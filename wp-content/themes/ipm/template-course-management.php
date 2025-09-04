@@ -5,7 +5,7 @@
  * Admin page for managing CPD courses - add, edit, delete courses
  */
 
-// Check if user is admin
+// Check if user is admin and storm
 if (!current_user_can('administrator')) {
     wp_redirect(home_url());
     exit;
