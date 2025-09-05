@@ -448,7 +448,7 @@ h1 {
   top: 0;
   left: 0;
   width: 100%;
-  z-index: 99;
+  z-index: 201;
 }
 .header__burger {
   z-index: 20;
@@ -544,8 +544,7 @@ h1 {
   top: 0;
   background: #404040;
   width: 100%;
-  height: -moz-max-content;
-  height: max-content;
+  height: 100vh;
   padding: 48px 50px;
 }
 .header.open .header__wrapper .container {
@@ -975,16 +974,24 @@ h1 {
   margin-top: 50px;
 }
 .banner {
-  height: 382px;
+  height: 100vh;
+  position: relative;
+  display: flex;
+  align-items: center;
 }
 .banner .container {
   position: relative;
+  z-index: 2;
 }
 .banner img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
   height: 100%;
-  min-height: 382px;
   -o-object-fit: cover;
   object-fit: cover;
+  z-index: 1;
 }
 .about .title-md {
   color: #724491;
@@ -2306,13 +2313,22 @@ section.single-events .container {
   background: url(../img/checked.webp) center no-repeat;
 }
 .login-content {
-  padding: 62px 0 95px;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  z-index: 3;
 }
 .login-content__wrapper {
   display: flex;
   justify-content: space-between;
   gap: 45px;
   align-items: center;
+  width: 100%;
+  height: 100%;
 }
 .login-content__left {
   width: 100%;
@@ -2320,6 +2336,8 @@ section.single-events .container {
   flex-direction: column;
   gap: 18px;
   max-width: 654px;
+  color: white;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
 }
 .login-content__left .text {
   max-width: 596px;
@@ -2327,13 +2345,15 @@ section.single-events .container {
 .login-content__right {
   width: 100%;
   padding: 40px 42px 30px;
-  margin-top: -180px;
-  max-width: 555px;
-  border-radius: 10px;
-  border: 3px solid rgba(255, 255, 255, 0.5);
-  background: rgba(217, 217, 217, 0.6);
-  -webkit-backdrop-filter: blur(17.5px);
-  backdrop-filter: blur(17.5px);
+  margin-top: 0;
+  max-width: 500px;
+  border-radius: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.95);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  margin-left: auto;
 }
 .login-content__right form {
   display: flex;
@@ -2657,10 +2677,18 @@ section.single-events .container {
     font-size: 34px;
   }
   .login-content {
-    padding: 48px 0;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    z-index: 3;
   }
   .login-content__wrapper {
     flex-direction: column;
+    padding: 20px;
   }
   .login-content__right {
     margin-top: 0;
@@ -2950,10 +2978,10 @@ section.single-events .container {
     width: 20px;
   }
   .banner {
-    height: 200px;
+    height: 100vh;
   }
   .banner img {
-    min-height: 200px;
+    min-height: 100vh;
   }
   .awards {
     padding: 48px 0;

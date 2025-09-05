@@ -72,17 +72,19 @@ function iipm_get_admin_dashboard_data() {
     // Get organisation statistics
     $stats = array(
         'total_members' => $wpdb->get_var($wpdb->prepare(
-            "SELECT COUNT(*) FROM {$wpdb->prefix}test_iipm_members WHERE organisation_id = %d",
+            "SELECT COUNT(*) FROM {$wpdb->prefix}test_iipm_member_profiles WHERE employer_id = %d",
             $organisation->id
         )),
         'active_members' => $wpdb->get_var($wpdb->prepare(
-            "SELECT COUNT(*) FROM {$wpdb->prefix}test_iipm_members 
-             WHERE organisation_id = %d AND membership_status = 'active'",
+            "SELECT COUNT(*) FROM {$wpdb->prefix}test_iipm_members m
+             JOIN {$wpdb->prefix}test_iipm_member_profiles mp ON m.user_id = mp.user_id
+             WHERE mp.employer_id = %d AND m.membership_status = 'active'",
             $organisation->id
         )),
         'pending_members' => $wpdb->get_var($wpdb->prepare(
-            "SELECT COUNT(*) FROM {$wpdb->prefix}test_iipm_members 
-             WHERE organisation_id = %d AND membership_status = 'pending'",
+            "SELECT COUNT(*) FROM {$wpdb->prefix}test_iipm_members m
+             JOIN {$wpdb->prefix}test_iipm_member_profiles mp ON m.user_id = mp.user_id
+             WHERE mp.employer_id = %d AND m.membership_status = 'pending'",
             $organisation->id
         )),
         'recent_imports' => $wpdb->get_var($wpdb->prepare(

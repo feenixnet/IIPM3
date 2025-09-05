@@ -564,7 +564,6 @@ function iipm_create_enhanced_tables() {
 		member_type enum('individual', 'organisation') NOT NULL DEFAULT 'individual',
 		membership_level enum('free', 'member', 'associate', 'fellow', 'council') NOT NULL DEFAULT 'free',
 		membership_status enum('active', 'inactive', 'pending', 'suspended') NOT NULL DEFAULT 'pending',
-		organisation_id int(11) NULL,
 		employee_id varchar(50) NULL,
 		qualification_date date NULL,
 		membership_start_date date NULL,
@@ -581,7 +580,6 @@ function iipm_create_enhanced_tables() {
 		updated_at timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 		PRIMARY KEY (id),
 		UNIQUE KEY user_id (user_id),
-		KEY organisation_id (organisation_id),
 		KEY membership_status (membership_status),
 		KEY membership_level (membership_level)
 	) $charset_collate;";
@@ -2810,7 +2808,7 @@ function iipm_get_dashboard_stats($user_id = null) {
 		$org = iipm_get_user_organisation($user_id);
 		if ($org) {
 			$stats['organisation_members'] = $wpdb->get_var($wpdb->prepare(
-				"SELECT COUNT(*) FROM {$wpdb->prefix}test_iipm_members WHERE organisation_id = %d",
+				"SELECT COUNT(*) FROM {$wpdb->prefix}test_iipm_member_profiles WHERE employer_id = %d",
 				$org->id
 			));
 			$stats['pending_invitations'] = $wpdb->get_var($wpdb->prepare(
@@ -4177,7 +4175,7 @@ function iipm_get_organisation_member_count($organisation_id) {
 	global $wpdb;
 	
 	return $wpdb->get_var($wpdb->prepare(
-		"SELECT COUNT(*) FROM {$wpdb->prefix}test_iipm_members WHERE organisation_id = %d",
+		"SELECT COUNT(*) FROM {$wpdb->prefix}test_iipm_member_profiles WHERE employer_id = %d",
 		$organisation_id
 	));
 }

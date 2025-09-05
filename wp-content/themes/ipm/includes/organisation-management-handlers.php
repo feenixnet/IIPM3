@@ -498,7 +498,7 @@ function iipm_delete_organisation() {
     try {
         // Get all members of this organisation
         $member_user_ids = $wpdb->get_col($wpdb->prepare(
-            "SELECT user_id FROM {$wpdb->prefix}test_iipm_members WHERE organisation_id = %d",
+            "SELECT mp.user_id FROM {$wpdb->prefix}test_iipm_member_profiles mp WHERE mp.employer_id = %d",
             $org_id
         ));
         

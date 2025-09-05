@@ -34,7 +34,7 @@ if (is_user_logged_in()) {
 get_header();
 ?>
 
-<main class="login" style="padding-top: 120px;">
+<main class="login" style="padding-top: 0; position: relative;">
     <div class="banner">
         <?php
         $image = get_field('image');
@@ -55,7 +55,7 @@ get_header();
                     <div class="text"><?php echo get_field('login_text'); ?></div>
                 </div>
                 
-                <div class="login-content__right" style="z-index:200">
+                <div class="login-content__right" style="z-index:10">
                     <div class="title-md text-purple" style="font-size:50px">Log in</div>
                     
                     <?php if (isset($login_error)): ?>
