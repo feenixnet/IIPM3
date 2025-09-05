@@ -46,12 +46,12 @@ function iipm_get_users() {
     if (!$is_site_admin && $is_org_admin) {
         // Get the organization ID for the current user
         $org_id = $wpdb->get_var($wpdb->prepare(
-            "SELECT organisation_id FROM {$wpdb->prefix}test_iipm_members WHERE user_id = %d",
+            "SELECT employer_id FROM {$wpdb->prefix}test_iipm_member_profiles WHERE user_id = %d",
             $current_user->ID
         ));
         
         if ($org_id) {
-            $where_conditions[] = "m.organisation_id = %d";
+            $where_conditions[] = "mp.employer_id = %d";
             $where_params[] = $org_id;
         } else {
             // If org admin has no organization, show no users
@@ -91,7 +91,8 @@ function iipm_get_users() {
         SELECT COUNT(DISTINCT u.ID)
         FROM {$wpdb->users} u
         LEFT JOIN {$wpdb->prefix}test_iipm_members m ON u.ID = m.user_id
-        LEFT JOIN {$wpdb->prefix}test_iipm_organisations o ON m.organisation_id = o.id
+        LEFT JOIN {$wpdb->prefix}test_iipm_member_profiles mp ON u.ID = mp.user_id
+        LEFT JOIN {$wpdb->prefix}test_iipm_organisations o ON mp.employer_id = o.id
         {$where_clause}
     ";
     
@@ -100,11 +101,12 @@ function iipm_get_users() {
     // Get users with pagination
     $users_sql = "
         SELECT u.ID, u.display_name, u.user_email, u.user_registered,
-               m.membership_status, m.last_login, m.organisation_id,
+               m.membership_status, m.last_login, mp.employer_id,
                o.name as organisation_name
         FROM {$wpdb->users} u
         LEFT JOIN {$wpdb->prefix}test_iipm_members m ON u.ID = m.user_id
-        LEFT JOIN {$wpdb->prefix}test_iipm_organisations o ON m.organisation_id = o.id
+        LEFT JOIN {$wpdb->prefix}test_iipm_member_profiles mp ON u.ID = mp.user_id
+        LEFT JOIN {$wpdb->prefix}test_iipm_organisations o ON mp.employer_id = o.id
         {$where_clause}
         ORDER BY u.display_name ASC
         LIMIT %d OFFSET %d
@@ -191,12 +193,12 @@ function iipm_get_user_details() {
     if (!$is_site_admin) {
         global $wpdb;
         $current_org_id = $wpdb->get_var($wpdb->prepare(
-            "SELECT organisation_id FROM {$wpdb->prefix}test_iipm_members WHERE user_id = %d",
+            "SELECT employer_id FROM {$wpdb->prefix}test_iipm_member_profiles WHERE user_id = %d",
             $current_user->ID
         ));
         
         $target_org_id = $wpdb->get_var($wpdb->prepare(
-            "SELECT organisation_id FROM {$wpdb->prefix}test_iipm_members WHERE user_id = %d",
+            "SELECT employer_id FROM {$wpdb->prefix}test_iipm_member_profiles WHERE user_id = %d",
             $user_id
         ));
         
@@ -264,12 +266,12 @@ function iipm_update_user() {
     if (!$is_site_admin) {
         global $wpdb;
         $current_org_id = $wpdb->get_var($wpdb->prepare(
-            "SELECT organisation_id FROM {$wpdb->prefix}test_iipm_members WHERE user_id = %d",
+            "SELECT employer_id FROM {$wpdb->prefix}test_iipm_member_profiles WHERE user_id = %d",
             $current_user->ID
         ));
         
         $target_org_id = $wpdb->get_var($wpdb->prepare(
-            "SELECT organisation_id FROM {$wpdb->prefix}test_iipm_members WHERE user_id = %d",
+            "SELECT employer_id FROM {$wpdb->prefix}test_iipm_member_profiles WHERE user_id = %d",
             $user_id
         ));
         
@@ -367,12 +369,12 @@ function iipm_delete_user() {
     if (!$is_site_admin) {
         global $wpdb;
         $current_org_id = $wpdb->get_var($wpdb->prepare(
-            "SELECT organisation_id FROM {$wpdb->prefix}test_iipm_members WHERE user_id = %d",
+            "SELECT employer_id FROM {$wpdb->prefix}test_iipm_member_profiles WHERE user_id = %d",
             $current_user->ID
         ));
         
         $target_org_id = $wpdb->get_var($wpdb->prepare(
-            "SELECT organisation_id FROM {$wpdb->prefix}test_iipm_members WHERE user_id = %d",
+            "SELECT employer_id FROM {$wpdb->prefix}test_iipm_member_profiles WHERE user_id = %d",
             $user_id
         ));
         

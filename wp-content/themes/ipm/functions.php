@@ -1564,7 +1564,6 @@ function iipm_process_member_registration($data, $token = null) {
             array(
                 'user_id' => $user_id,
                 'member_type' => $member_type,
-                'organisation_id' => $organisation_id,
                 'membership_status' => $membership_status,
                 'membership_level' => 'member',
                 'gdpr_consent' => $gdpr_consent,
@@ -1572,7 +1571,7 @@ function iipm_process_member_registration($data, $token = null) {
                 'email_verified' => 1,
                 'profile_completed' => 0
             ),
-            array('%d', '%s', '%d', '%s', '%s', '%d', '%d', '%d', '%d')
+            array('%d', '%s', '%d', '%s', '%s', '%d', '%d', '%d')
         );
 
         try {
@@ -1583,7 +1582,6 @@ function iipm_process_member_registration($data, $token = null) {
                     'user_phone' => sanitize_text_field($data['user_phone'] ?? ''),
                     'email_address' => $email,
                     'user_mobile' => sanitize_text_field($data['user_mobile'] ?? ''),
-                    'user_employer' => sanitize_text_field($organisation_name ?? ''),
                     'postal_address' => sanitize_text_field($data['postal_address'] ?? ''),
                     'city_or_town' => sanitize_text_field($data['city_or_town'] ?? ''),
                     'Address_1' => sanitize_text_field($data['address_line_1'] ?? ''),
@@ -1609,7 +1607,8 @@ function iipm_process_member_registration($data, $token = null) {
                     'dateOfUpdatePers' => current_time('mysql'),
                     'dateOfUpdateGen' => current_time('mysql'),
                     'employerDetailsUpdated' => current_time('mysql'),
-                    'theUsersStatus' => 'Full Member'
+                    'theUsersStatus' => 'Full Member',
+                    'employer_id' => $organisation_id,
                 ),
                 array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s')
             );
@@ -2695,14 +2694,14 @@ function iipm_get_user_organisation($user_id = null) {
 	global $wpdb;
 	
 	$member = $wpdb->get_row($wpdb->prepare(
-		"SELECT organisation_id FROM {$wpdb->prefix}test_iipm_members WHERE user_id = %d",
+		"SELECT employer_id FROM {$wpdb->prefix}test_iipm_member_profiles WHERE user_id = %d",
 		$user_id
 	));
 	
-	if ($member && $member->organisation_id) {
+	if ($member && $member->employer_id) {
 		return $wpdb->get_row($wpdb->prepare(
 			"SELECT * FROM {$wpdb->prefix}test_iipm_organisations WHERE id = %d",
-			$member->organisation_id
+			$member->employer_id
 		));
 	}
 	
@@ -2731,7 +2730,8 @@ function iipm_get_member_profile($user_id) {
 	$member = $wpdb->get_row($wpdb->prepare(
 		"SELECT m.*, o.name as organisation_name 
 		 FROM {$wpdb->prefix}test_iipm_members m
-		 LEFT JOIN {$wpdb->prefix}test_iipm_organisations o ON m.organisation_id = o.id
+		 LEFT JOIN {$wpdb->prefix}test_iipm_member_profiles mp ON m.user_id = mp.user_id
+		 LEFT JOIN {$wpdb->prefix}test_iipm_organisations o ON mp.employer_id = o.id
 		 WHERE m.user_id = %d",
 		$user_id
 	));
@@ -3563,8 +3563,8 @@ function iipm_send_individual_invitation_enhanced() {
             $user_org = $wpdb->get_row($wpdb->prepare(
                 "SELECT o.* 
                  FROM {$wpdb->prefix}test_iipm_organisations o
-                 JOIN {$wpdb->prefix}test_iipm_members m ON o.id = m.organisation_id
-                 WHERE m.user_id = %d",
+                 JOIN {$wpdb->prefix}test_iipm_member_profiles mp ON o.id = mp.employer_id
+                 WHERE mp.user_id = %d",
                 $current_user_id
             ));
         }
@@ -4886,4 +4886,185 @@ function iipm_get_organisation_name_ajax() {
 }
 add_action('wp_ajax_iipm_get_organisation_name', 'iipm_get_organisation_name_ajax');
 add_action('wp_ajax_nopriv_iipm_get_organisation_name', 'iipm_get_organisation_name_ajax');
+
+/**
+ * AJAX handler to update member profiles with employer_id
+ * Fetches all users and matches user_employer with organisation names to set employer_id
+ */
+function iipm_handle_update_employer_ids() {
+	global $wpdb;
+	
+	// Check permissions - only administrators can run this
+	// if (!current_user_can('administrator')) {
+	// 	wp_send_json_error('Insufficient permissions');
+	// 	return;
+	// }
+	
+	try {
+		// Fetch all data from member_profiles table
+		$member_profiles = $wpdb->get_results("SELECT * FROM {$wpdb->prefix}test_iipm_member_profiles WHERE user_employer IS NOT NULL AND user_employer != ''");
+		
+		// Fetch all data from organisations table
+		$organisations = $wpdb->get_results("SELECT * FROM {$wpdb->prefix}test_iipm_organisations");
+		
+		if (!$member_profiles) {
+			wp_send_json_error('No member profiles found with employer data');
+			return;
+		}
+		
+		if (!$organisations) {
+			wp_send_json_error('No organisations found');
+			return;
+		}
+		
+		// Create a lookup array for organisations by name
+		$org_lookup = array();
+		foreach ($organisations as $org) {
+			$org_lookup[$org->name] = $org->id;
+		}
+		
+		$updated_count = 0;
+		$errors = array();
+		
+		// Process each member profile
+		foreach ($member_profiles as $profile) {
+			$user_employer = trim($profile->user_employer);
+			
+			// Check if user_employer matches any organisation name
+			if (isset($org_lookup[$user_employer])) {
+				$employer_id = $org_lookup[$user_employer];
+				
+				// Update the member profile with employer_id
+				$update_result = $wpdb->update(
+					$wpdb->prefix . 'test_iipm_member_profiles',
+					array('employer_id' => $employer_id),
+					array('id' => $profile->id),
+					array('%d'),
+					array('%d')
+				);
+				
+				if ($update_result !== false) {
+					$updated_count++;
+				} else {
+					$errors[] = "Failed to update profile ID {$profile->id} for user {$profile->user_id}";
+				}
+			} else {
+				$errors[] = "No matching organisation found for user {$profile->user_id} with employer: {$user_employer}";
+			}
+		}
+		
+		$response = array(
+			'success' => true,
+			'message' => "Successfully updated {$updated_count} member profiles with employer_id",
+			'updated_count' => $updated_count,
+			'total_processed' => count($member_profiles),
+			'errors' => $errors
+		);
+		
+		wp_send_json_success($response);
+		
+	} catch (Exception $e) {
+		error_log('IIPM Update Employer IDs Error: ' . $e->getMessage());
+		wp_send_json_error('An error occurred while updating employer IDs: ' . $e->getMessage());
+	}
+}
+add_action('wp_ajax_iipm_update_employer_ids', 'iipm_handle_update_employer_ids');
+add_action('wp_ajax_nopriv_iipm_update_employer_ids', 'iipm_handle_update_employer_ids');
+
+/**
+ * AJAX handler to populate missing members in test_iipm_members table
+ * Adds users from users table that don't exist in members table
+ */
+function iipm_handle_populate_missing_members() {
+	global $wpdb;
+	
+	// Check permissions - only administrators can run this
+	// if (!current_user_can('administrator')) {
+	// 	wp_send_json_error('Insufficient permissions');
+	// 	return;
+	// }
+	
+	try {
+		// Get all users from users table
+		$all_users = $wpdb->get_results("SELECT ID, user_login, user_email, display_name FROM {$wpdb->users} ORDER BY ID");
+		
+		// Get existing member user_ids
+		$existing_members = $wpdb->get_col("SELECT user_id FROM {$wpdb->prefix}test_iipm_members");
+		
+		if (!$all_users) {
+			wp_send_json_error('No users found in users table');
+			return;
+		}
+		
+		// Create lookup array for existing members
+		$existing_member_ids = array_flip($existing_members);
+		
+		$added_count = 0;
+		$skipped_count = 0;
+		$errors = array();
+		
+		// Process each user
+		foreach ($all_users as $user) {
+			// Check if user already exists in members table
+			if (isset($existing_member_ids[$user->ID])) {
+				$skipped_count++;
+				continue;
+			}
+			
+			// Insert new member with default values
+			$insert_result = $wpdb->insert(
+				$wpdb->prefix . 'test_iipm_members',
+				array(
+					'user_id' => $user->ID,
+					'member_type' => 'organisation',
+					'membership_level' => 'member',
+					'membership_status' => 'active',
+					'cpd_points_required' => 40,
+					'cpd_points_current' => 0,
+					'cpd_prorata_adjustment' => 0.00,
+					'email_verified' => 1,
+					'profile_completed' => 0,
+					'created_at' => current_time('mysql'),
+					'updated_at' => current_time('mysql')
+				),
+				array(
+					'%d', // user_id
+					'%s', // member_type
+					'%s', // membership_level
+					'%s', // membership_status
+					'%d', // cpd_points_required
+					'%d', // cpd_points_current
+					'%f', // cpd_prorata_adjustment
+					'%d', // email_verified
+					'%d', // profile_completed
+					'%s', // created_at
+					'%s'  // updated_at
+				)
+			);
+			
+			if ($insert_result !== false) {
+				$added_count++;
+			} else {
+				$errors[] = "Failed to add user {$user->ID} ({$user->user_login}) to members table";
+			}
+		}
+		
+		$response = array(
+			'success' => true,
+			'message' => "Successfully added {$added_count} new members to test_iipm_members table",
+			'added_count' => $added_count,
+			'skipped_count' => $skipped_count,
+			'total_users' => count($all_users),
+			'errors' => $errors
+		);
+		
+		wp_send_json_success($response);
+		
+	} catch (Exception $e) {
+		error_log('IIPM Populate Missing Members Error: ' . $e->getMessage());
+		wp_send_json_error('An error occurred while populating missing members: ' . $e->getMessage());
+	}
+}
+add_action('wp_ajax_iipm_populate_missing_members', 'iipm_handle_populate_missing_members');
+add_action('wp_ajax_nopriv_iipm_populate_missing_members', 'iipm_handle_populate_missing_members');
 

@@ -324,7 +324,8 @@ function iipm_get_organisation_members() {
                 m.membership_status, m.created_at, m.last_login
          FROM {$wpdb->prefix}test_iipm_members m
          JOIN {$wpdb->users} u ON m.user_id = u.ID
-         WHERE m.organisation_id = %d
+         JOIN {$wpdb->prefix}test_iipm_member_profiles mp ON u.ID = mp.user_id
+         WHERE mp.employer_id = %d
          ORDER BY u.display_name",
         $org_id
     ));
@@ -431,7 +432,8 @@ function iipm_get_organisation_delete_info() {
         "SELECT u.ID as user_id, u.display_name, u.user_email, m.membership_status
          FROM {$wpdb->prefix}test_iipm_members m
          JOIN {$wpdb->users} u ON m.user_id = u.ID
-         WHERE m.organisation_id = %d
+         JOIN {$wpdb->prefix}test_iipm_member_profiles mp ON u.ID = mp.user_id
+         WHERE mp.employer_id = %d
          ORDER BY u.display_name",
         $org_id
     ));
@@ -603,10 +605,10 @@ function iipm_export_organisations() {
         SELECT o.*, 
                u.display_name as admin_name,
                u.user_email as admin_email,
-               COUNT(m.id) as member_count
+               COUNT(mp.id) as member_count
         FROM {$wpdb->prefix}test_iipm_organisations o
         LEFT JOIN {$wpdb->users} u ON o.admin_user_id = u.ID
-        LEFT JOIN {$wpdb->prefix}test_iipm_members m ON o.id = m.organisation_id
+        LEFT JOIN {$wpdb->prefix}test_iipm_member_profiles mp ON o.id = mp.employer_id
         WHERE o.is_active = 1
         GROUP BY o.id
         ORDER BY o.name
@@ -966,7 +968,6 @@ function iipm_process_organisation_admin_registration($data, $invitation) {
         array(
             'user_id' => $user_id,
             'member_type' => 'organisation',
-            'organisation_id' => $organisation_id,
             'membership_status' => 'active', // Admins are automatically active
             'membership_level' => 'member',
             'gdpr_consent' => 1,
@@ -974,7 +975,7 @@ function iipm_process_organisation_admin_registration($data, $invitation) {
             'email_verified' => 1, // Auto-verify admin emails
             'profile_completed' => 0
         ),
-        array('%d', '%s', '%d', '%s', '%s', '%d', '%d', '%d', '%d')
+        array('%d', '%s', '%s', '%s', '%d', '%d', '%d', '%d')
     );
     
     // Create profile record
@@ -983,15 +984,37 @@ function iipm_process_organisation_admin_registration($data, $invitation) {
         array(
             'user_id' => $user_id,
             'user_phone' => sanitize_text_field($data['user_phone'] ?? ''),
-            'email_address' => sanitize_email($data['work_email'] ?? ''),
+            'email_address' => $email,
             'user_mobile' => sanitize_text_field($data['user_mobile'] ?? ''),
-            'employer_name' => sanitize_text_field($data['employer_name'] ?? ''),
-            'is_admin' => 1,
+            'postal_address' => sanitize_text_field($data['postal_address'] ?? ''),
+            'city_or_town' => sanitize_text_field($data['city_or_town'] ?? ''),
+            'Address_1' => sanitize_text_field($data['address_line_1'] ?? ''),
+            'Address_2' => sanitize_text_field($data['address_line_2'] ?? ''),
+            'Address_3' => sanitize_text_field($data['address_line_3'] ?? ''),
+            'user_fullName' => $first_name." ".$last_name,
+            'user_payment_method' => sanitize_text_field($data['payment_method'] ?? ''),
+            'sur_name' => sanitize_text_field($last_name ?? ''),
+            'first_name' => sanitize_text_field($first_name ?? ''),
+            'user_is_admin' => 1,
+            'user_designation' => sanitize_text_field($data['user_designation'] ?? ''),
+            'user_name_login' => sanitize_text_field($data['login_name'] ?? ''),
+            'email_address_pers' => sanitize_email($data['email_address_pers'] ?? ''),
+            'user_phone_pers' => sanitize_text_field($data['user_phone_pers'] ?? ''),
+            'user_mobile_pers' => sanitize_text_field($data['user_mobile_pers'] ?? ''),
+            'Address_1_pers' => sanitize_text_field($data['Address_1_pers'] ?? ''),
+            'Address_2_pers' => sanitize_text_field($data['Address_2_pers'] ?? ''),
+            'Address_3_pers' => sanitize_text_field($data['Address_3_pers'] ?? ''),
+            'eircode_p' => sanitize_text_field($data['eircode_p'] ?? ''),
+            'eircode_w' => sanitize_text_field($data['eircode_w'] ?? ''),
+            'correspondence_email' => sanitize_email($data['correspondence_email'] ?? ''),
+            'user_notes' => sanitize_textarea_field($data['user_notes'] ?? ''),
             'dateOfUpdatePers' => current_time('mysql'),
             'dateOfUpdateGen' => current_time('mysql'),
             'employerDetailsUpdated' => current_time('mysql'),
+            'theUsersStatus' => 'Systems Admin',
+            'employer_id' => $organisation_id,
         ),
-        array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s')
+        array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s')
     );
     
     // Mark invitation as used

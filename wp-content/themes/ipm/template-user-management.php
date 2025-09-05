@@ -660,7 +660,7 @@ jQuery(document).ready(function($) {
                     </td>
                     <td style="padding: 16px; color: #6b7280;">${user.organisation_name || 'N/A'}</td>
                     <td style="padding: 16px; color: #6b7280;">${user.last_login || 'Never'}</td>
-                    <td style="padding: 16px; text-align: center;">
+                    <td style="padding: 16px; text-align: center;width: 150px;">
                         <button class="action-btn edit-btn" onclick="editUser(${user.ID})">Edit</button>
                         <button class="action-btn delete-btn" onclick="deleteUser(${user.ID}, '${user.display_name}')">Delete</button>
                     </td>

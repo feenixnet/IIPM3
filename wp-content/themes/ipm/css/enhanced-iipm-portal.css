@@ -1244,5 +1244,5 @@ input[type="checkbox"]:disabled:checked {
 /* Make the membership type options more prominent */
 .form-section:first-of-type .form-group {
   max-width: 600px;
-  margin: 0 auto;
+  /* margin: 0 auto; */
 }

@@ -147,10 +147,10 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
                                 SELECT o.*, 
                                        u.display_name as admin_name,
                                        u.user_email as admin_email,
-                                       COUNT(m.id) as member_count
+                                       COUNT(mp.id) as member_count
                                 FROM {$wpdb->prefix}test_iipm_organisations o
                                 LEFT JOIN {$wpdb->users} u ON o.admin_user_id = u.ID
-                                LEFT JOIN {$wpdb->prefix}test_iipm_members m ON o.id = m.organisation_id
+                                LEFT JOIN {$wpdb->prefix}test_iipm_member_profiles mp ON o.id = mp.employer_id
                                 WHERE o.is_active = 1
                                 GROUP BY o.id
                                 ORDER BY o.created_at DESC
@@ -168,7 +168,7 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
                                     echo "<td>";
                                     echo "<div class='org-info'>";
                                     echo "<div class='org-name'>" . esc_html($org->name) . "</div>";
-                                    echo "<div class='org-location'>" . esc_html($org->city . ', ' . $org->county) . "</div>";
+                                    echo $org->city && $org->county ? "<div class='org-location'>" . esc_html($org->city . ', ' . $org->county) . "</div>" : "";
                                     echo "</div>";
                                     echo "</td>";
                                     
@@ -594,7 +594,7 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
 }
 
 .search-input {
-    padding: 8px 12px;
+    padding: 8px 12px !important;
     border: 1px solid #d1d5db;
     border-radius: 6px;
     font-size: 0.875rem;
@@ -1331,6 +1331,7 @@ jQuery(document).ready(function($) {
     // Edit Organisation
     $(document).on('click', '.edit-org', function() {
         const orgId = $(this).data('org-id');
+        console.log('Edit org clicked', orgId);
         loadOrganisationData(orgId);
     });
     
@@ -1825,9 +1826,10 @@ jQuery(document).ready(function($) {
     }
     
     // Handle modal close events for all modal types
-    $(document).on('click', '.modal-close', function() {
-        $(this).closest('.modal').remove();
-    });
+    // $(document).on('click', '.modal-close', function() {
+    //     alert(" i am called ");
+    //     $(this).closest('.modal').remove();
+    // });
     
     $(document).on('click', '.modal', function(e) {
         if (e.target === this) {

@@ -387,7 +387,7 @@ get_header();
                     
                     <div class="info-card">
                         <h3>Registration Process</h3>
-                        <ol>
+                        <ul>
                             <li>Complete the registration form</li>
                             <li>Verify your email address</li>
                             <li>Complete your member profile</li>
