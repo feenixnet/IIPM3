@@ -273,6 +273,12 @@ add_action('wp_ajax_nopriv_iipm_delete_cpd_confirmation', 'iipm_ajax_delete_cpd_
 add_action('wp_ajax_iipm_get_completed_courses_history', 'iipm_ajax_get_completed_courses_history');
 add_action('wp_ajax_nopriv_iipm_get_completed_courses_history', 'iipm_ajax_get_completed_courses_history');
 
+add_action('wp_ajax_iipm_get_started_courses', 'iipm_ajax_get_started_courses');
+add_action('wp_ajax_nopriv_iipm_get_started_courses', 'iipm_ajax_get_started_courses');
+
+add_action('wp_ajax_iipm_get_courses_in_learning_path', 'iipm_ajax_get_courses_in_learning_path');
+add_action('wp_ajax_nopriv_iipm_get_courses_in_learning_path', 'iipm_ajax_get_courses_in_learning_path');
+
 add_action('wp_ajax_iipm_assign_to_cpd', 'iipm_ajax_assign_to_cpd');
 add_action('wp_ajax_nopriv_iipm_assign_to_cpd', 'iipm_ajax_assign_to_cpd');
 
@@ -410,6 +416,42 @@ function iipm_ajax_get_completed_courses_history() {
     
     wp_send_json_success(array(
         'completed_courses' => $completed_courses
+    ));
+}
+
+/**
+ * AJAX callback for getting currently started courses (in progress)
+ */
+function iipm_ajax_get_started_courses() {
+    $user_id = get_current_user_id();
+    
+    if (!$user_id) {
+        wp_send_json_error('User not logged in');
+        return;
+    }
+    
+    $started_courses = iipm_get_started_courses($user_id);
+    
+    wp_send_json_success(array(
+        'started_courses' => $started_courses
+    ));
+}
+
+/**
+ * AJAX callback for getting all courses in learning path (both completed and started)
+ */
+function iipm_ajax_get_courses_in_learning_path() {
+    $user_id = get_current_user_id();
+    
+    if (!$user_id) {
+        wp_send_json_error('User not logged in');
+        return;
+    }
+    
+    $courses = iipm_get_courses_in_learning_path($user_id);
+    
+    wp_send_json_success(array(
+        'courses' => $courses
     ));
 }
 
@@ -1107,6 +1149,83 @@ function iipm_get_completed_courses_history($user_id) {
             'crs_provider' => $course->crs_provider,
             'date_of_return' => $course->dateOfReturn,
             'year' => $course->year
+        );
+    }
+    
+    return $formatted_courses;
+}
+
+/**
+ * Get currently started courses (in progress - added to learning path but not completed)
+ */
+function iipm_get_started_courses($user_id) {
+    global $wpdb;
+    
+    $table_name = $wpdb->prefix . 'fullcpd_confirmations';
+    
+    // Get started courses (courses added to learning path but not completed)
+    $current_year = date('Y');
+    
+    $query = $wpdb->prepare(
+        "SELECT course_id, courseName, crs_provider, dateOfCourse, year 
+         FROM {$table_name} 
+         WHERE user_id = %d AND year = %d AND dateOfReturn IS NULL
+         ORDER BY dateOfCourse DESC",
+        $user_id,
+        $current_year
+    );
+    
+    $started_courses = $wpdb->get_results($query);
+    
+    // Format the results
+    $formatted_courses = array();
+    foreach ($started_courses as $course) {
+        $formatted_courses[] = array(
+            'course_id' => $course->course_id,
+            'course_name' => $course->courseName,
+            'crs_provider' => $course->crs_provider,
+            'date_of_course' => $course->dateOfCourse,
+            'year' => $course->year
+        );
+    }
+    
+    return $formatted_courses;
+}
+
+/**
+ * Get all courses in learning path (both completed and started)
+ */
+function iipm_get_courses_in_learning_path($user_id) {
+    global $wpdb;
+    
+    $table_name = $wpdb->prefix . 'fullcpd_confirmations';
+    
+    // Get all courses in learning path (both completed and started)
+    $current_year = date('Y');
+    $start_year = $current_year - 4; // Past 5 years including current year
+    
+    $query = $wpdb->prepare(
+        "SELECT course_id, courseName, crs_provider, dateOfCourse, dateOfReturn, year 
+         FROM {$table_name} 
+         WHERE user_id = %d AND year >= %d
+         ORDER BY dateOfCourse DESC",
+        $user_id,
+        $start_year
+    );
+    
+    $courses = $wpdb->get_results($query);
+    
+    // Format the results
+    $formatted_courses = array();
+    foreach ($courses as $course) {
+        $formatted_courses[] = array(
+            'course_id' => $course->course_id,
+            'course_name' => $course->courseName,
+            'crs_provider' => $course->crs_provider,
+            'date_of_course' => $course->dateOfCourse,
+            'date_of_return' => $course->dateOfReturn,
+            'year' => $course->year,
+            'is_completed' => !empty($course->dateOfReturn)
         );
     }
     

@@ -59,12 +59,12 @@ get_header();
             <div style="display: flex; justify-content: center; gap: 20px;">
                 <a href="?tab=users" class="tab-button <?php echo $active_tab === 'users' ? 'active' : ''; ?>" 
                    style="padding: 12px 24px; background: <?php echo $active_tab === 'users' ? '#f8a135' : '#6b4c93'; ?>; color: white; border-radius: 8px; text-decoration: none; font-weight: 500; transition: all 0.3s ease;">
-                    <span style="margin-right: 8px;">👥</span>
+                    <span style="margin-right: 8px;"><i class="fas fa-users"></i></span>
                     Users
                 </a>
                 <a href="?tab=invitations" class="tab-button <?php echo $active_tab === 'invitations' ? 'active' : ''; ?>"
                    style="padding: 12px 24px; background: <?php echo $active_tab === 'invitations' ? '#f8a135' : '#6b4c93'; ?>; color: white; border-radius: 8px; text-decoration: none; font-weight: 500; transition: all 0.3s ease;">
-                    <span style="margin-right: 8px;">✉️</span>
+                    <span style="margin-right: 8px;"><i class="fas fa-envelope"></i></span>
                     Invitations
                 </a>
             </div>
@@ -79,12 +79,12 @@ get_header();
                     <div style="display: flex; justify-content: flex-end; gap: 20px; margin-bottom: 30px;">
                         <?php if ($is_site_admin): ?>
                         <button id="sync-login-data" style="display: inline-flex; align-items: center; padding: 12px 24px; background: #10B981; color: white; border: none; border-radius: 8px; font-weight: 500; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-                            <span style="margin-right: 8px;">🔄</span>
+                            <span style="margin-right: 8px;"><i class="fas fa-sync-alt"></i></span>
                             Sync Login Data
                         </button>
                         <?php endif; ?>
                         <a href="<?php echo home_url('/bulk-import/'); ?>" style="display: inline-flex; align-items: center; padding: 12px 24px; background: #8B5CF6; color: white; border-radius: 8px; text-decoration: none; font-weight: 500; transition: all 0.3s ease; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-                            <span style="margin-right: 8px;">📥</span>
+                            <span style="margin-right: 8px;"><i class="fas fa-upload"></i></span>
                             Bulk Member Upload
                         </a>
                     </div>
@@ -178,7 +178,7 @@ get_header();
                                     <label>Organisation</label>
                                     <div class="readonly-field">
                                         <span class="organisation-badge">
-                                            🏢 <?php echo esc_html($user_organisation->name); ?>
+                                            <i class="fas fa-building"></i> <?php echo esc_html($user_organisation->name); ?>
                                         </span>
                                         <small class="field-note">Invitations will be sent for your organisation</small>
                                     </div>
@@ -557,7 +557,7 @@ jQuery(document).ready(function($) {
         const button = $(this);
         const originalText = button.html();
         
-        button.html('<span style="margin-right: 8px;">⏳</span>Syncing...').prop('disabled', true);
+        button.html('<span style="margin-right: 8px;"><i class="fas fa-spinner fa-spin"></i></span>Syncing...').prop('disabled', true);
         
         $.ajax({
             url: '<?php echo admin_url('admin-ajax.php'); ?>',

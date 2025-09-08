@@ -44,7 +44,7 @@ get_header();
                         <label for="title-search">Title</label>
                         <div class="search-input">
                             <input type="text" id="title-search" placeholder="Search course title">
-                            <span class="search-icon">🔍</span>
+                            <span class="search-icon"><i class="fas fa-search"></i></span>
                         </div>
                     </div>
 
@@ -52,7 +52,7 @@ get_header();
                         <label for="lia-code-search">LIA Code</label>
                         <div class="search-input">
                             <input type="text" id="lia-code-search" placeholder="Search LIA code">
-                            <span class="search-icon">🔍</span>
+                            <span class="search-icon"><i class="fas fa-search"></i></span>
                         </div>
                     </div>
 
@@ -398,6 +398,16 @@ get_header();
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     }
 
+    .course-card.course-started {
+        border: 2px solid #f59e0b;
+        background: linear-gradient(135deg, #fef3c7 0%, #ffffff 100%);
+    }
+
+    .course-card.course-started:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 16px rgba(245, 158, 11, 0.2);
+    }
+
     .course-header {
         display: flex;
         justify-content: space-between;
@@ -424,6 +434,17 @@ get_header();
 
     .completed-badge {
         background: #10b981;
+        color: white;
+        padding: 4px 12px;
+        border-radius: 16px;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .started-badge {
+        background: #f59e0b;
         color: white;
         padding: 4px 12px;
         border-radius: 16px;
@@ -657,8 +678,8 @@ get_header();
     let totalCourses = 0;
     let coursesPerPage = 12;
     
-    // Global variable to store completed courses
-    let completedCourses = [];
+    // Global variable to store all courses in fullcpd_confirmations table (both completed and started)
+    let coursesInLearningPath = [];
     
     document.addEventListener('DOMContentLoaded', function() {
         // Get DOM elements
@@ -686,7 +707,7 @@ get_header();
             // Load initial data
             loadCategories();
             loadProviders();
-            loadCompletedCourses(); // Load completed courses first
+            loadCoursesInLearningPath(); // Load all courses in learning path
             loadCourses();
             
             // Set up event listeners
@@ -783,23 +804,22 @@ get_header();
                     }
                 }
                 
-                // Check if course is already completed
+                // Check if course is in learning path (either completed or started)
+                const isInLearningPath = isCourseInLearningPath(course);
                 const isCompleted = isCourseCompleted(course);
-                const addButtonClass = isCompleted ? 'add-course-btn disabled' : 'add-course-btn';
-                const addButtonTitle = isCompleted ? 'Already completed' : 'Add to learning path';
-                const addButtonIcon = isCompleted ? '✅' : '➕';
+                const addButtonClass = isInLearningPath ? 'add-course-btn disabled' : 'add-course-btn';
+                const addButtonTitle = isInLearningPath ? (isCompleted ? 'Course completed' : 'Course in progress') : 'Add to learning path';
+                const addButtonIcon = isInLearningPath ? (isCompleted ? '<i class="fas fa-check"></i>' : '<i class="fas fa-clock"></i>') : '<i class="fas fa-plus"></i>';
                 
                 html += `
-                    <div class="course-card ${isCompleted ? 'course-completed' : ''}">
+                    <div class="course-card ${isCompleted ? 'course-completed' : ''} ${isInLearningPath && !isCompleted ? 'course-started' : ''}">
                         <div class="course-header">
                             <div class="course-badges">
                                 <span class="category-badge">${course.course_category || 'N/A'}</span>
                                 ${isCompleted ? '<span class="completed-badge">Completed</span>' : ''}
-                                <button class="favorite-btn" title="Add to favorites">
-                                    <span class="heart-icon">🤍</span>
-                                </button>
+                                ${isInLearningPath && !isCompleted ? '<span class="started-badge">In Progress</span>' : ''}
                             </div>
-                            <button class="${addButtonClass}" title="${addButtonTitle}" ${isCompleted ? 'disabled' : ''}>
+                            <button class="${addButtonClass}" title="${addButtonTitle}" ${isInLearningPath ? 'disabled' : ''}>
                                 <span class="plus-icon">${addButtonIcon}</span>
                             </button>
                         </div>
@@ -870,9 +890,9 @@ get_header();
         function addCourseToLearningPath(course) {
             console.log('Adding course to learning path:', course);
             
-            // Check if course is already completed
-            if (isCourseCompleted(course)) {
-                showNotification('This course has already been completed in the past 5 years!', 'error');
+            // Check if course is already in learning path (either completed or started)
+            if (isCourseInLearningPath(course)) {
+                showNotification('This course is already in your learning path!', 'error');
                 return;
             }
             
@@ -880,7 +900,7 @@ get_header();
             const addBtn = event.target.closest('.add-course-btn');
             if (addBtn) {
                 const originalContent = addBtn.innerHTML;
-                addBtn.innerHTML = '<span class="loading-icon">⏳</span>';
+                addBtn.innerHTML = '<span class="loading-icon"><i class="fas fa-spinner fa-spin"></i></span>';
                 addBtn.disabled = true;
                 
                 // Revert after 2 seconds if there's an error
@@ -910,7 +930,7 @@ get_header();
                     if (response.success) {
                         // Show success state
                         if (addBtn) {
-                            addBtn.innerHTML = '<span class="success-icon">✅</span>';
+                            addBtn.innerHTML = '<span class="success-icon"><i class="fas fa-check"></i></span>';
                             addBtn.style.background = '#10b981';
                             addBtn.style.color = 'white';
                             
@@ -926,6 +946,12 @@ get_header();
                         // Show success message
                         showNotification('Course added to your learning path!', 'success');
                         
+                        // Refresh the learning path courses list and reload courses to update the UI
+                        loadCoursesInLearningPath();
+                        setTimeout(() => {
+                            loadCourses(); // Reload courses to update the UI with new status
+                        }, 500);
+                        
                         // Optionally redirect back to member portal
                         setTimeout(() => {
                             if (confirm('Course added successfully! Would you like to return to your Member Portal?')) {
@@ -936,7 +962,7 @@ get_header();
                     } else {
                         // Show error state
                         if (addBtn) {
-                            addBtn.innerHTML = '<span class="error-icon">❌</span>';
+                            addBtn.innerHTML = '<span class="error-icon"><i class="fas fa-times"></i></span>';
                             addBtn.style.background = '#ef4444';
                             addBtn.style.color = 'white';
                             
@@ -1008,39 +1034,53 @@ get_header();
         }
         
         /**
-         * Load completed courses from the past 5 years
+         * Load all courses in learning path (both completed and started)
          */
-        function loadCompletedCourses() {
+        function loadCoursesInLearningPath() {
             jQuery.ajax({
                 url: ajaxurl,
                 type: 'POST',
                 data: {
-                    action: 'iipm_get_completed_courses_history'
+                    action: 'iipm_get_courses_in_learning_path'
                 },
                 success: function(response) {
-                    if (response.success && response.data.completed_courses) {
-                        completedCourses = response.data.completed_courses;
-                        console.log('Loaded completed courses:', completedCourses);
+                    if (response.success && response.data.courses) {
+                        coursesInLearningPath = response.data.courses;
+                        console.log('Loaded courses in learning path:', coursesInLearningPath);
                     }
                 },
                 error: function(xhr, status, error) {
-                    console.error('Error loading completed courses:', error);
+                    console.error('Error loading courses in learning path:', error);
                 }
             });
         }
         
         /**
-         * Check if a course is already completed
+         * Check if a course is in learning path (either completed or started)
+         */
+        function isCourseInLearningPath(course) {
+            return coursesInLearningPath.some(learningPathCourse => {
+                // Check by course ID if available, otherwise by course name and provider
+                if (learningPathCourse.course_id && course.id) {
+                    return learningPathCourse.course_id == course.id;
+                }
+                return learningPathCourse.course_name === course.course_name && 
+                       learningPathCourse.crs_provider === course.crs_provider;
+            });
+        }
+        
+        /**
+         * Check if a course is completed (has dateOfReturn)
          */
         function isCourseCompleted(course) {
-            return completedCourses.some(completed => {
-                // Check by course ID if available, otherwise by course name and provider
-                if (completed.course_id && course.id) {
-                    return completed.course_id == course.id;
+            const learningPathCourse = coursesInLearningPath.find(lpCourse => {
+                if (lpCourse.course_id && course.id) {
+                    return lpCourse.course_id == course.id;
                 }
-                return completed.course_name === course.course_name && 
-                       completed.crs_provider === course.crs_provider;
+                return lpCourse.course_name === course.course_name && 
+                       lpCourse.crs_provider === course.crs_provider;
             });
+            return learningPathCourse && learningPathCourse.date_of_return;
         }
         
         /**

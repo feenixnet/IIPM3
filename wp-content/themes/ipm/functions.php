@@ -6,7 +6,7 @@
  */
 
 if ( ! defined( '_S_VERSION' ) ) {
-	define( '_S_VERSION', '1.0.0' );
+	define( '_S_VERSION', '1.0.1' );
 }
 
 /**
@@ -97,6 +97,9 @@ function ipm_scripts() {
 	wp_style_add_data( 'ipm-style', 'rtl', 'replace' );
 	// Ensure main theme CSS is loaded first
 	wp_enqueue_style('iipm-main-style', get_template_directory_uri() . '/assets/css/main.min.css', array(), _S_VERSION);
+	
+	// Enqueue FontAwesome from CDN for better icon support
+	wp_enqueue_style( 'fontawesome', 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css', array(), '6.4.0' );
 
 	wp_enqueue_script( 'ipm-navigation', get_template_directory_uri() . '/js/navigation.js', array(), _S_VERSION, true );
 	
@@ -350,7 +353,7 @@ function iipm_send_email_alternative($null, $atts) {
         </head>
         <body>
             <div class='header'>
-                <h2>📧 Email Debug - Local Development</h2>
+                <h2><i class='fas fa-envelope'></i> Email Debug - Local Development</h2>
                 <p><strong>To:</strong> {$to}</p>
                 <p><strong>Subject:</strong> {$subject}</p>
                 <p><strong>Time:</strong> " . date('Y-m-d H:i:s') . "</p>
@@ -1729,11 +1732,11 @@ function iipm_send_welcome_email($user_id, $email, $first_name) {
 
 	Your account has been created successfully and is now ACTIVE. You can immediately access all member benefits:
 	
-	🎯 Access your member portal: {$portal_url}
-	📚 Browse professional development courses
-	🎓 Track your CPD points
-	📅 Register for events and conferences
-	📋 Download member resources
+	<i class='fas fa-bullseye'></i> Access your member portal: {$portal_url}
+	<i class='fas fa-book'></i> Browse professional development courses
+	<i class='fas fa-graduation-cap'></i> Track your CPD points
+	<i class='fas fa-calendar'></i> Register for events and conferences
+	<i class='fas fa-clipboard-list'></i> Download member resources
 	
 	Your membership is now active and ready to use!
 	
@@ -2941,9 +2944,9 @@ function iipm_debug_database() {
 		
 		if ($exists) {
 			$count = $wpdb->get_var("SELECT COUNT(*) FROM $full_table_name");
-			echo "<p>✅ $table: $count records</p>";
+			echo "<p><i class='fas fa-check'></i> $table: $count records</p>";
 		} else {
-			echo "<p>❌ $table: Table does not exist</p>";
+			echo "<p><i class='fas fa-times'></i> $table: Table does not exist</p>";
 		}
 	}
 	
@@ -4192,22 +4195,22 @@ function iipm_get_organisation_active_members($organisation_id) {
 
 function iipm_get_activity_icon($action) {
 	$icons = array(
-		'login' => '🔐',
-		'logout' => '🚪',
-		'registration' => '📝',
-		'profile_update' => '👤',
-		'email_verified' => '✅',
-		'bulk_import' => '📊',
-		'cpd_logged' => '📚',
-		'event_registered' => '📅',
-		'payment_made' => '💳',
-		'leave_request_submitted' => '📋',
-		'leave_request_approved' => '✅',
-		'leave_request_rejected' => '❌',
-		'leave_request_cancelled' => '🚫'
+		'login' => '<i class="fas fa-lock"></i>',
+		'logout' => '<i class="fas fa-sign-out-alt"></i>',
+		'registration' => '<i class="fas fa-edit"></i>',
+		'profile_update' => '<i class="fas fa-user"></i>',
+		'email_verified' => '<i class="fas fa-check"></i>',
+		'bulk_import' => '<i class="fas fa-chart-bar"></i>',
+		'cpd_logged' => '<i class="fas fa-book"></i>',
+		'event_registered' => '<i class="fas fa-calendar"></i>',
+		'payment_made' => '<i class="fas fa-credit-card"></i>',
+		'leave_request_submitted' => '<i class="fas fa-clipboard-list"></i>',
+		'leave_request_approved' => '<i class="fas fa-check"></i>',
+		'leave_request_rejected' => '<i class="fas fa-times"></i>',
+		'leave_request_cancelled' => '<i class="fas fa-ban"></i>'
 	);
 	
-	return $icons[$action] ?? '📋';
+	return $icons[$action] ?? '<i class="fas fa-clipboard-list"></i>';
 }
 
 if (!defined('WP_DEBUG')) {

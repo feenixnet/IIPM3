@@ -274,7 +274,7 @@ get_header();
                         <!-- Error Display Area -->
                         <div id="registration-errors" class="error-container" style="display:none;">
                             <div class="error-header">
-                                <span class="error-icon">⚠️</span>
+                                <span class="error-icon"><i class="fas fa-exclamation-triangle"></i></span>
                                 <span class="error-title">Registration Error</span>
                             </div>
                             <div class="error-content">
@@ -309,7 +309,7 @@ get_header();
                             
                             <div class="success-details">
                                 <div class="detail-item">
-                                    <div class="detail-icon">📧</div>
+                                    <div class="detail-icon"><i class="fas fa-envelope"></i></div>
                                     <div class="detail-text">
                                         <strong>Email Verification</strong>
                                         <span>Check your inbox for verification link</span>
@@ -317,7 +317,7 @@ get_header();
                                 </div>
                                 
                                 <div class="detail-item">
-                                    <div class="detail-icon">👤</div>
+                                    <div class="detail-icon"><i class="fas fa-user"></i></div>
                                     <div class="detail-text">
                                         <strong>Complete Profile</strong>
                                         <span>Add additional information</span>
@@ -325,7 +325,7 @@ get_header();
                                 </div>
                                 
                                 <div class="detail-item">
-                                    <div class="detail-icon">🚀</div>
+                                    <div class="detail-icon"><i class="fas fa-rocket"></i></div>
                                     <div class="detail-text">
                                         <strong>Access Dashboard</strong>
                                         <span>Start using IIPM services</span>

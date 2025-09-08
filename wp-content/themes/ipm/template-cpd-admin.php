@@ -27,20 +27,20 @@ get_header();
         <!-- Admin Navigation -->
         <div class="admin-nav">
             <button class="nav-btn active" data-section="submissions">
-                <span class="icon">📋</span>
+                <span class="icon"><i class="fas fa-clipboard-list"></i></span>
                 Review Submissions
                 <span class="badge" id="pending-count">0</span>
             </button>
             <button class="nav-btn" data-section="courses">
-                <span class="icon">📚</span>
+                <span class="icon"><i class="fas fa-book"></i></span>
                 Manage Courses
             </button>
             <button class="nav-btn" data-section="reports">
-                <span class="icon">📊</span>
+                <span class="icon"><i class="fas fa-chart-bar"></i></span>
                 CPD Reports
             </button>
             <button class="nav-btn" data-section="certificates">
-                <span class="icon">🎓</span>
+                <span class="icon"><i class="fas fa-graduation-cap"></i></span>
                 Certificates
             </button>
             <button class="nav-btn" data-section="bulk-import">
@@ -73,7 +73,7 @@ get_header();
                 <h2>Course Management</h2>
                 <div class="section-actions">
                     <button class="btn btn-primary" id="add-course-btn">
-                        <span class="icon">➕</span>
+                        <span class="icon"><i class="fas fa-plus"></i></span>
                         Add New Course
                     </button>
                 </div>
@@ -100,7 +100,7 @@ get_header();
                         <div class="search-input-group">
                             <input type="text" id="search-courses" class="form-control" placeholder="Search courses...">
                             <button class="btn btn-primary" id="search-button" type="button">
-                                <span class="btn-icon">🔍</span>
+                                <span class="btn-icon"><i class="fas fa-search"></i></span>
                                 Search
                             </button>
                         </div>
@@ -119,16 +119,16 @@ get_header();
                         <div class="list-actions">
                             <div class="view-toggle">
                                 <button class="btn btn-outline view-btn active" id="card-view-btn" data-view="card">
-                                    <span class="btn-icon">📋</span>
+                                    <span class="btn-icon"><i class="fas fa-clipboard-list"></i></span>
                                     Card View
                                 </button>
                                 <button class="btn btn-outline view-btn" id="table-view-btn" data-view="table">
-                                    <span class="btn-icon">📊</span>
+                                    <span class="btn-icon"><i class="fas fa-chart-bar"></i></span>
                                     Table View
                                 </button>
                             </div>
                             <button class="btn btn-outline" id="refresh-courses">
-                                <span class="btn-icon">🔄</span>
+                                <span class="btn-icon"><i class="fas fa-sync-alt"></i></span>
                                 Refresh
                             </button>
                         </div>

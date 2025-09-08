@@ -176,6 +176,7 @@ if (!empty($_GET['sort'])) {
 $args = array(
     'post_type' => 'downloads',
     'posts_per_page' => 15,
+    
     'orderby' => $orderby,
     'order' => $order,
     'paged' => $paged,

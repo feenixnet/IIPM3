@@ -72,19 +72,19 @@ get_header();
                 <div class="cpd-course-card">
                     <div class="unassigned-user-section" id="unassigned-user-section">
                         <div class="unassigned-content">
-                            <div class="unassigned-icon">🎓</div>
+                            <div class="unassigned-icon"><i class="fas fa-graduation-cap"></i></div>
                             <h3>Welcome to CPD Training</h3>
                             <p class="unassigned-description">
                                 You haven't been assigned to the current CPD cycle yet. Click the button below to join and start your professional development journey.
                             </p>
                             
                             <button class="btn btn-primary assign-btn-large" id="assign-to-cpd-btn-large">
-                                <span class="btn-icon">📝</span>
+                                <span class="btn-icon"><i class="fas fa-edit"></i></span>
                                 Assign to CPD
                             </button>
                             
                             <div class="logging-period-info" id="logging-period-info">
-                                <div class="period-icon">📅</div>
+                                <div class="period-icon"><i class="fas fa-calendar"></i></div>
                                 <div class="period-details">
                                     <h4>Logging Period</h4>
                                     <p id="logging-period-text">Loading dates...</p>
@@ -187,7 +187,7 @@ get_header();
                     <!-- CPD Assignment and Submission Buttons -->
                     <div class="cpd-action-buttons" id="cpd-action-buttons" style="display: none;">
                         <button class="btn btn-success" id="submit-cpd-btn">
-                            <span class="btn-icon">✅</span>
+                            <span class="btn-icon"><i class="fas fa-check"></i></span>
                             Submit CPD
                         </button>
                     </div>
@@ -207,7 +207,7 @@ get_header();
                     </div>
                     
                     <div class="alert-banner">
-                        <span class="alert-icon">⚠️</span>
+                        <span class="alert-icon"><i class="fas fa-exclamation-triangle"></i></span>
                         <span class="alert-text" id="deadline-warning">Submit your CPD before the deadline</span>
                     </div>
                 </div>
@@ -218,15 +218,15 @@ get_header();
                 <!-- Quick Links -->
                 <div class="quick-links">
                     <div class="quick-link-card" id="all-courses-card">
-                        <div class="card-icon">📚</div>
+                        <div class="card-icon"><i class="fas fa-book"></i></div>
                         <h4>All Courses</h4>
-                        <a href="<?php echo home_url('/cpd-courses/'); ?>" class="card-link">Browse courses →</a>
+                        <a href="<?php echo home_url('/cpd-courses/'); ?>" class="card-link">Browse courses <i class="fas fa-arrow-right"></i></a>
                     </div>
                     
                     <div class="quick-link-card">
-                        <div class="card-icon">📅</div>
+                        <div class="card-icon"><i class="fas fa-calendar"></i></div>
                         <h4>Submit Leave Request</h4>
-                        <a href="#" class="card-link">Submit →</a>
+                        <a href="#" class="card-link">Submit <i class="fas fa-arrow-right"></i></a>
                     </div>
                 </div>
 
@@ -243,7 +243,7 @@ get_header();
                         </div>
                     </div>
                     
-                    <a href="#" class="see-history-link">See training history →</a>
+                    <a href="#" class="see-history-link">See training history <i class="fas fa-arrow-right"></i></a>
                 </div>
             </div>
             <?php endif; ?>
@@ -264,13 +264,13 @@ get_header();
             
             <div class="training-options">
                 <div class="training-option" id="pre-approved-option">
-                    <div class="option-icon">📚</div>
+                    <div class="option-icon"><i class="fas fa-book"></i></div>
                     <h4>Pre-approved Course</h4>
                     <p>Select from our library of approved courses. Automatically approved upon submission.</p>
                 </div>
                 
                 <div class="training-option" id="external-training-option">
-                    <div class="option-icon">📝</div>
+                    <div class="option-icon"><i class="fas fa-edit"></i></div>
                     <h4>External Training</h4>
                     <p>Submit training from external providers. Requires approval from admin.</p>
                 </div>
@@ -1787,7 +1787,7 @@ get_header();
             alert.className = 'cpd-alert';
             alert.innerHTML = `
                 <div class="alert-content">
-                    <span class="alert-icon">⚠️</span>
+                    <span class="alert-icon"><i class="fas fa-exclamation-triangle"></i></span>
                     <span class="alert-message">${message}</span>
                     <button class="alert-close">×</button>
                 </div>

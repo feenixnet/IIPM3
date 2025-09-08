@@ -1057,11 +1057,11 @@ Welcome to the Irish Institute of Pensions Management! Your administrator accoun
 
 As an organisation administrator, you now have access to:
 
-🏢 Organisation Dashboard: {$portal_url}
-📊 Bulk Member Import: {$bulk_import_url}
-👥 Member Management Tools
-📈 Reporting and Analytics
-💳 Payment and Billing Management
+<i class='fas fa-building'></i> Organisation Dashboard: {$portal_url}
+<i class='fas fa-chart-bar'></i> Bulk Member Import: {$bulk_import_url}
+<i class='fas fa-users'></i> Member Management Tools
+<i class='fas fa-chart-line'></i> Reporting and Analytics
+<i class='fas fa-credit-card'></i> Payment and Billing Management
 
 Getting Started:
 1. Log in to your dashboard: {$portal_url}
@@ -1070,7 +1070,7 @@ Getting Started:
 4. Start importing your team members
 
 Need help getting started? Our support team is here to assist:
-📧 Email: info@iipm.ie
+<i class='fas fa-envelope'></i> Email: info@iipm.ie
 📞 Phone: +353 (0)1 613 0874
 
 Best regards,

@@ -33,7 +33,7 @@ get_header();
         </div>
         <div class="header-right">
             <button class="btn btn-primary" id="add-course-btn">
-                <span class="btn-icon">➕</span>
+                <span class="btn-icon"><i class="fas fa-plus"></i></span>
                 Add New Course
             </button>
         </div>
@@ -58,7 +58,7 @@ get_header();
             <div class="search-input-group">
                 <input type="text" id="search-courses" class="form-control" placeholder="Search courses...">
                 <button class="btn btn-primary" id="search-button" type="button">
-                    <span class="btn-icon">🔍</span>
+                    <span class="btn-icon"><i class="fas fa-search"></i></span>
                     Search
                 </button>
             </div>
@@ -77,16 +77,16 @@ get_header();
             <div class="list-actions">
                 <div class="view-toggle">
                     <button class="btn btn-outline view-btn active" id="card-view-btn" data-view="card">
-                        <span class="btn-icon">📋</span>
+                        <span class="btn-icon"><i class="fas fa-clipboard-list"></i></span>
                         Card View
                     </button>
                     <button class="btn btn-outline view-btn" id="table-view-btn" data-view="table">
-                        <span class="btn-icon">📊</span>
+                        <span class="btn-icon"><i class="fas fa-chart-bar"></i></span>
                         Table View
                     </button>
                 </div>
                 <button class="btn btn-outline" id="refresh-courses">
-                    <span class="btn-icon">🔄</span>
+                    <span class="btn-icon"><i class="fas fa-sync-alt"></i></span>
                     Refresh
                 </button>
             </div>
@@ -162,7 +162,7 @@ get_header();
         <div class="modal-footer">
             <button type="button" class="btn btn-outline" id="cancel-course">Cancel</button>
             <button type="button" class="btn btn-primary" id="save-course">
-                <span class="btn-icon">💾</span>
+                <span class="btn-icon"><i class="fas fa-save"></i></span>
                 Save Course
             </button>
         </div>
@@ -184,7 +184,7 @@ get_header();
         <div class="modal-footer">
             <button type="button" class="btn btn-outline" id="cancel-delete">Cancel</button>
             <button type="button" class="btn btn-danger" id="confirm-delete">
-                <span class="btn-icon">🗑️</span>
+                <span class="btn-icon"><i class="fas fa-trash-alt"></i></span>
                 Delete Course
             </button>
         </div>
@@ -1129,7 +1129,7 @@ jQuery(document).ready(function($) {
         if (coursesToShow.length === 0) {
             const emptyStateHtml = `
                 <div class="empty-state">
-                    <div class="empty-state-icon">📚</div>
+                    <div class="empty-state-icon"><i class="fas fa-book"></i></div>
                     <h3>No courses found</h3>
                     <p>No courses match your current filters.</p>
                 </div>
@@ -1169,11 +1169,11 @@ jQuery(document).ready(function($) {
                     </div>
                     <div class="course-actions">
                         <button class="btn btn-outline edit-course" data-course-id="${course.id}">
-                            <span class="btn-icon">✏️</span>
+                            <span class="btn-icon"><i class="fas fa-edit"></i></span>
                             Edit
                         </button>
                         <button class="btn btn-danger delete-course" data-course-id="${course.id}">
-                            <span class="btn-icon">🗑️</span>
+                            <span class="btn-icon"><i class="fas fa-trash-alt"></i></span>
                             Delete
                         </button>
                     </div>
@@ -1208,11 +1208,11 @@ jQuery(document).ready(function($) {
                     <td>
                         <div class="table-actions">
                             <button class="btn btn-outline edit-course" data-course-id="${course.id}">
-                                <span class="btn-icon">✏️</span>
+                                <span class="btn-icon"><i class="fas fa-edit"></i></span>
                                 Edit
                             </button>
                             <button class="btn btn-danger delete-course" data-course-id="${course.id}">
-                                <span class="btn-icon">🗑️</span>
+                                <span class="btn-icon"><i class="fas fa-trash-alt"></i></span>
                                 Delete
                             </button>
                         </div>
@@ -1313,7 +1313,7 @@ jQuery(document).ready(function($) {
         
         const $saveBtn = $('#save-course');
         const originalText = $saveBtn.html();
-        $saveBtn.html('<span class="btn-icon">⏳</span> Saving...');
+        $saveBtn.html('<span class="btn-icon"><i class="fas fa-spinner fa-spin"></i></span> Saving...');
         $saveBtn.prop('disabled', true);
         
         $.ajax({
@@ -1370,7 +1370,7 @@ jQuery(document).ready(function($) {
         
         const $deleteBtn = $('#confirm-delete');
         const originalText = $deleteBtn.html();
-        $deleteBtn.html('<span class="btn-icon">⏳</span> Deleting...');
+        $deleteBtn.html('<span class="btn-icon"><i class="fas fa-spinner fa-spin"></i></span> Deleting...');
         $deleteBtn.prop('disabled', true);
         
         $.ajax({

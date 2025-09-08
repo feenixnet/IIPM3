@@ -189,8 +189,8 @@ p {
   line-height: normal;
 }
 .title-lg {
-  font-size: 68px;
-  color: #000;
+  font-size: 68px !important;
+  color: white !important;
   font-style: normal;
   font-weight: 600;
   line-height: 70px;
@@ -974,7 +974,7 @@ h1 {
   margin-top: 50px;
 }
 .banner {
-  height: 100vh;
+  height: 400px;
   position: relative;
   display: flex;
   align-items: center;
@@ -2313,7 +2313,7 @@ section.single-events .container {
   background: url(../img/checked.webp) center no-repeat;
 }
 .login-content {
-  position: absolute;
+  /* position: absolute; */
   top: 0;
   left: 0;
   width: 100%;

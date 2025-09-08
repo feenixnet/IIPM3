@@ -55,7 +55,7 @@ get_header();
                     <div class="text"><?php echo get_field('login_text'); ?></div>
                 </div>
                 
-                <div class="login-content__right" style="z-index:10">
+                <div class="login-content__right" style="z-index:10;position: relative;top: -184px;">
                     <div class="title-md text-purple" style="font-size:50px">Log in</div>
                     
                     <?php if (isset($login_error)): ?>
@@ -67,7 +67,7 @@ get_header();
                     <form method="post" action="" class="login-form">
                         <?php wp_nonce_field('iipm_login_nonce', 'login_nonce'); ?>
                         
-                        <label>
+                        <label style="text-align: left;">
                             E-mail Address
                             <input type="email" name="email" placeholder="johndoe@iipm.ie" 
                                    value="<?php echo isset($_POST['email']) ? esc_attr($_POST['email']) : ''; ?>" 

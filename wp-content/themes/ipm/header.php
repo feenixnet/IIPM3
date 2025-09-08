@@ -574,7 +574,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
 				/* Arrow indicator */
 				.user-menu .login::after {
-					content: "▼" !important;
+					content: "\f078" !important;
 					font-size: 10px !important;
 					margin-left: 8px !important;
 					transition: transform 0.3s ease !important;

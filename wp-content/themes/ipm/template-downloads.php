@@ -23,7 +23,7 @@ get_header() ?>
     </div>
     <div class="browse">
         <div class="container">
-            <div class="text-40 "><?php echo get_field('browse_title'); ?></div>
+            <div class="text-40 "><?php echo get_field('browse_title'); ?> 111</div>
             <div class="browse__items">
                 <?php
                 if (have_rows('browse_repeater')):

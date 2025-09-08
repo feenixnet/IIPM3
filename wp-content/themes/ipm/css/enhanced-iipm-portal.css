@@ -1,5 +1,99 @@
 /* Enhanced IIPM Portal Styles */
 
+/* FontAwesome Icon Styles */
+.fas,
+.far,
+.fab,
+.fal,
+.fad {
+  font-family: "Font Awesome 6 Free", "Font Awesome 6 Pro",
+    "Font Awesome 6 Brands" !important;
+  font-weight: 900;
+  font-style: normal;
+  font-variant: normal;
+  text-rendering: auto;
+  line-height: 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.far {
+  font-weight: 400;
+}
+
+.fab {
+  font-weight: 400;
+}
+
+/* Icon spacing and alignment */
+.stat-icon i,
+.btn-icon i,
+.detail-icon i,
+.error-icon i,
+.notice-icon i,
+.faq-toggle i,
+.card-icon i,
+.option-icon i,
+.period-icon i,
+.unassigned-icon i,
+.alert-icon i {
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+/* Ensure icons are properly sized */
+.stat-icon i {
+  font-size: 2rem;
+  color: #8b5a96;
+}
+
+.btn-icon i {
+  font-size: 1rem;
+}
+
+.detail-icon i {
+  font-size: 1.5rem;
+  color: #10b981;
+}
+
+.error-icon i {
+  color: #ef4444;
+}
+
+.notice-icon i {
+  color: #f59e0b;
+}
+
+.faq-toggle i {
+  transition: transform 0.3s ease;
+}
+
+.faq-item.expanded .faq-toggle i {
+  transform: rotate(180deg);
+}
+
+/* Card and option icons */
+.card-icon i,
+.option-icon i {
+  font-size: 2rem;
+  color: #8b5a96;
+}
+
+.period-icon i {
+  font-size: 1.5rem;
+  color: #10b981;
+}
+
+.unassigned-icon i {
+  font-size: 3rem;
+  color: #8b5a96;
+}
+
+.alert-icon i {
+  color: #f59e0b;
+  font-size: 1.2rem;
+}
+
 /* Base Styles */
 .iipm-member-portal,
 .iipm-registration-page,
@@ -1090,7 +1184,7 @@ input[type="checkbox"]:focus {
 /* Checkbox Label Styles */
 label {
   display: inline-flex;
-  align-items: center;
+  /* align-items: center; */
   gap: 8px;
   cursor: pointer;
   font-size: 14px;

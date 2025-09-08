@@ -158,10 +158,10 @@
   color: #8b5a96 !important;
 }
 
-.title-md {
+/* .title-md {
   font-size: 1.5rem;
   font-weight: 600;
-}
+} */
 
 .banner {
   position: relative;
@@ -188,6 +188,12 @@
 .banner .container {
   position: relative;
   z-index: 2;
+}
+
+/* Banner title styling - white text */
+.banner .title-lg {
+  color: white !important;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
 /* IIPM Portal Styles */
@@ -1252,7 +1258,7 @@
 /* Ensure banner sections cover the header properly */
 .banner {
   margin-top: -120px !important;
-  padding-top: 160px !important;
+  padding-top: 235px !important;
   position: relative !important;
   z-index: 10 !important;
 }

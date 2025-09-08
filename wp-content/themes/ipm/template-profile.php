@@ -521,7 +521,7 @@ get_header();
                     <div class="order-details-header">
                         <div class="back-navigation">
                             <a href="javascript:void(0)" onclick="showSection('payment')" class="back-link">
-                                ← Back to order list
+                                <i class="fas fa-arrow-left"></i> Back to order list
                             </a>
                         </div>
                         <h2 id="order-details-title">Order Details - 2210</h2>
@@ -703,7 +703,7 @@ get_header();
                                 <div class="faq-item">
                                     <div class="faq-question" onclick="toggleFAQ(this)">
                                         <span>How to log my CPD hours?</span>
-                                        <span class="faq-toggle">▼</span>
+                                        <span class="faq-toggle"><i class="fas fa-chevron-down"></i></span>
                                     </div>
                                     <div class="faq-answer">
                                         <p>You can log your CPD hours by going to the CPD Record section in your profile. Click "Add New Record" and fill in the details of your professional development activity including the date, duration, and description.</p>
@@ -713,7 +713,7 @@ get_header();
                                 <div class="faq-item">
                                     <div class="faq-question" onclick="toggleFAQ(this)">
                                         <span>How do I submit my CPD return?</span>
-                                        <span class="faq-toggle">▼</span>
+                                        <span class="faq-toggle"><i class="fas fa-chevron-down"></i></span>
                                     </div>
                                     <div class="faq-answer">
                                         <p>To submit your CPD return, navigate to the CPD Record page and click "Submit CPD Return" button. Ensure you have completed the minimum required hours before submitting.</p>
@@ -723,7 +723,7 @@ get_header();
                                 <div class="faq-item">
                                     <div class="faq-question" onclick="toggleFAQ(this)">
                                         <span>How do I reset my password?</span>
-                                        <span class="faq-toggle">▼</span>
+                                        <span class="faq-toggle"><i class="fas fa-chevron-down"></i></span>
                                     </div>
                                     <div class="faq-answer">
                                         <p>You can reset your password by going to Settings in your profile sidebar. Enter your current password and set a new one, or use the "Reset through e-mail" option to receive reset instructions via email.</p>
@@ -733,7 +733,7 @@ get_header();
                                 <div class="faq-item">
                                     <div class="faq-question" onclick="toggleFAQ(this)">
                                         <span>How do I submit a leave request?</span>
-                                        <span class="faq-toggle">▼</span>
+                                        <span class="faq-toggle"><i class="fas fa-chevron-down"></i></span>
                                     </div>
                                     <div class="faq-answer">
                                         <p><strong>To submit a leave request:</strong></p>
@@ -3172,11 +3172,11 @@ function toggleFAQ(questionElement) {
     if (isExpanded) {
         // Collapse
         faqItem.classList.remove('expanded');
-        toggle.textContent = '▼';
+        toggle.innerHTML = '<i class="fas fa-chevron-down"></i>';
     } else {
         // Expand
         faqItem.classList.add('expanded');
-        toggle.textContent = '▲';
+        toggle.innerHTML = '<i class="fas fa-chevron-up"></i>';
     }
 }
 
