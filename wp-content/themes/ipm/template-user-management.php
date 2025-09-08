@@ -95,14 +95,18 @@ get_header();
                             <input type="text" id="user-search" placeholder="Search users by name or email..." 
                                    style="width: 100%; padding: 12px 16px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 14px;">
                         </div>
+                        <div class="user-count-display" style="padding: 12px 16px; background: #f8fafc; border: 2px solid #e5e7eb; border-radius: 8px; font-weight: 500; color: #374151; min-width: 120px; text-align: center;">
+                            <span id="user-count-text">Loading...</span>
+                        </div>
                         
                         <div class="filter-controls" style="display: flex; gap: 15px; align-items: center;">
                             <select id="role-filter" style="padding: 12px 16px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 14px;">
                                 <option value="">All Roles</option>
-                                <option value="iipm_member">IIPM Member</option>
-                                <option value="iipm_corporate_admin">Corporate Admin</option>
-                                <option value="iipm_council_member">Council Member</option>
-                                <option value="administrator">Administrator</option>
+                                <option value="EmployerContact">Employer Contact</option>
+                                <option value="Full Member">Full Member</option>
+                                <option value="Life Member">Life Member</option>
+                                <option value="QPT Member">QPT Member</option>
+                                <option value="Systems Admin">Systems Admin</option>
                             </select>
                             
                             <select id="status-filter" style="padding: 12px 16px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 14px;">
@@ -283,11 +287,12 @@ get_header();
                     <label style="display: block; margin-bottom: 5px; font-weight: 500; color: #374151;">Role</label>
                     <select id="edit-role" name="role" 
                             style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px;">
-                        <option value="iipm_member">IIPM Member</option>
-                        <option value="iipm_corporate_admin">Corporate Admin</option>
-                        <option value="iipm_council_member">Council Member</option>
+                        <option value="EmployerContact">Employer Contact</option>
+                        <option value="Full Member">Full Member</option>
+                        <option value="Life Member">Life Member</option>
+                        <option value="QPT Member">QPT Member</option>
                         <?php if ($is_site_admin): ?>
-                        <option value="administrator">Administrator</option>
+                        <option value="Systems Admin">Administrator</option>
                         <?php endif; ?>
                     </select>
                 </div>
@@ -300,6 +305,23 @@ get_header();
                         <option value="inactive">Inactive</option>
                         <option value="suspended">Suspended</option>
                     </select>
+                </div>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                <div>
+                    <label style="display: block; margin-bottom: 5px; font-weight: 500; color: #374151;">Employer/Organization</label>
+                    <select id="edit-employer" name="employer_id" 
+                            style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px;">
+                        <option value="">Select Employer...</option>
+                        <!-- Options will be populated by JavaScript -->
+                    </select>
+                </div>
+                <div>
+                    <label style="display: block; margin-bottom: 5px; font-weight: 500; color: #374151;">Last Login</label>
+                    <div id="edit-last-login" style="padding: 10px; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 6px; color: #6b7280;">
+                        Loading...
+                    </div>
                 </div>
             </div>
             
@@ -529,8 +551,9 @@ jQuery(document).ready(function($) {
     let currentStatusFilter = '';
     let userToDelete = null;
 
-    // Load users on page load
+    // Load users and organizations on page load
     loadUsers();
+    fetchOrganizations();
 
     // Search functionality
     $('#user-search').on('input', function() {
@@ -593,6 +616,7 @@ jQuery(document).ready(function($) {
                 </td>
             </tr>
         `);
+        $('#user-count-text').text('Loading...');
 
         $.ajax({
             url: '<?php echo admin_url('admin-ajax.php'); ?>',
@@ -609,6 +633,7 @@ jQuery(document).ready(function($) {
                 if (response.success) {
                     displayUsers(response.data.users);
                     displayPagination(response.data.pagination);
+                    updateUserCount(response.data.pagination);
                 } else {
                     $('#users-table-body').html(`
                         <tr>
@@ -617,6 +642,7 @@ jQuery(document).ready(function($) {
                             </td>
                         </tr>
                     `);
+                    $('#user-count-text').text('Error');
                 }
             },
             error: function() {
@@ -627,6 +653,7 @@ jQuery(document).ready(function($) {
                         </td>
                     </tr>
                 `);
+                $('#user-count-text').text('Error');
             }
         });
     }
@@ -670,6 +697,26 @@ jQuery(document).ready(function($) {
         $('#users-table-body').html(html);
     }
 
+    // Update user count display
+    function updateUserCount(pagination) {
+        const totalUsers = pagination.total_users || 0;
+        const currentPage = pagination.current_page || 1;
+        const perPage = pagination.per_page || 20;
+        const startUser = ((currentPage - 1) * perPage) + 1;
+        const endUser = Math.min(currentPage * perPage, totalUsers);
+        
+        let countText;
+        if (totalUsers === 0) {
+            countText = 'No users found';
+        } else if (totalUsers <= perPage) {
+            countText = `${totalUsers} user${totalUsers === 1 ? '' : 's'}`;
+        } else {
+            countText = `${startUser}-${endUser} of ${totalUsers} users`;
+        }
+        
+        $('#user-count-text').text(countText);
+    }
+
     // Display pagination
     function displayPagination(pagination) {
         if (pagination.total_pages <= 1) {
@@ -704,6 +751,43 @@ jQuery(document).ready(function($) {
         loadUsers();
     };
 
+    // Global variable to store organizations
+    let organizations = [];
+
+    // Fetch organizations on page load
+    function fetchOrganizations() {
+        $.ajax({
+            url: '<?php echo admin_url('admin-ajax.php'); ?>',
+            type: 'POST',
+            data: {
+                action: 'iipm_get_all_organizations',
+                nonce: '<?php echo wp_create_nonce('iipm_user_management_nonce'); ?>'
+            },
+            success: function(response) {
+                if (response.success) {
+                    organizations = response.data;
+                    populateEmployerSelect();
+                } else {
+                    console.error('Error fetching organizations:', response.data);
+                }
+            },
+            error: function() {
+                console.error('Error fetching organizations');
+            }
+        });
+    }
+
+    // Populate employer select box
+    function populateEmployerSelect() {
+        const select = $('#edit-employer');
+        select.empty();
+        select.append('<option value="">Select Employer...</option>');
+        
+        organizations.forEach(function(org) {
+            select.append(`<option value="${org.id}">${org.name}</option>`);
+        });
+    }
+
     // Edit user function (global)
     window.editUser = function(userId) {
         $.ajax({
@@ -717,12 +801,21 @@ jQuery(document).ready(function($) {
             success: function(response) {
                 if (response.success) {
                     const user = response.data;
+                    console.log(user);
                     $('#edit-user-id').val(user.ID);
                     $('#edit-first-name').val(user.first_name);
                     $('#edit-last-name').val(user.last_name);
                     $('#edit-email').val(user.user_email);
                     $('#edit-role').val(user.roles[0]);
                     $('#edit-status').val(user.membership_status);
+                    
+                    // Set employer
+                    $('#edit-employer').val(user.employer_id || '');
+                    
+                    // Set last login
+                    const lastLogin = user.last_login || 'Never';
+                    $('#edit-last-login').text(lastLogin);
+                    
                     $('#edit-user-modal').css('display', 'flex');
                 } else {
                     alert('Error loading user details: ' + response.data);
@@ -760,7 +853,8 @@ jQuery(document).ready(function($) {
             last_name: $('#edit-last-name').val(),
             email: $('#edit-email').val(),
             role: $('#edit-role').val(),
-            status: $('#edit-status').val()
+            status: $('#edit-status').val(),
+            employer_id: $('#edit-employer').val()
         };
 
         // Only include password if it's not empty

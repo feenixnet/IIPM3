@@ -80,6 +80,12 @@ function iipm_get_users() {
         $where_params[] = $status_filter;
     }
     
+    // Role filter
+    if (!empty($role_filter)) {
+        $where_conditions[] = "mp.theUsersStatus = %s";
+        $where_params[] = $role_filter;
+    }
+    
     // Build WHERE clause
     $where_clause = '';
     if (!empty($where_conditions)) {
@@ -101,7 +107,7 @@ function iipm_get_users() {
     // Get users with pagination
     $users_sql = "
         SELECT u.ID, u.display_name, u.user_email, u.user_registered,
-               m.membership_status, m.last_login, mp.employer_id,
+               m.membership_status, m.last_login, mp.employer_id, mp.theUsersStatus,
                o.name as organisation_name
         FROM {$wpdb->users} u
         LEFT JOIN {$wpdb->prefix}test_iipm_members m ON u.ID = m.user_id
@@ -121,21 +127,24 @@ function iipm_get_users() {
         $wp_user = get_user_by('id', $user->ID);
         $user_roles = $wp_user->roles;
         
-        // Role filter
-        if (!empty($role_filter) && !in_array($role_filter, $user_roles)) {
-            continue;
-        }
+        // Get the actual role from query result
+        $actual_role = $user->theUsersStatus ?: '';
         
-        // Get role display name
+        // Get role display name - simplified mapping based on actual stored role
         $role_display = 'Member';
-        if (in_array('administrator', $user_roles)) {
-            $role_display = 'Administrator';
-        } elseif (in_array('iipm_corporate_admin', $user_roles)) {
-            $role_display = 'Corporate Admin';
-        } elseif (in_array('iipm_council_member', $user_roles)) {
-            $role_display = 'Council Member';
-        } elseif (in_array('iipm_member', $user_roles)) {
-            $role_display = 'IIPM Member';
+        if ($actual_role === 'Systems Admin' || in_array('administrator', $user_roles)) {
+            $role_display = 'Systems Admin';
+        } elseif ($actual_role === 'EmployerContact') {
+            $role_display = 'Employer Contact';
+        } elseif ($actual_role === 'Full Member') {
+            $role_display = 'Full Member';
+        } elseif ($actual_role === 'Life Member') {
+            $role_display = 'Life Member';
+        } elseif ($actual_role === 'QPT Member') {
+            $role_display = 'QPT Member';
+        } else {
+            // For any other member types, show as "Member"
+            $role_display = 'Member';
         }
         
         $processed_users[] = array(
@@ -219,14 +228,23 @@ function iipm_get_user_details() {
         "SELECT * FROM {$wpdb->prefix}test_iipm_members WHERE user_id = %d",
         $user_id
     ));
+
+    $member_profile_data = $wpdb->get_row($wpdb->prepare(
+        "SELECT * FROM {$wpdb->prefix}test_iipm_member_profiles WHERE user_id = %d",
+        $user_id
+    ));
+
+    error_log(print_r($member_profile_data, true));
     
     wp_send_json_success(array(
         'ID' => $user->ID,
-        'first_name' => $user->first_name,
-        'last_name' => $user->last_name,
+        'first_name' => $member_profile_data->first_name,
+        'last_name' => $member_profile_data->sur_name,
         'user_email' => $user->user_email,
-        'roles' => $user->roles,
-        'membership_status' => $member_data ? $member_data->membership_status : 'pending'
+        'roles' => array($member_profile_data->theUsersStatus),
+        'membership_status' => $member_data ? $member_data->membership_status : 'pending',
+        'employer_id' => $member_profile_data->employer_id,
+        'last_login' => $member_data ? ($member_data->last_login ? date('M j, Y g:i A', strtotime($member_data->last_login)) : 'Never') : 'Never'
     ));
 }
 add_action('wp_ajax_iipm_get_user_details', 'iipm_get_user_details');
@@ -253,6 +271,7 @@ function iipm_update_user() {
     $email = sanitize_email($_POST['email']);
     $role = sanitize_text_field($_POST['role']);
     $status = sanitize_text_field($_POST['status']);
+    $employer_id = intval($_POST['employer_id'] ?? 0);
     
     if (!$user_id || !$first_name || !$last_name || !$email) {
         wp_send_json_error('Missing required fields');
@@ -281,7 +300,7 @@ function iipm_update_user() {
         }
         
         // Org admins cannot assign administrator role
-        if ($role === 'administrator') {
+        if ($role === 'Systems Admin') {
             wp_send_json_error('You cannot assign administrator role');
             return;
         }
@@ -321,6 +340,23 @@ function iipm_update_user() {
     
     // Update membership status
     global $wpdb;
+    $wpdb->update(
+        $wpdb->prefix . 'test_iipm_member_profiles',
+        array(
+            'theUsersStatus' => $role, 
+            'email_address' => $email, 
+            'first_name' => $first_name, 
+            'sur_name' => $last_name, 
+            'user_fullName' => $first_name . ' ' . $last_name,
+            'user_is_admin' => $role === 'Systems Admin' ? 1 : 0,
+            'employer_id' => $employer_id,
+            'dateOfUpdateGen' => current_time('mysql')
+        ),
+        array('user_id' => $user_id),
+        array('%s', '%s', '%s', '%s', '%s', '%d', '%d', '%s'),
+        array('%d')
+    );
+
     $wpdb->update(
         $wpdb->prefix . 'test_iipm_members',
         array('membership_status' => $status),
@@ -467,4 +503,35 @@ function iipm_sync_last_login_data() {
     ));
 }
 add_action('wp_ajax_iipm_sync_last_login_data', 'iipm_sync_last_login_data');
+
+// Get all organizations for select box
+function iipm_get_all_organizations() {
+    // Check permissions
+    if (!current_user_can('administrator') && 
+        !current_user_can('manage_organisation_members') && 
+        !in_array('iipm_corporate_admin', wp_get_current_user()->roles)) {
+        wp_send_json_error('Insufficient permissions');
+        return;
+    }
+    
+    // Verify nonce
+    if (!wp_verify_nonce($_POST['nonce'], 'iipm_user_management_nonce')) {
+        wp_send_json_error('Security check failed');
+        return;
+    }
+    
+    global $wpdb;
+    
+    $organizations = $wpdb->get_results(
+        "SELECT id, name FROM {$wpdb->prefix}test_iipm_organisations WHERE is_active = 1 ORDER BY name"
+    );
+    
+    if ($organizations === false) {
+        wp_send_json_error('Database error');
+        return;
+    }
+    
+    wp_send_json_success($organizations);
+}
+add_action('wp_ajax_iipm_get_all_organizations', 'iipm_get_all_organizations');
 ?>
