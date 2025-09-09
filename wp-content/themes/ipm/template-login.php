@@ -15,13 +15,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login_submit'])) {
     if (is_wp_error($user)) {
         $login_error = $user->get_error_message();
     } else {
-        // Login successful
-        wp_set_current_user($user->ID);
-        wp_set_auth_cookie($user->ID, $remember);
+        // Login successful - use wp_signon to trigger wp_login action
+        $credentials = array(
+            'user_login' => $email,
+            'user_password' => $password,
+            'remember' => $remember
+        );
         
-        // Redirect to dashboard instead of member portal
-        wp_redirect(home_url('/dashboard/'));
-        exit;
+        $user = wp_signon($credentials);
+        
+        if (is_wp_error($user)) {
+            $login_error = $user->get_error_message();
+        } else {
+            // Redirect to dashboard instead of member portal
+            wp_redirect(home_url('/dashboard/'));
+            exit;
+        }
     }
 }
 

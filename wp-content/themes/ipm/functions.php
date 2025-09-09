@@ -1245,14 +1245,40 @@ function iipm_log_login_activity($user_login, $user) {
 	if ($user instanceof WP_User) {
 		global $wpdb;
 		
-		$wpdb->update(
-			$wpdb->prefix . 'test_iipm_members',
-			array('last_login' => current_time('mysql')),
-			array('user_id' => $user->ID),
-			array('%s'),
-			array('%d')
-		);
+		// Check if user exists in test_iipm_members table
+		$member_exists = $wpdb->get_var($wpdb->prepare(
+			"SELECT COUNT(*) FROM {$wpdb->prefix}test_iipm_members WHERE user_id = %d",
+			$user->ID
+		));
 		
+		// If user doesn't exist in members table, create entry
+		if (!$member_exists) {
+			$wpdb->insert(
+				$wpdb->prefix . 'test_iipm_members',
+				array(
+					'user_id' => $user->ID,
+					'membership_status' => 'active',
+					'last_login' => current_time('mysql'),
+					'created_at' => current_time('mysql')
+				),
+				array('%d', '%s', '%s', '%s')
+			);
+			error_log("IIPM: Created new member entry for user ID {$user->ID}");
+		} else {
+			// Update last_login timestamp in test_iipm_members table
+			$result = $wpdb->update(
+				$wpdb->prefix . 'test_iipm_members',
+				array('last_login' => current_time('mysql')),
+				array('user_id' => $user->ID),
+				array('%s'),
+				array('%d')
+			);
+			
+			// Log for debugging
+			error_log("IIPM: Login logged for user ID {$user->ID} - Update result: " . ($result !== false ? 'Success' : 'Failed'));
+		}
+		
+		// Log the activity
 		iipm_log_user_activity($user->ID, 'login', 'User logged in');
 	}
 }

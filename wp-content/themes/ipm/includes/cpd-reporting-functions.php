@@ -185,7 +185,7 @@ function iipm_get_cpd_compliance_stats($year = null) {
         }
     }
     
-    $average_points = $assigned_members_with_cpd > 0 ? round($total_cpd_points / $assigned_members_with_cpd, 1) : 0;
+    $average_points = $assigned_members_with_cpd > 0 ? round($total_cpd_points / $assigned_members_with_cpd, 2) : 0;
     
     error_log('📊 Final stats - Total members: ' . $total_members . ', Assigned members: ' . $total_assigned_members . ', Assigned with CPD: ' . $assigned_members_with_cpd . ', Total CPD points: ' . $total_cpd_points . ', Average points: ' . $average_points);
     
@@ -349,7 +349,7 @@ function iipm_get_detailed_compliance_data($year = null, $type = null, $page = 1
             'earned_points' => $earned_points,
             'required_points' => $required_points,
             'shortage' => max(0, $required_points - $earned_points),
-            'progress_percentage' => round($progress_percentage, 1),
+            'progress_percentage' => round($progress_percentage, 2),
             'days_left' => $days_left,
             'compliance_status' => $earned_points >= $required_points ? 'Yes' : 'No',
             'is_high_risk' => $is_high_risk // High risk calculated in backend

@@ -387,7 +387,7 @@ $stats = iipm_get_cpd_compliance_stats($selected_year);
                     <div style="display: flex; flex-direction: column; gap: 15px;">
                         <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: #f8fafc; border-radius: 8px;">
                             <span style="color: #374151; font-weight: 500;">Average CPD Points:</span>
-                            <span style="color: #667eea; font-weight: bold;"><?php echo number_format($stats['average_points'], 1); ?></span>
+                            <span style="color: #667eea; font-weight: bold;"><?php echo number_format($stats['average_points'], 2); ?></span>
                         </div>
                         
                         <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: #f8fafc; border-radius: 8px;">

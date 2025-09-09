@@ -26,9 +26,9 @@ class IIPM_Navigation_Manager {
                 'User Management' => home_url('/user-management/'),
                 'Organisation Management' => home_url('/organisation-management/'),
                 
-                'Bulk Import' => home_url('/bulk-import/'),
+                'Bulk Import' => array('url' => home_url('/bulk-import/'), 'badge' => 'working on...'),
                 'CPD Reports' => home_url('/cpd-reports/'),
-                'CPD Administration' => home_url('/cpd-admin/'),
+                'CPD Administration' => array('url' => home_url('/cpd-admin/'), 'badge' => 'working on...'),
                 'Course Management' => home_url('/course-management/'),
                 'Leave Administration' => home_url('/leave-admin/'),
                 'File Dashboard' => home_url('/file-dashboard/'),
@@ -41,7 +41,7 @@ class IIPM_Navigation_Manager {
                 'Dashboard' => home_url('/dashboard/'),
                 'Employee Management' => home_url('/user-management/'),
                 
-                'Bulk Import' => home_url('/bulk-import/'),
+                'Bulk Import' => array('url' => home_url('/bulk-import/'), 'badge' => 'working on...'),
                 'CPD Reports' => home_url('/cpd-reports/'),
                 'Leave Management' => home_url('/leave-admin/'),
                 'My Leave Requests' => home_url('/leave-request/'),

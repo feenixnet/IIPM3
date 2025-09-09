@@ -313,6 +313,38 @@ function iipm_update_user() {
         return;
     }
     
+    // Check if employer is being changed and handle admin role cleanup
+    global $wpdb;
+    $current_employer = $wpdb->get_var($wpdb->prepare(
+        "SELECT employer_id FROM {$wpdb->prefix}test_iipm_member_profiles WHERE user_id = %d",
+        $user_id
+    ));
+    
+    $was_org_admin = null; // Initialize variable
+    
+    // If employer is being changed, check if user was admin of original organisation
+    if ($current_employer != $employer_id) {
+        // Check if user was admin of the original organisation
+        $was_org_admin = $wpdb->get_var($wpdb->prepare(
+            "SELECT admin_user_id FROM {$wpdb->prefix}test_iipm_organisations WHERE id = %d",
+            $current_employer
+        ));
+        
+        // If user was admin of original organisation, remove admin role
+        if ($was_org_admin == $user_id) {
+            $wpdb->update(
+                $wpdb->prefix . 'test_iipm_organisations',
+                array('admin_user_id' => null),
+                array('id' => $current_employer),
+                array('%s'),
+                array('%d')
+            );
+            
+            // Log the admin role removal
+            error_log("IIPM: Removed admin role from organisation ID {$current_employer} for user ID {$user_id} due to employer change");
+        }
+    }
+    
     // Update user data
     $user_data = array(
         'ID' => $user_id,
@@ -366,10 +398,17 @@ function iipm_update_user() {
     );
     
     // Log activity
+    $log_message = "Updated user: {$first_name} {$last_name} ({$email})";
+    
+    // Add admin role removal info to log if applicable
+    if ($current_employer != $employer_id && $was_org_admin == $user_id) {
+        $log_message .= " - Removed admin role from previous organisation";
+    }
+    
     iipm_log_user_activity(
         get_current_user_id(),
         'user_updated',
-        "Updated user: {$first_name} {$last_name} ({$email})"
+        $log_message
     );
     
     wp_send_json_success('User updated successfully');

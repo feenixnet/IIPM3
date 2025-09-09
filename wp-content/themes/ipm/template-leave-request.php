@@ -16,11 +16,12 @@ wp_enqueue_style('iipm-main-style', get_template_directory_uri() . '/assets/css/
 wp_enqueue_script('jquery');
 
 // Check if the modular header function exists, otherwise use default header
-if (function_exists('iipm_load_header')) {
-    iipm_load_header();
-} else {
-    get_header();
-}
+// if (function_exists('iipm_load_header')) {
+//     iipm_load_header();
+// } else {
+//     get_header();
+// }
+get_header();
 
 $current_user = wp_get_current_user();
 $user_id = $current_user->ID;
@@ -58,10 +59,27 @@ foreach ($leave_requests as $request) {
 }
 ?>
 
-<div class="iipm-portal-container">
-    <div class="iipm-portal-header">
-        <h1 class="portal-title">Leave Request</h1>
-    </div>
+<main id="primary" class="iipm-leave-request-page">
+    <!-- Hero Section -->
+    <section class="leave-request-hero" style="padding-top: 160px; position: relative; z-index: 1;">
+        <div class="hero-background">
+            <div class="hero-overlay"></div>
+        </div>
+        <div class="hero-content">
+            <div class="container">
+                <h1 class="hero-title"><i class="fas fa-calendar-plus"></i> Leave Request</h1>
+                <p class="hero-subtitle">Submit and manage your leave requests</p>
+                <div class="admin-nav">
+                    <a href="<?php echo home_url('/member-portal/'); ?>" class="btn btn-outline">Dashboard</a>
+                    <a href="<?php echo home_url('/leave-admin/'); ?>" class="btn btn-outline">Admin Panel</a>
+                    <a href="<?php echo wp_logout_url(home_url()); ?>" class="btn btn-outline">Logout</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="leave-request-page" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding-bottom: 20px;">
+        <div class="container" style="max-width: 1400px; margin: 0 auto; padding: 0 20px;">
 
     <div class="leave-request-content">
         <!-- Submit Leave Request Section -->
@@ -1485,5 +1503,9 @@ function getRequestData(requestId) {
     return requests.find(request => request.id == requestId);
 }
 </script>
+
+        </div>
+    </div>
+</main>
 
 <?php get_footer(); ?>

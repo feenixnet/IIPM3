@@ -572,6 +572,23 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 					padding-left: 24px !important;
 				}
 
+				/* Navigation Badge Styles */
+				.nav-badge {
+					background: #f59e0b !important;
+					color: white !important;
+					font-size: 10px !important;
+					font-weight: 600 !important;
+					padding: 2px 6px !important;
+					border-radius: 10px !important;
+					margin-left: 8px !important;
+					text-transform: uppercase !important;
+					letter-spacing: 0.5px !important;
+					display: inline-block !important;
+					line-height: 1.2 !important;
+					min-width: 60px !important;
+					text-align: center !important;
+				}
+
 				/* Arrow indicator */
 				.user-menu .login::after {
 					content: "\f078" !important;
@@ -652,8 +669,22 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                                  <?php 
                                  // Get role-based navigation
                                  $navigation = IIPM_Navigation_Manager::get_role_based_navigation();
-                                 foreach ($navigation as $menu_title => $menu_url): ?>
-                                     <a href="<?php echo esc_url($menu_url); ?>"><?php echo esc_html($menu_title); ?></a>
+                                 foreach ($navigation as $menu_title => $menu_data): 
+                                     // Handle both string URLs and array with badge
+                                     if (is_array($menu_data)) {
+                                         $menu_url = $menu_data['url'];
+                                         $badge = isset($menu_data['badge']) ? $menu_data['badge'] : '';
+                                     } else {
+                                         $menu_url = $menu_data;
+                                         $badge = '';
+                                     }
+                                 ?>
+                                     <a href="<?php echo esc_url($menu_url); ?>">
+                                         <?php echo esc_html($menu_title); ?>
+                                         <?php if ($badge): ?>
+                                             <span class="nav-badge"><?php echo esc_html($badge); ?></span>
+                                         <?php endif; ?>
+                                     </a>
                                  <?php endforeach; ?>
                              </div>
                         </div>

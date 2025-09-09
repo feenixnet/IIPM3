@@ -15,11 +15,13 @@ if (!is_user_logged_in() || (!current_user_can('administrator') && !current_user
 wp_enqueue_style('iipm-main-style', get_template_directory_uri() . '/assets/css/main.min.css', array(), '1.0.0');
 
 // Check if the modular header function exists, otherwise use default header
-if (function_exists('iipm_load_header')) {
-    iipm_load_header();
-} else {
-    get_header();
-}
+// if (function_exists('iipm_load_header')) {
+//     iipm_load_header();
+// } else {
+//     get_header();
+// }
+
+get_header();
 
 // Get all leave requests
 global $wpdb;
@@ -50,11 +52,19 @@ foreach ($leave_requests as $request) {
 }
 ?>
 
-<div class="iipm-portal-container">
-    <div class="iipm-portal-header">
-        <h1 class="portal-title">Leave Request Administration</h1>
-        <p class="portal-subtitle">Review and manage all leave requests</p>
-    </div>
+<main id="primary" class="iipm-leave-admin-page">
+    <!-- Hero Section -->
+     <div class="leave-header">
+        <div class="hero-content">
+            <div class="container">
+                <h1 class="hero-title"><i class="fas fa-calendar-check"></i> Leave Request Administration</h1>
+                <p class="hero-subtitle">Review and manage all leave requests from members</p>
+            </div>
+        </div>
+     </div>
+
+    <div class="leave-admin-page">
+        <div class="container" style="max-width: 1400px; margin: 0 auto; padding: 0 20px;">
 
     <!-- Statistics Cards -->
     <div class="stats-grid">
@@ -239,6 +249,14 @@ foreach ($leave_requests as $request) {
     margin: 0 auto;
     padding: 20px;
     font-family: 'Gabarito', sans-serif;
+}
+
+.leave-header {
+    background: linear-gradient(135deg, #8b5a96 0%, #6b4c93 100%);
+    color: white;
+    padding: 40px 0;
+    margin-bottom: 30px;
+    padding-top: 120px;
 }
 
 .portal-subtitle {
@@ -723,5 +741,9 @@ window.addEventListener('click', function(event) {
     }
 });
 </script>
+
+        </div>
+    </div>
+</main>
 
 <?php get_footer(); ?>
