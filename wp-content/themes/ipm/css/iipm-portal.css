@@ -165,9 +165,9 @@
 
 .banner {
   position: relative;
-  min-height: 300px;
+  /* min-height: 300px; */
   display: flex;
-  align-items: center;
+  /* align-items: center; */
   background: linear-gradient(
     135deg,
     rgba(139, 90, 150, 0.9) 0%,
@@ -1249,7 +1249,7 @@
 .portal-header,
 .dashboard-hero,
 .registration-hero {
-  margin-top: -120px !important; /* Pull it up to cover the header */
+  margin-top: -140px !important; /* Pull it up to cover the header */
   padding-top: 160px !important; /* Add padding to push content down */
   position: relative !important;
   z-index: 10 !important;
@@ -1257,7 +1257,7 @@
 
 /* Ensure banner sections cover the header properly */
 .banner {
-  margin-top: -120px !important;
+  /* margin-top: -120px !important; */
   padding-top: 235px !important;
   position: relative !important;
   z-index: 10 !important;
@@ -1280,8 +1280,7 @@
 @media (max-width: 768px) {
   .portal-header,
   .dashboard-hero,
-  .registration-hero,
-  .banner {
+  .registration-hero {
     margin-top: -100px !important;
     padding-top: 140px !important;
   }
