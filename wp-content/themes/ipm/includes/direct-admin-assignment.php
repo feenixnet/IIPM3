@@ -78,9 +78,15 @@ function iipm_direct_admin_assignment() {
     // Set user role to corporate admin
     $user->set_role('iipm_corporate_admin');
     
-    // Check if user is already a member of this organisation
+    // Check if user is already a member
     $member = $wpdb->get_row($wpdb->prepare(
         "SELECT * FROM {$wpdb->prefix}test_iipm_members WHERE user_id = %d",
+        $user_id
+    ));
+    
+    // Check if user has a member profile
+    $member_profile = $wpdb->get_row($wpdb->prepare(
+        "SELECT * FROM {$wpdb->prefix}test_iipm_member_profiles WHERE user_id = %d",
         $user_id
     ));
     
@@ -91,13 +97,12 @@ function iipm_direct_admin_assignment() {
             array(
                 'user_id' => $user_id,
                 'member_type' => 'organisation',
-                'organisation_id' => $org_id,
                 'membership_status' => 'active',
                 'gdpr_consent' => 1,
                 'email_verified' => 1,
                 'profile_completed' => 1
             ),
-            array('%d', '%s', '%d', '%s', '%d', '%d', '%d')
+            array('%d', '%s', '%s', '%d', '%d', '%d')
         );
         
         if ($member_result === false) {
@@ -108,17 +113,56 @@ function iipm_direct_admin_assignment() {
         $member_result = $wpdb->update(
             $wpdb->prefix . 'test_iipm_members',
             array(
-                'organisation_id' => $org_id,
                 'membership_status' => 'active',
                 'updated_at' => current_time('mysql')
+            ),
+            array('user_id' => $user_id),
+            array('%s', '%s'),
+            array('%d')
+        );
+        
+        if ($member_result === false) {
+            error_log('IIPM: Failed to update member record: ' . $wpdb->last_error);
+        }
+    }
+    
+    // Update or create member profile with employer_id
+    if (!$member_profile) {
+        // Create member profile
+        $profile_result = $wpdb->insert(
+            $wpdb->prefix . 'test_iipm_member_profiles',
+            array(
+                'user_id' => $user_id,
+                'employer_id' => $org_id,
+                'first_name' => $user->first_name,
+                'sur_name' => $user->last_name,
+                'user_fullName' => $user->display_name,
+                'email_address' => $user->user_email,
+                'theUsersStatus' => 'Systems Admin',
+                'dateOfUpdateGen' => current_time('mysql')
+            ),
+            array('%d', '%d', '%s', '%s', '%s', '%s', '%s', '%s')
+        );
+        
+        if ($profile_result === false) {
+            error_log('IIPM: Failed to create member profile: ' . $wpdb->last_error);
+        }
+    } else {
+        // Update existing member profile
+        $profile_result = $wpdb->update(
+            $wpdb->prefix . 'test_iipm_member_profiles',
+            array(
+                'employer_id' => $org_id,
+                'theUsersStatus' => 'Systems Admin',
+                'dateOfUpdateGen' => current_time('mysql')
             ),
             array('user_id' => $user_id),
             array('%d', '%s', '%s'),
             array('%d')
         );
         
-        if ($member_result === false) {
-            error_log('IIPM: Failed to update member record: ' . $wpdb->last_error);
+        if ($profile_result === false) {
+            error_log('IIPM: Failed to update member profile: ' . $wpdb->last_error);
         }
     }
     

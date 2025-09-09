@@ -288,12 +288,17 @@ function iipm_get_organisation_members() {
         return;
     }
     
-    if (!wp_verify_nonce($_POST['nonce'], 'iipm_portal_nonce')) {
+    // Support both nonces for backward compatibility
+    $nonce_valid = wp_verify_nonce($_POST['nonce'], 'iipm_portal_nonce') || 
+                   wp_verify_nonce($_POST['nonce'], 'iipm_user_management_nonce');
+    
+    if (!$nonce_valid) {
         wp_send_json_error('Security check failed');
         return;
     }
     
-    $org_id = intval($_POST['org_id']);
+    // Support both org_id and employer_id parameters
+    $org_id = intval($_POST['org_id'] ?? $_POST['employer_id'] ?? 0);
     
     if (!$org_id) {
         wp_send_json_error('Invalid organisation ID');
@@ -319,18 +324,84 @@ function iipm_get_organisation_members() {
     }
     
     global $wpdb;
-    $members = $wpdb->get_results($wpdb->prepare(
-        "SELECT u.ID as user_id, u.display_name, u.user_email, 
-                m.membership_status, m.created_at, m.last_login
-         FROM {$wpdb->prefix}test_iipm_members m
-         JOIN {$wpdb->users} u ON m.user_id = u.ID
-         JOIN {$wpdb->prefix}test_iipm_member_profiles mp ON u.ID = mp.user_id
-         WHERE mp.employer_id = %d
-         ORDER BY u.display_name",
-        $org_id
-    ));
     
-    wp_send_json_success($members);
+    // Get pagination parameters
+    $page = intval($_POST['page'] ?? 1);
+    $per_page = 20;
+    $offset = ($page - 1) * $per_page;
+    $search = sanitize_text_field($_POST['search'] ?? '');
+    $status_filter = sanitize_text_field($_POST['status_filter'] ?? '');
+    
+    // Build WHERE clause
+    $where_conditions = array("mp.employer_id = %d");
+    $where_params = array($org_id);
+    
+    // Search filter
+    if (!empty($search)) {
+        $where_conditions[] = "(u.display_name LIKE %s OR u.user_email LIKE %s)";
+        $where_params[] = '%' . $search . '%';
+        $where_params[] = '%' . $search . '%';
+    }
+    
+    // Status filter
+    if (!empty($status_filter)) {
+        $where_conditions[] = "m.membership_status = %s";
+        $where_params[] = $status_filter;
+    }
+    
+    $where_clause = 'WHERE ' . implode(' AND ', $where_conditions);
+    
+    // Get total count
+    $count_sql = "
+        SELECT COUNT(DISTINCT u.ID)
+        FROM {$wpdb->users} u
+        LEFT JOIN {$wpdb->prefix}test_iipm_members m ON u.ID = m.user_id
+        LEFT JOIN {$wpdb->prefix}test_iipm_member_profiles mp ON u.ID = mp.user_id
+        {$where_clause}
+    ";
+    
+    $total_members = $wpdb->get_var($wpdb->prepare($count_sql, $where_params));
+    
+    // Get members with pagination
+    $members_sql = "
+        SELECT u.ID, u.display_name, u.user_email, u.user_registered,
+               m.membership_status, m.last_login, mp.employer_id, mp.theUsersStatus
+        FROM {$wpdb->users} u
+        LEFT JOIN {$wpdb->prefix}test_iipm_members m ON u.ID = m.user_id
+        LEFT JOIN {$wpdb->prefix}test_iipm_member_profiles mp ON u.ID = mp.user_id
+        {$where_clause}
+        ORDER BY u.display_name ASC
+        LIMIT %d OFFSET %d
+    ";
+    
+    $members_params = array_merge($where_params, array($per_page, $offset));
+    $members = $wpdb->get_results($wpdb->prepare($members_sql, $members_params));
+    
+    // Process members data
+    $processed_members = array();
+    foreach ($members as $member) {
+        $processed_members[] = array(
+            'ID' => $member->ID,
+            'display_name' => $member->display_name,
+            'user_email' => $member->user_email,
+            'membership_status' => $member->membership_status ?: 'pending',
+            'last_login' => $member->last_login ? date('M j, Y g:i A', strtotime($member->last_login)) : null,
+            'theUsersStatus' => $member->theUsersStatus
+        );
+    }
+    
+    $total_pages = ceil($total_members / $per_page);
+    
+    // Return data in the format expected by the new page
+    wp_send_json_success(array(
+        'members' => $processed_members,
+        'pagination' => array(
+            'current_page' => $page,
+            'total_pages' => $total_pages,
+            'total_members' => $total_members,
+            'per_page' => $per_page
+        )
+    ));
 }
 add_action('wp_ajax_iipm_get_organisation_members', 'iipm_get_organisation_members');
 
@@ -1239,4 +1310,484 @@ function iipm_handle_bulk_import_enhanced() {
 // Replace the existing handler
 remove_action('wp_ajax_iipm_bulk_import', 'iipm_handle_bulk_import');
 add_action('wp_ajax_iipm_bulk_import', 'iipm_handle_bulk_import_enhanced');
+
+// Get member details for editing
+function iipm_get_member_details() {
+    // Check permissions
+    if (!current_user_can('administrator') && 
+        !current_user_can('manage_organisation_members') && 
+        !in_array('iipm_corporate_admin', wp_get_current_user()->roles)) {
+        wp_send_json_error('Insufficient permissions');
+        return;
+    }
+    
+    // Verify nonce
+    if (!wp_verify_nonce($_POST['nonce'], 'iipm_user_management_nonce')) {
+        wp_send_json_error('Security check failed');
+        return;
+    }
+    
+    $member_id = intval($_POST['member_id']);
+    if (!$member_id) {
+        wp_send_json_error('Invalid member ID');
+        return;
+    }
+    
+    $user = get_user_by('id', $member_id);
+    if (!$user) {
+        wp_send_json_error('Member not found');
+        return;
+    }
+    
+    global $wpdb;
+    $member_data = $wpdb->get_row($wpdb->prepare(
+        "SELECT * FROM {$wpdb->prefix}test_iipm_members WHERE user_id = %d",
+        $member_id
+    ));
+    
+    wp_send_json_success(array(
+        'ID' => $user->ID,
+        'display_name' => $user->display_name,
+        'user_email' => $user->user_email,
+        'membership_status' => $member_data ? $member_data->membership_status : 'pending'
+    ));
+}
+add_action('wp_ajax_iipm_get_member_details', 'iipm_get_member_details');
+
+// Update member status
+function iipm_update_member_status() {
+    // Check permissions
+    if (!current_user_can('administrator') && 
+        !current_user_can('manage_organisation_members') && 
+        !in_array('iipm_corporate_admin', wp_get_current_user()->roles)) {
+        wp_send_json_error('Insufficient permissions');
+        return;
+    }
+    
+    // Verify nonce
+    if (!wp_verify_nonce($_POST['nonce'], 'iipm_user_management_nonce')) {
+        wp_send_json_error('Security check failed');
+        return;
+    }
+    
+    $member_id = intval($_POST['member_id']);
+    $status = sanitize_text_field($_POST['status']);
+    
+    if (!$member_id || !$status) {
+        wp_send_json_error('Missing required fields');
+        return;
+    }
+    
+    global $wpdb;
+    
+    // Update membership status
+    $result = $wpdb->update(
+        $wpdb->prefix . 'test_iipm_members',
+        array('membership_status' => $status),
+        array('user_id' => $member_id),
+        array('%s'),
+        array('%d')
+    );
+    
+    if ($result === false) {
+        wp_send_json_error('Database error');
+        return;
+    }
+    
+    // Log activity
+    iipm_log_user_activity(
+        get_current_user_id(),
+        'member_status_updated',
+        "Updated member status to: {$status}"
+    );
+    
+    wp_send_json_success('Member status updated successfully');
+}
+add_action('wp_ajax_iipm_update_member_status', 'iipm_update_member_status');
+
+// Get users for bulk import (users not in current organization)
+function iipm_get_import_users() {
+    // Check permissions
+    if (!current_user_can('administrator') && 
+        !current_user_can('manage_organisation_members') && 
+        !in_array('iipm_corporate_admin', wp_get_current_user()->roles)) {
+        wp_send_json_error('Insufficient permissions');
+        return;
+    }
+    
+    // Verify nonce
+    if (!wp_verify_nonce($_POST['nonce'], 'iipm_user_management_nonce')) {
+        wp_send_json_error('Security check failed');
+        return;
+    }
+    
+    global $wpdb;
+    
+    $current_user = wp_get_current_user();
+    $is_site_admin = current_user_can('administrator');
+    $is_org_admin = in_array('iipm_corporate_admin', $current_user->roles) || current_user_can('manage_organisation_members');
+    
+    // Get parameters
+    $page = intval($_POST['page'] ?? 1);
+    $per_page = 20;
+    $offset = ($page - 1) * $per_page;
+    $search = sanitize_text_field($_POST['search'] ?? '');
+    $status_filter = sanitize_text_field($_POST['status_filter'] ?? '');
+    $org_filter = intval($_POST['org_filter'] ?? 0);
+    $current_employer_id = intval($_POST['current_employer_id'] ?? 0);
+    
+    if (!$current_employer_id) {
+        wp_send_json_error('Invalid current employer ID');
+        return;
+    }
+    
+    // Build WHERE clause
+    $where_conditions = array();
+    $where_params = array();
+    
+    // Exclude users already in current organization
+    $where_conditions[] = "(mp.employer_id IS NULL OR mp.employer_id != %d)";
+    $where_params[] = $current_employer_id;
+    
+    // Search filter
+    if (!empty($search)) {
+        $where_conditions[] = "(u.display_name LIKE %s OR u.user_email LIKE %s)";
+        $where_params[] = '%' . $search . '%';
+        $where_params[] = '%' . $search . '%';
+    }
+    
+    // Status filter
+    if (!empty($status_filter)) {
+        $where_conditions[] = "m.membership_status = %s";
+        $where_params[] = $status_filter;
+    }
+    
+    // Organization filter
+    if (!empty($org_filter)) {
+        $where_conditions[] = "mp.employer_id = %d";
+        $where_params[] = $org_filter;
+    }
+    
+    // Build WHERE clause
+    $where_clause = '';
+    if (!empty($where_conditions)) {
+        $where_clause = 'WHERE ' . implode(' AND ', $where_conditions);
+    }
+    
+    // Get total count
+    $count_sql = "
+        SELECT COUNT(DISTINCT u.ID)
+        FROM {$wpdb->users} u
+        LEFT JOIN {$wpdb->prefix}test_iipm_members m ON u.ID = m.user_id
+        LEFT JOIN {$wpdb->prefix}test_iipm_member_profiles mp ON u.ID = mp.user_id
+        LEFT JOIN {$wpdb->prefix}test_iipm_organisations o ON mp.employer_id = o.id
+        {$where_clause}
+    ";
+    
+    $total_users = $wpdb->get_var($wpdb->prepare($count_sql, $where_params));
+    
+    // Get users with pagination
+    $users_sql = "
+        SELECT u.ID, u.display_name, u.user_email, u.user_registered,
+               m.membership_status, m.last_login, mp.employer_id,
+               o.name as organisation_name
+        FROM {$wpdb->users} u
+        LEFT JOIN {$wpdb->prefix}test_iipm_members m ON u.ID = m.user_id
+        LEFT JOIN {$wpdb->prefix}test_iipm_member_profiles mp ON u.ID = mp.user_id
+        LEFT JOIN {$wpdb->prefix}test_iipm_organisations o ON mp.employer_id = o.id
+        {$where_clause}
+        ORDER BY u.display_name ASC
+        LIMIT %d OFFSET %d
+    ";
+    
+    $users_params = array_merge($where_params, array($per_page, $offset));
+    $users = $wpdb->get_results($wpdb->prepare($users_sql, $users_params));
+    
+    // Process users data
+    $processed_users = array();
+    foreach ($users as $user) {
+        $processed_users[] = array(
+            'ID' => $user->ID,
+            'display_name' => $user->display_name,
+            'user_email' => $user->user_email,
+            'membership_status' => $user->membership_status ?: 'pending',
+            'last_login' => $user->last_login ? date('M j, Y g:i A', strtotime($user->last_login)) : null,
+            'organisation_name' => $user->organisation_name ?: 'No Organization'
+        );
+    }
+    
+    $total_pages = ceil($total_users / $per_page);
+    
+    wp_send_json_success(array(
+        'users' => $processed_users,
+        'pagination' => array(
+            'current_page' => $page,
+            'total_pages' => $total_pages,
+            'total_users' => $total_users,
+            'per_page' => $per_page
+        )
+    ));
+}
+add_action('wp_ajax_iipm_get_import_users', 'iipm_get_import_users');
+
+// Import users to organization
+function iipm_import_users_to_organisation() {
+    // Check permissions
+    if (!current_user_can('administrator') && 
+        !current_user_can('manage_organisation_members') && 
+        !in_array('iipm_corporate_admin', wp_get_current_user()->roles)) {
+        wp_send_json_error('Insufficient permissions');
+        return;
+    }
+    
+    // Verify nonce
+    if (!wp_verify_nonce($_POST['nonce'], 'iipm_user_management_nonce')) {
+        wp_send_json_error('Security check failed');
+        return;
+    }
+    
+    $user_ids = $_POST['user_ids'] ?? array();
+    $employer_id = intval($_POST['employer_id'] ?? 0);
+    
+    if (empty($user_ids) || !$employer_id) {
+        wp_send_json_error('Missing required fields');
+        return;
+    }
+    
+    global $wpdb;
+    
+    $imported_count = 0;
+    $errors = array();
+    
+    foreach ($user_ids as $user_id) {
+        $user_id = intval($user_id);
+        if (!$user_id) continue;
+        
+        // Update or insert member profile
+        $existing_profile = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$wpdb->prefix}test_iipm_member_profiles WHERE user_id = %d",
+            $user_id
+        ));
+        
+        if ($existing_profile) {
+            // Update existing profile
+            $result = $wpdb->update(
+                $wpdb->prefix . 'test_iipm_member_profiles',
+                array('employer_id' => $employer_id),
+                array('user_id' => $user_id),
+                array('%d'),
+                array('%d')
+            );
+        } else {
+            // Create new profile
+            $user = get_user_by('id', $user_id);
+            if ($user) {
+                $result = $wpdb->insert(
+                    $wpdb->prefix . 'test_iipm_member_profiles',
+                    array(
+                        'user_id' => $user_id,
+                        'employer_id' => $employer_id,
+                        'first_name' => $user->first_name,
+                        'sur_name' => $user->last_name,
+                        'user_fullName' => $user->display_name,
+                        'email_address' => $user->user_email,
+                        'theUsersStatus' => 'Full Member',
+                        'dateOfUpdateGen' => current_time('mysql')
+                    ),
+                    array('%d', '%d', '%s', '%s', '%s', '%s', '%s', '%s')
+                );
+            } else {
+                $errors[] = "User ID {$user_id} not found";
+                continue;
+            }
+        }
+        
+        if ($result !== false) {
+            $imported_count++;
+        } else {
+            $errors[] = "Failed to import user ID {$user_id}";
+        }
+    }
+    
+    // Log activity
+    iipm_log_user_activity(
+        get_current_user_id(),
+        'users_imported',
+        "Imported {$imported_count} users to organization"
+    );
+    
+    wp_send_json_success(array(
+        'imported_count' => $imported_count,
+        'errors' => $errors
+    ));
+}
+add_action('wp_ajax_iipm_import_users_to_organisation', 'iipm_import_users_to_organisation');
+
+// Export organization members to CSV
+function iipm_export_organisation_members() {
+    // Check permissions
+    if (!current_user_can('administrator') && 
+        !current_user_can('manage_organisation_members') && 
+        !in_array('iipm_corporate_admin', wp_get_current_user()->roles)) {
+        wp_send_json_error('Insufficient permissions');
+        return;
+    }
+    
+    // Verify nonce
+    if (!wp_verify_nonce($_POST['nonce'], 'iipm_user_management_nonce')) {
+        wp_send_json_error('Security check failed');
+        return;
+    }
+    
+    $employer_id = intval($_POST['employer_id'] ?? 0);
+    $status_filter = sanitize_text_field($_POST['status_filter'] ?? '');
+    $include_fields_raw = $_POST['include_fields'] ?? '';
+    
+    // Decode JSON string from JavaScript
+    $include_fields = json_decode($include_fields_raw, true);
+    
+    // Fallback to default fields if decoding fails
+    if (!is_array($include_fields)) {
+        $include_fields = ['name', 'email', 'status', 'last_login', 'role'];
+    }
+    
+    if (!$employer_id) {
+        wp_send_json_error('Invalid employer ID');
+        return;
+    }
+    
+    global $wpdb;
+    
+    // Build WHERE clause
+    $where_conditions = array("mp.employer_id = %d");
+    $where_params = array($employer_id);
+    
+    if (!empty($status_filter)) {
+        $where_conditions[] = "m.membership_status = %s";
+        $where_params[] = $status_filter;
+    }
+    
+    $where_clause = 'WHERE ' . implode(' AND ', $where_conditions);
+    
+    // Get members data
+    $members = $wpdb->get_results($wpdb->prepare("
+        SELECT u.ID, u.display_name, u.user_email, u.user_registered,
+               m.membership_status, m.last_login, mp.theUsersStatus
+        FROM {$wpdb->users} u
+        LEFT JOIN {$wpdb->prefix}test_iipm_members m ON u.ID = m.user_id
+        LEFT JOIN {$wpdb->prefix}test_iipm_member_profiles mp ON u.ID = mp.user_id
+        {$where_clause}
+        ORDER BY u.display_name ASC
+    ", $where_params));
+    
+    if (empty($members)) {
+        wp_send_json_error('No members found to export');
+        return;
+    }
+    
+    // Debug: Log members data to file
+    error_log('CSV Export Debug - Members count: ' . count($members));
+    error_log('CSV Export Debug - Status filter: ' . $status_filter);
+    error_log('CSV Export Debug - Raw include_fields from POST: ' . print_r($_POST['include_fields'], true));
+    error_log('CSV Export Debug - Processed include_fields: ' . print_r($include_fields, true));
+    error_log('CSV Export Debug - Include fields type: ' . gettype($include_fields));
+    error_log('CSV Export Debug - Include fields is_array: ' . (is_array($include_fields) ? 'true' : 'false'));
+    error_log('CSV Export Debug - WHERE clause: ' . $where_clause);
+    error_log('CSV Export Debug - WHERE params: ' . print_r($where_params, true));
+    if (!empty($members)) {
+        error_log('CSV Export Debug - First member: ' . print_r($members[0], true));
+    }
+    
+    // Set headers for CSV download
+    header('Content-Type: text/csv');
+    header('Content-Disposition: attachment; filename="organisation_members_' . date('Y-m-d') . '.csv"');
+    
+    // Create CSV output
+    $output = fopen('php://output', 'w');
+    
+    // CSV headers
+    $headers = array();
+    if (in_array('name', $include_fields)) $headers[] = 'Name';
+    if (in_array('email', $include_fields)) $headers[] = 'Email';
+    if (in_array('status', $include_fields)) $headers[] = 'Status';
+    if (in_array('last_login', $include_fields)) $headers[] = 'Last Login';
+    if (in_array('role', $include_fields)) $headers[] = 'Role';
+    
+    fputcsv($output, $headers);
+    
+    // CSV data
+    foreach ($members as $member) {
+        $row = array();
+        
+        // Get user role for role display
+        $user = get_user_by('id', $member->ID);
+        $user_roles = $user ? $user->roles : array();
+        $actual_role = $member->theUsersStatus ?: '';
+        
+        // Determine role display
+        $role_display = 'Member';
+        if ($actual_role === 'Systems Admin' || in_array('administrator', $user_roles)) {
+            $role_display = 'Systems Admin';
+        } elseif ($actual_role === 'EmployerContact') {
+            $role_display = 'Employer Contact';
+        } elseif ($actual_role === 'Full Member') {
+            $role_display = 'Full Member';
+        } elseif ($actual_role === 'Life Member') {
+            $role_display = 'Life Member';
+        } elseif ($actual_role === 'QPT Member') {
+            $role_display = 'QPT Member';
+        } else {
+            $role_display = 'Member';
+        }
+        
+        if (in_array('name', $include_fields)) $row[] = $member->display_name ?: 'N/A';
+        if (in_array('email', $include_fields)) $row[] = $member->user_email ?: 'N/A';
+        if (in_array('status', $include_fields)) $row[] = $member->membership_status ?: 'pending';
+        if (in_array('last_login', $include_fields)) $row[] = $member->last_login ? date('Y-m-d H:i:s', strtotime($member->last_login)) : 'Never';
+        if (in_array('role', $include_fields)) $row[] = $role_display;
+        
+        // Debug: Log first row only
+        if ($member === $members[0]) {
+            error_log('CSV Export Debug - First row data: ' . print_r($row, true));
+        }
+        
+        fputcsv($output, $row);
+    }
+    
+    fclose($output);
+    exit;
+}
+add_action('wp_ajax_iipm_export_organisation_members', 'iipm_export_organisation_members');
+
+// Get all organizations for import filter
+function iipm_get_all_organisations_for_import() {
+    // Check permissions
+    if (!current_user_can('administrator') && 
+        !current_user_can('manage_organisation_members') && 
+        !in_array('iipm_corporate_admin', wp_get_current_user()->roles)) {
+        wp_send_json_error('Insufficient permissions');
+        return;
+    }
+    
+    // Verify nonce
+    if (!wp_verify_nonce($_POST['nonce'], 'iipm_user_management_nonce')) {
+        wp_send_json_error('Security check failed');
+        return;
+    }
+    
+    global $wpdb;
+    
+    $organizations = $wpdb->get_results(
+        "SELECT id, name FROM {$wpdb->prefix}test_iipm_organisations WHERE is_active = 1 ORDER BY name"
+    );
+    
+    if ($organizations === false) {
+        wp_send_json_error('Database error');
+        return;
+    }
+    
+    wp_send_json_success($organizations);
+}
+add_action('wp_ajax_iipm_get_all_organisations_for_import', 'iipm_get_all_organisations_for_import');
+
 ?>

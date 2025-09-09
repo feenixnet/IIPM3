@@ -95,14 +95,14 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
                     Add New Organisation
                 </button>
                 
-                <button id="bulk-setup-btn" class="btn btn-secondary">
+                <!-- <button id="bulk-setup-btn" class="btn btn-secondary">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-15"/>
                         <polyline points="7,10 12,15 17,10"/>
                         <line x1="12" y1="15" x2="12" y2="3"/>
                     </svg>
                     Bulk Setup
-                </button>
+                </button> -->
                 
                 <button id="export-orgs-btn" class="btn btn-outline">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -202,7 +202,7 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
                                         echo "<button class='btn-small setup-admin' data-org-id='{$org->id}'>Setup Admin</button>";
                                         echo "<button class='btn-small direct-assign-admin' data-org-id='{$org->id}' data-org-name='" . esc_attr($org->name) . "'>Direct Assign</button>";
                                     } else {
-                                        echo "<button class='btn-small view-members' data-org-id='{$org->id}'>View Members</button>";
+                                        echo "<a href='" . home_url('/organisation-members?employer_id=' . $org->id) . "' class='btn-small view-members' data-org-id='{$org->id}'>View Members</a>";
                                     }
                                     
                                     echo "<button class='btn-small btn-danger deactivate-org' data-org-id='{$org->id}'>Deactivate</button>";
@@ -1397,14 +1397,14 @@ jQuery(document).ready(function($) {
     }
     
     // View Members
-    $(document).on('click', '.view-members', function() {
-        const orgId = $(this).data('org-id');
-        const orgName = $(this).closest('tr').find('.org-name').text();
+    // $(document).on('click', '.view-members', function() {
+    //     const orgId = $(this).data('org-id');
+    //     const orgName = $(this).closest('tr').find('.org-name').text();
         
-        $('#members-modal-title').text(orgName + ' - Members');
-        loadOrganisationMembers(orgId);
-        $('#view-members-modal').addClass('show');
-    });
+    //     $('#members-modal-title').text(orgName + ' - Members');
+    //     loadOrganisationMembers(orgId);
+    //     $('#view-members-modal').addClass('show');
+    // });
     
     // Organisation Form Submit
     $('#organisation-form').submit(function(e) {
@@ -1676,16 +1676,7 @@ jQuery(document).ready(function($) {
         });
     }
     
-    // Close modals
-    $('.modal-close').click(function() {
-        $(this).closest('.modal').removeClass('show');
-    });
-    
-    $('.modal').click(function(e) {
-        if (e.target === this) {
-            $(this).removeClass('show');
-        }
-    });
+    // Close modals - handled by document event delegation below
     
     // Deactivate Organisation
     $(document).on('click', '.deactivate-org', function() {
@@ -1826,14 +1817,13 @@ jQuery(document).ready(function($) {
     }
     
     // Handle modal close events for all modal types
-    // $(document).on('click', '.modal-close', function() {
-    //     alert(" i am called ");
-    //     $(this).closest('.modal').remove();
-    // });
+    $(document).on('click', '.modal-close', function() {
+        $(this).closest('.modal').removeClass('show');
+    });
     
     $(document).on('click', '.modal', function(e) {
         if (e.target === this) {
-            $(this).remove();
+            $(this).removeClass('show');
         }
     });
 

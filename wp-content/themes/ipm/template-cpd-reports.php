@@ -17,7 +17,32 @@ get_header();
 // Get reporting data
 global $wpdb;
 $current_year = date('Y');
-$selected_year = isset($_GET['year']) ? intval($_GET['year']) : $current_year;
+
+// Get current year from CPD types table
+$cpd_types = $wpdb->get_results("SELECT * FROM {$wpdb->prefix}cpd_types ORDER BY id ASC");
+$cpd_year = $current_year; // Default fallback
+
+if (!empty($cpd_types)) {
+    // Get the primary CPD type or first one to determine the current year
+    $primary_type = null;
+    foreach ($cpd_types as $type) {
+        if ($type->{'Is primary CPD Type'} == 1) {
+            $primary_type = $type;
+            break;
+        }
+    }
+    if (!$primary_type && !empty($cpd_types)) {
+        $primary_type = $cpd_types[0];
+    }
+    
+    if ($primary_type && $primary_type->{'Start of logging date'}) {
+        $start_date = $primary_type->{'Start of logging date'};
+        $cpd_year = date('Y', strtotime($start_date));
+    }
+}
+
+$selected_year = isset($_GET['year']) ? intval($_GET['year']) : $cpd_year;
+$selected_report = isset($_GET['report']) ? sanitize_text_field($_GET['report']) : 'compliance';
 
 // Get overall statistics
 $stats = iipm_get_cpd_compliance_stats($selected_year);
@@ -52,7 +77,7 @@ $stats = iipm_get_cpd_compliance_stats($selected_year);
 }
 </style>
 
-<div class="cpd-reports-page" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding-top: 140px;">
+<div class="cpd-reports-page" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding-top: 140px;padding-bottom: 20px;">
     <div class="container" style="max-width: 1400px; margin: 0 auto; padding: 0 20px;">
         
         <!-- Page Header -->
@@ -67,15 +92,31 @@ $stats = iipm_get_cpd_compliance_stats($selected_year);
                 <select id="year-selector" onchange="changeYear(this.value)" 
                         style="background: white; padding: 10px 15px; border-radius: 8px; border: none; font-size: 16px;">
                     <?php 
-                    // Include both current year and next year for testing
-                    $start_year = $current_year + 1;
-                    $end_year = $current_year - 5;
-                    for ($year = $start_year; $year >= $end_year; $year--): 
+                    // Get available years from CPD types
+                    $available_years = array();
+                    foreach ($cpd_types as $type) {
+                        if ($type->{'Start of logging date'}) {
+                            $year = date('Y', strtotime($type->{'Start of logging date'}));
+                            if (!in_array($year, $available_years)) {
+                                $available_years[] = $year;
+                            }
+                        }
+                    }
+                    
+                    // Sort years descending
+                    rsort($available_years);
+                    
+                    // If no years from CPD types, use current year
+                    if (empty($available_years)) {
+                        $available_years = array($current_year);
+                    }
+                    
+                    foreach ($available_years as $year): 
                     ?>
                         <option value="<?php echo $year; ?>" <?php selected($year, $selected_year); ?>>
                             <?php echo $year; ?> CPD Year
                         </option>
-                    <?php endfor; ?>
+                    <?php endforeach; ?>
                 </select>
             </div>
         </div>
@@ -154,7 +195,7 @@ $stats = iipm_get_cpd_compliance_stats($selected_year);
                 <div class="report-tabs" style="border-bottom: 2px solid #e5e7eb; margin-bottom: 30px;">
                     <div style="display: flex; gap: 20px;">
                         <button class="tab-btn active" onclick="showReport('compliance')" 
-                                style="padding: 15px 20px; border: none; background: none; color: #667eea; border-bottom: 3px solid #667eea; font-weight: 600; cursor: pointer;">
+                                style="padding: 15px 20px; border-top: none; border-right: none; border-left: none; border-image: initial; background: none; color: rgb(102, 126, 234); border-bottom: 3px solid rgb(102, 126, 234); font-weight: 600; cursor: pointer;">
                             Compliance Overview
                         </button>
                         <button class="tab-btn" onclick="showReport('categories')" 
@@ -172,9 +213,27 @@ $stats = iipm_get_cpd_compliance_stats($selected_year);
                 <div id="compliance-report" class="report-content">
                     <h3 style="color: #374151; margin-bottom: 20px;">📋 Member Compliance Status</h3>
                     
-                    <!-- Non-Compliant Members Table -->
-                    <div style="margin-bottom: 30px;">
-                        <h4 style="color: #ef4444; margin-bottom: 15px;">❌ Non-Compliant Members (<?php echo $stats['non_compliant_members']; ?>)</h4>
+                    <!-- Compliance Tab Bar -->
+                    <div style="margin-bottom: 20px;">
+                        <div style="display: flex; border-bottom: 2px solid #e5e7eb; margin-bottom: 20px;">
+                            <button id="compliant-tab" onclick="switchComplianceTab('compliant')" style="padding: 12px 24px; border: none; background: #10b981; color: white; font-weight: 600; cursor: pointer; border-radius: 8px 8px 0 0; margin-right: 4px;">
+                                ✅ Compliant Members
+                            </button>
+                            <button id="non-compliant-tab" onclick="switchComplianceTab('non-compliant')" style="padding: 12px 24px; border: none; background: #6b7280; color: white; font-weight: 600; cursor: pointer; border-radius: 8px 8px 0 0; margin-right: 4px;">
+                                ❌ Non-Compliant Members
+                            </button>
+                        </div>
+                        
+                        <!-- High Risk Filter (only for non-compliant tab) -->
+                        <div id="high-risk-filter" style="margin-bottom: 15px; display: none;">
+                            <label style="display: flex; align-items: center; gap: 8px; font-weight: 500; color: #374151;">
+                                <input type="checkbox" id="show-high-risk-only" onchange="toggleHighRiskFilter()" style="width: 16px; height: 16px;">
+                                Show High Risk Only (0% progress, No course trained, Not assigned)
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <!-- Compliance Members Table -->
                         <div style="overflow-x: auto; border: 1px solid #e5e7eb; border-radius: 8px;">
                             <table style="width: 100%; border-collapse: collapse;">
                                 <thead style="background: #f8fafc;">
@@ -182,11 +241,11 @@ $stats = iipm_get_cpd_compliance_stats($selected_year);
                                         <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Member</th>
                                         <th style="padding: 12px; text-align: center; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Points Earned</th>
                                         <th style="padding: 12px; text-align: center; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Required</th>
-                                        <th style="padding: 12px; text-align: center; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Shortage</th>
+                        <th style="padding: 12px; text-align: center; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Progress</th>
                                         <th style="padding: 12px; text-align: center; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Actions</th>
                                     </tr>
                                 </thead>
-                                <tbody id="non-compliant-table">
+                            <tbody id="compliance-table">
                                     <!-- Will be loaded via AJAX -->
                                     <tr>
                                         <td colspan="5" style="padding: 20px; text-align: center; color: #6b7280;">
@@ -196,27 +255,11 @@ $stats = iipm_get_cpd_compliance_stats($selected_year);
                                     </tr>
                                 </tbody>
                             </table>
-                        </div>
                     </div>
 
-                    <!-- At Risk Members -->
-                    <div>
-                        <h4 style="color: #f59e0b; margin-bottom: 15px;">⚠️ At Risk Members (<?php echo $stats['at_risk_members']; ?>)</h4>
-                        <div style="overflow-x: auto; border: 1px solid #e5e7eb; border-radius: 8px;">
-                            <table style="width: 100%; border-collapse: collapse;">
-                                <thead style="background: #f8fafc;">
-                                    <tr>
-                                        <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Member</th>
-                                        <th style="padding: 12px; text-align: center; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Progress</th>
-                                        <th style="padding: 12px; text-align: center; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Days Left</th>
-                                        <th style="padding: 12px; text-align: center; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="at-risk-table">
-                                    <!-- Will be loaded via AJAX -->
-                                </tbody>
-                            </table>
-                        </div>
+                    <!-- Pagination for Compliance Members -->
+                    <div id="compliance-pagination" style="margin-top: 15px; display: flex; justify-content: center; align-items: center; gap: 10px;">
+                        <!-- Pagination will be loaded here -->
                     </div>
                 </div>
 
@@ -231,7 +274,17 @@ $stats = iipm_get_cpd_compliance_stats($selected_year);
 
                 <!-- Members Report -->
                 <div id="members-report" class="report-content" style="display: none;">
-                    <h3 style="color: #374151; margin-bottom: 20px;">👥 Individual Member Reports</h3>
+                    <h3 style="color: #374151; margin-bottom: 20px;">👥 Member Details</h3>
+                    
+                    <!-- Report Type Selection -->
+                    <div style="margin-bottom: 20px; display: flex; gap: 10px; align-items: center;">
+                        <label style="font-weight: 600; color: #374151;">Report Type:</label>
+                        <select id="member-report-type" onchange="loadMemberDetails()" 
+                                style="padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; background: white;">
+                            <option value="individual">Individual Member Reports</option>
+                            <option value="employed" selected>Employed Member Reports</option>
+                        </select>
+                    </div>
                     
                     <!-- Members Table -->
                     <div style="background: white; border-radius: 12px; overflow: hidden; border: 1px solid #e5e7eb;">
@@ -240,7 +293,9 @@ $stats = iipm_get_cpd_compliance_stats($selected_year);
                                 <thead style="background: #f8fafc;">
                                     <tr>
                                         <th style="padding: 15px; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Member</th>
-                                        <th style="padding: 15px; text-align: center; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Membership Level</th>
+                                        <th style="padding: 15px; text-align: center; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Role</th>
+                                        <th style="padding: 15px; text-align: center; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Points Earned</th>
+                                        <th style="padding: 15px; text-align: center; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Required</th>
                                         <th style="padding: 15px; text-align: center; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">CPD Progress</th>
                                         <th style="padding: 15px; text-align: center; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Compliance Status</th>
                                         <th style="padding: 15px; text-align: center; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Actions</th>
@@ -249,7 +304,7 @@ $stats = iipm_get_cpd_compliance_stats($selected_year);
                                 <tbody id="members-table-body">
                                     <!-- Loading state -->
                                     <tr>
-                                        <td colspan="5" style="padding: 40px; text-align: center; color: #6b7280;">
+                                        <td colspan="7" style="padding: 40px; text-align: center; color: #6b7280;">
                                             <div class="loading-spinner" style="display: inline-block; width: 24px; height: 24px; border: 3px solid #e5e7eb; border-top: 3px solid #667eea; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px;"></div>
                                             <div>Loading members...</div>
                                         </td>
@@ -257,6 +312,11 @@ $stats = iipm_get_cpd_compliance_stats($selected_year);
                                 </tbody>
                             </table>
                         </div>
+                    </div>
+                    
+                    <!-- Pagination for Member Details -->
+                    <div id="member-pagination" style="margin-top: 20px; display: flex; justify-content: center; align-items: center; gap: 10px;">
+                        <!-- Pagination will be loaded here -->
                     </div>
                     
                     <!-- Individual Report Content -->
@@ -334,11 +394,6 @@ $stats = iipm_get_cpd_compliance_stats($selected_year);
                             <span style="color: #374151; font-weight: 500;">Total CPD Logged:</span>
                             <span style="color: #059669; font-weight: bold;"><?php echo number_format($stats['total_cpd_logged']); ?></span>
                         </div>
-                        
-                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: #f8fafc; border-radius: 8px;">
-                            <span style="color: #374151; font-weight: 500;">Pending Approvals:</span>
-                            <span style="color: #f59e0b; font-weight: bold;"><?php echo $stats['pending_approvals']; ?></span>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -372,12 +427,21 @@ document.addEventListener('DOMContentLoaded', function() {
         switch(reportType) {
             case 'compliance':
                 showComplianceReport();
+                console.log('🎯 About to call loadComplianceCounts...');
+                loadComplianceCounts(); // Load counts for tab buttons via AJAX
+                
+                // Ensure compliant tab is active by default
+                console.log('🎯 Setting compliant tab as active by default');
+                switchComplianceTab('compliant');
                 break;
             case 'popularity':
                 showCoursePopularity();
                 break;
             case 'provider':
                 showProviderAnalysis();
+                break;
+            case 'members':
+                showReport('members');
                 break;
             default:
                 // Default to compliance report
@@ -387,13 +451,27 @@ document.addEventListener('DOMContentLoaded', function() {
     } else {
         // Default to compliance report highlighting
         setActiveReportCard('compliance');
+        console.log('🎯 About to call loadComplianceCounts (default)...');
+        loadComplianceCounts(); // Load counts for tab buttons via AJAX
         loadComplianceData();
+        
+        // Ensure compliant tab is active by default
+        console.log('🎯 Setting compliant tab as active by default');
+        switchComplianceTab('compliant');
     }
 });
 
 // Change year
 function changeYear(year) {
-    window.location.href = window.location.pathname + '?year=' + year;
+    const url = new URL(window.location);
+    url.searchParams.set('year', year);
+    
+    // If no report parameter, set compliance as default
+    if (!url.searchParams.has('report')) {
+        url.searchParams.set('report', 'compliance');
+    }
+    
+    window.location.href = url.toString();
 }
 
 // Show different report tabs
@@ -402,6 +480,7 @@ function showReport(reportType, clickedElement) {
     document.querySelectorAll('.report-content').forEach(el => el.style.display = 'none');
     
     // Remove active class from all tabs
+    console.log('🔄 Removing active styling from all tabs');
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.style.color = '#6b7280';
         btn.style.borderBottom = 'none';
@@ -410,24 +489,20 @@ function showReport(reportType, clickedElement) {
     // Show selected report
     document.getElementById(reportType + '-report').style.display = 'block';
     
-    // Activate current tab - handle both event.target and direct element reference
-    let targetElement = clickedElement;
-    if (!targetElement && typeof event !== 'undefined' && event.target) {
-        targetElement = event.target;
+    // Load data for specific report types
+    if (reportType === 'compliance') {
+        loadComplianceData();
+    } else if (reportType === 'members') {
+        loadMemberDetails();
     }
-    if (!targetElement) {
-        // If no element provided, find the tab button for this report type
-        const tabSelectors = {
-            'compliance': '.tab-btn[onclick*="compliance"]',
-            'categories': '.tab-btn[onclick*="categories"]', 
-            'members': '.tab-btn[onclick*="members"]'
-        };
-        targetElement = document.querySelector(tabSelectors[reportType]);
-    }
+    
+    // Activate current tab
+    const targetElement = clickedElement || document.querySelector(`.tab-btn[onclick*="${reportType}"]`);
     
     if (targetElement) {
         targetElement.style.color = '#667eea';
         targetElement.style.borderBottom = '3px solid #667eea';
+        console.log('🎯 Applied tab styling to:', reportType, targetElement);
     }
     
     // Load data based on report type
@@ -444,8 +519,27 @@ function showReport(reportType, clickedElement) {
     }
 }
 
+// Global variables for compliance tab management
+let currentComplianceTab = 'compliant';
+let showHighRiskOnly = false;
+
 // Load compliance data
-function loadComplianceData() {
+function loadComplianceData(page = 1) {
+    console.log('🔄 Loading compliance data for tab:', currentComplianceTab);
+    loadComplianceMembers(currentComplianceTab, page);
+}
+
+// Load initial compliance counts for tab buttons via AJAX
+function loadComplianceCounts() {
+    console.log('🔄 Loading compliance counts...', {
+        ajax_url: window.iipm_reports_ajax.ajax_url,
+        year: currentYear,
+        nonce: window.iipm_reports_ajax.nonce
+    });
+    
+    // Test if function is being called
+    console.log('✅ loadComplianceCounts function called!');
+    
     fetch(window.iipm_reports_ajax.ajax_url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -455,66 +549,585 @@ function loadComplianceData() {
             nonce: window.iipm_reports_ajax.nonce
         })
     })
+    .then(response => {
+        console.log('📡 Response received:', response);
+        return response.json();
+    })
+    .then(data => {
+        console.log('📦 Data received:', data);
+        if (data.success) {
+            // Update tab counts from AJAX response
+            const compliantCount = document.getElementById('compliant-tab-count');
+            const nonCompliantCount = document.getElementById('non-compliant-tab-count');
+            
+            console.log('📊 Updating counts:', {
+                compliant: data.data.compliant_members,
+                non_compliant: data.data.non_compliant_members
+            });
+            
+            if (compliantCount) {
+                compliantCount.textContent = data.data.compliant_members || 0;
+            }
+            if (nonCompliantCount) {
+                nonCompliantCount.textContent = data.data.non_compliant_members || 0;
+            }
+        } else {
+            console.error('❌ API Error:', data);
+        }
+    })
+    .catch(error => {
+        console.error('❌ Error loading compliance counts:', error);
+        
+        // Fallback: Set default values if AJAX fails
+        const compliantCount = document.getElementById('compliant-tab-count');
+        const nonCompliantCount = document.getElementById('non-compliant-tab-count');
+        
+        if (compliantCount) {
+            compliantCount.textContent = '0';
+        }
+        if (nonCompliantCount) {
+            nonCompliantCount.textContent = '0';
+        }
+    });
+}
+
+
+// Switch between compliant and non-compliant tabs
+function switchComplianceTab(tab) {
+    console.log('🔄 Switching to tab:', tab);
+    currentComplianceTab = tab;
+    
+    // Update tab button styles - active tab is always green
+    const compliantTab = document.getElementById('compliant-tab');
+    const nonCompliantTab = document.getElementById('non-compliant-tab');
+    const highRiskFilter = document.getElementById('high-risk-filter');
+    
+    if (tab === 'compliant') {
+        compliantTab.style.background = '#10b981'; // Green for active
+        nonCompliantTab.style.background = '#6b7280'; // Gray for inactive
+        highRiskFilter.style.display = 'none';
+        showHighRiskOnly = false;
+    } else {
+        compliantTab.style.background = '#6b7280'; // Gray for inactive
+        nonCompliantTab.style.background = '#10b981'; // Green for active
+        highRiskFilter.style.display = 'block';
+    }
+    
+    // Load data for the selected tab
+    loadComplianceMembers(tab, 1);
+}
+
+// Toggle high-risk filter
+function toggleHighRiskFilter() {
+    showHighRiskOnly = document.getElementById('show-high-risk-only').checked;
+    loadComplianceMembers(currentComplianceTab, 1);
+}
+
+// Load compliance members with pagination
+function loadComplianceMembers(type, page = 1) {
+    const tableBody = document.getElementById('compliance-table');
+    const pagination = document.getElementById('compliance-pagination');
+    
+    // Show loading state
+    tableBody.innerHTML = `
+        <tr>
+            <td colspan="5" style="padding: 20px; text-align: center; color: #6b7280;">
+                <div class="loading-spinner" style="display: inline-block; width: 20px; height: 20px; border: 2px solid #e5e7eb; border-top: 2px solid #667eea; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                Loading ${type} members...
+            </td>
+        </tr>
+    `;
+    
+    const params = new URLSearchParams({
+        action: 'iipm_get_compliance_data',
+        year: currentYear,
+        type: type === 'non-compliant' ? 'non_compliant' : type,
+        page: page,
+        nonce: window.iipm_reports_ajax.nonce
+    });
+    
+    // Add high-risk filter if applicable
+    if (type === 'non-compliant' && showHighRiskOnly) {
+        params.append('high_risk_only', '1');
+    }
+    
+    fetch(window.iipm_reports_ajax.ajax_url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: params
+    })
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            updateComplianceTables(data.data);
+            updateComplianceTable(data.data, page, type);
+        } else {
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="6" style="padding: 20px; text-align: center; color: #ef4444;">
+                        Error loading ${type} members: ${data.data || 'Unknown error'}
+                    </td>
+                </tr>
+            `;
         }
     })
-    .catch(error => console.error('Error loading compliance data:', error));
+    .catch(error => {
+        console.error(`Error loading ${type} members:`, error);
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="6" style="padding: 20px; text-align: center; color: #ef4444;">
+                    Error loading ${type} members. Please try again.
+                </td>
+            </tr>
+        `;
+    });
 }
 
-// Update compliance tables
-function updateComplianceTables(data) {
-    // Update non-compliant table
-    const nonCompliantTable = document.getElementById('non-compliant-table');
-    if (data.non_compliant.length === 0) {
-        nonCompliantTable.innerHTML = '<tr><td colspan="5" style="padding: 20px; text-align: center; color: #059669;">🎉 All members are compliant!</td></tr>';
-    } else {
-        nonCompliantTable.innerHTML = data.non_compliant.map(member => 
-            `<tr>
-                <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">
-                    <strong>${member.name}</strong><br>
-                    <small style="color: #6b7280;">${member.email}</small>
-                </td>
-                <td style="padding: 12px; text-align: center; border-bottom: 1px solid #e5e7eb;">${member.earned_points}</td>
-                <td style="padding: 12px; text-align: center; border-bottom: 1px solid #e5e7eb;">${member.required_points}</td>
-                <td style="padding: 12px; text-align: center; border-bottom: 1px solid #e5e7eb; color: #ef4444; font-weight: bold;">${member.shortage}</td>
-                <td style="padding: 12px; text-align: center; border-bottom: 1px solid #e5e7eb;">
-                    <button onclick="sendIndividualReminder(${member.user_id})" style="background: #667eea; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;">
-                        Send Reminder
-                    </button>
-                </td>
-            </tr>`
-        ).join('');
+// Update compliance table with badges and status
+function updateComplianceTable(data, currentPage, type) {
+    const tableBody = document.getElementById('compliance-table');
+    const pagination = document.getElementById('compliance-pagination');
+    const members = data.members || [];
+    
+    // Tab counts are loaded via initial AJAX call - no need to update dynamically here
+    
+    if (members.length === 0) {
+        const message = type === 'compliant' ? 'No compliant members found' : 'No non-compliant members found';
+        tableBody.innerHTML = `<tr><td colspan="5" style="padding: 20px; text-align: center; color: #6b7280;">${message}</td></tr>`;
+        pagination.innerHTML = '';
+        return;
     }
     
-    // Update at-risk table
-    const atRiskTable = document.getElementById('at-risk-table');
-    if (data.at_risk.length === 0) {
-        atRiskTable.innerHTML = '<tr><td colspan="4" style="padding: 20px; text-align: center; color: #6b7280;">No members at risk</td></tr>';
+    tableBody.innerHTML = members.map(member => {
+        // Determine status badge
+        let statusBadge = '';
+        let statusColor = '';
+        
+        if (member.progress_percentage >= 100) {
+            statusBadge = 'Compliant';
+            statusColor = '#10b981';
+        } else if (member.progress_percentage === 0) {
+            statusBadge = 'High Risk';
+            statusColor = '#ef4444';
     } else {
-        atRiskTable.innerHTML = data.at_risk.map(member => 
-            `<tr>
+            statusBadge = 'Non-Compliant';
+            statusColor = '#ef4444';
+        }
+        
+        // Calculate high risk status in frontend (for table view) - only for non-compliant members
+        const isHighRisk = 
+                          ((member.progress_percentage === 0) || 
+                           (member.earned_points === 0));
+        
+        // High risk badge only for non-compliant members (includes not assigned cases)
+        const highRiskBadge = isHighRisk ? '<span style="background: #dc2626; color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; margin-left: 4px; white-space: nowrap; display: inline-block;">High Risk</span>' : '';
+        
+        return `
+            <tr>
                 <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">
-                    <strong>${member.name}</strong><br>
+                    <strong>${member.name || 'Unknown User'}</strong><br>
                     <small style="color: #6b7280;">${member.email}</small>
+                    ${highRiskBadge}
                 </td>
+                <td style="padding: 12px; text-align: center; border-bottom: 1px solid #e5e7eb;">${member.earned_points || 0}</td>
+                <td style="padding: 12px; text-align: center; border-bottom: 1px solid #e5e7eb;">${member.required_points || 0}</td>
                 <td style="padding: 12px; text-align: center; border-bottom: 1px solid #e5e7eb;">
-                    <div style="background: #f3f4f6; border-radius: 10px; height: 8px; position: relative;">
-                        <div style="background: #f59e0b; height: 100%; border-radius: 10px; width: ${member.progress_percentage}%;"></div>
+                    <div style="background: #f3f4f6; border-radius: 10px; height: 8px; position: relative; margin-bottom: 4px;">
+                        <div style="background: ${statusColor}; height: 100%; border-radius: 10px; width: ${member.progress_percentage || 0}%;"></div>
                     </div>
-                    <small style="color: #6b7280;">${member.earned_points}/${member.required_points}</small>
+                    <small style="color: #6b7280;">${member.progress_percentage || 0}%</small>
                 </td>
-                <td style="padding: 12px; text-align: center; border-bottom: 1px solid #e5e7eb; color: #f59e0b; font-weight: bold;">${member.days_left}</td>
                 <td style="padding: 12px; text-align: center; border-bottom: 1px solid #e5e7eb;">
-                    <button onclick="sendIndividualReminder(${member.user_id})" style="background: #f59e0b; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                    <button onclick="sendIndividualReminder(${member.user_id})" style="background: ${statusColor}; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;">
                         Send Reminder
                     </button>
                 </td>
-            </tr>`
-        ).join('');
+            </tr>
+        `;
+    }).join('');
+    
+    // Add comprehensive pagination
+    const totalPages = data.total_pages || 1;
+    console.log('Pagination Debug:', { totalPages, currentPage, totalMembers: data.total_members, membersCount: members.length });
+    
+    if (totalPages > 1) {
+        let paginationHTML = '<div style="display: flex; justify-content: center; align-items: center; gap: 5px; flex-wrap: wrap;">';
+        
+        // Previous button
+        if (currentPage > 1) {
+            paginationHTML += `<button onclick="loadComplianceMembers('${type}', ${currentPage - 1})" style="padding: 8px 12px; border: 1px solid #d1d5db; background: white; border-radius: 4px; cursor: pointer; font-size: 14px; transition: all 0.2s;">‹ Previous</button>`;
+        }
+        
+        // First page
+        if (currentPage > 3) {
+            paginationHTML += `<button onclick="loadComplianceMembers('${type}', 1)" style="padding: 8px 12px; border: 1px solid #d1d5db; background: white; border-radius: 4px; cursor: pointer; font-size: 14px; transition: all 0.2s;">1</button>`;
+            if (currentPage > 4) {
+                paginationHTML += `<span style="padding: 8px 4px; color: #6b7280;">...</span>`;
+            }
+        }
+        
+        // Page numbers around current page
+        const startPage = Math.max(1, currentPage - 2);
+        const endPage = Math.min(totalPages, currentPage + 2);
+        
+        for (let i = startPage; i <= endPage; i++) {
+            if (i === currentPage) {
+                paginationHTML += `<button style="padding: 8px 12px; border: 1px solid #667eea; background: #667eea; color: white; border-radius: 4px; font-size: 14px; font-weight: 600;">${i}</button>`;
+    } else {
+                paginationHTML += `<button onclick="loadComplianceMembers('${type}', ${i})" style="padding: 8px 12px; border: 1px solid #d1d5db; background: white; border-radius: 4px; cursor: pointer; font-size: 14px; transition: all 0.2s;">${i}</button>`;
+            }
+        }
+        
+        // Last page
+        if (currentPage < totalPages - 2) {
+            if (currentPage < totalPages - 3) {
+                paginationHTML += `<span style="padding: 8px 4px; color: #6b7280;">...</span>`;
+            }
+            paginationHTML += `<button onclick="loadComplianceMembers('${type}', ${totalPages})" style="padding: 8px 12px; border: 1px solid #d1d5db; background: white; border-radius: 4px; cursor: pointer; font-size: 14px; transition: all 0.2s;">${totalPages}</button>`;
+        }
+        
+        // Next button
+        if (currentPage < totalPages) {
+            paginationHTML += `<button onclick="loadComplianceMembers('${type}', ${currentPage + 1})" style="padding: 8px 12px; border: 1px solid #d1d5db; background: white; border-radius: 4px; cursor: pointer; font-size: 14px; transition: all 0.2s;">Next ›</button>`;
+        }
+        
+        // Page info
+        paginationHTML += `<span style="padding: 8px 12px; color: #6b7280; font-size: 14px; margin-left: 10px;">Page ${currentPage} of ${totalPages} (${data.total_members} total)</span>`;
+        
+        paginationHTML += '</div>';
+        pagination.innerHTML = paginationHTML;
+    } else {
+        pagination.innerHTML = '';
     }
+}
+
+// Load member details (now uses loadMembersTable)
+function loadMemberDetails(page = 1) {
+    loadMembersTable(page);
+}
+
+// Update member details table
+function updateMemberDetailsTable(data, currentPage) {
+    const tableBody = document.getElementById('members-table-body');
+    const pagination = document.getElementById('member-pagination');
+    const members = data.members || [];
+    
+    if (members.length === 0) {
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="7" style="padding: 40px; text-align: center; color: #6b7280;">
+                    No members found
+                </td>
+            </tr>
+        `;
+        pagination.innerHTML = '';
+        return;
+    }
+    
+    tableBody.innerHTML = members.map(member => `
+        <tr>
+            <td style="padding: 15px; border-bottom: 1px solid #e5e7eb;">
+                <strong>${member.name || 'Unknown User'}</strong><br>
+                    <small style="color: #6b7280;">${member.email}</small>
+                </td>
+            <td style="padding: 15px; text-align: center; border-bottom: 1px solid #e5e7eb;">${member.role || 'Member'}</td>
+            <td style="padding: 15px; text-align: center; border-bottom: 1px solid #e5e7eb;">${member.earned_points || 0}</td>
+            <td style="padding: 15px; text-align: center; border-bottom: 1px solid #e5e7eb;">${member.required_points || 0}</td>
+            <td style="padding: 15px; text-align: center; border-bottom: 1px solid #e5e7eb;">
+                <div style="background: #f3f4f6; border-radius: 10px; height: 8px; position: relative; margin-bottom: 5px;">
+                    <div style="background: ${member.progress_percentage >= 100 ? '#10b981' : member.progress_percentage >= 75 ? '#f59e0b' : '#ef4444'}; height: 100%; border-radius: 10px; width: ${Math.min(member.progress_percentage, 100)}%;"></div>
+                    </div>
+                <small style="color: #6b7280;">${member.progress_percentage || 0}%</small>
+                </td>
+            <td style="padding: 15px; text-align: center; border-bottom: 1px solid #e5e7eb;">
+                <span style="background: ${member.compliance_status === 'Yes' ? '#10b981' : '#ef4444'}; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold;">
+                    ${member.compliance_status || 'No'}
+                </span>
+            </td>
+            <td style="padding: 15px; text-align: center; border-bottom: 1px solid #e5e7eb;">
+                <button onclick="viewMemberReport(${member.user_id})" style="background: #667eea; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                    View Report
+                    </button>
+                </td>
+        </tr>
+    `).join('');
+    
+    // Add comprehensive pagination
+    const totalPages = data.total_pages || 1;
+    if (totalPages > 1) {
+        let paginationHTML = '<div style="display: flex; justify-content: center; align-items: center; gap: 5px; flex-wrap: wrap;">';
+        
+        // Previous button
+        if (currentPage > 1) {
+            paginationHTML += `<button onclick="loadMemberDetails(${currentPage - 1})" style="padding: 8px 12px; border: 1px solid #d1d5db; background: white; border-radius: 4px; cursor: pointer; font-size: 14px; transition: all 0.2s;">‹ Previous</button>`;
+        }
+        
+        // First page
+        if (currentPage > 3) {
+            paginationHTML += `<button onclick="loadMemberDetails(1)" style="padding: 8px 12px; border: 1px solid #d1d5db; background: white; border-radius: 4px; cursor: pointer; font-size: 14px; transition: all 0.2s;">1</button>`;
+            if (currentPage > 4) {
+                paginationHTML += `<span style="padding: 8px 4px; color: #6b7280;">...</span>`;
+            }
+        }
+        
+        // Page numbers around current page
+        const startPage = Math.max(1, currentPage - 2);
+        const endPage = Math.min(totalPages, currentPage + 2);
+        
+        for (let i = startPage; i <= endPage; i++) {
+            if (i === currentPage) {
+                paginationHTML += `<button style="padding: 8px 12px; border: 1px solid #667eea; background: #667eea; color: white; border-radius: 4px; font-size: 14px; font-weight: 600;">${i}</button>`;
+            } else {
+                paginationHTML += `<button onclick="loadMemberDetails(${i})" style="padding: 8px 12px; border: 1px solid #d1d5db; background: white; border-radius: 4px; cursor: pointer; font-size: 14px; transition: all 0.2s;">${i}</button>`;
+            }
+        }
+        
+        // Last page
+        if (currentPage < totalPages - 2) {
+            if (currentPage < totalPages - 3) {
+                paginationHTML += `<span style="padding: 8px 4px; color: #6b7280;">...</span>`;
+            }
+            paginationHTML += `<button onclick="loadMemberDetails(${totalPages})" style="padding: 8px 12px; border: 1px solid #d1d5db; background: white; border-radius: 4px; cursor: pointer; font-size: 14px; transition: all 0.2s;">${totalPages}</button>`;
+        }
+        
+        // Next button
+        if (currentPage < totalPages) {
+            paginationHTML += `<button onclick="loadMemberDetails(${currentPage + 1})" style="padding: 8px 12px; border: 1px solid #d1d5db; background: white; border-radius: 4px; cursor: pointer; font-size: 14px; transition: all 0.2s;">Next ›</button>`;
+        }
+        
+        // Page info
+        paginationHTML += `<span style="padding: 8px 12px; color: #6b7280; font-size: 14px; margin-left: 10px;">Page ${currentPage} of ${totalPages} (${data.total_members} total)</span>`;
+        
+        paginationHTML += '</div>';
+        pagination.innerHTML = paginationHTML;
+    } else {
+        pagination.innerHTML = '';
+    }
+}
+
+// View individual member report
+function viewMemberReport(userId) {
+    const reportContent = document.getElementById('individual-report-content');
+    
+    // Show loading state
+    reportContent.style.display = 'block';
+    reportContent.innerHTML = `
+        <div style="text-align: center; padding: 40px; color: #6b7280;">
+            <div class="loading-spinner" style="display: inline-block; width: 24px; height: 24px; border: 3px solid #e5e7eb; border-top: 3px solid #667eea; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px;"></div>
+            <div>Loading member report...</div>
+        </div>
+    `;
+    
+    fetch(window.iipm_reports_ajax.ajax_url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+            action: 'iipm_get_individual_report',
+            user_id: userId,
+            year: currentYear,
+            nonce: window.iipm_reports_ajax.nonce
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const memberName = data.data.member ? 
+                `${data.data.member.first_name || ''} ${data.data.member.last_name || ''}`.trim() || data.data.member.display_name : 
+                'Unknown Member';
+            console.log("Wow", "Wow!");
+            displayIndividualReport(data.data, memberName);
+            
+            // Auto-scroll to the report
+            setTimeout(() => {
+                const reportElement = document.getElementById('individual-report-content');
+                if (reportElement) {
+                    reportElement.scrollIntoView({ 
+                        behavior: 'smooth', 
+                        block: 'start',
+                        inline: 'nearest'
+                    });
+                }
+            }, 100);
+        } else {
+            reportContent.innerHTML = `
+                <div style="text-align: center; padding: 40px; color: #ef4444;">
+                    Error loading member report: ${data.data || 'Unknown error'}
+                </div>
+            `;
+        }
+    })
+    .catch(error => {
+        console.error('Error loading member report:', error);
+        reportContent.innerHTML = `
+            <div style="text-align: center; padding: 40px; color: #ef4444;">
+                Error loading member report. Please try again.
+            </div>
+        `;
+    });
+}
+
+// Display individual member report
+function displayIndividualReport(reportData, memberName = null) {
+    const reportContent = document.getElementById('individual-report-content');
+
+    console.log("reportData", "wow!");
+    
+    // Store data globally for export and email functions
+    currentIndividualReportData = reportData;
+    
+    // Generate category progress HTML
+    const categoryProgressHTML = Object.values(reportData.categories).map(category => {
+        const isCompleted = (category.completed || 0) >= (category.required || 0);
+        const progressColor = isCompleted ? '#10b981' : '#ef4444';
+        const progressText = (category.required || 0) > 0 ? `${category.completed || 0}/${category.required || 0} courses` : `${category.completed || 0} courses`;
+        
+        return `
+            <div style="margin-bottom: 20px; padding: 15px; background: #f8fafc; border-radius: 8px; border-left: 4px solid ${progressColor};">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <h4 style="margin: 0; color: #374151;">${category.name || 'Unknown Category'}</h4>
+                    <span style="font-weight: bold; color: ${progressColor};">${progressText}</span>
+                </div>
+                <div style="background: #e5e7eb; height: 8px; border-radius: 4px; overflow: hidden;">
+                    <div style="background: ${progressColor}; height: 100%; width: ${(category.required || 0) > 0 ? Math.min(100, ((category.completed || 0) / (category.required || 1)) * 100) : 100}%; transition: width 0.3s ease;"></div>
+                </div>
+                <div style="font-size: 0.875rem; color: #6b7280; margin-top: 5px;">
+                    ${(category.required || 0) > 0 ? (isCompleted ? '✅ Requirement met' : '❌ Need at least 1 course') : 'Additional courses'}
+                </div>
+            </div>
+        `;
+    }).join('');
+    
+    // Generate completed courses HTML
+    const completedCoursesHTML = reportData.all_courses.length > 0 ? 
+        reportData.all_courses.map(course => `
+            <tr style="border-bottom: 1px solid #e5e7eb;">
+                <td style="padding: 12px; color: #374151;">${course.title}</td>
+                <td style="padding: 12px; color: #6b7280;">${course.provider}</td>
+                <td style="padding: 12px; text-align: center;">
+                    <span style="background: #667eea; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem;">
+                        ${course.hours} hrs
+                    </span>
+                </td>
+                <td style="padding: 12px; text-align: center;">
+                    <span style="background: #f3f4f6; color: #374151; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem;">
+                        ${course.category}
+                    </span>
+                </td>
+                <td style="padding: 12px; text-align: center;">
+                    <span style="background: #e0f2fe; color: #0369a1; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem;">
+                        ${course.courseType || 'Unknown'}
+                    </span>
+                </td>
+                <td style="padding: 12px; color: #6b7280; font-size: 0.875rem;">${course.date}</td>
+            </tr>
+        `).join('') : 
+        '<tr><td colspan="6" style="text-align: center; padding: 40px; color: #6b7280;">No completed courses found for this year</td></tr>';
+    
+    reportContent.innerHTML = `
+        <div style="background: white; border-radius: 12px; padding: 30px; border: 1px solid #e5e7eb; max-height: 80vh; overflow-y: auto;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+                <h3 style="color: #374151; margin: 0;">📊 Individual Member Report - ${memberName || reportData.member.display_name}</h3>
+                <div style="display: flex; gap: 10px;">
+                    <button onclick="exportIndividualReportCSV()" 
+                            style="background: #10b981; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.875rem;">
+                        📄 Export CSV
+                    </button>
+                    <button onclick="sendIndividualReportEmail()" 
+                            style="background: #3b82f6; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.875rem;">
+                        📧 Send Email
+                    </button>
+                    <button onclick="document.getElementById('individual-report-content').style.display='none'" 
+                            style="background: #6b7280; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.875rem;">
+                        ✕ Close
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Member Info -->
+            <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin-bottom: 30px;">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                    <div>
+                        <strong style="color: #374151;">Name:</strong> 
+                        <span style="color: #6b7280;">${reportData.member.first_name || ''} ${reportData.member.last_name || ''} (${reportData.member.display_name})</span>
+                    </div>
+                    <div>
+                        <strong style="color: #374151;">Email:</strong> 
+                        <span style="color: #6b7280;">${reportData.member.user_email}</span>
+                    </div>
+                    <div>
+                        <strong style="color: #374151;">Role:</strong> 
+                        <span style="color: #6b7280;">${reportData.member.role || 'N/A'}</span>
+                    </div>
+                    <div>
+                        <strong style="color: #374151;">Year:</strong> 
+                        <span style="color: #6b7280;">${reportData.year}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Summary Stats -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px;">
+                <div style="text-align: center; padding: 20px; background: #f0fdf4; border-radius: 8px; border: 1px solid #bbf7d0;">
+                    <div style="font-size: 2rem; color: #10b981; margin-bottom: 10px;">📈</div>
+                    <h4 style="margin: 0 0 5px 0; color: #374151;">Points Earned</h4>
+                    <p style="font-size: 1.5rem; font-weight: bold; color: #10b981; margin: 0;">${reportData.total_earned.toFixed(1)}</p>
+                </div>
+                
+                <div style="text-align: center; padding: 20px; background: #eff6ff; border-radius: 8px; border: 1px solid #bfdbfe;">
+                    <div style="font-size: 2rem; color: #667eea; margin-bottom: 10px;">🎯</div>
+                    <h4 style="margin: 0 0 5px 0; color: #374151;">Required Points</h4>
+                    <p style="font-size: 1.5rem; font-weight: bold; color: #667eea; margin: 0;">${reportData.required_points}</p>
+                </div>
+                
+                <div style="text-align: center; padding: 20px; background: #fefce8; border-radius: 8px; border: 1px solid #fde68a;">
+                    <div style="font-size: 2rem; color: #f59e0b; margin-bottom: 10px;">📊</div>
+                    <h4 style="margin: 0 0 5px 0; color: #374151;">Progress</h4>
+                    <p style="font-size: 1.5rem; font-weight: bold; color: #f59e0b; margin: 0;">${reportData.progress_percentage.toFixed(1)}%</p>
+                </div>
+                
+                <div style="text-align: center; padding: 20px; background: ${reportData.compliance_status === 'compliant' ? '#f0fdf4' : '#fef2f2'}; border-radius: 8px; border: 1px solid ${reportData.compliance_status === 'compliant' ? '#bbf7d0' : '#fecaca'};">
+                    <div style="font-size: 2rem; color: ${reportData.compliance_status === 'compliant' ? '#10b981' : '#ef4444'}; margin-bottom: 10px;">${reportData.compliance_status === 'compliant' ? '✅' : '❌'}</div>
+                    <h4 style="margin: 0 0 5px 0; color: #374151;">Status</h4>
+                    <p style="font-size: 1.5rem; font-weight: bold; color: ${reportData.compliance_status === 'compliant' ? '#10b981' : '#ef4444'}; margin: 0;">${reportData.compliance_status === 'compliant' ? 'Compliant' : 'Non-Compliant'}</p>
+                </div>
+            </div>
+            
+            <!-- CPD Progress by Category -->
+            <div style="margin-bottom: 30px;">
+                <h4 style="color: #374151; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #e5e7eb;">📚 CPD Progress by Category</h4>
+                ${categoryProgressHTML}
+            </div>
+            
+            <!-- Completed Courses Table -->
+            <div>
+                <h4 style="color: #374151; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #e5e7eb;">📋 Completed Courses (${reportData.all_courses.length} total)</h4>
+                <div style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                        <thead style="background: #f8fafc;">
+                            <tr>
+                                <th style="padding: 15px; text-align: left; color: #374151; font-weight: 600; border-bottom: 2px solid #e5e7eb;">Course Title</th>
+                                <th style="padding: 15px; text-align: left; color: #374151; font-weight: 600; border-bottom: 2px solid #e5e7eb;">Provider</th>
+                                <th style="padding: 15px; text-align: center; color: #374151; font-weight: 600; border-bottom: 2px solid #e5e7eb;">Hours</th>
+                                <th style="padding: 15px; text-align: center; color: #374151; font-weight: 600; border-bottom: 2px solid #e5e7eb;">Category</th>
+                                <th style="padding: 15px; text-align: center; color: #374151; font-weight: 600; border-bottom: 2px solid #e5e7eb;">Type</th>
+                                <th style="padding: 15px; text-align: left; color: #374151; font-weight: 600; border-bottom: 2px solid #e5e7eb;">Date Completed</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${completedCoursesHTML}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// Update compliance tables (legacy function for backward compatibility)
+function updateComplianceTables(data) {
+    // This function is kept for backward compatibility but now uses the new tab system
+    // Initialize with compliant tab by default
+    currentComplianceTab = 'compliant';
+    loadComplianceMembers('compliant', 1);
 }
 
 // Export reports
@@ -525,49 +1138,12 @@ function exportReport(type) {
 
 // Send reminders
 function sendReminders(type) {
-    const statusDiv = document.getElementById('reminder-status');
-    statusDiv.style.display = 'block';
-    statusDiv.style.background = '#f0f9ff';
-    statusDiv.style.color = '#0369a1';
-    statusDiv.innerHTML = '📤 Sending reminders...';
-    
-    fetch(window.iipm_reports_ajax.ajax_url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-            action: 'iipm_send_bulk_reminders',
-            type: type,
-            year: currentYear,
-            nonce: window.iipm_reports_ajax.nonce
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            statusDiv.style.background = '#ecfdf5';
-            statusDiv.style.color = '#059669';
-            statusDiv.innerHTML = `✅ Sent ${data.data.sent_count} reminders successfully!`;
-        } else {
-            statusDiv.style.background = '#fef2f2';
-            statusDiv.style.color = '#dc2626';
-            statusDiv.innerHTML = '❌ Failed to send reminders: ' + data.data.message;
-        }
-        
-        setTimeout(() => {
-            statusDiv.style.display = 'none';
-        }, 5000);
-    })
-    .catch(error => {
-        statusDiv.style.background = '#fef2f2';
-        statusDiv.style.color = '#dc2626';
-        statusDiv.innerHTML = '❌ Error sending reminders';
-        console.error('Error:', error);
-    });
+    alert('📧 Bulk reminder functionality will be implemented in the next feature update.');
 }
 
 // Send individual reminder (referenced in table buttons)
 function sendIndividualReminder(userId) {
-    alert('Individual reminder functionality will be implemented in next phase');
+    alert('📧 Individual reminder functionality will be implemented in the next feature update.');
 }
 
 // Load categories data (referenced in tab switching)
@@ -583,11 +1159,13 @@ function loadMembersData() {
 }
 
 // Load all members into the table
-function loadMembersTable() {
-    console.log('📊 Loading members table...');
+function loadMembersTable(page = 1) {
+    console.log('📊 Loading members table - Page:', page);
     
     // Show loading state
     const tableBody = document.getElementById('members-table-body');
+    const pagination = document.getElementById('member-pagination');
+    
     if (!tableBody) {
         console.error('❌ Members table body not found!');
         return;
@@ -595,54 +1173,57 @@ function loadMembersTable() {
     
     tableBody.innerHTML = `
         <tr>
-            <td colspan="5" style="padding: 40px; text-align: center; color: #6b7280;">
+            <td colspan="7" style="padding: 40px; text-align: center; color: #6b7280;">
                 <div class="loading-spinner" style="display: inline-block; width: 24px; height: 24px; border: 3px solid #e5e7eb; border-top: 3px solid #667eea; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px;"></div>
                 <div>Loading members...</div>
             </td>
         </tr>
     `;
     
-    // Fetch all members with their CPD progress
+    // Fetch members with pagination
+    const reportType = document.getElementById('member-report-type')?.value || 'employed';
     fetch(window.iipm_reports_ajax.ajax_url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({
             action: 'iipm_get_all_members_for_reports',
             year: currentYear,
+            report_type: reportType,
+            page: page,
             nonce: window.iipm_reports_ajax.nonce
         })
     })
     .then(response => response.json())
     .then(data => {
         console.log('📦 Members data received:', data);
-        if (data.success && data.data.length > 0) {
-            displayMembersTable(data.data);
+        if (data.success) {
+            updateMemberDetailsTable(data.data, page);
         } else {
             tableBody.innerHTML = `
                 <tr>
-                    <td colspan="5" style="padding: 40px; text-align: center; color: #6b7280;">
-                        <div style="font-size: 1.2rem; margin-bottom: 10px;">👥</div>
-                        <div>No active members found</div>
+                    <td colspan="7" style="padding: 40px; text-align: center; color: #ef4444;">
+                        Error loading members: ${data.data || 'Unknown error'}
                     </td>
                 </tr>
             `;
+            if (pagination) pagination.innerHTML = '';
         }
     })
     .catch(error => {
         console.error('❌ Error loading members:', error);
         tableBody.innerHTML = `
             <tr>
-                <td colspan="5" style="padding: 40px; text-align: center; color: #ef4444;">
-                    <div style="font-size: 1.2rem; margin-bottom: 10px;">⚠️</div>
-                    <div>Failed to load members</div>
+                <td colspan="7" style="padding: 40px; text-align: center; color: #ef4444;">
+                    Error loading members. Please try again.
                 </td>
             </tr>
         `;
+        if (pagination) pagination.innerHTML = '';
     });
 }
 
-// Display members in the table
-function displayMembersTable(members) {
+// Removed - using updateMemberDetailsTable instead
+// function displayMembersTable(members) {
     console.log('🎨 Displaying', members.length, 'members in table');
     
     const tableBody = document.getElementById('members-table-body');
@@ -717,9 +1298,9 @@ function displayMembersTable(members) {
         `;
     }).join('');
     
-    tableBody.innerHTML = tableRows;
-    console.log('✅ Members table displayed successfully');
-}
+    // OLD FUNCTION - REMOVED FOR EFFICIENCY
+    // Now using updateMemberDetailsTable() with pagination
+// }
 
 // Generate member report from table button
 function generateMemberReport(userId, memberName) {
@@ -796,8 +1377,8 @@ function generateMemberReport(userId, memberName) {
 
 // Legacy functions - no longer needed with table view
 
-// Display individual report
-function displayIndividualReport(reportData, memberName) {
+// Display individual report (LEGACY - REMOVED)
+function displayIndividualReportLegacy(reportData, memberName) {
     console.log('🎨 Displaying individual report for:', memberName);
     
     // Store report data globally for CSV export
@@ -867,7 +1448,6 @@ function displayIndividualReport(reportData, memberName) {
                             <th style="padding: 12px; text-align: center; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Category</th>
                             <th style="padding: 12px; text-align: center; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Points</th>
                             <th style="padding: 12px; text-align: center; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Status</th>
-                            <th style="padding: 12px; text-align: center; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Certificate</th>
                         </tr>
                     </thead>
                     <tbody id="course-history-body">
@@ -906,20 +1486,21 @@ function getComplianceText(status) {
 
 function generateCategoryBreakdown(categories) {
     return Object.entries(categories).map(([key, category]) => {
-        const percentage = category.min_required > 0 ? (category.earned / category.min_required) * 100 : 0;
-        const color = percentage >= 100 ? '#10b981' : percentage >= 75 ? '#f59e0b' : '#ef4444';
+        const isCompleted = (category.completed || 0) >= (category.required || 0);
+        const color = isCompleted ? '#10b981' : '#ef4444';
+        const progressText = (category.required || 0) > 0 ? `${category.completed || 0}/${category.required || 0} courses` : `${category.completed || 0} courses`;
         
         return `
             <div style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 15px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                    <h5 style="margin: 0; color: #374151;">${category.name}</h5>
-                    <span style="font-weight: bold; color: ${color};">${category.earned}/${category.min_required} points</span>
+                    <h5 style="margin: 0; color: #374151;">${category.name || 'Unknown Category'}</h5>
+                    <span style="font-weight: bold; color: ${color};">${progressText}</span>
                 </div>
                 <div style="background: #f3f4f6; border-radius: 8px; height: 8px; overflow: hidden;">
-                    <div style="background: ${color}; height: 100%; width: ${Math.min(100, percentage)}%; transition: width 0.3s ease;"></div>
+                    <div style="background: ${color}; height: 100%; width: ${(category.required || 0) > 0 ? Math.min(100, ((category.completed || 0) / (category.required || 1)) * 100) : 100}%; transition: width 0.3s ease;"></div>
                 </div>
                 <div style="text-align: right; margin-top: 5px; font-size: 0.85rem; color: #6b7280;">
-                    ${Math.round(percentage)}% complete
+                    ${(category.required || 0) > 0 ? (isCompleted ? '✅ Requirement met' : '❌ Need at least 1 course') : 'Additional courses'}
                 </div>
             </div>
         `;
@@ -932,26 +1513,20 @@ function generateCourseHistory(courses) {
     }
     
     return courses.map(course => {
-        const statusColor = course.status === 'approved' ? '#10b981' : course.status === 'pending' ? '#f59e0b' : '#ef4444';
-        const date = course.completion_date ? new Date(course.completion_date).toLocaleDateString() : new Date(course.created_at).toLocaleDateString();
+        const statusColor = '#10b981';
+        const date = new Date(course.date).toLocaleDateString();
         
         return `
             <tr>
                 <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">${date}</td>
-                <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">${course.course_title || course.title || 'N/A'}</td>
+                <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">${course.title || 'N/A'}</td>
                 <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">${course.provider || 'N/A'}</td>
-                <td style="padding: 12px; text-align: center; border-bottom: 1px solid #e5e7eb;">${course.category_name || 'N/A'}</td>
-                <td style="padding: 12px; text-align: center; border-bottom: 1px solid #e5e7eb; font-weight: bold;">${course.cpd_points}</td>
+                <td style="padding: 12px; text-align: center; border-bottom: 1px solid #e5e7eb;">${course.category || 'N/A'}</td>
+                <td style="padding: 12px; text-align: center; border-bottom: 1px solid #e5e7eb; font-weight: bold;">${course.hours}</td>
                 <td style="padding: 12px; text-align: center; border-bottom: 1px solid #e5e7eb;">
                     <span style="background: ${statusColor}; color: white; padding: 3px 8px; border-radius: 12px; font-size: 0.75rem; text-transform: capitalize;">
-                        ${course.status}
+                        Completed
                     </span>
-                </td>
-                <td style="padding: 12px; text-align: center; border-bottom: 1px solid #e5e7eb;">
-                    ${course.certificate_file ? 
-                        `<a href="${course.certificate_file}" target="_blank" style="color: #667eea; text-decoration: none;">📄 View</a>` : 
-                        '<span style="color: #9ca3af;">No certificate</span>'
-                    }
                 </td>
             </tr>
         `;
@@ -1039,6 +1614,8 @@ function emailIndividualReport() {
 
 // Function to highlight active report card
 function setActiveReportCard(cardType) {
+    console.log('🎯 Setting active report card:', cardType);
+    
     // Remove active class from all cards
     document.querySelectorAll('.report-card').forEach(card => {
         card.style.border = '2px solid transparent';
@@ -1048,6 +1625,8 @@ function setActiveReportCard(cardType) {
     
     // Add active styling to selected card
     const activeCard = document.getElementById(cardType + '-card');
+    console.log('🎯 Active card element:', activeCard);
+    
     if (activeCard) {
         let borderColor, shadowColor;
         switch(cardType) {
@@ -1068,16 +1647,24 @@ function setActiveReportCard(cardType) {
         activeCard.style.border = `2px solid ${borderColor}`;
         activeCard.style.boxShadow = `0 15px 40px ${shadowColor}`;
         activeCard.style.transform = 'translateY(-2px)';
+        
+        console.log('✅ Applied styling to compliance card:', {
+            border: activeCard.style.border,
+            boxShadow: activeCard.style.boxShadow,
+            transform: activeCard.style.transform
+        });
+    } else {
+        console.error('❌ Compliance card not found!');
     }
 }
 
 // Functions for the main report type buttons
 function showComplianceReport() {
-    // Highlight the compliance card
-    setActiveReportCard('compliance');
     
     // Show the compliance section and load data
     showReport('compliance');
+    // Highlight the compliance card
+    setActiveReportCard('compliance');
     loadComplianceData();
     
     // Update URL without page reload
@@ -1121,6 +1708,136 @@ function showProviderAnalysis() {
     
     // Scroll to the report area
     document.getElementById('categories-report').scrollIntoView({ behavior: 'smooth' });
+}
+
+// Global variable to store current individual report data
+var currentIndividualReportData = null;
+
+// Export individual report as CSV
+function exportIndividualReportCSV() {
+    console.log('currentIndividualReportData', currentIndividualReportData);
+    if (typeof currentIndividualReportData === 'undefined' || !currentIndividualReportData) {
+        alert('No report data available to export. Please view a member report first.');
+        return;
+    }
+    
+    const data = currentIndividualReportData;
+    let csvContent = '';
+    
+    // Header
+    csvContent += `Individual Member CPD Report\n`;
+    csvContent += `Generated: ${new Date().toLocaleDateString()}\n`;
+    csvContent += `Year: ${data.year}\n\n`;
+    
+    // Member Information
+    csvContent += `MEMBER INFORMATION\n`;
+    csvContent += `Name,${data.member.first_name || ''} ${data.member.last_name || ''} (${data.member.display_name})\n`;
+    csvContent += `Email,${data.member.user_email}\n`;
+    csvContent += `Role,${data.member.role || 'N/A'}\n`;
+    csvContent += `Membership Status,${data.member.membership_status}\n\n`;
+    
+    // CPD Summary
+    csvContent += `CPD SUMMARY\n`;
+    csvContent += `Points Earned,${data.total_earned}\n`;
+    csvContent += `Points Required,${data.required_points}\n`;
+    csvContent += `Progress,${data.progress_percentage.toFixed(1)}%\n`;
+    csvContent += `Compliance Status,${data.compliance_status === 'compliant' ? 'Compliant' : 'Non-Compliant'}\n\n`;
+    
+    // CPD Progress by Category
+    csvContent += `CPD PROGRESS BY CATEGORY\n`;
+    csvContent += `Category,Required,Completed,Status\n`;
+    Object.values(data.categories).forEach(category => {
+        const status = category.completed >= category.required ? 'Completed' : 'Incomplete';
+        csvContent += `${category.name},${category.required},${category.completed},${status}\n`;
+    });
+    csvContent += `\n`;
+    
+    // Completed Course History
+    csvContent += `COMPLETED COURSE HISTORY\n`;
+    csvContent += `Course Title,Provider,Hours,Category,Type,Date Completed\n`;
+    data.all_courses.forEach(course => {
+        csvContent += `"${course.title}","${course.provider}",${course.hours},"${course.category}","${course.courseType || 'Unknown'}","${course.date}"\n`;
+    });
+    
+    // Download CSV
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `CPD_Report_${data.member.display_name.replace(/\s+/g, '_')}_${data.year}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+// Send individual report via email
+function sendIndividualReportEmail() {
+    if (typeof currentIndividualReportData === 'undefined' || !currentIndividualReportData) {
+        alert('No report data available to send. Please view a member report first.');
+        return;
+    }
+    
+    const memberEmail = currentIndividualReportData.member.user_email;
+    const memberName = currentIndividualReportData.member.display_name;
+    
+    if (!memberEmail) {
+        alert('Member email not available');
+        return;
+    }
+    
+    // Get the HTML content from the individual-report-content div
+    const reportContent = document.getElementById('individual-report-content');
+    if (!reportContent) {
+        alert('Report content not found. Please view a member report first.');
+        return;
+    }
+    
+    // Clone the content and remove action buttons
+    const clonedContent = reportContent.cloneNode(true);
+    const actionButtons = clonedContent.querySelectorAll('button[onclick*="exportIndividualReportCSV"], button[onclick*="sendIndividualReportEmail"], button[onclick*="style.display=\'none\'"]');
+    actionButtons.forEach(button => button.remove());
+    
+    // Get the HTML string
+    const htmlContent = clonedContent.innerHTML;
+    
+    if (!confirm(`Send CPD report to ${memberName} (${memberEmail})?`)) {
+        return;
+    }
+    
+    // Show loading state
+    const button = event.target;
+    const originalText = button.textContent;
+    button.textContent = '📧 Sending...';
+    button.disabled = true;
+    
+    fetch(window.iipm_reports_ajax.ajax_url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+            action: 'iipm_send_individual_report_email',
+            user_id: currentIndividualReportData.member.ID,
+            year: currentIndividualReportData.year,
+            html_content: htmlContent,
+            nonce: window.iipm_reports_ajax.nonce
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('✅ Report sent successfully!');
+        } else {
+            alert('❌ Failed to send report: ' + (data.data || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        console.error('Error sending email:', error);
+        alert('❌ Error sending email. Please try again.');
+    })
+    .finally(() => {
+        button.textContent = originalText;
+        button.disabled = false;
+    });
 }
 
 // CSS for loading spinner animation

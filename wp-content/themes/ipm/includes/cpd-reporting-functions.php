@@ -29,7 +29,7 @@ function iipm_ensure_cpd_reporting_columns() {
 iipm_ensure_cpd_reporting_columns();
 
 /**
- * Get CPD compliance statistics
+ * Get CPD compliance statistics - Returns only 4 summary values for stat cards
  */
 function iipm_get_cpd_compliance_stats($year = null) {
     if (!$year) {
@@ -38,9 +38,54 @@ function iipm_get_cpd_compliance_stats($year = null) {
     
     global $wpdb;
     
+    // Get CPD types to determine required points and assigned users
+    $cpd_types = $wpdb->get_results("SELECT * FROM {$wpdb->prefix}cpd_types ORDER BY id ASC");
+    $required_points = 8; // Default fallback
+    $assigned_user_ids = array(); // Store assigned user IDs
+    
+    if (!empty($cpd_types)) {
+        // Get the primary CPD type or first one
+        $primary_type = null;
+        foreach ($cpd_types as $type) {
+            if ($type->{'Is primary CPD Type'} == 1) {
+                $primary_type = $type;
+                break;
+            }
+        }
+        if (!$primary_type && !empty($cpd_types)) {
+            $primary_type = $cpd_types[0];
+        }
+        
+        if ($primary_type) {
+            $required_points = intval($primary_type->{'Total Hours/Points Required'});
+            
+            // Get assigned user IDs from the primary CPD type
+            if (!empty($primary_type->{'User Ids Assigned'})) {
+                $assigned_string = $primary_type->{'User Ids Assigned'};
+                error_log('🔍 Raw assigned string: ' . $assigned_string);
+                
+                // Remove brackets and parse the string
+                $assigned_string = trim($assigned_string, '[]');
+                
+                // Split by comma and clean each value
+                $assigned_array = explode(',', $assigned_string);
+                $assigned_user_ids = array();
+                
+                foreach ($assigned_array as $user_id) {
+                    $user_id = trim($user_id, " \t\n\r\0\x0B'\"");
+                    if (is_numeric($user_id)) {
+                        $assigned_user_ids[] = intval($user_id);
+                    }
+                }
+                
+                error_log('🔍 Parsed assigned user IDs (count: ' . count($assigned_user_ids) . '): ' . print_r($assigned_user_ids, true));
+            }
+        }
+    }
+    
     // Get all active members
     $members_table = $wpdb->prefix . 'test_iipm_members';
-    $cpd_table = $wpdb->prefix . 'test_iipm_cpd_records';
+    $cpd_table = $wpdb->prefix . 'fullcpd_confirmations';
     
     $total_members = $wpdb->get_var("
         SELECT COUNT(*) 
@@ -48,126 +93,306 @@ function iipm_get_cpd_compliance_stats($year = null) {
         WHERE membership_status = 'active'
     ");
     
-    // Get members with their CPD progress
-    $member_progress = $wpdb->get_results($wpdb->prepare("
+    // Get members with their CPD progress from fullcpd_confirmations using hrsAndCategory parsing
+    $member_courses = $wpdb->get_results($wpdb->prepare("
         SELECT 
             m.user_id,
-            m.cpd_points_required,
-            m.cpd_prorata_adjustment,
-            COALESCE(SUM(CASE WHEN c.status = 'approved' THEN c.cpd_points ELSE 0 END), 0) as earned_points,
-            COUNT(CASE WHEN c.status = 'pending' THEN 1 END) as pending_approvals
+            c.hrsAndCategory
         FROM {$members_table} m
-        LEFT JOIN {$cpd_table} c ON m.user_id = c.user_id AND c.cpd_year = %d
+        LEFT JOIN {$cpd_table} c ON m.user_id = c.user_id AND c.year = %d AND c.dateOfReturn IS NOT NULL
         WHERE m.membership_status = 'active'
-        GROUP BY m.user_id
     ", $year));
+    
+    // Group courses by user and process hrsAndCategory using the exact algorithm from CPD record API
+    $user_stats = array();
+    foreach ($member_courses as $course) {
+        if (!isset($user_stats[$course->user_id])) {
+            $user_stats[$course->user_id] = array(
+                'total_hours' => 0,
+                'courses' => array()
+            );
+        }
+        
+        if ($course->hrsAndCategory) {
+            $user_stats[$course->user_id]['courses'][] = $course->hrsAndCategory;
+        }
+    }
     
     $compliant_members = 0;
     $at_risk_members = 0;
     $non_compliant_members = 0;
-    $total_cpd_logged = 0;
-    $total_pending = 0;
+    $total_cpd_points = 0;
+    $total_assigned_members = 0;
     
-    foreach ($member_progress as $member) {
-        $required = $member->cpd_points_required - $member->cpd_prorata_adjustment;
-        $earned = $member->earned_points;
-        $total_cpd_logged += $earned;
-        $total_pending += $member->pending_approvals;
+    // First, count total assigned members (only those who exist in wp_users and are active members)
+    $total_assigned_members = 0;
+    if (!empty($assigned_user_ids)) {
+        $assigned_user_ids_str = implode(',', array_map('intval', $assigned_user_ids));
+        $total_assigned_members = $wpdb->get_var($wpdb->prepare("
+            SELECT COUNT(DISTINCT u.ID) 
+            FROM {$wpdb->users} u
+            INNER JOIN {$members_table} m ON u.ID = m.user_id
+            WHERE u.ID IN ($assigned_user_ids_str) 
+            AND m.membership_status = 'active'
+        "));
+    }
+    error_log('🔍 Total assigned members in CPD type (active users only): ' . $total_assigned_members);
+    
+    foreach ($user_stats as $user_id => $user_data) {
+        $total_hours = 0;
         
-        if ($earned >= $required) {
+        foreach ($user_data['courses'] as $hrs_and_category) {
+            // Parse hrsAndCategory field (format: "2hrs: Pensions") - EXACT ALGORITHM FROM CPD RECORD API
+            $hrs_and_category_parts = explode(': ', $hrs_and_category, 2);
+            $hours = 0;
+            
+            if (count($hrs_and_category_parts) >= 2) {
+                // Extract hours from "2hrs" format
+                $hours_text = trim($hrs_and_category_parts[0]);
+                $hours = floatval(preg_replace('/[^0-9.]/', '', $hours_text));
+            }
+            
+            $total_hours += $hours;
+        }
+        
+        $earned = $total_hours;
+        $total_cpd_points += $earned; // Add to total CPD points
+        
+        error_log('🔍 Member ID: ' . $user_id . ' earned points: ' . $earned . ', is assigned: ' . (in_array($user_id, $assigned_user_ids) ? 'Yes' : 'No'));
+        
+        $progress_percentage = $required_points > 0 ? min(100, ($earned / $required_points) * 100) : 0;
+        
+        if ($progress_percentage >= 100) {
             $compliant_members++;
-        } elseif ($earned >= ($required * 0.75)) { // 75% or more = at risk
+        } elseif ($progress_percentage == 0) { // 0% = high risk (only for non-compliant members)
             $at_risk_members++;
+            $non_compliant_members++;
         } else {
             $non_compliant_members++;
         }
     }
     
-    $average_points = $total_members > 0 ? $total_cpd_logged / $total_members : 0;
+    // Calculate percentages
+    $compliant_percentage = $total_members > 0 ? round(($compliant_members / $total_members) * 100, 1) : 0;
+    $at_risk_percentage = $total_members > 0 ? round(($at_risk_members / $total_members) * 100, 1) : 0;
+    $non_compliant_percentage = $total_members > 0 ? round(($non_compliant_members / $total_members) * 100, 1) : 0;
     
+    // Calculate average CPD points for assigned members who have CPD data
+    $assigned_members_with_cpd = 0;
+    foreach ($user_stats as $user_id => $user_data) {
+        if (in_array($user_id, $assigned_user_ids)) {
+            $assigned_members_with_cpd++;
+        }
+    }
+    
+    $average_points = $assigned_members_with_cpd > 0 ? round($total_cpd_points / $assigned_members_with_cpd, 1) : 0;
+    
+    error_log('📊 Final stats - Total members: ' . $total_members . ', Assigned members: ' . $total_assigned_members . ', Assigned with CPD: ' . $assigned_members_with_cpd . ', Total CPD points: ' . $total_cpd_points . ', Average points: ' . $average_points);
+    
+    // Return summary values for stat cards and Quick Stats
     return array(
         'total_members' => intval($total_members),
         'compliant_members' => $compliant_members,
+        'compliant_percentage' => $compliant_percentage,
         'at_risk_members' => $at_risk_members,
+        'at_risk_percentage' => $at_risk_percentage,
         'non_compliant_members' => $non_compliant_members,
+        'non_compliant_percentage' => $non_compliant_percentage,
         'average_points' => $average_points,
-        'total_cpd_logged' => $total_cpd_logged,
-        'pending_approvals' => $total_pending
+        'total_cpd_logged' => $total_assigned_members
     );
 }
 
 /**
  * Get detailed compliance data for reports
  */
-function iipm_get_detailed_compliance_data($year = null) {
+function iipm_get_detailed_compliance_data($year = null, $type = null, $page = 1, $per_page = 20) {
     if (!$year) {
         $year = date('Y');
     }
     
     global $wpdb;
     
+    // Get CPD types to determine required points
+    $cpd_types = $wpdb->get_results("SELECT * FROM {$wpdb->prefix}cpd_types ORDER BY id ASC");
+    $required_points = 8; // Default fallback
+    
+    if (!empty($cpd_types)) {
+        // Get the primary CPD type or first one
+        $primary_type = null;
+        foreach ($cpd_types as $type_item) {
+            if ($type_item->{'Is primary CPD Type'} == 1) {
+                $primary_type = $type_item;
+                break;
+            }
+        }
+        if (!$primary_type && !empty($cpd_types)) {
+            $primary_type = $cpd_types[0];
+        }
+        
+        if ($primary_type) {
+            $required_points = intval($primary_type->{'Total Hours/Points Required'});
+        }
+    }
+    
     $members_table = $wpdb->prefix . 'test_iipm_members';
-    $cpd_table = $wpdb->prefix . 'test_iipm_cpd_records';
+    $cpd_table = $wpdb->prefix . 'fullcpd_confirmations';
     $users_table = $wpdb->prefix . 'users';
     
-    // Get detailed member data
-    $member_data = $wpdb->get_results($wpdb->prepare("
-        SELECT 
-            u.ID as user_id,
-            u.display_name as name,
-            u.user_email as email,
-            m.cpd_points_required,
-            m.cpd_prorata_adjustment,
-            COALESCE(SUM(CASE WHEN c.status = 'approved' THEN c.cpd_points ELSE 0 END), 0) as earned_points,
-            COUNT(CASE WHEN c.status = 'pending' THEN 1 END) as pending_approvals
-        FROM {$users_table} u
-        LEFT JOIN {$members_table} m ON u.ID = m.user_id
-        LEFT JOIN {$cpd_table} c ON u.ID = c.user_id AND c.cpd_year = %d
-        WHERE m.membership_status = 'active'
-        GROUP BY u.ID
-        ORDER BY u.display_name
-    ", $year));
+    $offset = ($page - 1) * $per_page;
     
-    $compliant = array();
-    $at_risk = array();
-    $non_compliant = array();
+    // Build WHERE clause based on type
+    $where_clause = "WHERE m.membership_status = 'active'";
+    $order_clause = "ORDER BY u.display_name";
+    
+    // We'll filter after processing hrsAndCategory data since we need to parse the text
+    $having_clause = "";
+    
+    // Get total count for the specific type - we'll calculate this after processing the data
+    // since we need to apply the hrsAndCategory parsing logic
+    $total_members = 0;
+    
+    // Get ALL member data first (no pagination in SQL)
+    $sql = "SELECT 
+                u.ID as user_id,
+                u.display_name as name,
+                u.user_email as email,
+                m.membership_status,
+                mp.theUsersStatus,
+                mp.employer_id,
+                c.hrsAndCategory
+            FROM {$users_table} u
+            LEFT JOIN {$members_table} m ON u.ID = m.user_id
+            LEFT JOIN {$wpdb->prefix}test_iipm_member_profiles mp ON u.ID = mp.user_id
+            LEFT JOIN {$cpd_table} c ON u.ID = c.user_id AND c.year = %d AND c.dateOfReturn IS NOT NULL
+            {$where_clause}
+            {$order_clause}";
+
+    error_log($sql . ' ' . $year);
+    
+    $member_data = $wpdb->get_results($wpdb->prepare($sql, $year));
     
     $year_end = strtotime($year . '-12-31');
     $today = time();
     $days_left = max(0, ceil(($year_end - $today) / (60 * 60 * 24)));
     
+    // Group courses by user_id and process hrsAndCategory using the exact algorithm from CPD record API
+    $user_courses = array();
     foreach ($member_data as $member) {
-        $required = $member->cpd_points_required - $member->cpd_prorata_adjustment;
-        $earned = floatval($member->earned_points);
-        $shortage = max(0, $required - $earned);
-        $progress_percentage = $required > 0 ? min(100, ($earned / $required) * 100) : 0;
+        if (!isset($user_courses[$member->user_id])) {
+            $user_courses[$member->user_id] = array(
+                'user_id' => $member->user_id,
+                'name' => $member->name ?: 'Unknown User',
+                'email' => $member->email,
+                'membership_status' => $member->membership_status,
+                'theUsersStatus' => $member->theUsersStatus,
+                'employer_id' => $member->employer_id,
+                'courses' => array()
+            );
+        }
         
-        $member_info = array(
-            'user_id' => $member->user_id,
-            'name' => $member->name ?: 'Unknown User',
-            'email' => $member->email,
-            'earned_points' => $earned,
-            'required_points' => $required,
-            'shortage' => $shortage,
-            'progress_percentage' => round($progress_percentage, 1),
-            'days_left' => $days_left,
-            'pending_approvals' => $member->pending_approvals
-        );
-        
-        if ($earned >= $required) {
-            $compliant[] = $member_info;
-        } elseif ($earned >= ($required * 0.75)) {
-            $at_risk[] = $member_info;
-        } else {
-            $non_compliant[] = $member_info;
+        if ($member->hrsAndCategory) {
+            $user_courses[$member->user_id]['courses'][] = $member->hrsAndCategory;
         }
     }
     
-    return array(
-        'compliant' => $compliant,
-        'at_risk' => $at_risk,
-        'non_compliant' => $non_compliant
+    // Process all users first to determine compliance status
+    $all_users = array();
+    foreach ($user_courses as $user_id => $user_data) {
+        // Process hrsAndCategory using the exact algorithm from iipm_get_cpd_stats
+        $total_hours = 0;
+        
+        foreach ($user_data['courses'] as $hrs_and_category) {
+            // Parse hrsAndCategory field (format: "2hrs: Pensions") - EXACT ALGORITHM FROM CPD RECORD API
+            $hrs_and_category_parts = explode(': ', $hrs_and_category, 2);
+            $hours = 0;
+            
+            if (count($hrs_and_category_parts) >= 2) {
+                // Extract hours from "2hrs" format
+                $hours_text = trim($hrs_and_category_parts[0]);
+                $hours = floatval(preg_replace('/[^0-9.]/', '', $hours_text));
+            }
+            
+            $total_hours += $hours;
+        }
+        
+        // Convert to earned_points (matching CPD record API logic)
+        $earned_points = $total_hours;
+        $progress_percentage = $required_points > 0 ? min(100, ($earned_points / $required_points) * 100) : 0;
+        
+        // Get role display name
+        $role_display = 'Member';
+        if ($user_data['theUsersStatus'] === 'Systems Admin') {
+            $role_display = 'Systems Admin';
+        } elseif ($user_data['theUsersStatus'] === 'EmployerContact') {
+            $role_display = 'Employer Contact';
+        } elseif ($user_data['theUsersStatus'] === 'Full Member') {
+            $role_display = 'Full Member';
+        } elseif ($user_data['theUsersStatus'] === 'Life Member') {
+            $role_display = 'Life Member';
+        } elseif ($user_data['theUsersStatus'] === 'QPT Member') {
+            $role_display = 'QPT Member';
+        }
+        
+        // Calculate high risk status in backend
+        $is_high_risk = ($progress_percentage === 0) || 
+                       (!$user_data['employer_id'] || $user_data['employer_id'] === '0') ||
+                       ($earned_points === 0);
+        
+        $member_info = array(
+            'user_id' => $user_id,
+            'name' => $user_data['name'],
+            'email' => $user_data['email'],
+            'membership_level' => $user_data['membership_status'],
+            'role' => $role_display,
+            'employer_id' => $user_data['employer_id'],
+            'earned_points' => $earned_points,
+            'required_points' => $required_points,
+            'shortage' => max(0, $required_points - $earned_points),
+            'progress_percentage' => round($progress_percentage, 1),
+            'days_left' => $days_left,
+            'compliance_status' => $earned_points >= $required_points ? 'Yes' : 'No',
+            'is_high_risk' => $is_high_risk // High risk calculated in backend
+        );
+        
+        $all_users[] = $member_info;
+    }
+
+    error_log(print_r("all_users: " . count($all_users), true));
+    
+    // Filter based on type (compliant vs non-compliant)
+    $filtered_users = array();
+    foreach ($all_users as $user) {
+        $is_compliant = $user['progress_percentage'] >= 100;
+        
+        if ($type === 'compliant' && $is_compliant) {
+            $filtered_users[] = $user;
+        } elseif ($type === 'non_compliant' && !$is_compliant) {
+            // Apply high-risk filter if requested for non-compliant
+            $high_risk_only = isset($_POST['high_risk_only']) && $_POST['high_risk_only'] === '1';
+            
+            if (!$high_risk_only || $user['is_high_risk']) {
+                $filtered_users[] = $user;
+            }
+        }
+    }
+    
+    // Apply pagination to filtered results
+    $total_members = count($filtered_users);
+    $offset = ($page - 1) * $per_page;
+    $members = array_slice($filtered_users, $offset, $per_page);
+    
+    $result = array(
+        'members' => $members,
+        'total_members' => $total_members,
+        'total_pages' => ceil($total_members / $per_page),
+        'current_page' => $page,
+        'per_page' => $per_page
     );
+    
+    error_log('Pagination Debug - Type: ' . $type . ', Total Members: ' . $total_members . ', Members Count: ' . count($members) . ', Total Pages: ' . ceil($total_members / $per_page) . ', Current Page: ' . $page);
+    
+    return $result;
 }
 
 /**
@@ -203,18 +428,61 @@ function iipm_get_cpd_by_categories($year = null) {
  * AJAX handler for compliance data
  */
 function iipm_handle_get_compliance_data() {
+    error_log('🔍 iipm_handle_get_compliance_data called');
+    error_log('📥 POST data: ' . print_r($_POST, true));
+    
     // Verify nonce
     if (!wp_verify_nonce($_POST['nonce'], 'iipm_reports_nonce')) {
+        error_log('❌ Nonce verification failed');
         wp_die('Security check failed');
     }
     
     if (!current_user_can('administrator')) {
+        error_log('❌ Insufficient permissions');
         wp_send_json_error(array('message' => 'Insufficient permissions'));
     }
     
     $year = intval($_POST['year'] ?? date('Y'));
-    $data = iipm_get_detailed_compliance_data($year);
+    $type = sanitize_text_field($_POST['type'] ?? '');
+    $page = intval($_POST['page'] ?? 1);
+    $high_risk_only = isset($_POST['high_risk_only']) && $_POST['high_risk_only'] === '1';
     
+    error_log('📊 Processing request - Year: ' . $year . ', Type: ' . $type . ', Page: ' . $page);
+    
+    if ($type) {
+        // Get specific type with pagination
+        $data = iipm_get_detailed_compliance_data($year, $type, $page);
+    } else {
+        // Get all data (legacy mode) - get all members and categorize them
+        $all_members = iipm_get_detailed_compliance_data($year, '', 1, 9999); // Get all members
+        
+        $compliant = array();
+        $at_risk = array();
+        $non_compliant = array();
+        
+        foreach ($all_members['members'] as $member) {
+            if ($member['earned_points'] >= $member['required_points']) {
+                $compliant[] = $member;
+            } elseif ($member['progress_percentage'] >= 75) {
+                $at_risk[] = $member;
+            } else {
+                $non_compliant[] = $member;
+            }
+        }
+        
+        $data = array(
+            'compliant' => $compliant,
+            'at_risk' => $at_risk,
+            'non_compliant' => $non_compliant,
+            'compliant_members' => count($compliant),
+            'at_risk_members' => count($at_risk),
+            'non_compliant_members' => count($non_compliant)
+        );
+        
+        error_log('📊 Counts calculated - Compliant: ' . count($compliant) . ', At Risk: ' . count($at_risk) . ', Non-Compliant: ' . count($non_compliant));
+    }
+    
+    error_log('📤 Sending response: ' . print_r($data, true));
     wp_send_json_success($data);
 }
 
@@ -245,7 +513,7 @@ function iipm_handle_export_report() {
             iipm_export_all_members_report($year);
             break;
         case 'categories':
-            iipm_export_categories_report($year);
+            iipm_export_compliance_report($year);
             break;
         default:
             wp_die('Invalid report type');
@@ -256,7 +524,8 @@ function iipm_handle_export_report() {
  * Export compliance report as CSV
  */
 function iipm_export_compliance_report($year) {
-    $data = iipm_get_detailed_compliance_data($year);
+    // Get ALL compliant members (no pagination for export)
+    $data = iipm_get_detailed_compliance_data($year, 'compliant', 1, 999999);
     
     // Set headers for CSV download
     header('Content-Type: text/csv; charset=utf-8');
@@ -271,53 +540,29 @@ function iipm_export_compliance_report($year) {
     fputcsv($output, array(
         'Name',
         'Email',
-        'Status',
+        'Role',
+        'Membership Level',
         'CPD Points Earned',
         'CPD Points Required',
         'Shortage',
         'Progress %',
-        'Pending Approvals'
+        'Compliance Status',
+        'Days Left'
     ));
     
-    // Write compliant members
-    foreach ($data['compliant'] as $member) {
+    // Write compliant members data
+    foreach ($data['members'] as $member) {
         fputcsv($output, array(
             $member['name'],
             $member['email'],
-            'Compliant',
-            $member['earned_points'],
-            $member['required_points'],
-            0,
-            $member['progress_percentage'] . '%',
-            $member['pending_approvals']
-        ));
-    }
-    
-    // Write at-risk members
-    foreach ($data['at_risk'] as $member) {
-        fputcsv($output, array(
-            $member['name'],
-            $member['email'],
-            'At Risk',
+            $member['role'],
+            $member['membership_level'],
             $member['earned_points'],
             $member['required_points'],
             $member['shortage'],
             $member['progress_percentage'] . '%',
-            $member['pending_approvals']
-        ));
-    }
-    
-    // Write non-compliant members
-    foreach ($data['non_compliant'] as $member) {
-        fputcsv($output, array(
-            $member['name'],
-            $member['email'],
-            'Non-Compliant',
-            $member['earned_points'],
-            $member['required_points'],
-            $member['shortage'],
-            $member['progress_percentage'] . '%',
-            $member['pending_approvals']
+            $member['compliance_status'],
+            $member['days_left']
         ));
     }
     
@@ -329,7 +574,8 @@ function iipm_export_compliance_report($year) {
  * Export non-compliant members only
  */
 function iipm_export_non_compliant_report($year) {
-    $data = iipm_get_detailed_compliance_data($year);
+    // Get ALL non-compliant members (no pagination for export)
+    $data = iipm_get_detailed_compliance_data($year, 'non_compliant', 1, 999999);
     
     header('Content-Type: text/csv; charset=utf-8');
     header('Content-Disposition: attachment; filename=non-compliant-members-' . $year . '.csv');
@@ -341,20 +587,86 @@ function iipm_export_non_compliant_report($year) {
     fputcsv($output, array(
         'Name',
         'Email',
+        'Role',
+        'Membership Level',
         'CPD Points Earned',
         'CPD Points Required',
         'Shortage',
-        'Progress %'
+        'Progress %',
+        'Compliance Status',
+        'Days Left'
     ));
     
-    foreach ($data['non_compliant'] as $member) {
+    foreach ($data['members'] as $member) {
         fputcsv($output, array(
             $member['name'],
             $member['email'],
+            $member['role'],
+            $member['membership_level'],
             $member['earned_points'],
             $member['required_points'],
             $member['shortage'],
-            $member['progress_percentage'] . '%'
+            $member['progress_percentage'] . '%',
+            $member['compliance_status'],
+            $member['days_left']
+        ));
+    }
+    
+    fclose($output);
+    exit;
+}
+
+/**
+ * Export all members report as CSV
+ */
+function iipm_export_all_members_report($year) {
+    // Get ALL members (both individual and employed) - no pagination for export
+    $individual_data = iipm_get_all_members_with_progress($year, 'individual', 1, 999999);
+    $employed_data = iipm_get_all_members_with_progress($year, 'employed', 1, 999999);
+    
+    // Combine both datasets
+    $all_members = array_merge($individual_data['members'], $employed_data['members']);
+    
+    // Set headers for CSV download
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename=all-members-report-' . $year . '.csv');
+    header('Pragma: no-cache');
+    header('Expires: 0');
+    
+    // Create file handle
+    $output = fopen('php://output', 'w');
+    
+    // Write CSV headers
+    fputcsv($output, array(
+        'Name',
+        'Email',
+        'Role',
+        'Membership Level',
+        'Member Type',
+        'Employer ID',
+        'CPD Points Earned',
+        'CPD Points Required',
+        'Shortage',
+        'Progress %',
+        'Compliance Status',
+        'Days Left'
+    ));
+    
+    // Write all members data
+    foreach ($all_members as $member) {
+        fputcsv($output, array(
+            $member['name'],
+            $member['email'],
+            $member['role'],
+            $member['membership_level'],
+            $member['member_type'],
+            $member['employer_id'],
+            $member['earned_points'],
+            $member['required_points'],
+            $member['shortage'],
+            $member['progress_percentage'] . '%',
+            $member['compliance_status'],
+            $member['days_left']
         ));
     }
     
@@ -471,7 +783,7 @@ function iipm_send_cpd_reminder_email($member, $subject, $year) {
 }
 
 /**
- * Get individual member CPD report data
+ * Get individual member CPD report data - Uses existing iipm_get_cpd_stats function
  */
 function iipm_get_individual_member_report($user_id, $year = null) {
     if (!$year) {
@@ -483,75 +795,94 @@ function iipm_get_individual_member_report($user_id, $year = null) {
     // Get member basic info - ensure member record exists and is active
     $member = $wpdb->get_row($wpdb->prepare("
         SELECT u.ID, u.display_name, u.user_email,
-               m.cpd_points_required, m.cpd_prorata_adjustment, m.membership_level
+               m.membership_status, mp.theUsersStatus as role
         FROM {$wpdb->users} u
         INNER JOIN {$wpdb->prefix}test_iipm_members m ON u.ID = m.user_id
+        LEFT JOIN {$wpdb->prefix}test_iipm_member_profiles mp ON u.ID = mp.user_id
         WHERE u.ID = %d AND m.membership_status = 'active'
     ", $user_id));
-    
-    // Get first_name and last_name from user meta
-    if ($member) {
-        $member->first_name = get_user_meta($user_id, 'first_name', true);
-        $member->last_name = get_user_meta($user_id, 'last_name', true);
-    }
     
     if (!$member) {
         error_log("IIPM: Member not found or not active for user_id: " . $user_id);
         return false;
     }
     
-    // Get CPD records by category
-    $cpd_records = $wpdb->get_results($wpdb->prepare("
-        SELECT c.*, cat.name as category_name, cat.min_points_required,
-               course.title as course_title, course.provider
-        FROM {$wpdb->prefix}test_iipm_cpd_records c
-        LEFT JOIN {$wpdb->prefix}test_iipm_cpd_categories cat ON c.category_id = cat.id
-        LEFT JOIN {$wpdb->prefix}test_iipm_cpd_courses course ON c.course_id = course.id
-        WHERE c.user_id = %d AND c.cpd_year = %d
-        ORDER BY c.created_at DESC
-    ", $user_id, $year));
+    // Use existing iipm_get_cpd_stats function from cpd-record-api.php
+    $cpd_stats = iipm_get_cpd_stats($user_id, $year);
     
-    // Initialize categories with proper name mapping
+    // Convert the stats to the format expected by the frontend
+    $required_points = $cpd_stats['target_minutes'] / 60; // Convert minutes to hours
+    $total_earned = $cpd_stats['total_hours'];
+    $progress_percentage = $cpd_stats['completion_percentage'];
+    
+    // Initialize categories with course count requirements
     $categories = array(
-        'Pensions' => array('name' => 'Pensions', 'min_required' => 10, 'earned' => 0, 'courses' => array()),
-        'Savings & Investment' => array('name' => 'Savings & Investment', 'min_required' => 10, 'earned' => 0, 'courses' => array()),
-        'Ethics' => array('name' => 'Ethics', 'min_required' => 10, 'earned' => 0, 'courses' => array()),
-        'Life Assurance' => array('name' => 'Life Assurance', 'min_required' => 10, 'earned' => 0, 'courses' => array())
+        'Pensions' => array('name' => 'Pensions', 'required' => 1, 'completed' => 0, 'courses' => array()),
+        'Savings & Investment' => array('name' => 'Savings & Investment', 'required' => 1, 'completed' => 0, 'courses' => array()),
+        'Ethics' => array('name' => 'Ethics', 'required' => 1, 'completed' => 0, 'courses' => array()),
+        'Life Assurance' => array('name' => 'Life Assurance', 'required' => 1, 'completed' => 0, 'courses' => array())
     );
     
-    $total_earned = 0;
     $all_courses = array();
     
-    foreach ($cpd_records as $record) {
-        if ($record->status === 'approved') {
-            $total_earned += $record->cpd_points;
-            
-            // Add to category totals - use the actual category name from database
-            if (isset($categories[$record->category_name])) {
-                $categories[$record->category_name]['earned'] += $record->cpd_points;
-                $categories[$record->category_name]['courses'][] = $record;
-            } else {
-                // Log unmatched categories for debugging
-                error_log("IIPM: Unmatched category: '{$record->category_name}' for record ID {$record->id}");
-            }
-        }
-        
-        // Add to all courses list
-        $all_courses[] = $record;
-    }
+    // Get detailed course information for the courses table
+    $cpd_courses = $wpdb->get_results($wpdb->prepare("
+        SELECT hrsAndCategory, dateOfReturn, courseName, courseName, crs_provider, courseType
+        FROM {$wpdb->prefix}fullcpd_confirmations
+        WHERE user_id = %d AND year = %d AND dateOfReturn IS NOT NULL
+        ORDER BY dateOfReturn DESC
+    ", $user_id, $year));
     
-    $required_points = $member->cpd_points_required - $member->cpd_prorata_adjustment;
-    $progress_percentage = $required_points > 0 ? ($total_earned / $required_points) * 100 : 0;
+    // Process courses for detailed display
+    foreach ($cpd_courses as $course) {
+        if ($course->hrsAndCategory) {
+            // Parse hrsAndCategory field (format: "2hrs: Pensions")
+            $hrs_and_category_parts = explode(': ', $course->hrsAndCategory, 2);
+            $hours = 0;
+            $category = 'Other';
+            
+            if (count($hrs_and_category_parts) >= 2) {
+                $hours_text = trim($hrs_and_category_parts[0]);
+                $hours = floatval(preg_replace('/[^0-9.]/', '', $hours_text));
+                $category = trim($hrs_and_category_parts[1]);
+            }
+            
+            // Add to all courses list
+            $all_courses[] = array(
+                'title' => $course->courseName ?: 'Untitled Course',
+                'provider' => $course->crs_provider ?: 'Unknown Provider',
+                'hours' => $hours,
+                'category' => $category,
+                'date' => $course->dateOfReturn,
+                'courseType' => $course->courseType ?: 'Unknown'
+            );
+            
+            // Add to category courses and count
+            if (isset($categories[$category])) {
+                $categories[$category]['courses'][] = array(
+                    'title' => $course->courseName ?: 'Untitled Course',
+                    'provider' => $course->crs_provider ?: 'Unknown Provider',
+                    'hours' => $hours,
+                    'category' => $category,
+                    'date' => $course->dateOfReturn,
+                    'courseType' => $course->courseType ?: 'Unknown'
+                );
+                $categories[$category]['completed']++;
+            }
+            // Note: Courses that don't match the 4 main categories are not added to any category
+            // They are still included in all_courses for the detailed table view
+        }
+    }
     
     return array(
         'member' => $member,
         'year' => $year,
         'total_earned' => $total_earned,
         'required_points' => $required_points,
-        'progress_percentage' => min(100, $progress_percentage),
+        'progress_percentage' => $progress_percentage,
         'categories' => $categories,
         'all_courses' => $all_courses,
-        'compliance_status' => $total_earned >= $required_points ? 'compliant' : ($total_earned >= $required_points * 0.75 ? 'at_risk' : 'non_compliant')
+        'compliance_status' => $total_earned >= $required_points ? 'compliant' : ($total_earned == 0 ? 'at_risk' : 'non_compliant')
     );
 }
 
@@ -642,54 +973,152 @@ function iipm_handle_search_members() {
 /**
  * Get all members with their CPD progress for the reports table
  */
-function iipm_get_all_members_with_progress($year = null) {
+function iipm_get_all_members_with_progress($year = null, $report_type = 'employed', $page = 1, $per_page = 20) {
     if (!$year) {
         $year = date('Y');
     }
     
     global $wpdb;
     
+    // Get CPD types to determine required points
+    $cpd_types = $wpdb->get_results("SELECT * FROM {$wpdb->prefix}cpd_types ORDER BY id ASC");
+    $required_points = 8; // Default fallback
+    
+    if (!empty($cpd_types)) {
+        // Get the primary CPD type or first one
+        $primary_type = null;
+        foreach ($cpd_types as $type) {
+            if ($type->{'Is primary CPD Type'} == 1) {
+                $primary_type = $type;
+                break;
+            }
+        }
+        if (!$primary_type && !empty($cpd_types)) {
+            $primary_type = $cpd_types[0];
+        }
+        
+        if ($primary_type) {
+            $required_points = intval($primary_type->{'Total Hours/Points Required'});
+        }
+    }
+    
+    $offset = ($page - 1) * $per_page;
+    
+    // Build WHERE clause based on report type
+    $where_clause = "WHERE m.membership_status = 'active'";
+    if ($report_type === 'individual') {
+        $where_clause .= " AND (mp.employer_id IS NULL OR mp.employer_id = 0)";
+        error_log('Member Details - Filtering for INDIVIDUAL members only (no employer)');
+    } elseif ($report_type === 'employed') {
+        $where_clause .= " AND mp.employer_id IS NOT NULL AND mp.employer_id != 0";
+        error_log('Member Details - Filtering for EMPLOYED members only (has employer)');
+    } else {
+        error_log('Member Details - Showing ALL members (default)');
+    }
+    
+    // We'll calculate total_members after processing all data
+    
+    // Get ALL members first (no pagination in SQL)
     $sql = "SELECT 
                 u.ID, 
                 u.display_name, 
                 u.user_email,
-                m.membership_level,
-                m.cpd_points_required,
-                m.cpd_prorata_adjustment,
-                COALESCE(SUM(CASE WHEN c.status = 'approved' THEN c.cpd_points ELSE 0 END), 0) as earned_points
+                m.membership_status,
+                mp.theUsersStatus,
+                mp.employer_id,
+                c.hrsAndCategory
             FROM {$wpdb->users} u
             LEFT JOIN {$wpdb->prefix}test_iipm_members m ON u.ID = m.user_id
-            LEFT JOIN {$wpdb->prefix}test_iipm_cpd_records c ON u.ID = c.user_id AND c.cpd_year = %d
-            WHERE m.membership_status = 'active'
-            GROUP BY u.ID, u.display_name, u.user_email, m.membership_level, m.cpd_points_required, m.cpd_prorata_adjustment
+            LEFT JOIN {$wpdb->prefix}test_iipm_member_profiles mp ON u.ID = mp.user_id
+            LEFT JOIN {$wpdb->prefix}fullcpd_confirmations c ON u.ID = c.user_id AND c.year = %d AND c.dateOfReturn IS NOT NULL
+            {$where_clause}
             ORDER BY u.display_name ASC";
     
-    $members = $wpdb->get_results($wpdb->prepare($sql, $year));
+    $member_courses = $wpdb->get_results($wpdb->prepare($sql, $year));
     
-    // Calculate required points and progress for each member
-    foreach ($members as &$member) {
-        $required_points = $member->cpd_points_required - $member->cpd_prorata_adjustment;
-        $member->required_points = max(0, $required_points); // Ensure it's not negative
-        $member->earned_points = (int) $member->earned_points;
-        
-        // Calculate progress percentage
-        if ($member->required_points > 0) {
-            $member->progress_percentage = min(100, ($member->earned_points / $member->required_points) * 100);
-        } else {
-            $member->progress_percentage = 100; // If no points required, they're compliant
+    // Group courses by user and process hrsAndCategory using the exact algorithm from CPD record API
+    $user_stats = array();
+    foreach ($member_courses as $course) {
+        if (!isset($user_stats[$course->ID])) {
+            $user_stats[$course->ID] = array(
+                'user_id' => $course->ID,
+                'name' => $course->display_name,
+                'email' => $course->user_email,
+                'membership_status' => $course->membership_status,
+                'theUsersStatus' => $course->theUsersStatus,
+                'total_hours' => 0,
+                'courses' => array()
+            );
         }
         
-        // Determine compliance status
-        if ($member->earned_points >= $member->required_points) {
-            $member->compliance_status = 'compliant';
-        } elseif ($member->progress_percentage >= 75) {
-            $member->compliance_status = 'at_risk';
-        } else {
-            $member->compliance_status = 'non_compliant';
+        if ($course->hrsAndCategory) {
+            $user_stats[$course->ID]['courses'][] = $course->hrsAndCategory;
         }
     }
     
-    return $members;
+    // Process each user's courses using the exact algorithm from CPD record API
+    $members = array();
+    foreach ($user_stats as $user_id => $user_data) {
+        $total_hours = 0;
+        
+        foreach ($user_data['courses'] as $hrs_and_category) {
+            // Parse hrsAndCategory field (format: "2hrs: Pensions") - EXACT ALGORITHM FROM CPD RECORD API
+            $hrs_and_category_parts = explode(': ', $hrs_and_category, 2);
+            $hours = 0;
+            
+            if (count($hrs_and_category_parts) >= 2) {
+                // Extract hours from "2hrs" format
+                $hours_text = trim($hrs_and_category_parts[0]);
+                $hours = floatval(preg_replace('/[^0-9.]/', '', $hours_text));
+            }
+            
+            $total_hours += $hours;
+        }
+        
+        $earned = $total_hours;
+        $user_data['earned_points'] = $earned;
+        $user_data['required_points'] = $required_points;
+        
+        // Calculate progress percentage
+        if ($required_points > 0) {
+            $user_data['progress_percentage'] = min(100, ($earned / $required_points) * 100);
+        } else {
+            $user_data['progress_percentage'] = 100;
+        }
+        
+        // Get role display name
+        $role_display = 'Member';
+        if ($user_data['theUsersStatus'] === 'Systems Admin') {
+            $role_display = 'Systems Admin';
+        } elseif ($user_data['theUsersStatus'] === 'EmployerContact') {
+            $role_display = 'Employer Contact';
+        } elseif ($user_data['theUsersStatus'] === 'Full Member') {
+            $role_display = 'Full Member';
+        } elseif ($user_data['theUsersStatus'] === 'Life Member') {
+            $role_display = 'Life Member';
+        } elseif ($user_data['theUsersStatus'] === 'QPT Member') {
+            $role_display = 'QPT Member';
+        }
+        $user_data['role'] = $role_display;
+        
+        // Determine compliance status
+        $user_data['compliance_status'] = $earned >= $required_points ? 'Yes' : 'No';
+        
+        $members[] = $user_data;
+    }
+    
+    // Apply pagination to processed results
+    $total_members = count($members);
+    $offset = ($page - 1) * $per_page;
+    $paginated_members = array_slice($members, $offset, $per_page);
+    
+    return array(
+        'members' => $paginated_members,
+        'total_members' => $total_members,
+        'total_pages' => ceil($total_members / $per_page),
+        'current_page' => $page,
+        'per_page' => $per_page
+    );
 }
 
 /**
@@ -706,9 +1135,14 @@ function iipm_handle_get_all_members_for_reports() {
     }
     
     $year = intval($_POST['year'] ?? date('Y'));
-    $members = iipm_get_all_members_with_progress($year);
+    $report_type = sanitize_text_field($_POST['report_type'] ?? 'employed');
+    $page = intval($_POST['page'] ?? 1);
     
-    wp_send_json_success($members);
+    error_log('Member Details Debug - Report Type: ' . $report_type . ', Year: ' . $year . ', Page: ' . $page);
+    
+    $result = iipm_get_all_members_with_progress($year, $report_type, $page);
+    
+    wp_send_json_success($result);
 }
 
 // Register AJAX handlers (for logged-in users only, since these require admin access)
@@ -716,6 +1150,7 @@ add_action('wp_ajax_iipm_get_compliance_data', 'iipm_handle_get_compliance_data'
 add_action('wp_ajax_iipm_export_report', 'iipm_handle_export_report');
 add_action('wp_ajax_iipm_send_bulk_reminders', 'iipm_handle_send_bulk_reminders');
 add_action('wp_ajax_iipm_get_individual_report', 'iipm_handle_get_individual_report');
+add_action('wp_ajax_iipm_send_individual_report_email', 'iipm_handle_send_individual_report_email');
 add_action('wp_ajax_iipm_search_members', 'iipm_handle_search_members');
 add_action('wp_ajax_iipm_get_all_members_for_reports', 'iipm_handle_get_all_members_for_reports');
 
@@ -810,4 +1245,73 @@ function iipm_handle_get_training_history() {
 
 // Register the AJAX handler
 add_action('wp_ajax_iipm_get_training_history', 'iipm_handle_get_training_history');
-add_action('wp_ajax_nopriv_iipm_get_training_history', 'iipm_handle_get_training_history'); 
+add_action('wp_ajax_nopriv_iipm_get_training_history', 'iipm_handle_get_training_history');
+
+/**
+ * AJAX handler for sending individual report email
+ */
+function iipm_handle_send_individual_report_email() {
+    // Verify nonce
+    if (!wp_verify_nonce($_POST['nonce'], 'iipm_reports_nonce')) {
+        wp_die('Security check failed');
+    }
+    
+    if (!current_user_can('administrator')) {
+        wp_send_json_error(array('message' => 'Insufficient permissions'));
+    }
+    
+    $user_id = intval($_POST['user_id']);
+    $year = intval($_POST['year'] ?? date('Y'));
+    $html_content = wp_unslash($_POST['html_content'] ?? '');
+    
+    error_log("IIPM: Sending individual report email for user_id: " . $user_id . ", year: " . $year);
+    
+    // Get member information for email
+    $member = get_user_by('ID', $user_id);
+    if (!$member) {
+        wp_send_json_error(array('message' => 'Member not found'));
+    }
+    
+    $member_email = $member->user_email;
+    $member_name = $member->display_name;
+    
+    if (empty($html_content)) {
+        wp_send_json_error(array('message' => 'No HTML content provided'));
+    }
+    
+    // Wrap the HTML content in a proper email structure
+    $email_html = '
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <title>CPD Report - ' . esc_html($member_name) . '</title>
+        <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #374151; max-width: 800px; margin: 0 auto; padding: 20px; }
+        </style>
+    </head>
+    <body>
+        <div style="background: white; border-radius: 12px; padding: 30px; border: 1px solid #e5e7eb;">
+            <h2 style="color: #374151; margin-bottom: 30px;">📊 Individual Member CPD Report - ' . esc_html($member_name) . '</h2>
+            ' . $html_content . '
+        </div>
+    </body>
+    </html>';
+    
+    // Send email
+    $subject = 'CPD Report - ' . $member_name . ' (' . $year . ')';
+    $headers = array(
+        'Content-Type: text/html; charset=UTF-8',
+        'From: IIPM Portal <' . (defined('SMTP_FROM') ? SMTP_FROM : get_option('admin_email')) . '>'
+    );
+    
+    $sent = wp_mail($member_email, $subject, $email_html, $headers);
+    
+    if ($sent) {
+        error_log("IIPM: Individual report email sent successfully to: " . $member_email);
+        wp_send_json_success(array('message' => 'Report sent successfully'));
+    } else {
+        error_log("IIPM: Failed to send individual report email to: " . $member_email);
+        wp_send_json_error(array('message' => 'Failed to send email'));
+    }
+} 
