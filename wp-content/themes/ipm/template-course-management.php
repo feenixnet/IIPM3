@@ -14,110 +14,109 @@ if (!current_user_can('administrator')) {
 get_header();
 ?>
 
-<div class="course-management-page">
-    <!-- Header -->
-    <div class="course-header">
-        <div class="container">
-            <div class="header-content">
-                <h1>Course Management</h1>
+<div class="course-management-page main-container">
+    <div class="container" style="position: relative; z-index: 2;">
+        <div class="page-header" style="text-align: center; margin-bottom: 40px;">
+            <div>
+                <h1 style="color: white; font-size: 2.5rem; margin-bottom: 10px;">Course Management</h1>
+                <p style="color: rgba(255,255,255,0.9); font-size: 1.1rem;">
+                    You can manage your CPD course database here
+                </p>
             </div>
         </div>
-    </div>
-
-    <div class="container" style="margin-bottom: 40px;">
-    <!-- Course Management Actions -->
-    <div class="course-management-header">
-        <div class="header-left">
-            <h2>Course Library</h2>
-            <p>Manage your CPD course database</p>
-        </div>
-        <div class="header-right">
-            <button class="btn btn-primary" id="add-course-btn">
-                <span class="btn-icon"><i class="fas fa-plus"></i></span>
-                Add New Course
-            </button>
-        </div>
-    </div>
-
-    <!-- Filters and Search -->
-    <div class="course-filters">
-        <div class="filter-group">
-            <label for="category-filter">Category:</label>
-            <select id="category-filter" class="form-control">
-                <option value="all">All Categories</option>
-            </select>
-        </div>
-        <div class="filter-group">
-            <label for="provider-filter">Provider:</label>
-            <select id="provider-filter" class="form-control">
-                <option value="all">All Providers</option>
-            </select>
-        </div>
-        <div class="filter-group">
-            <label for="search-courses">Search:</label>
-            <div class="search-input-group">
-                <input type="text" id="search-courses" class="form-control" placeholder="Search courses...">
-                <button class="btn btn-primary" id="search-button" type="button">
-                    <span class="btn-icon"><i class="fas fa-search"></i></span>
-                    Search
+        <!-- Course Management Actions -->
+        <div class="course-management-header">
+            <div class="header-left">
+                <h2>Course Library</h2>
+                <p>Manage your CPD course database</p>
+            </div>
+            <div class="header-right">
+                <button class="btn btn-primary" id="add-course-btn">
+                    <span class="btn-icon"><i class="fas fa-plus"></i></span>
+                    Add New Course
                 </button>
             </div>
         </div>
-        <div class="filter-group">
-            <button class="btn btn-outline" id="clear-filters">Clear Filters</button>
-        </div>
-    </div>
 
-    <!-- Course List -->
-    <div class="course-list-container">
-        <div class="course-list-header">
-            <div class="list-info">
-                <span id="course-count">Loading courses...</span>
+        <!-- Filters and Search -->
+        <div class="course-filters">
+            <div class="filter-group">
+                <label for="category-filter">Category:</label>
+                <select id="category-filter" class="form-control">
+                    <option value="all">All Categories</option>
+                </select>
             </div>
-            <div class="list-actions">
-                <div class="view-toggle">
-                    <button class="btn btn-outline view-btn active" id="card-view-btn" data-view="card">
-                        <span class="btn-icon"><i class="fas fa-clipboard-list"></i></span>
-                        Card View
-                    </button>
-                    <button class="btn btn-outline view-btn" id="table-view-btn" data-view="table">
-                        <span class="btn-icon"><i class="fas fa-chart-bar"></i></span>
-                        Table View
+            <div class="filter-group">
+                <label for="provider-filter">Provider:</label>
+                <select id="provider-filter" class="form-control">
+                    <option value="all">All Providers</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="search-courses">Search:</label>
+                <div class="search-input-group">
+                    <input type="text" id="search-courses" class="form-control" placeholder="Search courses...">
+                    <button class="btn btn-primary" id="search-button" type="button">
+                        <span class="btn-icon"><i class="fas fa-search"></i></span>
+                        Search
                     </button>
                 </div>
-                <button class="btn btn-outline" id="refresh-courses">
-                    <span class="btn-icon"><i class="fas fa-sync-alt"></i></span>
-                    Refresh
-                </button>
+            </div>
+            <div class="filter-group">
+                <button class="btn btn-outline" id="clear-filters">Clear Filters</button>
             </div>
         </div>
-        
-        <div class="course-list" id="course-list">
-            <div class="loading-state">
-                <div class="loading-spinner"></div>
-                <p>Loading courses...</p>
+
+        <!-- Course List -->
+        <div class="course-list-container">
+            <div class="course-list-header">
+                <div class="list-info">
+                    <span id="course-count">Loading courses...</span>
+                </div>
+                <div class="list-actions">
+                    <div class="view-toggle">
+                        <button class="btn btn-outline view-btn active" id="card-view-btn" data-view="card">
+                            <span class="btn-icon"><i class="fas fa-clipboard-list"></i></span>
+                            Card View
+                        </button>
+                        <button class="btn btn-outline view-btn" id="table-view-btn" data-view="table">
+                            <span class="btn-icon"><i class="fas fa-chart-bar"></i></span>
+                            Table View
+                        </button>
+                    </div>
+                    <button class="btn btn-outline" id="refresh-courses">
+                        <span class="btn-icon"><i class="fas fa-sync-alt"></i></span>
+                        Refresh
+                    </button>
+                </div>
+            </div>
+            
+            <div class="course-list" id="course-list">
+                <div class="loading-state">
+                    <div class="loading-spinner"></div>
+                    <p>Loading courses...</p>
+                </div>
+            </div>
+            
+            <!-- Table View -->
+            <div class="table-container" id="table-container" style="display: none;">
+                <table class="courses-table" id="courses-table">
+                    <thead>
+                        <tr>
+                            <th>Course Name</th>
+                            <th>Code</th>
+                            <th>Category</th>
+                            <th>Provider</th>
+                            <th>Duration (CPD mins)</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="courses-table-body">
+                        <!-- Course rows will be populated here -->
+                    </tbody>
+                </table>
             </div>
         </div>
-        
-        <!-- Table View -->
-        <div class="table-container" id="table-container" style="display: none;">
-            <table class="courses-table" id="courses-table">
-                <thead>
-                    <tr>
-                        <th>Course Name</th>
-                        <th>Code</th>
-                        <th>Category</th>
-                        <th>Provider</th>
-                        <th>Duration (CPD mins)</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="courses-table-body">
-                    <!-- Course rows will be populated here -->
-                </tbody>
-            </table>
-        </div>
-    </div>
 </div>
 
 <!-- Add/Edit Course Modal -->
@@ -195,7 +194,6 @@ get_header();
 /* Course Management Page */
 .course-management-page {
     min-height: 100vh;
-    background: #f8fafc;
 }
 
 /* Course Header */
@@ -449,6 +447,7 @@ get_header();
     padding: 20px;
     border-bottom: 1px solid #e2e8f0;
     transition: background 0.2s;
+    margin-bottom: 10px;
 }
 
 .course-item:hover {
