@@ -1211,6 +1211,21 @@ input[type="checkbox"]:disabled:checked {
   margin: 4px 0;
 }
 
+.main-content {
+  background: white;
+  border-radius: 20px;
+  padding: 40px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+.main-container {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-height: 100vh;
+  position: relative;
+  padding-top: 120px !important;
+  padding-bottom: 60px;
+}
+
 /* For better touch targets on mobile */
 @media (max-width: 768px) {
   input[type="checkbox"] {

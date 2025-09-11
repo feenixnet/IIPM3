@@ -68,7 +68,8 @@ get_header() ?>
                                 }
                                 ?>
                                 <div class="block">
-                                    <a href="<?php echo get_sub_field('links')[0]['link']['url']?>" class="text-40" style="display: block; text-decoration: none;"><?php echo esc_html(get_sub_field('title')); ?></a>
+                                    <!-- <?php echo json_encode(get_sub_field('links')); ?> -->
+                                    <a href="<?php echo get_sub_field('links')[0]['link']['url']; ?>" class="text-40" style="display: block; text-decoration: none;"><?php echo esc_html(get_sub_field('title')); ?></a>
                                     <?php
                                     if (have_rows('texts')):
                                         while (have_rows('texts')):

@@ -37,7 +37,7 @@ $active_tab = isset($_GET['tab']) ? sanitize_text_field($_GET['tab']) : 'users';
 get_header();
 ?>
 
-<main class="user-management-page" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; position: relative; padding-top:120px !important; padding-bottom: 60px">
+<main class="user-management-page main-container">
     <div class="container" style="position: relative; z-index: 2;">
         
         <!-- Page Header -->
@@ -65,13 +65,13 @@ get_header();
                 <a href="?tab=invitations" class="tab-button <?php echo $active_tab === 'invitations' ? 'active' : ''; ?>"
                    style="padding: 12px 24px; background: <?php echo $active_tab === 'invitations' ? '#f8a135' : '#6b4c93'; ?>; color: white; border-radius: 8px; text-decoration: none; font-weight: 500; transition: all 0.3s ease;">
                     <span style="margin-right: 8px;"><i class="fas fa-envelope"></i></span>
-                    Invitations
+                    Invite new users
                 </a>
             </div>
         </div>
 
         <!-- Tab Content -->
-        <div class="tab-content" style="background: white; border-radius: 20px; padding: 40px; box-shadow: 0 20px 40px rgba(0,0,0,0.1);">
+        <div class="tab-content main-content">
             <?php if ($active_tab === 'users'): ?>
                 <!-- Users Management Content -->
                 <div class="users-content">

@@ -19,27 +19,18 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
 )) . ';', 'before');
 ?>
 
-<main id="primary" class="iipm-organisation-manage-page">
-    <!-- Hero Section -->
-    <section class="org-management-hero" style=" padding-top: 160px; position: relative; z-index: 1;">
-        <div class="hero-background">
-            <div class="hero-overlay"></div>
-        </div>
-        <div class="hero-content">
-            <div class="container">
-                <h1 class="hero-title"><i class="fas fa-building"></i> Organisation Management</h1>
-                <p class="hero-subtitle">Manage member organisations and their administrators</p>
-                <div class="admin-nav">
-                    <a href="<?php echo home_url('/member-portal/'); ?>" class="btn btn-outline">Dashboard</a>
-                    <a href="<?php echo home_url('/admin-invitations/'); ?>" class="btn btn-outline">Invitations</a>
-                    <a href="<?php echo wp_logout_url(home_url()); ?>" class="btn btn-outline">Logout</a>
-                </div>
+<main id="primary" class="iipm-organisation-manage-page main-container">
+    <div class="container" style="position: relative; z-index: 2;">
+        <!-- Page Header -->
+        <div class="page-header" style="text-align: center; margin-bottom: 40px;">
+            <div>
+                <h1 style="color: white; font-size: 2.5rem; margin-bottom: 10px;">Organisation Management</h1>
+                <p style="color: rgba(255,255,255,0.9); font-size: 1.1rem;">
+                    Manage member organisations and their administrators
+                </p>
             </div>
         </div>
-    </section>
-
-    <div class="org-management-page">
-        <div class="container">
+        <div class="tab-content main-content">
             
             <!-- Quick Stats -->
             <div class="stats-grid">
@@ -145,9 +136,9 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
                             <?php
                             $organisations = $wpdb->get_results("
                                 SELECT o.*, 
-                                       u.display_name as admin_name,
-                                       u.user_email as admin_email,
-                                       COUNT(mp.id) as member_count
+                                    u.display_name as admin_name,
+                                    u.user_email as admin_email,
+                                    COUNT(mp.id) as member_count
                                 FROM {$wpdb->prefix}test_iipm_organisations o
                                 LEFT JOIN {$wpdb->users} u ON o.admin_user_id = u.ID
                                 LEFT JOIN {$wpdb->prefix}test_iipm_member_profiles mp ON o.id = mp.employer_id
