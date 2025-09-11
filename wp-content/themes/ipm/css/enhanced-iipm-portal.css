@@ -1226,6 +1226,16 @@ input[type="checkbox"]:disabled:checked {
   padding-bottom: 60px;
 }
 
+.icon-button {
+  min-width: 40px !important;
+  min-height: 40px !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin: 0;
+}
+
 /* For better touch targets on mobile */
 @media (max-width: 768px) {
   input[type="checkbox"] {

@@ -51,10 +51,10 @@ get_header();
 
 /* Base Layout */
 .iipm-dashboard-page {
-    min-height: 100vh;
-    background: transparent;
-    margin: 0;
-    padding: 0;
+    /* min-height: 100vh; */
+    /* background: transparent; */
+    /* margin: 0; */
+    /* padding: 0; */
 }
 
 /* Hero Section */
@@ -84,6 +84,7 @@ get_header();
 
 .user-role {
     display: flex;
+    justify-content: center;
     align-items: center;
     gap: 12px;
 }
@@ -121,14 +122,6 @@ get_header();
     font-size: 32px;
     font-weight: 600;
     color: white;
-}
-
-/* Container */
-.container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 20px;
-    position: relative;
 }
 
 /* Message Container */
@@ -354,17 +347,17 @@ if (isset($_POST['delete_super_admin']) && isset($_POST['user_id'])) {
 
     // Prevent deleting yourself
     if ($user_id === $current_user_id) {
-        echo '<script>
-            document.addEventListener("DOMContentLoaded", function() {
-                const container = document.getElementById("iipm-message-container");
-                container.innerHTML = `
-                    <div class="iipm-message error">
-                        <p>You cannot delete your own account.</p>
-                        <button type="button" class="dismiss-message" onclick="this.parentElement.remove();">&times;</button>
-                    </div>
-                `;
-            });
-        </script>';
+        // echo '<script>
+        //     document.addEventListener("DOMContentLoaded", function() {
+        //         const container = document.getElementById("iipm-message-container");
+        //         container.innerHTML = `
+        //             <div class="iipm-message error">
+        //                 <p>You cannot delete your own account.</p>
+        //                 <button type="button" class="dismiss-message" onclick="this.parentElement.remove();">&times;</button>
+        //             </div>
+        //         `;
+        //     });
+        // </script>';
     } else {
         // Remove super admin role first
         revoke_super_admin($user_id);
@@ -375,30 +368,30 @@ if (isset($_POST['delete_super_admin']) && isset($_POST['user_id'])) {
         
         // Delete the user
         if (wp_delete_user($user_id)) {
-            echo '<script>
-                document.addEventListener("DOMContentLoaded", function() {
-                    const container = document.getElementById("iipm-message-container");
-                    container.innerHTML = `
-                        <div class="iipm-message success">
-                            <p>Successfully deleted super admin account for ' . esc_js($user_name) . '.</p>
-                            <button type="button" class="dismiss-message" onclick="this.parentElement.remove();">&times;</button>
-                        </div>
-                    `;
-                });
-            </script>';
+            // echo '<script>
+            //     document.addEventListener("DOMContentLoaded", function() {
+            //         const container = document.getElementById("iipm-message-container");
+            //         container.innerHTML = `
+            //             <div class="iipm-message success">
+            //                 <p>Successfully deleted super admin account for ' . esc_js($user_name) . '.</p>
+            //                 <button type="button" class="dismiss-message" onclick="this.parentElement.remove();">&times;</button>
+            //             </div>
+            //         `;
+            //     });
+            // </script>';
             iipm_log_super_admin_change($user_id, 'account deleted');
         } else {
-            echo '<script>
-                document.addEventListener("DOMContentLoaded", function() {
-                    const container = document.getElementById("iipm-message-container");
-                    container.innerHTML = `
-                        <div class="iipm-message error">
-                            <p>Failed to delete user account.</p>
-                            <button type="button" class="dismiss-message" onclick="this.parentElement.remove();">&times;</button>
-                        </div>
-                    `;
-                });
-            </script>';
+            // echo '<script>
+            //     document.addEventListener("DOMContentLoaded", function() {
+            //         const container = document.getElementById("iipm-message-container");
+            //         container.innerHTML = `
+            //             <div class="iipm-message error">
+            //                 <p>Failed to delete user account.</p>
+            //                 <button type="button" class="dismiss-message" onclick="this.parentElement.remove();">&times;</button>
+            //             </div>
+            //         `;
+            //     });
+            // </script>';
         }
     }
 }
@@ -418,17 +411,17 @@ if (isset($_POST['add_super_admin']) && isset($_POST['super_admin_email'])) {
     $existing_user = get_user_by('email', $email);
 
     if ($existing_user) {
-        echo '<script>
-            document.addEventListener("DOMContentLoaded", function() {
-                const container = document.getElementById("iipm-message-container");
-                container.innerHTML = `
-                    <div class="iipm-message error">
-                        <p>A user with this email already exists.</p>
-                        <button type="button" class="dismiss-message" onclick="this.parentElement.remove();">&times;</button>
-                    </div>
-                `;
-            });
-        </script>';
+        // echo '<script>
+        //     document.addEventListener("DOMContentLoaded", function() {
+        //         const container = document.getElementById("iipm-message-container");
+        //         container.innerHTML = `
+        //             <div class="iipm-message error">
+        //                 <p>A user with this email already exists.</p>
+        //                 <button type="button" class="dismiss-message" onclick="this.parentElement.remove();">&times;</button>
+        //             </div>
+        //         `;
+        //     });
+        // </script>';
     } else {
         // Create new user
         $userdata = array(
@@ -461,65 +454,55 @@ if (isset($_POST['add_super_admin']) && isset($_POST['super_admin_email'])) {
             $user = new WP_User($user_id);
             $user->add_cap('manage_network');
             
-            echo '<script>
-                document.addEventListener("DOMContentLoaded", function() {
-                    const container = document.getElementById("iipm-message-container");
-                    container.innerHTML = `
-                        <div class="iipm-message success">
-                            <p>Successfully added ' . esc_js($first_name . ' ' . $last_name) . ' as a super admin.</p>
-                            <button type="button" class="dismiss-message" onclick="this.parentElement.remove();">&times;</button>
-                        </div>
-                    `;
-                    // Reload page after 1 second to show updated list
-                    setTimeout(function() {
-                        window.location.reload();
-                    }, 1000);
-                });
-            </script>';
+            // echo '<script>
+            //     document.addEventListener("DOMContentLoaded", function() {
+            //         const container = document.getElementById("iipm-message-container");
+            //         container.innerHTML = `
+            //             <div class="iipm-message success">
+            //                 <p>Successfully added ' . esc_js($first_name . ' ' . $last_name) . ' as a super admin.</p>
+            //                 <button type="button" class="dismiss-message" onclick="this.parentElement.remove();">&times;</button>
+            //             </div>
+            //         `;
+            //         // Reload page after 1 second to show updated list
+            //         setTimeout(function() {
+            //             window.location.reload();
+            //         }, 1000);
+            //     });
+            // </script>';
             iipm_log_super_admin_change($user_id, 'added as super admin');
         } else {
-            echo '<script>
-                document.addEventListener("DOMContentLoaded", function() {
-                    const container = document.getElementById("iipm-message-container");
-                    container.innerHTML = `
-                        <div class="iipm-message error">
-                            <p>' . esc_js($user_id->get_error_message()) . '</p>
-                            <button type="button" class="dismiss-message" onclick="this.parentElement.remove();">&times;</button>
-                        </div>
-                    `;
-                });
-            </script>';
+            // echo '<script>
+            //     document.addEventListener("DOMContentLoaded", function() {
+            //         const container = document.getElementById("iipm-message-container");
+            //         container.innerHTML = `
+            //             <div class="iipm-message error">
+            //                 <p>' . esc_js($user_id->get_error_message()) . '</p>
+            //                 <button type="button" class="dismiss-message" onclick="this.parentElement.remove();">&times;</button>
+            //             </div>
+            //         `;
+            //     });
+            // </script>';
         }
     }
 }
 ?>
 
-<div class="iipm-dashboard-page">
+<div class="iipm-dashboard-page main-container">
     <!-- Error/Success Message Container -->
     <div id="iipm-message-container"></div>
     
     <!-- Hero Section -->
-    <section class="dashboard-hero">
-        <div class="container">
-            <div class="hero-content">
-                <div class="welcome-section">
-                    <h1>Super Admin Management</h1>
-                    <div class="user-role">
-                        <span class="role-badge admin">Super Admin</span>
-                        <span class="user-email"><?php echo esc_html($current_user->user_email); ?></span>
-                    </div>
-                </div>
-                <div class="dashboard-avatar">
-                    <div class="avatar-circle">
-                        <?php echo strtoupper(substr($current_user->display_name, 0, 1)); ?>
-                    </div>
+    <div class="container" style="position: relative; z-index: 2;">
+        <div class="page-header" style="text-align: center; margin-bottom: 40px;">
+            <div class="welcome-section">
+                <h1 style="color: white; font-size: 2.5rem; margin-bottom: 10px;">Super Admin Management</h1>
+                <div class="user-role">
+                    <span class="role-badge admin">Super Admin</span>
+                    <span class="user-email"><?php echo esc_html($current_user->user_email); ?></span>
                 </div>
             </div>
         </div>
-    </section>
-
-    <section class="dashboard-content">
-        <div class="container">
+        <div class="tab-content main-content">
             <!-- Add New Super Admin Section -->
             <div class="dashboard-card">
                 <div class="card-header">
@@ -546,14 +529,14 @@ if (isset($_POST['add_super_admin']) && isset($_POST['super_admin_email'])) {
                             <p class="description">Password should be at least 8 characters long and include numbers and special characters.</p>
                         </div>
                         <div class="form-submit">
-                            <button type="submit" name="add_super_admin" class="button button-primary">Add Super Admin</button>
+                            <button type="submit" name="add_super_admin" class="btn btn-primary btn-large">Add Super Admin</button>
                         </div>
                     </form>
                 </div>
             </div>
 
             <!-- Current Super Admins Section -->
-            <div class="dashboard-card">
+            <div class="dashboard-card" style="margin-bottom: 0;">
                 <div class="card-header">
                     <h2>Current Super Admins</h2>
                 </div>
@@ -589,11 +572,22 @@ if (isset($_POST['add_super_admin']) && isset($_POST['super_admin_email'])) {
                                     <td class="action-buttons">
                                         <?php if ($admin->ID !== $current_user_id): ?>
                                             <!-- Update Password Button -->
-                                            <button type="button" class="button button-primary" 
-                                                    onclick="showPasswordModal(<?php echo esc_attr($admin->ID); ?>, '<?php echo esc_attr($admin->display_name); ?>')">
-                                                <span class="dashicons dashicons-admin-users"></span>
-                                                Update Password
+                                            <button type="button" class="button button-primary icon-button" 
+                                                    onclick="showPasswordModal(<?php echo esc_attr($admin->ID); ?>, '<?php echo esc_attr($admin->display_name); ?>')"
+                                                    title="Update Password">
+                                                <i class="fas fa-edit"></i>
                                             </button>
+                                            
+                                            <!-- Delete Account Button -->
+                                            <form method="post" action="">
+                                                <?php wp_nonce_field('delete_super_admin_action', 'delete_super_admin_nonce'); ?>
+                                                <input type="hidden" name="user_id" value="<?php echo esc_attr($admin->ID); ?>">
+                                                <button type="submit" name="delete_super_admin" class="button button-link-delete icon-button" 
+                                                        onclick="return confirm('Are you sure you want to delete this super admin account? This action cannot be undone.');"
+                                                        title="Delete Account">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </form>
 
                                             <!-- Remove Super Admin Button -->
                                             <form method="post" action="">
@@ -601,21 +595,11 @@ if (isset($_POST['add_super_admin']) && isset($_POST['super_admin_email'])) {
                                                 <input type="hidden" name="user_id" value="<?php echo esc_attr($admin->ID); ?>">
                                                 <button type="submit" name="remove_super_admin" class="button" 
                                                         onclick="return confirm('Are you sure you want to remove super admin privileges from this user?');">
-                                                    <span class="dashicons dashicons-dismiss"></span>
+                                                    <i class="fas fa-user-minus"></i>
                                                     Remove Privileges
                                                 </button>
                                             </form>
 
-                                            <!-- Delete Account Button -->
-                                            <form method="post" action="">
-                                                <?php wp_nonce_field('delete_super_admin_action', 'delete_super_admin_nonce'); ?>
-                                                <input type="hidden" name="user_id" value="<?php echo esc_attr($admin->ID); ?>">
-                                                <button type="submit" name="delete_super_admin" class="button button-link-delete" 
-                                                        onclick="return confirm('Are you sure you want to delete this super admin account? This action cannot be undone.');">
-                                                    <span class="dashicons dashicons-trash"></span>
-                                                    Delete Account
-                                                </button>
-                                            </form>
                                         <?php else: ?>
                                             <span class="current-user-badge">Current User</span>
                                         <?php endif; ?>
@@ -630,7 +614,7 @@ if (isset($_POST['add_super_admin']) && isset($_POST['super_admin_email'])) {
                 </div>
             </div>
         </div>
-    </section>
+    </div>
 </div>
 
 <!-- Password Update Modal -->
@@ -648,7 +632,7 @@ if (isset($_POST['add_super_admin']) && isset($_POST['super_admin_email'])) {
                 <p class="description">Password should be at least 8 characters long and include numbers and special characters.</p>
             </div>
             <div class="form-submit">
-                <button type="submit" name="update_password" class="button button-primary">Update Password</button>
+                <button type="submit" name="update_password" class="btn btn-primary btn-large">Update Password</button>
             </div>
         </form>
     </div>
@@ -657,9 +641,9 @@ if (isset($_POST['add_super_admin']) && isset($_POST['super_admin_email'])) {
 <style>
 /* Dashboard Page Layout */
 .iipm-dashboard-page {
-    position: relative;
+    /* position: relative;
     min-height: 100vh;
-    background: #f0f0f1;
+    background: #f0f0f1; */
 }
 
 /* Hero Section Styling */
@@ -675,12 +659,6 @@ if (isset($_POST['add_super_admin']) && isset($_POST['super_admin_email'])) {
     position: relative;
     z-index: 1;
     margin-top: -20px;
-    padding: 0 20px;
-}
-
-.container {
-    max-width: 1200px;
-    margin: 0 auto;
     padding: 0 20px;
 }
 
