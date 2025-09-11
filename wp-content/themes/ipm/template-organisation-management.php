@@ -11,6 +11,11 @@ if (!current_user_can('manage_iipm_members') && !current_user_can('administrator
 
 get_header();
 
+// Include notification system if not already loaded
+if (!function_exists('add_success_notification')) {
+    include_once get_template_directory() . '/includes/notification-system.php';
+}
+
 // Enqueue and localize script for AJAX
 wp_enqueue_script('jquery');
 wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
@@ -1416,7 +1421,10 @@ jQuery(document).ready(function($) {
             contentType: false,
             success: function(response) {
                 if (response.success) {
-                    showSuccessModal('Organisation saved successfully!');
+                    // Show success notification
+                    if (window.notifications) {
+                        notifications.success('Organisation Saved', response.data.message);
+                    }
                     $('#organisation-modal').removeClass('show');
                     setTimeout(function() {
                         location.reload();
@@ -1426,12 +1434,18 @@ jQuery(document).ready(function($) {
                     if (response.data && response.data.includes('organisation with this name already exists')) {
                         showDuplicateNameErrorModal(response.data);
                     } else {
-                        showErrorModal('Save Failed', response.data || 'Unknown error occurred');
+                        // Show error notification
+                        if (window.notifications) {
+                            notifications.error('Save Failed', response.data || 'Unknown error occurred');
+                        }
                     }
                 }
             },
             error: function(xhr, status, error) {
-                showErrorModal('Connection Error', 'Unable to save organisation. Please check your connection and try again.');
+                // Show error notification
+                if (window.notifications) {
+                    notifications.error('Connection Error', 'Unable to save organisation. Please check your connection and try again.');
+                }
             },
             complete: function() {
                 $submitBtn.removeClass('loading');
@@ -1500,15 +1514,24 @@ jQuery(document).ready(function($) {
             data: formData,
             success: function(response) {
                 if (response.success) {
-                    alert('Administrator setup successfully! Invitation sent.');
+                    // Show success notification
+                    if (window.notifications) {
+                        notifications.success('Admin Setup', response.data.admin_email);
+                    }
                     $('#setup-admin-modal').removeClass('show');
                     location.reload();
                 } else {
-                    alert('Error: ' + response.data);
+                    // Show error notification
+                    if (window.notifications) {
+                        notifications.error('Setup Failed', 'Error: ' + response.data);
+                    }
                 }
             },
             error: function() {
-                alert('An error occurred. Please try again.');
+                // Show error notification
+                if (window.notifications) {
+                    notifications.error('Setup Failed', 'An error occurred. Please try again.');
+                }
             },
             complete: function() {
                 $submitBtn.removeClass('loading');
@@ -1537,17 +1560,26 @@ jQuery(document).ready(function($) {
             success: function(response) {
                 console.log('Assignment response:', response);
                 if (response.success) {
-                    alert('Administrator assigned successfully!');
+                    // Show success notification
+                    if (window.notifications) {
+                        notifications.success('Admin Assigned', "Admin assigned successfully!");
+                    }
                     $('#direct-assign-modal').removeClass('show');
-                    location.reload();
+                    // location.reload();
                 } else {
-                    alert('Error: ' + response.data);
+                    // Show error notification
+                    if (window.notifications) {
+                        notifications.error('Assignment Failed', 'Error: ' + response.data);
+                    }
                 }
             },
             error: function(xhr, status, error) {
                 console.error('Assignment error:', error);
                 console.error('Response:', xhr.responseText);
-                alert('An error occurred. Please try again.');
+                // Show error notification
+                if (window.notifications) {
+                    notifications.error('Assignment Failed', 'An error occurred. Please try again.');
+                }
             },
             complete: function() {
                 $submitBtn.removeClass('loading');
@@ -1685,14 +1717,23 @@ jQuery(document).ready(function($) {
                 },
                 success: function(response) {
                     if (response.success) {
-                        alert('Organisation deactivated successfully.');
+                        // Show success notification
+                        if (window.notifications) {
+                            notifications.success('Organisation Deactivated', response.data);
+                        }
                         location.reload();
                     } else {
-                        alert('Error: ' + response.data);
+                        // Show error notification
+                        if (window.notifications) {
+                            notifications.error('Deactivation Failed', 'Error: ' + response.data);
+                        }
                     }
                 },
                 error: function() {
-                    alert('An error occurred.');
+                    // Show error notification
+                    if (window.notifications) {
+                        notifications.error('Deactivation Failed', 'An error occurred.');
+                    }
                 }
             });
         }
@@ -1959,16 +2000,25 @@ jQuery(document).ready(function($) {
                             success: function(response) {
                                 console.log('Delete response:', response); // Debug log
                                 if (response.success) {
-                                    alert('Organisation deleted successfully.');
+                                    // Show success notification
+                                    if (window.notifications) {
+                                        notifications.success('Organisation Deleted', "");
+                                    }
                                     $('#delete-confirmation-modal').remove();
                                     location.reload();
                                 } else {
-                                    alert('Error: ' + response.data);
+                                    // Show error notification
+                                    if (window.notifications) {
+                                        notifications.error('Delete Failed', 'Error: ' + response.data);
+                                    }
                                 }
                             },
                             error: function(xhr, status, error) {
                                 console.log('Delete error:', xhr, status, error); // Debug log
-                                alert('An error occurred while deleting the organisation.');
+                                // Show error notification
+                                if (window.notifications) {
+                                    notifications.error('Delete Failed', 'An error occurred while deleting the organisation.');
+                                }
                             },
                             complete: function() {
                                 $btn.removeClass('loading');

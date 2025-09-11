@@ -1283,13 +1283,34 @@ function iipm_log_login_activity($user_login, $user) {
 		
 		// Log the activity
 		iipm_log_user_activity($user->ID, 'login', 'User logged in');
+		
+		// Set login notification in session
+		if (!session_id()) {
+			session_start();
+		}
+		$_SESSION['iipm_login_notification'] = array(
+			'type' => 'success',
+			'title' => 'Welcome Back!',
+			'message' => 'You have successfully logged in.'
+		);
 	}
 }
 add_action('wp_login', 'iipm_log_login_activity', 10, 2);
 
 function iipm_log_logout_activity() {
 	if (is_user_logged_in()) {
-		iipm_log_user_activity(get_current_user_id(), 'logout', 'User logged out');
+		$user_id = get_current_user_id();
+		iipm_log_user_activity($user_id, 'logout', 'User logged out');
+		
+		// Set logout notification in session
+		if (!session_id()) {
+			session_start();
+		}
+		$_SESSION['iipm_logout_notification'] = array(
+			'type' => 'info',
+			'title' => 'Logged Out',
+			'message' => 'You have been successfully logged out.'
+		);
 	}
 }
 add_action('wp_logout', 'iipm_log_logout_activity');
@@ -5257,4 +5278,418 @@ function iipm_handle_delete_user() {
     }
 }
 add_action('wp_ajax_iipm_delete_user', 'iipm_handle_delete_user');
+
+// AJAX handler for saving organisation (add/edit)
+function iipm_handle_save_organisation() {
+    // Verify nonce
+    if (!wp_verify_nonce($_POST['nonce'], 'iipm_portal_nonce')) {
+        wp_send_json_error('Security check failed');
+        return;
+    }
+    
+    // Check permissions
+    if (!current_user_can('manage_iipm_members') && !current_user_can('administrator')) {
+        wp_send_json_error('Insufficient permissions');
+        return;
+    }
+    
+    global $wpdb;
+    
+    $org_id = intval($_POST['org_id']);
+    $name = sanitize_text_field($_POST['name']);
+    $description = sanitize_textarea_field($_POST['description']);
+    $address = sanitize_textarea_field($_POST['address']);
+    $phone = sanitize_text_field($_POST['phone']);
+    $email = sanitize_email($_POST['email']);
+    $website = esc_url_raw($_POST['website']);
+    $industry = sanitize_text_field($_POST['industry']);
+    $size = sanitize_text_field($_POST['size']);
+    $is_active = isset($_POST['is_active']) ? 1 : 0;
+    
+    // Validate required fields
+    if (empty($name)) {
+        wp_send_json_error('Organisation name is required');
+        return;
+    }
+    
+    $table_name = $wpdb->prefix . 'test_iipm_organisations';
+    
+    if ($org_id) {
+        // Update existing organisation
+        $result = $wpdb->update(
+            $table_name,
+            array(
+                'name' => $name,
+                'description' => $description,
+                'address' => $address,
+                'phone' => $phone,
+                'email' => $email,
+                'website' => $website,
+                'industry' => $industry,
+                'size' => $size,
+                'is_active' => $is_active,
+                'updated_at' => current_time('mysql')
+            ),
+            array('id' => $org_id)
+        );
+        
+        if ($result !== false) {
+            wp_send_json_success('Organisation updated successfully');
+        } else {
+            wp_send_json_error('Failed to update organisation');
+        }
+    } else {
+        // Add new organisation
+        $result = $wpdb->insert(
+            $table_name,
+            array(
+                'name' => $name,
+                'description' => $description,
+                'address' => $address,
+                'phone' => $phone,
+                'email' => $email,
+                'website' => $website,
+                'industry' => $industry,
+                'size' => $size,
+                'is_active' => $is_active,
+                'created_at' => current_time('mysql'),
+                'updated_at' => current_time('mysql')
+            )
+        );
+        
+        if ($result !== false) {
+            wp_send_json_success('Organisation added successfully');
+        } else {
+            wp_send_json_error('Failed to add organisation');
+        }
+    }
+}
+add_action('wp_ajax_iipm_save_organisation', 'iipm_handle_save_organisation');
+
+// AJAX handler for setup organisation admin
+function iipm_handle_setup_organisation_admin() {
+    // Verify nonce
+    if (!wp_verify_nonce($_POST['nonce'], 'iipm_setup_admin_nonce')) {
+        wp_send_json_error('Security check failed');
+        return;
+    }
+    
+    // Check permissions
+    if (!current_user_can('manage_iipm_members') && !current_user_can('administrator')) {
+        wp_send_json_error('Insufficient permissions');
+        return;
+    }
+    
+    $org_id = intval($_POST['org_id']);
+    $admin_email = sanitize_email($_POST['admin_email']);
+    $admin_name = sanitize_text_field($_POST['admin_name']);
+    $send_invitation = isset($_POST['send_invitation']);
+    
+    if (empty($admin_email)) {
+        wp_send_json_error('Administrator email is required');
+        return;
+    }
+    
+    // Check if user already exists
+    $existing_user = get_user_by('email', $admin_email);
+    
+    if ($existing_user) {
+        // User exists, assign as admin
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'test_iipm_organisations';
+        
+        $result = $wpdb->update(
+            $table_name,
+            array('admin_user_id' => $existing_user->ID),
+            array('id' => $org_id)
+        );
+        
+        if ($result !== false) {
+            wp_send_json_success('Administrator assigned successfully');
+        } else {
+            wp_send_json_error('Failed to assign administrator');
+        }
+    } else {
+        // Send invitation
+        $result = iipm_send_invitation($admin_email, 'organisation_admin', $org_id);
+        
+        if ($result['success']) {
+            wp_send_json_success('Invitation sent successfully');
+        } else {
+            wp_send_json_error($result['error']);
+        }
+    }
+}
+add_action('wp_ajax_iipm_setup_organisation_admin', 'iipm_handle_setup_organisation_admin');
+
+// AJAX handler for direct admin assignment
+function iipm_handle_direct_admin_assignment() {
+    // Verify nonce
+    if (!wp_verify_nonce($_POST['nonce'], 'iipm_portal_nonce')) {
+        wp_send_json_error('Security check failed');
+        return;
+    }
+    
+    // Check permissions
+    if (!current_user_can('manage_iipm_members') && !current_user_can('administrator')) {
+        wp_send_json_error('Insufficient permissions');
+        return;
+    }
+    
+    $org_id = intval($_POST['org_id']);
+    $user_id = intval($_POST['user_id']);
+    
+    if (empty($org_id) || empty($user_id)) {
+        wp_send_json_error('Organisation ID and User ID are required');
+        return;
+    }
+    
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'test_iipm_organisations';
+    
+    $result = $wpdb->update(
+        $table_name,
+        array('admin_user_id' => $user_id),
+        array('id' => $org_id)
+    );
+    
+    if ($result !== false) {
+        wp_send_json_success('Administrator assigned successfully');
+    } else {
+        wp_send_json_error('Failed to assign administrator');
+    }
+}
+add_action('wp_ajax_iipm_direct_admin_assignment', 'iipm_handle_direct_admin_assignment');
+
+// AJAX handler for deactivating organisation
+function iipm_handle_deactivate_organisation() {
+    // Verify nonce
+    if (!wp_verify_nonce($_POST['nonce'], 'iipm_portal_nonce')) {
+        wp_send_json_error('Security check failed');
+        return;
+    }
+    
+    // Check permissions
+    if (!current_user_can('manage_iipm_members') && !current_user_can('administrator')) {
+        wp_send_json_error('Insufficient permissions');
+        return;
+    }
+    
+    $org_id = intval($_POST['org_id']);
+    
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'test_iipm_organisations';
+    
+    $result = $wpdb->update(
+        $table_name,
+        array('is_active' => 0),
+        array('id' => $org_id)
+    );
+    
+    if ($result !== false) {
+        wp_send_json_success('Organisation deactivated successfully');
+    } else {
+        wp_send_json_error('Failed to deactivate organisation');
+    }
+}
+add_action('wp_ajax_iipm_deactivate_organisation', 'iipm_handle_deactivate_organisation');
+
+// AJAX handler for deleting organisation
+function iipm_handle_delete_organisation() {
+    // Verify nonce
+    if (!wp_verify_nonce($_POST['nonce'], 'iipm_portal_nonce')) {
+        wp_send_json_error('Security check failed');
+        return;
+    }
+    
+    // Check permissions
+    if (!current_user_can('manage_iipm_members') && !current_user_can('administrator')) {
+        wp_send_json_error('Insufficient permissions');
+        return;
+    }
+    
+    $org_id = intval($_POST['org_id']);
+    
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'test_iipm_organisations';
+    
+    // Check if organisation has members
+    $members_count = $wpdb->get_var($wpdb->prepare(
+        "SELECT COUNT(*) FROM {$wpdb->prefix}test_iipm_members WHERE employer_id = %d",
+        $org_id
+    ));
+    
+    if ($members_count > 0) {
+        wp_send_json_error('Cannot delete organisation with existing members. Please remove all members first.');
+        return;
+    }
+    
+    $result = $wpdb->delete($table_name, array('id' => $org_id));
+    
+    if ($result !== false) {
+        wp_send_json_success('Organisation deleted successfully');
+    } else {
+        wp_send_json_error('Failed to delete organisation');
+    }
+}
+add_action('wp_ajax_iipm_delete_organisation', 'iipm_handle_delete_organisation');
+
+// AJAX handler for adding course
+function iipm_handle_add_course() {
+    // Verify nonce
+    if (!wp_verify_nonce($_POST['nonce'], 'iipm_portal_nonce')) {
+        wp_send_json_error('Security check failed');
+        return;
+    }
+    
+    // Check permissions
+    if (!current_user_can('administrator')) {
+        wp_send_json_error('Insufficient permissions');
+        return;
+    }
+    
+    global $wpdb;
+    
+    $course_name = sanitize_text_field($_POST['course_name']);
+    $course_description = sanitize_textarea_field($_POST['course_description']);
+    $course_category = sanitize_text_field($_POST['course_category']);
+    $course_provider = sanitize_text_field($_POST['course_provider']);
+    $course_duration = intval($_POST['course_duration']);
+    $course_credits = floatval($_POST['course_credits']);
+    $course_price = floatval($_POST['course_price']);
+    $course_url = esc_url_raw($_POST['course_url']);
+    $course_status = sanitize_text_field($_POST['course_status']);
+    
+    // Validate required fields
+    if (empty($course_name)) {
+        wp_send_json_error('Course name is required');
+        return;
+    }
+    
+    $table_name = $wpdb->prefix . 'test_iipm_courses';
+    
+    $result = $wpdb->insert(
+        $table_name,
+        array(
+            'course_name' => $course_name,
+            'course_description' => $course_description,
+            'course_category' => $course_category,
+            'course_provider' => $course_provider,
+            'course_duration' => $course_duration,
+            'course_credits' => $course_credits,
+            'course_price' => $course_price,
+            'course_url' => $course_url,
+            'course_status' => $course_status,
+            'created_at' => current_time('mysql'),
+            'updated_at' => current_time('mysql')
+        )
+    );
+    
+    if ($result !== false) {
+        wp_send_json_success(array('message' => 'Course added successfully'));
+    } else {
+        wp_send_json_error('Failed to add course');
+    }
+}
+add_action('wp_ajax_iipm_add_course', 'iipm_handle_add_course');
+
+// AJAX handler for updating course
+function iipm_handle_update_course_v1() {
+    // Verify nonce
+    if (!wp_verify_nonce($_POST['nonce'], 'iipm_portal_nonce')) {
+        wp_send_json_error('Security check failed');
+        return;
+    }
+    
+    // Check permissions
+    if (!current_user_can('administrator')) {
+        wp_send_json_error('Insufficient permissions');
+        return;
+    }
+    
+    global $wpdb;
+    
+    $course_id = intval($_POST['course_id']);
+    $course_name = sanitize_text_field($_POST['course_name']);
+    $course_description = sanitize_textarea_field($_POST['course_description']);
+    $course_category = sanitize_text_field($_POST['course_category']);
+    $course_provider = sanitize_text_field($_POST['course_provider']);
+    $course_duration = intval($_POST['course_duration']);
+    $course_credits = floatval($_POST['course_credits']);
+    $course_price = floatval($_POST['course_price']);
+    $course_url = esc_url_raw($_POST['course_url']);
+    $course_status = sanitize_text_field($_POST['course_status']);
+    
+    // Validate required fields
+    if (empty($course_name)) {
+        wp_send_json_error('Course name is required');
+        return;
+    }
+    
+    $table_name = $wpdb->prefix . 'test_iipm_courses';
+    
+    $result = $wpdb->update(
+        $table_name,
+        array(
+            'course_name' => $course_name,
+            'course_description' => $course_description,
+            'course_category' => $course_category,
+            'course_provider' => $course_provider,
+            'course_duration' => $course_duration,
+            'course_credits' => $course_credits,
+            'course_price' => $course_price,
+            'course_url' => $course_url,
+            'course_status' => $course_status,
+            'updated_at' => current_time('mysql')
+        ),
+        array('id' => $course_id)
+    );
+    
+    if ($result !== false) {
+        wp_send_json_success(array('message' => 'Course updated successfully'));
+    } else {
+        wp_send_json_error('Failed to update course');
+    }
+}
+add_action('wp_ajax_iipm_update_course_v1', 'iipm_handle_update_course_v1');
+
+// AJAX handler for deleting course
+function iipm_handle_delete_course_v1() {
+    // Verify nonce
+    if (!wp_verify_nonce($_POST['nonce'], 'iipm_portal_nonce')) {
+        wp_send_json_error('Security check failed');
+        return;
+    }
+    
+    // Check permissions
+    if (!current_user_can('administrator')) {
+        wp_send_json_error('Insufficient permissions');
+        return;
+    }
+    
+    $course_id = intval($_POST['course_id']);
+    
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'test_iipm_courses';
+    
+    // Check if course has any enrollments
+    $enrollments_count = $wpdb->get_var($wpdb->prepare(
+        "SELECT COUNT(*) FROM {$wpdb->prefix}test_iipm_cpd_enrollments WHERE course_id = %d",
+        $course_id
+    ));
+    
+    if ($enrollments_count > 0) {
+        wp_send_json_error('Cannot delete course with existing enrollments. Please remove all enrollments first.');
+        return;
+    }
+    
+    $result = $wpdb->delete($table_name, array('id' => $course_id));
+    
+    if ($result !== false) {
+        wp_send_json_success(array('message' => 'Course deleted successfully'));
+    } else {
+        wp_send_json_error('Failed to delete course');
+    }
+}
+add_action('wp_ajax_iipm_delete_course_v1', 'iipm_handle_delete_course_v1');
 

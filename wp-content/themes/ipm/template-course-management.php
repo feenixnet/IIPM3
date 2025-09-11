@@ -12,6 +12,11 @@ if (!current_user_can('administrator')) {
 }
 
 get_header();
+
+// Include notification system if not already loaded
+if (!function_exists('add_success_notification')) {
+    include_once get_template_directory() . '/includes/notification-system.php';
+}
 ?>
 
 <div class="course-management-page main-container">
@@ -1306,7 +1311,10 @@ jQuery(document).ready(function($) {
         
         // Validate required fields
         if (!formData.course_name || !formData.course_category || !formData.course_provider || !formData.course_cpd_mins) {
-            alert('Please fill in all required fields.');
+            // Show error notification
+            if (window.notifications) {
+                notifications.error("Error", 'Please fill in all required fields.');
+            }
             return;
         }
         
@@ -1321,15 +1329,24 @@ jQuery(document).ready(function($) {
             data: formData,
             success: function(response) {
                 if (response.success) {
-                    showSuccess(currentCourseId ? 'Course updated successfully!' : 'Course added successfully!');
+                    // Show success notification
+                    if (window.notifications) {
+                        notifications.success("Success", "Course saved successfully!");
+                    }
                     closeCourseModal();
                     loadCourses();
                 } else {
-                    showError('Failed to save course: ' + response.data);
+                    // Show error notification
+                    if (window.notifications) {
+                        notifications.error("Error", 'Failed to save course: ' + response.data);
+                    }
                 }
             },
             error: function() {
-                showError('Failed to save course');
+                // Show error notification
+                if (window.notifications) {
+                    notifications.error("Error", 'Failed to save course');
+                }
             },
             complete: function() {
                 $saveBtn.html(originalText);
@@ -1382,15 +1399,24 @@ jQuery(document).ready(function($) {
             },
             success: function(response) {
                 if (response.success) {
-                    showSuccess('Course deleted successfully!');
+                    // Show success notification
+                    if (window.notifications) {
+                        notifications.success("Success", "Course deleted successfully!");
+                    }
                     closeDeleteModal();
                     loadCourses();
                 } else {
-                    showError('Failed to delete course: ' + response.data);
+                    // Show error notification
+                    if (window.notifications) {
+                        notifications.error("Error", 'Failed to delete course: ' + response.data);
+                    }
                 }
             },
             error: function() {
-                showError('Failed to delete course');
+                // Show error notification
+                if (window.notifications) {
+                    notifications.error("Error", 'Failed to delete course');
+                }
             },
             complete: function() {
                 $deleteBtn.html(originalText);

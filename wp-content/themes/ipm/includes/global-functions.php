@@ -68,4 +68,31 @@ if (!function_exists('iipm_get_notification')) {
         return iipm_notification_script($status, $title, $message);
     }
 }
+
+// Function to display login/logout notifications from session
+if (!function_exists('iipm_display_session_notifications')) {
+    function iipm_display_session_notifications() {
+        if (!session_id()) {
+            session_start();
+        }
+        
+        $output = '';
+        
+        // Check for login notification
+        if (isset($_SESSION['iipm_login_notification'])) {
+            $notification = $_SESSION['iipm_login_notification'];
+            $output .= iipm_notification_script($notification['type'], $notification['title'], $notification['message']);
+            unset($_SESSION['iipm_login_notification']); // Clear after displaying
+        }
+        
+        // Check for logout notification
+        if (isset($_SESSION['iipm_logout_notification'])) {
+            $notification = $_SESSION['iipm_logout_notification'];
+            $output .= iipm_notification_script($notification['type'], $notification['title'], $notification['message']);
+            unset($_SESSION['iipm_logout_notification']); // Clear after displaying
+        }
+        
+        return $output;
+    }
+}
 ?>

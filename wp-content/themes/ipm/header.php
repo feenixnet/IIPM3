@@ -41,6 +41,17 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
 <body <?php body_class(); ?>>
     <?php wp_body_open(); ?>
+    
+    <?php
+    // Include notification system if not already loaded
+    if (!function_exists('add_success_notification')) {
+        include_once get_template_directory() . '/includes/notification-system.php';
+    }
+    
+    // Display login/logout notifications
+    echo iipm_display_session_notifications();
+    ?>
+    
     <a class="skip-link screen-reader-text" href="#primary"><?php esc_html_e('Skip to content', 'ipm'); ?></a>
 
     <header class="header">
