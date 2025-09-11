@@ -35,6 +35,11 @@ if ($is_org_admin) {
 $active_tab = isset($_GET['tab']) ? sanitize_text_field($_GET['tab']) : 'users';
 
 get_header();
+
+// Include notification system if not already loaded
+if (!function_exists('add_success_notification')) {
+    include_once get_template_directory() . '/includes/notification-system.php';
+}
 ?>
 
 <main class="user-management-page main-container">
@@ -872,9 +877,21 @@ jQuery(document).ready(function($) {
                     $('#edit-user-modal').hide();
                     $('#edit-password').val(''); // Clear password field
                     loadUsers();
-                    alert('User updated successfully!');
+                    // Show success notification
+                    if (window.notifications) {
+                        notifications.success('User Updated', 'User has been updated successfully.');
+                    }
                 } else {
-                    alert('Error updating user: ' + response.data);
+                    // Show error notification
+                    if (window.notifications) {
+                        notifications.error('Update Failed', 'Error updating user: ' + response.data);
+                    }
+                }
+            },
+            error: function() {
+                // Show error notification
+                if (window.notifications) {
+                    notifications.error('Update Failed', 'Error updating user. Please try again.');
                 }
             }
         });
@@ -896,9 +913,22 @@ jQuery(document).ready(function($) {
                 if (response.success) {
                     $('#delete-user-modal').hide();
                     loadUsers();
-                    alert('User deleted successfully!');
+                    // Show success notification
+                    if (window.notifications) {
+                        notifications.success('User Deleted', 'User has been deleted successfully.');
+                    }
                 } else {
-                    alert('Error deleting user: ' + response.data);
+                    // Show error notification
+                    if (window.notifications) {
+                        notifications.error('Delete Failed', 'Error deleting user: ' + response.data);
+                    }
+                }
+                userToDelete = null;
+            },
+            error: function() {
+                // Show error notification
+                if (window.notifications) {
+                    notifications.error('Delete Failed', 'Error deleting user. Please try again.');
                 }
                 userToDelete = null;
             }
@@ -1042,16 +1072,31 @@ jQuery(document).ready(function($) {
                     $('#send-invitation-form')[0].reset();
                     $('.organisation-field').hide();
                     
+                    // Show success notification
+                    if (window.notifications) {
+                        notifications.success('Invitation Sent', message);
+                    }
+                    
                     // Reload invitations instead of page
                     loadInvitations();
                 } else {
                     // Handle both string and object error messages
                     const errorMsg = typeof response.data === 'string' ? response.data : (response.data.message || 'Unknown error occurred');
                     $('#invitation-result').html('<div class="error">Error: ' + errorMsg + '</div>').show();
+                    
+                    // Show error notification
+                    if (window.notifications) {
+                        notifications.error('Send Failed', 'Error: ' + errorMsg);
+                    }
                 }
             },
             error: function() {
                 $('#invitation-result').html('<div class="error">Error: Failed to send invitation. Please try again.</div>').show();
+                
+                // Show error notification
+                if (window.notifications) {
+                    notifications.error('Send Failed', 'Failed to send invitation. Please try again.');
+                }
             },
             complete: function() {
                 submitBtn.text(originalText).prop('disabled', false);
@@ -1079,16 +1124,25 @@ jQuery(document).ready(function($) {
             },
             success: function(response) {
                 if (response.success) {
-                    alert('Invitation resent successfully!');
+                    // Show success notification
+                    if (window.notifications) {
+                        notifications.success('Invitation Resent', 'Invitation resent successfully!');
+                    }
                     // Reload invitations to refresh the list
                     loadInvitations();
                 } else {
-                    alert('Error: ' + response.data.message);
+                    // Show error notification
+                    if (window.notifications) {
+                        notifications.error('Resend Failed', 'Error: ' + response.data.message);
+                    }
                 }
             },
             error: function(xhr, status, error) {
                 console.error('AJAX error:', {xhr, status, error});
-                alert('Failed to resend invitation. Please try again.');
+                // Show error notification
+                if (window.notifications) {
+                    notifications.error('Resend Failed', 'Failed to resend invitation. Please try again.');
+                }
             },
             complete: function() {
                 button.text(originalText).prop('disabled', false);

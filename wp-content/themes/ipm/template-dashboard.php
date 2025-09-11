@@ -65,13 +65,28 @@ $stats = iipm_get_dashboard_stats($user_id);
 get_header();
 ?>
 
-<div class="iipm-dashboard-page">
+<div class="iipm-dashboard-page main-container">
+    <div class="container" style="position: relative; z-index: 2;">
     <!-- Hero Section -->
-    <section class="dashboard-hero">
-        <div class="container">
+    <div class="page-header" style="text-align: center; margin-bottom: 40px;">
+        <div>
+            <h1 style="color: white; font-size: 2.5rem; margin-bottom: 10px;">Welcome, <?php echo esc_html($current_user->first_name ? $current_user->first_name : $current_user->display_name); ?></h1>
+            <div class="user-role">
+                <?php if ($is_admin): ?>
+                    <span class="role-badge admin">Super Admin</span>
+                <?php elseif ($is_corporate_admin): ?>
+                    <span class="role-badge corporate">Organization Admin</span>
+                    <?php if ($organisation): ?>
+                        <span class="org-name"><?php echo esc_html($organisation->name); ?></span>
+                    <?php endif; ?>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+    <!-- <section class="dashboard-hero">
             <div class="hero-content">
                 <div class="welcome-section">
-                    <h1>Welcome, <?php echo esc_html($current_user->first_name ?: $current_user->display_name); ?></h1>
+                    <h1>Welcome, <?php echo esc_html($current_user->first_name ? $current_user->first_name : $current_user->display_name); ?></h1>
                     <div class="user-role">
                         <?php if ($is_admin): ?>
                             <span class="role-badge admin">Super Admin</span>
@@ -83,19 +98,12 @@ get_header();
                         <?php endif; ?>
                     </div>
                 </div>
-                <div class="dashboard-avatar">
-                    <div class="avatar-circle">
-                        <?php echo strtoupper(substr($current_user->first_name ?: $current_user->display_name, 0, 1)); ?>
-                    </div>
-                </div>
             </div>
-        </div>
-    </section>
+    </section> -->
 
     <?php if ($is_admin || $is_corporate_admin): ?>
     <!-- Navigation Cards -->
-    <section class="dashboard-navigation">
-        <div class="container">
+    <section class="dashboard-navigation tab-content main-content">
             <h2>Quick Access</h2>
             <div class="nav-grid">
                 <?php if ($is_admin): ?>
@@ -161,9 +169,9 @@ get_header();
                 </div>
                 <?php endif; ?>
             </div>
-        </div>
     </section>
     <?php endif; ?>
+    </div>
 </div>
 
 <style>
@@ -198,6 +206,7 @@ get_header();
     margin-bottom: 24px;
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 16px;
     flex-wrap: wrap;
 }
@@ -298,6 +307,7 @@ get_header();
     font-size: 2rem;
     font-weight: 600;
     margin-bottom: 32px;
+    margin-top: 5px;
     color: #1f2937;
 }
 

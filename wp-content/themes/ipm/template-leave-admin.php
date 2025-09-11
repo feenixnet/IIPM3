@@ -52,172 +52,176 @@ foreach ($leave_requests as $request) {
 }
 ?>
 
-<main id="primary" class="iipm-leave-admin-page">
-    <!-- Hero Section -->
-     <div class="leave-header">
-        <div class="hero-content">
-            <div class="container">
-                <h1 class="hero-title"><i class="fas fa-calendar-check"></i> Leave Request Administration</h1>
-                <p class="hero-subtitle">Review and manage all leave requests from members</p>
+<main id="primary" class="iipm-leave-admin-page main-container">
+    <div class="container" style="position: relative; z-index: 2;">
+        <!-- Hero Section -->
+        <div class="page-header" style="text-align: center; margin-bottom: 40px;">
+            <div>
+                <h1 style="color: white; font-size: 2.5rem; margin-bottom: 10px;">Leave Request Administration</h1>
+                <p style="color: rgba(255,255,255,0.9); font-size: 1.1rem;">
+                Review and manage all leave requests from members
+                </p>
             </div>
         </div>
-     </div>
 
-    <div class="leave-admin-page">
-        <div class="container" style="max-width: 1400px; margin: 0 auto; padding: 0 20px;">
 
-    <!-- Statistics Cards -->
-    <div class="stats-grid">
-        <div class="stat-card pending">
-            <h3><?php echo count($pending_requests); ?></h3>
-            <p>Pending Requests</p>
-        </div>
-        <div class="stat-card approved">
-            <h3><?php echo count($approved_requests); ?></h3>
-            <p>Approved Requests</p>
-        </div>
-        <div class="stat-card rejected">
-            <h3><?php echo count($rejected_requests); ?></h3>
-            <p>Rejected Requests</p>
-        </div>
-        <div class="stat-card total">
-            <h3><?php echo count($leave_requests); ?></h3>
-            <p>Total Requests</p>
-        </div>
-    </div>
+        <div class="leave-admin-page tab-content main-content">
 
-    <!-- Pending Requests Section -->
-    <div class="admin-section">
-        <h2>Pending Requests (<?php echo count($pending_requests); ?>)</h2>
-        <div class="requests-list">
-            <?php if (!empty($pending_requests)): ?>
-                <?php foreach ($pending_requests as $request): ?>
-                    <div class="admin-request-item pending">
-                        <div class="request-header">
-                            <div class="user-info">
-                                <h4><?php echo esc_html($request->display_name); ?></h4>
-                                <span class="user-email"><?php echo esc_html($request->user_email); ?></span>
-                            </div>
-                            <div class="request-actions">
-                                <button class="btn-approve" onclick="approveRequest(<?php echo $request->id; ?>)">
-                                    ✓ Approve
-                                </button>
-                                <button class="btn-reject" onclick="rejectRequest(<?php echo $request->id; ?>)">
-                                    ✗ Reject
-                                </button>
-                            </div>
-                        </div>
-                        <div class="request-details">
-                            <h5><?php echo esc_html($request->title); ?></h5>
-                            <div class="detail-grid">
-                                <div class="detail-item">
-                                    <strong>Reason:</strong> <?php echo ucfirst($request->reason); ?>
-                                </div>
-                                <div class="detail-item">
-                                    <strong>Duration:</strong> <?php echo $request->duration_days; ?> days
-                                </div>
-                                <div class="detail-item">
-                                    <strong>Start Date:</strong> <?php echo date('M j, Y', strtotime($request->leave_start_date)); ?>
-                                </div>
-                                <div class="detail-item">
-                                    <strong>End Date:</strong> <?php echo date('M j, Y', strtotime($request->leave_end_date)); ?>
-                                </div>
-                            </div>
-                            <?php if ($request->description): ?>
-                                <div class="request-description">
-                                    <strong>Additional Details:</strong>
-                                    <p><?php echo esc_html($request->description); ?></p>
-                                </div>
-                            <?php endif; ?>
-                            <div class="request-meta">
-                                <span>Submitted on <?php echo date('F j, Y \a\t g:i A', strtotime($request->created_at)); ?></span>
-                            </div>
-                        </div>
-                    </div>
-                <?php endforeach; ?>
-            <?php else: ?>
-                <div class="no-requests">
-                    <p>No pending requests found.</p>
+            <!-- Statistics Cards -->
+            <div class="stats-grid">
+                <div class="stat-card pending">
+                    <h3><?php echo count($pending_requests); ?></h3>
+                    <p>Pending Requests</p>
                 </div>
-            <?php endif; ?>
-        </div>
-    </div>
-
-    <!-- Approved Requests Section -->
-    <div class="admin-section">
-        <h2>Approved Requests (<?php echo count($approved_requests); ?>)</h2>
-        <div class="requests-list">
-            <?php if (!empty($approved_requests)): ?>
-                <?php foreach (array_slice($approved_requests, 0, 5) as $request): ?>
-                    <div class="admin-request-item approved">
-                        <div class="request-header">
-                            <div class="user-info">
-                                <h4><?php echo esc_html($request->display_name); ?></h4>
-                                <span class="user-email"><?php echo esc_html($request->user_email); ?></span>
-                            </div>
-                            <div class="status-badge status-approved">Approved</div>
-                        </div>
-                        <div class="request-details">
-                            <h5><?php echo esc_html($request->title); ?></h5>
-                            <div class="detail-grid">
-                                <div class="detail-item">
-                                    <strong>Duration:</strong> <?php echo $request->duration_days; ?> days
-                                </div>
-                                <div class="detail-item">
-                                    <strong>Leave Period:</strong> <?php echo date('M j', strtotime($request->leave_start_date)); ?> - <?php echo date('M j, Y', strtotime($request->leave_end_date)); ?>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                <?php endforeach; ?>
-                <?php if (count($approved_requests) > 5): ?>
-                    <div class="show-more">
-                        <button onclick="showAllApproved()">Show All Approved (<?php echo count($approved_requests); ?>)</button>
-                    </div>
-                <?php endif; ?>
-            <?php else: ?>
-                <div class="no-requests">
-                    <p>No approved requests found.</p>
+                <div class="stat-card approved">
+                    <h3><?php echo count($approved_requests); ?></h3>
+                    <p>Approved Requests</p>
                 </div>
-            <?php endif; ?>
-        </div>
-    </div>
-
-    <!-- Rejected Requests Section -->
-    <div class="admin-section">
-        <h2>Rejected Requests (<?php echo count($rejected_requests); ?>)</h2>
-        <div class="requests-list">
-            <?php if (!empty($rejected_requests)): ?>
-                <?php foreach (array_slice($rejected_requests, 0, 3) as $request): ?>
-                    <div class="admin-request-item rejected">
-                        <div class="request-header">
-                            <div class="user-info">
-                                <h4><?php echo esc_html($request->display_name); ?></h4>
-                                <span class="user-email"><?php echo esc_html($request->user_email); ?></span>
-                            </div>
-                            <div class="status-badge status-rejected">Rejected</div>
-                        </div>
-                        <div class="request-details">
-                            <h5><?php echo esc_html($request->title); ?></h5>
-                            <?php if ($request->rejection_reason): ?>
-                                <div class="rejection-reason">
-                                    <strong>Rejection Reason:</strong>
-                                    <p><?php echo esc_html($request->rejection_reason); ?></p>
-                                </div>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-                <?php endforeach; ?>
-                <?php if (count($rejected_requests) > 3): ?>
-                    <div class="show-more">
-                        <button onclick="showAllRejected()">Show All Rejected (<?php echo count($rejected_requests); ?>)</button>
-                    </div>
-                <?php endif; ?>
-            <?php else: ?>
-                <div class="no-requests">
-                    <p>No rejected requests found.</p>
+                <div class="stat-card rejected">
+                    <h3><?php echo count($rejected_requests); ?></h3>
+                    <p>Rejected Requests</p>
                 </div>
-            <?php endif; ?>
+                <div class="stat-card total">
+                    <h3><?php echo count($leave_requests); ?></h3>
+                    <p>Total Requests</p>
+                </div>
+            </div>
+
+            <!-- Pending Requests Section -->
+            <div class="admin-section">
+                <h2>Pending Requests (<?php echo count($pending_requests); ?>)</h2>
+                <div class="requests-list">
+                    <?php if (!empty($pending_requests)): ?>
+                        <?php foreach ($pending_requests as $request): ?>
+                            <div class="admin-request-item pending">
+                                <div class="request-header">
+                                    <div class="user-info">
+                                        <h4><?php echo esc_html($request->display_name); ?></h4>
+                                        <span class="user-email"><?php echo esc_html($request->user_email); ?></span>
+                                    </div>
+                                    <div class="request-actions">
+                                        <button class="btn-approve" onclick="approveRequest(<?php echo $request->id; ?>)">
+                                            ✓ Approve
+                                        </button>
+                                        <button class="btn-reject" onclick="rejectRequest(<?php echo $request->id; ?>)">
+                                            ✗ Reject
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="request-details">
+                                    <h5><?php echo esc_html($request->title); ?></h5>
+                                    <div class="detail-grid">
+                                        <div class="detail-item">
+                                            <strong>Reason:</strong> <?php echo ucfirst($request->reason); ?>
+                                        </div>
+                                        <div class="detail-item">
+                                            <strong>Duration:</strong> <?php echo $request->duration_days; ?> days
+                                        </div>
+                                        <div class="detail-item">
+                                            <strong>Start Date:</strong> <?php echo date('M j, Y', strtotime($request->leave_start_date)); ?>
+                                        </div>
+                                        <div class="detail-item">
+                                            <strong>End Date:</strong> <?php echo date('M j, Y', strtotime($request->leave_end_date)); ?>
+                                        </div>
+                                    </div>
+                                    <?php if ($request->description): ?>
+                                        <div class="request-description">
+                                            <strong>Additional Details:</strong>
+                                            <p><?php echo esc_html($request->description); ?></p>
+                                        </div>
+                                    <?php endif; ?>
+                                    <div class="request-meta">
+                                        <span>Submitted on <?php echo date('F j, Y \a\t g:i A', strtotime($request->created_at)); ?></span>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <div class="no-requests">
+                            <p>No pending requests found.</p>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+
+            <!-- Approved Requests Section -->
+            <div class="admin-section">
+                <h2>Approved Requests (<?php echo count($approved_requests); ?>)</h2>
+                <div class="requests-list">
+                    <?php if (!empty($approved_requests)): ?>
+                        <?php foreach (array_slice($approved_requests, 0, 5) as $request): ?>
+                            <div class="admin-request-item approved">
+                                <div class="request-header">
+                                    <div class="user-info">
+                                        <h4><?php echo esc_html($request->display_name); ?></h4>
+                                        <span class="user-email"><?php echo esc_html($request->user_email); ?></span>
+                                    </div>
+                                    <div class="status-badge status-approved">Approved</div>
+                                </div>
+                                <div class="request-details">
+                                    <h5><?php echo esc_html($request->title); ?></h5>
+                                    <div class="detail-grid">
+                                        <div class="detail-item">
+                                            <strong>Duration:</strong> <?php echo $request->duration_days; ?> days
+                                        </div>
+                                        <div class="detail-item">
+                                            <strong>Leave Period:</strong> <?php echo date('M j', strtotime($request->leave_start_date)); ?> - <?php echo date('M j, Y', strtotime($request->leave_end_date)); ?>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                        <?php if (count($approved_requests) > 5): ?>
+                            <div class="show-more">
+                                <button onclick="showAllApproved()">Show All Approved (<?php echo count($approved_requests); ?>)</button>
+                            </div>
+                        <?php endif; ?>
+                    <?php else: ?>
+                        <div class="no-requests">
+                            <p>No approved requests found.</p>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+
+            <!-- Rejected Requests Section -->
+            <div class="admin-section">
+                <h2>Rejected Requests (<?php echo count($rejected_requests); ?>)</h2>
+                <div class="requests-list">
+                    <?php if (!empty($rejected_requests)): ?>
+                        <?php foreach (array_slice($rejected_requests, 0, 3) as $request): ?>
+                            <div class="admin-request-item rejected">
+                                <div class="request-header">
+                                    <div class="user-info">
+                                        <h4><?php echo esc_html($request->display_name); ?></h4>
+                                        <span class="user-email"><?php echo esc_html($request->user_email); ?></span>
+                                    </div>
+                                    <div class="status-badge status-rejected">Rejected</div>
+                                </div>
+                                <div class="request-details">
+                                    <h5><?php echo esc_html($request->title); ?></h5>
+                                    <?php if ($request->rejection_reason): ?>
+                                        <div class="rejection-reason">
+                                            <strong>Rejection Reason:</strong>
+                                            <p><?php echo esc_html($request->rejection_reason); ?></p>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                        <?php if (count($rejected_requests) > 3): ?>
+                            <div class="show-more">
+                                <button onclick="showAllRejected()">Show All Rejected (<?php echo count($rejected_requests); ?>)</button>
+                            </div>
+                        <?php endif; ?>
+                    <?php else: ?>
+                        <div class="no-requests">
+                            <p>No rejected requests found.</p>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+
         </div>
     </div>
 </div>

@@ -9,6 +9,9 @@ if ( ! defined( '_S_VERSION' ) ) {
 	define( '_S_VERSION', '1.0.1' );
 }
 
+// Include global functions (without notification system to avoid header issues)
+require_once get_template_directory() . '/includes/global-functions.php';
+
 /**
  * Sets up theme defaults and registers support for various WordPress features.
  */
@@ -5094,4 +5097,164 @@ function iipm_handle_populate_missing_members() {
 }
 add_action('wp_ajax_iipm_populate_missing_members', 'iipm_handle_populate_missing_members');
 add_action('wp_ajax_nopriv_iipm_populate_missing_members', 'iipm_handle_populate_missing_members');
+
+// AJAX handler for getting users in user management
+function iipm_handle_get_users() {
+    // Verify nonce
+    if (!wp_verify_nonce($_POST['nonce'], 'iipm_user_management_nonce')) {
+        wp_send_json_error('Security check failed');
+        return;
+    }
+    
+    // Check permissions
+    if (!current_user_can('manage_iipm_members') && !current_user_can('administrator')) {
+        wp_send_json_error('Insufficient permissions');
+        return;
+    }
+    
+    $page = intval($_POST['page']) ?: 1;
+    $search = sanitize_text_field($_POST['search'] ?? '');
+    $role_filter = sanitize_text_field($_POST['role_filter'] ?? '');
+    $status_filter = sanitize_text_field($_POST['status_filter'] ?? '');
+    $per_page = 20;
+    $offset = ($page - 1) * $per_page;
+    
+    // Build user query args
+    $args = array(
+        'number' => $per_page,
+        'offset' => $offset,
+        'orderby' => 'display_name',
+        'order' => 'ASC'
+    );
+    
+    // Add search
+    if (!empty($search)) {
+        $args['search'] = '*' . $search . '*';
+    }
+    
+    // Add role filter
+    if (!empty($role_filter)) {
+        $args['role'] = $role_filter;
+    }
+    
+    // Get users
+    $users = get_users($args);
+    $total_users = count_users();
+    $total_pages = ceil($total_users['total_users'] / $per_page);
+    
+    // Format user data
+    $formatted_users = array();
+    foreach ($users as $user) {
+        $formatted_users[] = array(
+            'id' => $user->ID,
+            'name' => $user->display_name,
+            'email' => $user->user_email,
+            'username' => $user->user_login,
+            'roles' => $user->roles,
+            'registered' => $user->user_registered,
+            'status' => $user->user_status == 0 ? 'active' : 'inactive'
+        );
+    }
+    
+    wp_send_json_success(array(
+        'users' => $formatted_users,
+        'pagination' => array(
+            'current_page' => $page,
+            'total_pages' => $total_pages,
+            'total_users' => $total_users['total_users'],
+            'per_page' => $per_page
+        )
+    ));
+}
+add_action('wp_ajax_iipm_get_users', 'iipm_handle_get_users');
+
+// AJAX handler for updating user
+function iipm_handle_update_user() {
+    // Verify nonce
+    if (!wp_verify_nonce($_POST['nonce'], 'iipm_user_management_nonce')) {
+        wp_send_json_error('Security check failed');
+        return;
+    }
+    
+    // Check permissions
+    if (!current_user_can('manage_iipm_members') && !current_user_can('administrator')) {
+        wp_send_json_error('Insufficient permissions');
+        return;
+    }
+    
+    $user_id = intval($_POST['user_id']);
+    $first_name = sanitize_text_field($_POST['first_name']);
+    $last_name = sanitize_text_field($_POST['last_name']);
+    $email = sanitize_email($_POST['email']);
+    
+    // Validate required fields
+    if (empty($first_name) || empty($last_name) || empty($email)) {
+        wp_send_json_error('All fields are required');
+        return;
+    }
+    
+    // Check if email is already taken by another user
+    $existing_user = get_user_by('email', $email);
+    if ($existing_user && $existing_user->ID != $user_id) {
+        wp_send_json_error('Email address is already in use by another user');
+        return;
+    }
+    
+    // Update user data
+    $user_data = array(
+        'ID' => $user_id,
+        'first_name' => $first_name,
+        'last_name' => $last_name,
+        'display_name' => $first_name . ' ' . $last_name,
+        'user_email' => $email
+    );
+    
+    $result = wp_update_user($user_data);
+    
+    if (is_wp_error($result)) {
+        wp_send_json_error($result->get_error_message());
+    } else {
+        wp_send_json_success('User updated successfully');
+    }
+}
+add_action('wp_ajax_iipm_update_user', 'iipm_handle_update_user');
+
+// AJAX handler for deleting user
+function iipm_handle_delete_user() {
+    // Verify nonce
+    if (!wp_verify_nonce($_POST['nonce'], 'iipm_user_management_nonce')) {
+        wp_send_json_error('Security check failed');
+        return;
+    }
+    
+    // Check permissions
+    if (!current_user_can('manage_iipm_members') && !current_user_can('administrator')) {
+        wp_send_json_error('Insufficient permissions');
+        return;
+    }
+    
+    $user_id = intval($_POST['user_id']);
+    $current_user_id = get_current_user_id();
+    
+    // Prevent deleting yourself
+    if ($user_id === $current_user_id) {
+        wp_send_json_error('You cannot delete your own account');
+        return;
+    }
+    
+    // Get user info before deletion
+    $user = get_userdata($user_id);
+    if (!$user) {
+        wp_send_json_error('User not found');
+        return;
+    }
+    
+    // Delete the user
+    if (wp_delete_user($user_id)) {
+        wp_send_json_success('User deleted successfully');
+    } else {
+        wp_send_json_error('Failed to delete user');
+    }
+}
+add_action('wp_ajax_iipm_delete_user', 'iipm_handle_delete_user');
 

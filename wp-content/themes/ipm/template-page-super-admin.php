@@ -5,25 +5,12 @@
  * This template is for managing super admins and is only accessible by super admins.
  */
 
-// Helper function to log super admin changes
-if (!function_exists('iipm_log_super_admin_change')) {
-    function iipm_log_super_admin_change($user_id, $action) {
-        $current_user = wp_get_current_user();
-        $user = get_user_by('ID', $user_id);
-        $message = sprintf(
-            '[Super Admin Change] %s performed "%s" action on user %s (%s)',
-            $current_user->user_email,
-            $action,
-            $user ? $user->user_email : $user_id,
-            current_time('mysql')
-        );
-        
-        error_log($message);
-        
-        // You can also store this in a custom table or use WordPress's logging system
-        // For now, we'll just use error_log for simplicity
-    }
+// Include notification system if not already loaded
+if (!function_exists('add_success_notification')) {
+    include_once get_template_directory() . '/includes/notification-system.php';
 }
+
+// Global functions are now available from global-functions.php
 
 // Redirect non-super admins to home page
 if (!is_super_admin()) {
@@ -50,12 +37,24 @@ get_header();
 }
 
 /* Base Layout */
-.iipm-dashboard-page {
-    /* min-height: 100vh; */
-    /* background: transparent; */
-    /* margin: 0; */
-    /* padding: 0; */
+/* .iipm-dashboard-page {
+    min-height: 100vh;
+    background: transparent;
+    margin: 0;
+    padding: 0;
 }
+
+.main-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+} */
 
 /* Hero Section */
 .dashboard-hero {
@@ -333,7 +332,8 @@ if (isset($_POST['update_password']) && isset($_POST['user_id']) && isset($_POST
     // Log the password change
     iipm_log_super_admin_change($user_id, 'password updated');
     
-    echo '<div class="notice notice-success"><p>Password updated successfully.</p></div>';
+    // Show success notification immediately
+    echo iipm_notification_script('success', 'Password Updated', 'Super admin password has been updated successfully.');
 }
 
 // Handle delete super admin
@@ -347,17 +347,7 @@ if (isset($_POST['delete_super_admin']) && isset($_POST['user_id'])) {
 
     // Prevent deleting yourself
     if ($user_id === $current_user_id) {
-        // echo '<script>
-        //     document.addEventListener("DOMContentLoaded", function() {
-        //         const container = document.getElementById("iipm-message-container");
-        //         container.innerHTML = `
-        //             <div class="iipm-message error">
-        //                 <p>You cannot delete your own account.</p>
-        //                 <button type="button" class="dismiss-message" onclick="this.parentElement.remove();">&times;</button>
-        //             </div>
-        //         `;
-        //     });
-        // </script>';
+        echo iipm_notification_script('error', 'Cannot Delete Account', 'You cannot delete your own account.');
     } else {
         // Remove super admin role first
         revoke_super_admin($user_id);
@@ -368,30 +358,37 @@ if (isset($_POST['delete_super_admin']) && isset($_POST['user_id'])) {
         
         // Delete the user
         if (wp_delete_user($user_id)) {
-            // echo '<script>
-            //     document.addEventListener("DOMContentLoaded", function() {
-            //         const container = document.getElementById("iipm-message-container");
-            //         container.innerHTML = `
-            //             <div class="iipm-message success">
-            //                 <p>Successfully deleted super admin account for ' . esc_js($user_name) . '.</p>
-            //                 <button type="button" class="dismiss-message" onclick="this.parentElement.remove();">&times;</button>
-            //             </div>
-            //         `;
-            //     });
-            // </script>';
+            echo iipm_notification_script('success', 'Account Deleted', "Successfully deleted super admin account for {$user_name}.");
             iipm_log_super_admin_change($user_id, 'account deleted');
         } else {
-            // echo '<script>
-            //     document.addEventListener("DOMContentLoaded", function() {
-            //         const container = document.getElementById("iipm-message-container");
-            //         container.innerHTML = `
-            //             <div class="iipm-message error">
-            //                 <p>Failed to delete user account.</p>
-            //                 <button type="button" class="dismiss-message" onclick="this.parentElement.remove();">&times;</button>
-            //             </div>
-            //         `;
-            //     });
-            // </script>';
+            echo iipm_notification_script('error', 'Delete Failed', 'Failed to delete user account.');
+        }
+    }
+}
+
+// Handle remove super admin privileges
+if (isset($_POST['remove_super_admin']) && isset($_POST['user_id'])) {
+    if (!wp_verify_nonce($_POST['remove_super_admin_nonce'], 'remove_super_admin_action')) {
+        die('Security check failed');
+    }
+
+    $user_id = intval($_POST['user_id']);
+    $current_user_id = get_current_user_id();
+
+    // Prevent removing yourself
+    if ($user_id === $current_user_id) {
+        echo iipm_notification_script('error', 'Cannot Remove Privileges', 'You cannot remove super admin privileges from your own account.');
+    } else {
+        // Get user info before removal
+        $user = get_userdata($user_id);
+        $user_name = $user ? $user->display_name : 'User';
+        
+        // Remove super admin privileges
+        if (revoke_super_admin($user_id)) {
+            echo iipm_notification_script('success', 'Privileges Removed', "Successfully removed super admin privileges from {$user_name}.");
+            iipm_log_super_admin_change($user_id, 'super admin privileges removed');
+        } else {
+            echo iipm_notification_script('error', 'Remove Failed', 'Failed to remove super admin privileges.');
         }
     }
 }
@@ -411,17 +408,7 @@ if (isset($_POST['add_super_admin']) && isset($_POST['super_admin_email'])) {
     $existing_user = get_user_by('email', $email);
 
     if ($existing_user) {
-        // echo '<script>
-        //     document.addEventListener("DOMContentLoaded", function() {
-        //         const container = document.getElementById("iipm-message-container");
-        //         container.innerHTML = `
-        //             <div class="iipm-message error">
-        //                 <p>A user with this email already exists.</p>
-        //                 <button type="button" class="dismiss-message" onclick="this.parentElement.remove();">&times;</button>
-        //             </div>
-        //         `;
-        //     });
-        // </script>';
+        echo iipm_notification_script('error', 'User Exists', 'A user with this email already exists.');
     } else {
         // Create new user
         $userdata = array(
@@ -454,34 +441,10 @@ if (isset($_POST['add_super_admin']) && isset($_POST['super_admin_email'])) {
             $user = new WP_User($user_id);
             $user->add_cap('manage_network');
             
-            // echo '<script>
-            //     document.addEventListener("DOMContentLoaded", function() {
-            //         const container = document.getElementById("iipm-message-container");
-            //         container.innerHTML = `
-            //             <div class="iipm-message success">
-            //                 <p>Successfully added ' . esc_js($first_name . ' ' . $last_name) . ' as a super admin.</p>
-            //                 <button type="button" class="dismiss-message" onclick="this.parentElement.remove();">&times;</button>
-            //             </div>
-            //         `;
-            //         // Reload page after 1 second to show updated list
-            //         setTimeout(function() {
-            //             window.location.reload();
-            //         }, 1000);
-            //     });
-            // </script>';
+            echo iipm_notification_script('success', 'Super Admin Added', "Successfully added {$first_name} {$last_name} as a super admin.");
             iipm_log_super_admin_change($user_id, 'added as super admin');
         } else {
-            // echo '<script>
-            //     document.addEventListener("DOMContentLoaded", function() {
-            //         const container = document.getElementById("iipm-message-container");
-            //         container.innerHTML = `
-            //             <div class="iipm-message error">
-            //                 <p>' . esc_js($user_id->get_error_message()) . '</p>
-            //                 <button type="button" class="dismiss-message" onclick="this.parentElement.remove();">&times;</button>
-            //             </div>
-            //         `;
-            //     });
-            // </script>';
+            echo iipm_notification_script('error', 'Add Failed', $user_id->get_error_message());
         }
     }
 }
@@ -768,6 +731,31 @@ if (isset($_POST['add_super_admin']) && isset($_POST['super_admin_email'])) {
     display: flex;
     gap: 8px;
     flex-wrap: wrap;
+}
+
+.icon-button {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+    background: white;
+    color: #333;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.icon-button:hover {
+    background: #f5f5f5;
+    border-color: #999;
+}
+
+.icon-button i {
+    font-size: 16px;
+    margin: 0;
 }
 
 .action-buttons .button {

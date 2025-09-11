@@ -288,7 +288,7 @@ if (!defined('ABSPATH')) {
 }
 
 /* Dark mode support */
-@media (prefers-color-scheme: dark) {
+/* @media (prefers-color-scheme: dark) {
     .notification {
         background: #1f2937;
         box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
@@ -310,7 +310,7 @@ if (!defined('ABSPATH')) {
         background: #374151;
         color: #9ca3af;
     }
-}
+} */
 </style>
 
 <script>

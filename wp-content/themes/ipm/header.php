@@ -656,7 +656,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
                         <!-- User Menu -->
                         <div class="user-menu">
-                            <a href="<?php echo home_url('/member-portal/'); ?>" class="login text text-white flex align-center w-max">
+                            <a class="login text text-white flex align-center w-max">
                                 <span class="user-name-responsive"><?php echo esc_html(wp_get_current_user()->display_name); ?></span>
                                 <svg width="29" height="31" viewBox="0 0 29 31" fill="none" xmlns="http://www.w3.org/2000/svg">
                                     <path fill-rule="evenodd" clip-rule="evenodd"
@@ -709,11 +709,14 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                             transition: all 0.3s ease;
                         ">
                             <div style="
-                                width: 8px;
-                                height: 8px;
-                                background: white;
-                                border-radius: 50%;
-                            "></div>
+                                width: 20px;
+                                height: 20px;
+								display: flex;
+								align-items: center;
+								justify-content: center;
+                            ">
+								<i class="fa fa-sign-in"></i>
+							</div>
                             Login
                         </a>
                     </div>

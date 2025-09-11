@@ -94,11 +94,6 @@
 
 <?php wp_footer(); ?>
 
-<?php
-// Include notification system
-include get_template_directory() . '/includes/notification-system.php';
-?>
-
 </body>
 
 </html>

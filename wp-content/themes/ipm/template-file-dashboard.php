@@ -15,7 +15,7 @@ $user_roles = $current_user->roles;
 get_header(); ?>
 
 <!-- Hero Section -->
-<div class="file-dashboard-hero">
+<!-- <div class="file-dashboard-hero">
     <div class="container">
         <div class="hero-content">
             <div class="page-header">
@@ -34,11 +34,20 @@ get_header(); ?>
             </div>
         </div>
     </div>
-</div>
+</div> -->
 
-<div class="file-dashboard-page">
-    <div class="container">
-        <div class="file-dashboard-layout">
+<div class="file-dashboard-page main-container">
+    <div class="container" style="position: relative; z-index: 2;">
+        <!-- Page Header -->
+        <div class="page-header" style="text-align: center; margin-bottom: 40px;">
+            <div>
+                <h1 style="color: white; font-size: 2.5rem; margin-bottom: 10px;">File Dashboard</h1>
+                <p style="color: rgba(255,255,255,0.9); font-size: 1.1rem;">
+                    Manage and access your documents and files
+                </p>
+            </div>
+        </div>
+        <div class="file-dashboard-layout tab-content main-content">
             <!-- Sidebar Navigation -->
             <div class="file-sidebar">
                 <!-- Upload Button -->
@@ -651,7 +660,6 @@ get_header(); ?>
     font-size: 2.5rem;
     font-weight: 700;
     margin: 0 0 8px 0;
-    text-align: left;
 }
 
 .page-subtitle {
@@ -680,7 +688,6 @@ get_header(); ?>
 
 /* File Dashboard Styles */
 .file-dashboard-page {
-    background: #f8fafc;
     min-height: 100vh;
     padding: 40px 0;
 }
