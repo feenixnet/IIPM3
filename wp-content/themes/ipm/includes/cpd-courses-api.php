@@ -30,6 +30,21 @@ add_action('wp_ajax_iipm_add_course', 'iipm_ajax_add_course');
 add_action('wp_ajax_iipm_update_course_v1', 'iipm_ajax_update_course');
 add_action('wp_ajax_iipm_delete_course_v1', 'iipm_ajax_delete_course');
 
+// User Course Management Actions
+add_action('wp_ajax_iipm_get_user_courses', 'iipm_ajax_get_user_courses');
+add_action('wp_ajax_iipm_get_user_course', 'iipm_ajax_get_user_course');
+add_action('wp_ajax_iipm_add_user_course', 'iipm_ajax_add_user_course');
+add_action('wp_ajax_iipm_update_user_course', 'iipm_ajax_update_user_course');
+add_action('wp_ajax_iipm_delete_user_course', 'iipm_ajax_delete_user_course');
+
+// Admin Course Management Actions
+add_action('wp_ajax_iipm_get_pending_courses', 'iipm_ajax_get_pending_courses');
+add_action('wp_ajax_iipm_approve_course', 'iipm_ajax_approve_course');
+add_action('wp_ajax_iipm_reject_course', 'iipm_ajax_reject_course');
+add_action('wp_ajax_iipm_activate_course', 'iipm_ajax_activate_course');
+add_action('wp_ajax_iipm_deactivate_course', 'iipm_ajax_deactivate_course');
+add_action('wp_ajax_iipm_get_user_courses_admin', 'iipm_ajax_get_user_courses_admin');
+
 /**
  * AJAX callback for getting courses
  */
@@ -42,7 +57,8 @@ function iipm_ajax_get_courses() {
         'date_from' => $_POST['date_from'] ?? '',
         'date_to' => $_POST['date_to'] ?? '',
         'categories' => $_POST['categories'] ?? '',
-        'providers' => $_POST['providers'] ?? ''
+        'providers' => $_POST['providers'] ?? '',
+        'my_courses' => $_POST['my_courses'] ?? false
     );
     
     $pagination = array(
@@ -80,7 +96,7 @@ function iipm_get_courses($filters = array(), $pagination = array()) {
     $table_name = $wpdb->prefix . 'coursesbyadminbku';
     
     // Build WHERE clause
-    $where_conditions = array();
+    $where_conditions = array("status = 'active'"); // Only show active courses
     $query_params = array();
     
     // Title search filter
@@ -119,6 +135,15 @@ function iipm_get_courses($filters = array(), $pagination = array()) {
         $provider = sanitize_text_field($filters['providers']);
         $where_conditions[] = "crs_provider = %s";
         $query_params[] = $provider;
+    }
+    
+    // My courses filter
+    if (!empty($filters['my_courses']) && $filters['my_courses'] === 'true') {
+        $user_id = get_current_user_id();
+        if ($user_id) {
+            $where_conditions[] = "user_id = %d";
+            $query_params[] = $user_id;
+        }
     }
     
     $where_clause = !empty($where_conditions) ? "WHERE " . implode(" AND ", $where_conditions) : "";
@@ -722,4 +747,449 @@ function iipm_delete_course_management($course_id) {
     );
     
     return $result !== false;
-} 
+}
+
+/**
+ * AJAX callback for getting user courses
+ */
+function iipm_ajax_get_user_courses() {
+    global $wpdb;
+    
+    $user_id = get_current_user_id();
+    if (!$user_id) {
+        wp_send_json_error('User not logged in');
+        return;
+    }
+    
+    $page = intval($_POST['page'] ?? 1);
+    $per_page = 10;
+    $offset = ($page - 1) * $per_page;
+    
+    $status = sanitize_text_field($_POST['status'] ?? '');
+    $search = sanitize_text_field($_POST['search'] ?? '');
+    
+    $table_name = $wpdb->prefix . 'coursesbyadminbku';
+    
+    // Build WHERE clause
+    $where_conditions = array("user_id = %d");
+    $where_values = array($user_id);
+    
+    if (!empty($status)) {
+        $where_conditions[] = "status = %s";
+        $where_values[] = $status;
+    }
+    
+    if (!empty($search)) {
+        $where_conditions[] = "(course_name LIKE %s OR course_code LIKE %s)";
+        $search_term = '%' . $wpdb->esc_like($search) . '%';
+        $where_values[] = $search_term;
+        $where_values[] = $search_term;
+    }
+    
+    $where_clause = implode(' AND ', $where_conditions);
+    
+    // Get total count
+    $total_query = "SELECT COUNT(*) FROM {$table_name} WHERE {$where_clause}";
+    $total = $wpdb->get_var($wpdb->prepare($total_query, $where_values));
+    
+    // Get courses
+    $courses_query = "SELECT * FROM {$table_name} WHERE {$where_clause} ORDER BY created_at DESC LIMIT %d OFFSET %d";
+    $where_values[] = $per_page;
+    $where_values[] = $offset;
+    
+    $courses = $wpdb->get_results($wpdb->prepare($courses_query, $where_values));
+    
+    $total_pages = ceil($total / $per_page);
+    
+    wp_send_json_success(array(
+        'courses' => $courses,
+        'pagination' => array(
+            'current_page' => $page,
+            'total_pages' => $total_pages,
+            'total' => $total,
+            'start' => $offset + 1,
+            'end' => min($offset + $per_page, $total)
+        )
+    ));
+}
+
+/**
+ * AJAX callback for getting a single user course
+ */
+function iipm_ajax_get_user_course() {
+    global $wpdb;
+    
+    $user_id = get_current_user_id();
+    if (!$user_id) {
+        wp_send_json_error('User not logged in');
+        return;
+    }
+    
+    $course_id = intval($_POST['course_id']);
+    $table_name = $wpdb->prefix . 'coursesbyadminbku';
+    
+    $course = $wpdb->get_row($wpdb->prepare(
+        "SELECT * FROM {$table_name} WHERE id = %d AND user_id = %d",
+        $course_id, $user_id
+    ));
+    
+    if (!$course) {
+        wp_send_json_error('Course not found');
+        return;
+    }
+    
+    wp_send_json_success($course);
+}
+
+/**
+ * AJAX callback for adding user course
+ */
+function iipm_ajax_add_user_course() {
+    global $wpdb;
+    
+    $user_id = get_current_user_id();
+    if (!$user_id) {
+        wp_send_json_error('User not logged in');
+        return;
+    }
+    
+    $course_data = array(
+        'course_name' => sanitize_text_field($_POST['course_name']),
+        'course_code' => sanitize_text_field($_POST['course_code']),
+        'course_category' => sanitize_text_field($_POST['course_category']),
+        'course_provider' => sanitize_text_field($_POST['course_provider']),
+        'course_duration' => intval($_POST['course_duration']),
+        'course_description' => sanitize_textarea_field($_POST['course_description'] ?? ''),
+        'user_id' => $user_id,
+        'is_by_admin' => intval($_POST['is_by_admin'] ?? 0),
+        'status' => sanitize_text_field($_POST['status'] ?? 'pending'),
+        'created_at' => current_time('mysql')
+    );
+    
+    $table_name = $wpdb->prefix . 'coursesbyadminbku';
+    
+    $result = $wpdb->insert($table_name, $course_data);
+    
+    if ($result === false) {
+        wp_send_json_error('Failed to add course');
+        return;
+    }
+    
+    wp_send_json_success('Course added successfully');
+}
+
+/**
+ * AJAX callback for updating user course
+ */
+function iipm_ajax_update_user_course() {
+    global $wpdb;
+    
+    $user_id = get_current_user_id();
+    if (!$user_id) {
+        wp_send_json_error('User not logged in');
+        return;
+    }
+    
+    $course_id = intval($_POST['course_id']);
+    $table_name = $wpdb->prefix . 'coursesbyadminbku';
+    
+    // Check if course belongs to user
+    $existing = $wpdb->get_row($wpdb->prepare(
+        "SELECT id FROM {$table_name} WHERE id = %d AND user_id = %d",
+        $course_id, $user_id
+    ));
+    
+    if (!$existing) {
+        wp_send_json_error('Course not found');
+        return;
+    }
+    
+    $course_data = array(
+        'course_name' => sanitize_text_field($_POST['course_name']),
+        'course_code' => sanitize_text_field($_POST['course_code']),
+        'course_category' => sanitize_text_field($_POST['course_category']),
+        'course_provider' => sanitize_text_field($_POST['course_provider']),
+        'course_duration' => intval($_POST['course_duration']),
+        'course_description' => sanitize_textarea_field($_POST['course_description'] ?? ''),
+        'updated_at' => current_time('mysql')
+    );
+    
+    $result = $wpdb->update(
+        $table_name,
+        $course_data,
+        array('id' => $course_id),
+        array('%s', '%s', '%s', '%s', '%d', '%s', '%s'),
+        array('%d')
+    );
+    
+    if ($result === false) {
+        wp_send_json_error('Failed to update course');
+        return;
+    }
+    
+    wp_send_json_success('Course updated successfully');
+}
+
+/**
+ * AJAX callback for deleting user course
+ */
+function iipm_ajax_delete_user_course() {
+    global $wpdb;
+    
+    $user_id = get_current_user_id();
+    if (!$user_id) {
+        wp_send_json_error('User not logged in');
+        return;
+    }
+    
+    $course_id = intval($_POST['course_id']);
+    $table_name = $wpdb->prefix . 'coursesbyadminbku';
+    
+    // Check if course belongs to user
+    $existing = $wpdb->get_row($wpdb->prepare(
+        "SELECT id FROM {$table_name} WHERE id = %d AND user_id = %d",
+        $course_id, $user_id
+    ));
+    
+    if (!$existing) {
+        wp_send_json_error('Course not found');
+        return;
+    }
+    
+    $result = $wpdb->delete($table_name, array('id' => $course_id), array('%d'));
+    
+    if ($result === false) {
+        wp_send_json_error('Failed to delete course');
+        return;
+    }
+    
+    wp_send_json_success('Course deleted successfully');
+}
+
+/**
+ * AJAX callback for getting pending courses (admin)
+ */
+function iipm_ajax_get_pending_courses() {
+    if (!current_user_can('administrator')) {
+        wp_send_json_error('Insufficient permissions');
+        return;
+    }
+    
+    global $wpdb;
+    
+    $page = intval($_POST['page'] ?? 1);
+    $per_page = 10;
+    $offset = ($page - 1) * $per_page;
+    
+    $table_name = $wpdb->prefix . 'coursesbyadminbku';
+    
+    // Get total count
+    $total = $wpdb->get_var("SELECT COUNT(*) FROM {$table_name} WHERE status = 'pending'");
+    
+    // Get courses with user info
+    $courses = $wpdb->get_results($wpdb->prepare(
+        "SELECT c.*, u.display_name, u.user_email 
+         FROM {$table_name} c 
+         LEFT JOIN {$wpdb->users} u ON c.user_id = u.ID 
+         WHERE c.status = 'pending' 
+         ORDER BY c.created_at DESC 
+         LIMIT %d OFFSET %d",
+        $per_page, $offset
+    ));
+    
+    $total_pages = ceil($total / $per_page);
+    
+    wp_send_json_success(array(
+        'courses' => $courses,
+        'pagination' => array(
+            'current_page' => $page,
+            'total_pages' => $total_pages,
+            'total' => $total,
+            'start' => $offset + 1,
+            'end' => min($offset + $per_page, $total)
+        )
+    ));
+}
+
+/**
+ * AJAX callback for approving course (admin)
+ */
+function iipm_ajax_approve_course() {
+    if (!current_user_can('administrator')) {
+        wp_send_json_error('Insufficient permissions');
+        return;
+    }
+    
+    global $wpdb;
+    
+    $course_id = intval($_POST['course_id']);
+    $table_name = $wpdb->prefix . 'coursesbyadminbku';
+    
+    $result = $wpdb->update(
+        $table_name,
+        array('status' => 'active'),
+        array('id' => $course_id),
+        array('%s'),
+        array('%d')
+    );
+    
+    if ($result === false) {
+        wp_send_json_error('Failed to approve course');
+        return;
+    }
+    
+    wp_send_json_success('Course approved successfully');
+}
+
+/**
+ * AJAX callback for rejecting course (admin)
+ */
+function iipm_ajax_reject_course() {
+    if (!current_user_can('administrator')) {
+        wp_send_json_error('Insufficient permissions');
+        return;
+    }
+    
+    global $wpdb;
+    
+    $course_id = intval($_POST['course_id']);
+    $table_name = $wpdb->prefix . 'coursesbyadminbku';
+    
+    $result = $wpdb->update(
+        $table_name,
+        array('status' => 'rejected'),
+        array('id' => $course_id),
+        array('%s'),
+        array('%d')
+    );
+    
+    if ($result === false) {
+        wp_send_json_error('Failed to reject course');
+        return;
+    }
+    
+    wp_send_json_success('Course rejected successfully');
+}
+
+/**
+ * AJAX callback for activating course (admin)
+ */
+function iipm_ajax_activate_course() {
+    if (!current_user_can('administrator')) {
+        wp_send_json_error('Insufficient permissions');
+        return;
+    }
+    
+    global $wpdb;
+    
+    $course_id = intval($_POST['course_id']);
+    $table_name = $wpdb->prefix . 'coursesbyadminbku';
+    
+    $result = $wpdb->update(
+        $table_name,
+        array('status' => 'active'),
+        array('id' => $course_id),
+        array('%s'),
+        array('%d')
+    );
+    
+    if ($result === false) {
+        wp_send_json_error('Failed to activate course');
+        return;
+    }
+    
+    wp_send_json_success('Course activated successfully');
+}
+
+/**
+ * AJAX callback for deactivating course (admin)
+ */
+function iipm_ajax_deactivate_course() {
+    if (!current_user_can('administrator')) {
+        wp_send_json_error('Insufficient permissions');
+        return;
+    }
+    
+    global $wpdb;
+    
+    $course_id = intval($_POST['course_id']);
+    $table_name = $wpdb->prefix . 'coursesbyadminbku';
+    
+    $result = $wpdb->update(
+        $table_name,
+        array('status' => 'inactive'),
+        array('id' => $course_id),
+        array('%s'),
+        array('%d')
+    );
+    
+    if ($result === false) {
+        wp_send_json_error('Failed to deactivate course');
+        return;
+    }
+    
+    wp_send_json_success('Course deactivated successfully');
+}
+
+/**
+ * AJAX callback for getting user courses for admin
+ */
+function iipm_ajax_get_user_courses_admin() {
+    if (!current_user_can('administrator')) {
+        wp_send_json_error('Insufficient permissions');
+        return;
+    }
+    
+    global $wpdb;
+    
+    $page = intval($_POST['page'] ?? 1);
+    $per_page = 10;
+    $offset = ($page - 1) * $per_page;
+    
+    $status = sanitize_text_field($_POST['status'] ?? 'active');
+    $search = sanitize_text_field($_POST['search'] ?? '');
+    
+    $table_name = $wpdb->prefix . 'coursesbyadminbku';
+    
+    // Build WHERE clause
+    $where_conditions = array("status = %s");
+    $where_values = array($status);
+    
+    if (!empty($search)) {
+        $where_conditions[] = "(course_name LIKE %s OR course_code LIKE %s)";
+        $search_term = '%' . $wpdb->esc_like($search) . '%';
+        $where_values[] = $search_term;
+        $where_values[] = $search_term;
+    }
+    
+    $where_clause = implode(' AND ', $where_conditions);
+    
+    // Get total count
+    $total_query = "SELECT COUNT(*) FROM {$table_name} WHERE {$where_clause}";
+    $total = $wpdb->get_var($wpdb->prepare($total_query, $where_values));
+    
+    // Get courses with user info
+    $courses_query = "SELECT c.*, u.display_name, u.user_email 
+                      FROM {$table_name} c 
+                      LEFT JOIN {$wpdb->users} u ON c.user_id = u.ID 
+                      WHERE {$where_clause} 
+                      ORDER BY c.created_at DESC 
+                      LIMIT %d OFFSET %d";
+    $where_values[] = $per_page;
+    $where_values[] = $offset;
+    
+    $courses = $wpdb->get_results($wpdb->prepare($courses_query, $where_values));
+    
+    $total_pages = ceil($total / $per_page);
+    
+    wp_send_json_success(array(
+        'courses' => $courses,
+        'pagination' => array(
+            'current_page' => $page,
+            'total_pages' => $total_pages,
+            'total' => $total,
+            'start' => $offset + 1,
+            'end' => min($offset + $per_page, $total)
+        )
+    ));
+}

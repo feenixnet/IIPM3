@@ -4,7 +4,7 @@ Tags: caching, optimize, performance, pagespeed, seo, image optimize, object cac
 Requires at least: 5.3
 Requires PHP: 7.2
 Tested up to: 6.8
-Stable tag: 7.3.0.1
+Stable tag: 7.5.0.1
 License: GPLv3
 License URI: http://www.gnu.org/licenses/gpl.html
 
@@ -256,6 +256,33 @@ The vast majority of plugins and themes are compatible with LiteSpeed Cache. The
 You can report security bugs through the Patchstack Vulnerability Disclosure Program. The Patchstack team help validate, triage and handle any security vulnerabilities. [Report a security vulnerability.](https://patchstack.com/database/vdp/litespeed-cache)
 
 == Changelog ==
+
+= 7.5.0.1 - Sep 11 2025 =
+* 🐞**GUI** Fixed an issue where the network dashboard template was missing. (mcworks)
+
+= 7.5 - Sep 10 2025 =
+* 🌱**Image Optimize** New option `Optimize Image Sizes` to allow user to choose which image sizes to include in optimization request.
+* 🐞**Purge** Purge Time setting will respect WP timezone setting now. (PR#893)
+* 🐞**Conf** Fixed a minor type-casting bug, which could cause unnecessary QUIC.cloud sync configuration when the setting is empty.
+* **Misc** Dropped unused rewrite rule from htaccess.
+
+= 7.4 - Aug 28 2025 =
+* 🌱**Media** Added new Auto Rescale Original Image option.
+* 🌱**Toolbox** Added ability to Disable All for 24 Hours. (PR#886)
+* 🐞**CDN** Fixed a QUIC.cloud sync configuration failure on network child sites.
+* 🐞**Object Cache** Fixed a bug that failed to detect the Redis connection status.
+* **Cache** Better match iPhone browsers for mobile cache detection.
+* **Cache** Dropped use of `advanced-cache.php` support since WP v5.3+ doesn't need it, and LiteSpeed requires WP v5.3+.
+* **Cache** When page is not cacheable, set header to value used by WordPress `Cache-Control` header. (asafm7)
+* **Page Optimize** Better compatibility for dummy CSS removal in cases where other plugins manipulate the quotation marks.
+* **Page Optimize** Dropped v4.2 legacy `LITESPEED_BYPASS_OPTM`.
+* **Crawler** Now use an .html file to test the port, as some security plugins block .txt files and cause port test failure. (#661828)
+* **GUI** Show current live values for options if they are overridden by filters or the server environment. (PR#885)
+* **Data** Dropped legacy code and upgraded data migration support to LSCWP v5.7-.
+* **Misc** Support the `LITESPEED_DEV` constant to allow switching to a development environment.
+* **Misc** Allow leading underscore (`_`) for private functions and variables in format checker.
+* **Misc** Suppress frequent version check when a certain database option is cached.
+* **Misc** Dropped `sanitize_file_name` usage to prevent template failure when 3rd party plugins manipulate that filter.
 
 = 7.3.0.1 - Jul 30 2025 =
 * **Page Optimize** Fixed the page score impact caused by CSS placeholder. (wpconvert, Sean Thompson)

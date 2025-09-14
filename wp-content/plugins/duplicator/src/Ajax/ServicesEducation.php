@@ -7,11 +7,11 @@
 
 namespace Duplicator\Ajax;
 
+use Plugin_Upgrader;
 use Duplicator\Ajax\AjaxWrapper;
 use Duplicator\Views\EducationElements;
 use Exception;
-use Duplicator\Libs\OneClickUpgrade\PluginSilentUpgrader;
-use Duplicator\Libs\OneClickUpgrade\ConnectSkin;
+use Duplicator\Libs\OneClickUpgrade\UpgraderSkin;
 use DUP_Log;
 use DUP_Settings;
 use Duplicator\Core\Controllers\ControllersManager;
@@ -148,8 +148,6 @@ class ServicesEducation extends AbstractAjaxService
      */
     public static function prepareForOneClickUpgradeCallback()
     {
-        DUP_Log::trace("User requested One Click Upgrade.");
-
         $oth        = wp_generate_password(30, false, false); // Generate random oth
         $licenseKey = sanitize_text_field($_REQUEST["license_key"]);
 
@@ -192,7 +190,7 @@ class ServicesEducation extends AbstractAjaxService
 
         $requestParam = array(
             'timeout'    => 15,
-            'sslverify'  => false,
+            'sslverify'  => true,
             'user-agent' => $agent_string,
             'body'       => $api_params
         );
@@ -203,7 +201,7 @@ class ServicesEducation extends AbstractAjaxService
             throw new Exception(__('Invalid license key.', 'duplicator'));
         }
 
-        // Fetch direct url and set $returnData["file"]. It is a direct url to download Pro version.
+        // Fetch direct url and set $returnData["file"]. It is a direct url to download the upgrade version.
         // It can be used only after license is activated for the given website.
         $api_params = array(
             'edd_action'  => 'get_version',
@@ -219,7 +217,7 @@ class ServicesEducation extends AbstractAjaxService
 
         $requestParam = array(
             'timeout'   => 15,
-            'sslverify' => false,
+            'sslverify' => true,
             'body'      => $api_params,
         );
 
@@ -261,7 +259,6 @@ class ServicesEducation extends AbstractAjaxService
                 'message' => '',
                 'details' => '',
             );
-            DUP_Log::traceObject("License request params:", $params);
 
             $response = wp_remote_post(self::DUPLICATOR_STORE_URL, $params);
             if (is_wp_error($response)) {
@@ -346,24 +343,16 @@ class ServicesEducation extends AbstractAjaxService
      */
     public function oneClickUpgrade()
     {
-        DUP_Log::trace("Doing One Click Upgrade, license is valid.");
-        $response["data"] = ""; // Optional data to be passed to final redirect url, but needs to be defined!
-
         $othReceived = sanitize_text_field($_REQUEST["oth"]);
         $oth         = get_option(self::OPTION_KEY_ONE_CLICK_UPGRADE_OTH);
         if (self::hashOth($oth) !== $othReceived) { // Verify that oth is fine
             DUP_Log::trace("ERROR: Wrong oth token.");
-            $response["error"] = true;
-            print(json_encode($response));
-            die();
+            wp_send_json_error(array('message' => 'Invalid security token'));
         }
-        DUP_Log::trace("Oth token verified.");
 
-        // Verify Pro is not installed (check if directory exists)
+        // Verify upgrade version is not installed
         if (!is_dir(WP_PLUGIN_DIR . "/duplicator-pro")) {
-            DUP_Log::trace("There is no Pro version in plugins directory, we need to download it!");
-            // There is no Pro version in plugins directory, we need to download it!
-            $file = sanitize_text_field($_REQUEST["file"]);
+            DUP_Log::trace("There is no upgrade version in plugins directory, we need to download it!");
 
             // Prepare variables.
             $url = esc_url_raw(
@@ -377,65 +366,92 @@ class ServicesEducation extends AbstractAjaxService
 
             // Check for file system permissions.
             if (false === $creds || ! \WP_Filesystem($creds)) {
-                DUP_Log::trace("ERROR: There was an error while installing an upgrade. " .
-                    "Please check file system permissions and try again. " .
-                    "Also, you can download the plugin from wpforms.com and install it manually.");
-                $response["error"] = true;
-                print(json_encode($response));
-                die();
+                wp_send_json_error(array('message' => 'File system permissions error. Please check permissions and try again.'));
             }
             // We do not need any extra credentials if we have gotten this far, so let's install the plugin.
+            require_once ABSPATH . 'wp-admin/includes/class-wp-upgrader.php';
 
             // Do not allow WordPress to search/download translations, as this will break JS output.
             remove_action('upgrader_process_complete', array( 'Language_Pack_Upgrader', 'async_upgrade' ), 20);
 
+            // Get license key and fetch download URL
+            $license_key = get_option(self::LICENSE_KEY_OPTION_AUTO_ACTIVE);
+            if (empty($license_key)) {
+                DUP_Log::trace("ERROR: No license key found for upgrade.");
+                wp_send_json_error(array('message' => 'No license key found for upgrade'));
+            }
+
+            // Get download URL from license API
+            $api_params = array(
+                'edd_action'  => 'get_version',
+                'license'     => $license_key,
+                'item_name'   => "Duplicator Pro",
+                'slug'        => "duplicator-pro",
+                'author'      => "Snap Creek Software",
+                'url'         => home_url(),
+                'beta'        => false,
+                'php_version' => phpversion(),
+                'wp_version'  => get_bloginfo('version'),
+            );
+
+            global $wp_version;
+            $agent_string = "WordPress/" . $wp_version;
+
+            $requestParam = array(
+                'timeout'    => 15,
+                'sslverify'  => true,
+                'user-agent' => $agent_string,
+                'body'       => $api_params
+            );
+
+            if (($data = self::licenseUpgradeRequests($requestParam, $requestError)) === false) {
+                DUP_Log::trace("ERROR: Failed to get download URL: " . $requestError['message']);
+                wp_send_json_error(array('message' => 'Failed to get download URL: ' . $requestError['message']));
+            }
+
+            if (empty($data->download_link)) {
+                DUP_Log::trace("ERROR: No download link returned from license API.");
+                wp_send_json_error(array('message' => 'No download link returned from license API'));
+            }
+
+            $download_url = $data->download_link;
+
             // Create the plugin upgrader with custom skin.
-            $installer = new PluginSilentUpgrader(new ConnectSkin());
-            DUP_Log::trace("Starting Pro plugin installer...");
-            $installer->install( $file ); // phpcs:ignore
-            DUP_Log::trace("Pro plugin installer finished.");
+            $installer = new Plugin_Upgrader(new UpgraderSkin());
+            $installer->install($download_url); // Use validated download URL from license API
 
             // Flush the cache and return the newly installed plugin basename.
             wp_cache_flush();
             $plugin_basename = $installer->plugin_info();
 
             if ($plugin_basename) {
-                $proDir = dirname($plugin_basename);
+                $upgradeDir = dirname($plugin_basename);
                 if (
-                    $proDir != "duplicator-pro" &&
-                    !rename(WP_PLUGIN_DIR . "/" . $proDir, WP_PLUGIN_DIR . "/duplicator-pro")
+                    $upgradeDir != "duplicator-pro" &&
+                    !rename(WP_PLUGIN_DIR . "/" . $upgradeDir, WP_PLUGIN_DIR . "/duplicator-pro")
                 ) {
-                    DUP_Log::trace("ERROR: ERROR: Failed renaming \"$proDir\" to \"duplicator-pro\".");
-                    $response["error"] = true;
-                    print(json_encode($response));
-                    die();
+                    wp_send_json_error(array('message' => 'Failed renaming plugin directory'));
                 }
-                // Here Pro is downloaded successfully
             } else {
-                DUP_Log::trace("ERROR: Installation of Pro version failed.");
-                $response["error"] = true;
-                print(json_encode($response));
-                die();
+                wp_send_json_error(array('message' => 'Installation of upgrade version failed'));
             }
         }
 
-        DUP_Log::trace("SUCCESS: Duplicator Pro plugin exists and is ready to be activated.");
-        $response["success"] = true;
-        print(json_encode($response));
-        die();
+        wp_send_json_success(array('message' => 'Plugin exists and is ready to be activated'));
     }
 
     /**
      * Checks if duplicator-pro exists. If it does not, then it redirects to Lite settings license page.
-     * Otherwise deactivates Lite and redirects to Pro plugin activation link.
+     * Otherwise deactivates Lite and redirects to upgrade plugin activation link.
      *
      * @return void
      */
     public function finalizeOneClickUpgrade()
     {
-        DUP_Log::trace("Running finalization of One Click Upgrade.");
         $othReceived = sanitize_text_field($_REQUEST["oth"]);
         $oth         = get_option(self::OPTION_KEY_ONE_CLICK_UPGRADE_OTH);
+        $newFolder   = WP_PLUGIN_DIR . "/duplicator-pro";
+
         if (!current_user_can('activate_plugins') || (self::hashOth($oth) !== $othReceived)) {
             $duplicatorPage = ControllersManager::getMenuLink(
                 ControllersManager::PACKAGES_SUBMENU_SLUG,
@@ -448,23 +464,16 @@ class ServicesEducation extends AbstractAjaxService
         }
         delete_option(self::OPTION_KEY_ONE_CLICK_UPGRADE_OTH);
 
-        if (!is_dir(WP_PLUGIN_DIR . "/duplicator-pro")) {
-            DUP_Log::trace("plugins/duplicator-pro folder does not exist, redirect to Lite settings license page.");
+        if (!is_dir($newFolder)) {
             $licensePageUrl = ControllersManager::getMenuLink(
                 ControllersManager::SETTINGS_SUBMENU_SLUG,
-                'license'
+                'general'
             );
             header("Location: $licensePageUrl");
             die();
         }
-        // Here we know that plugins/duplicator-pro folder exists for sure.
-
-        // Deactivate Lite
         deactivate_plugins(DUPLICATOR_PLUGIN_PATH . "/duplicator.php");
-        DUP_Log::trace("Lite plugin is deactivated.");
 
-        // Now to activate Pro plugin we need to create a separate request.
-        DUP_Log::trace("Doing Pro activation.");
         $plugin          = "duplicator-pro/duplicator-pro.php";
         $pluginsAdminUrl = is_multisite() ? network_admin_url('plugins.php') : admin_url('plugins.php');
         $activateProUrl  = esc_url_raw(

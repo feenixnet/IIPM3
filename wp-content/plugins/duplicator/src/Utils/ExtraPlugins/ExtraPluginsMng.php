@@ -528,6 +528,22 @@ final class ExtraPluginsMng
 
         $result[$item->getSlug()] = $item;
 
+        $item = new ExtraItem(
+            __('Database Reset Pro', 'duplicator'),
+            'db-reset-pro/db-reset-pro.php',
+            DUPLICATOR_PLUGIN_URL . 'assets/css/images/db-reset-icon.png',
+            __(
+                'Database Reset Pro is the safest and simplest way to reset your WordPress database to its default state. 
+            Unlike reinstalling WordPress, this database reset plugin preserves your files, uploads, 
+            and admin credentials while giving you a fresh start in seconds.',
+                'duplicator'
+            ),
+            'https://downloads.wordpress.org/plugin/db-reset-pro.zip',
+            'https://wordpress.org/plugins/db-reset-pro/'
+        );
+
+        $result[$item->getSlug()] = $item;
+
         return $result;
     }
 }

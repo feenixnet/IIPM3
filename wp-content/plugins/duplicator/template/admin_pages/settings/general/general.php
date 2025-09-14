@@ -32,11 +32,7 @@ if (isset($_POST['action']) && $_POST['action'] == 'save') {
         die('Invalid token permissions to perform this request.');
     }
 
-    DUP_Settings::Set('uninstall_settings', isset($_POST['uninstall_settings']) ? "1" : "0");
-    DUP_Settings::Set('uninstall_files', isset($_POST['uninstall_files']) ? "1" : "0");
-
     DUP_Settings::Set('wpfront_integrate', isset($_POST['wpfront_integrate']) ? "1" : "0");
-    DUP_Settings::Set('package_debug', isset($_POST['package_debug']) ? "1" : "0");
 
     $skip_archive_scan = filter_input(INPUT_POST, 'skip_archive_scan', FILTER_VALIDATE_BOOLEAN);
     DUP_Settings::Set('skip_archive_scan', $skip_archive_scan);
@@ -50,39 +46,15 @@ if (isset($_POST['action']) && $_POST['action'] == 'save') {
     $email_summary_frequency = SnapUtil::sanitizeStrictInput(INPUT_POST, 'email_summary_frequency');
     DUP_Settings::setEmailSummaryFrequency($email_summary_frequency);
 
-    $usage_tracking = filter_input(INPUT_POST, 'usage_tracking', FILTER_VALIDATE_BOOLEAN);
-    DUP_Settings::setUsageTracking($usage_tracking);
 
-    $amNotices = !SnapUtil::sanitizeBoolInput(INPUT_POST, 'dup_am_notices');
-    DUP_Settings::Set('amNotices', $amNotices);
-
-    if (isset($_REQUEST['trace_log_enabled'])) {
-        dup_log::trace("#### trace log enabled");
-        // Trace on
-
-        if (DUP_Settings::Get('trace_log_enabled') == 0) {
-            DUP_Log::DeleteTraceLog();
-        }
-
-        DUP_Settings::Set('trace_log_enabled', 1);
-    } else {
-        dup_log::trace("#### trace log disabled");
-
-        // Trace off
-        DUP_Settings::Set('trace_log_enabled', 0);
-    }
 
     DUP_Settings::Save();
     $action_updated = true;
     DUP_Util::initSnapshotDirectory();
 }
 
-$trace_log_enabled      = DUP_Settings::Get('trace_log_enabled');
-$uninstall_settings     = DUP_Settings::Get('uninstall_settings');
-$uninstall_files        = DUP_Settings::Get('uninstall_files');
 $wpfront_integrate      = DUP_Settings::Get('wpfront_integrate');
 $wpfront_ready          = apply_filters('wpfront_user_role_editor_duplicator_integration_ready', false);
-$package_debug          = DUP_Settings::Get('package_debug');
 $skip_archive_scan      = DUP_Settings::Get('skip_archive_scan');
 $unhook_third_party_js  = DUP_Settings::Get('unhook_third_party_js');
 $unhook_third_party_css = DUP_Settings::Get('unhook_third_party_css');
@@ -106,107 +78,9 @@ $actionUrl              = ControllersManager::getMenuLink(ControllersManager::SE
         <div id="message" class="notice notice-success is-dismissible dup-wpnotice-box"><p><?php echo esc_html($action_response); ?></p></div>
     <?php endif; ?>
 
-
-    <h3 class="title"><?php esc_html_e("Plugin", 'duplicator') ?> </h3>
-    <hr size="1" />
-    <table class="form-table">
-        <tr valign="top">
-            <th scope="row"><label><?php esc_html_e("Version", 'duplicator'); ?></label></th>
-            <td>
-                <?php
-                    echo DUPLICATOR_VERSION;
-                ?>
-            </td>
-        </tr>
-        <tr valign="top">
-            <th scope="row"><label><?php esc_html_e("Uninstall", 'duplicator'); ?></label></th>
-            <td>
-                <p>
-                    <input type="checkbox" name="uninstall_settings" id="uninstall_settings" <?php echo ($uninstall_settings) ? 'checked="checked"' : ''; ?> />
-                    <label for="uninstall_settings"><?php esc_html_e("Delete Plugin Settings", 'duplicator') ?> </label>
-                </p>
-                <p>
-                    <input type="checkbox" name="uninstall_files" id="uninstall_files" <?php echo ($uninstall_files) ? 'checked="checked"' : ''; ?> />
-                    <label for="uninstall_files"><?php esc_html_e("Delete Entire Storage Directory", 'duplicator') ?></label><br/>
-                </p>
-            </td>
-        </tr>
-        <tr valign="top">
-            <th scope="row"><label><?php esc_html_e("Usage statistics", 'duplicator'); ?></label></th>
-            <td>
-                <?php if (DUPLICATOR_USTATS_DISALLOW) {  // @phpstan-ignore-line ?>
-                    <span class="maroon">
-                        <?php _e('Usage statistics are hardcoded disallowed.', 'duplicator'); ?>
-                    </span>
-                <?php } else { ?>
-                    <input
-                        type="checkbox"
-                        name="usage_tracking"
-                        id="usage_tracking"
-                        value="1"
-                        <?php checked(DUP_Settings::Get('usage_tracking')); ?>
-                    >
-                    <label for="usage_tracking"><?php _e("Enable usage tracking", 'duplicator'); ?> </label>
-                    <i 
-                            class="fas fa-question-circle fa-sm" 
-                            data-tooltip-title="<?php esc_attr_e("Usage Tracking", 'duplicator'); ?>" 
-                            data-tooltip="<?php echo esc_attr($tplMng->render('admin_pages/settings/general/usage_tracking_tooltip', array(), false)); ?>"
-                            data-tooltip-width="600"
-                    >
-                    </i>
-                <?php } ?>
-            </td>
-        </tr>
-        <tr valign="top">
-            <th scope="row"><label><?php esc_html_e("Hide Announcements", 'duplicator'); ?></label></th>
-            <td>
-                <input 
-                    type="checkbox" 
-                    name="dup_am_notices" 
-                    id="dup_am_notices" 
-                    <?php checked(!DUP_Settings::Get('amNotices')); ?>
-                />
-                <label for="dup_am_notices">
-                    <?php esc_html_e("Check this option to hide plugin announcements and update details.", 'duplicator') ?>
-                </label>
-            </td>
-        </tr>
-    </table>
+    <?php TplMng::getInstance()->render('admin_pages/settings/general/license'); ?>
 
     <?php TplMng::getInstance()->render('admin_pages/settings/general/email_summary'); ?>
-
-    <h3 class="title"><?php esc_html_e("Debug", 'duplicator') ?> </h3>
-    <hr size="1" />
-    <table class="form-table">
-        <tr>
-            <th scope="row"><label><?php esc_html_e("Debugging", 'duplicator'); ?></label></th>
-            <td>
-                <input type="checkbox" name="package_debug" id="package_debug" <?php echo ($package_debug) ? 'checked="checked"' : ''; ?> />
-                <label for="package_debug"><?php esc_html_e("Enable debug options throughout user interface", 'duplicator'); ?></label>
-            </td>
-        </tr>
-        <tr valign="top">
-            <th scope="row"><label><?php esc_html_e("Trace Log", 'duplicator'); ?></label></th>
-            <td>
-                <input type="checkbox" name="trace_log_enabled" id="trace_log_enabled" <?php echo ($trace_log_enabled == 1) ? 'checked="checked"' : ''; ?> />
-                <label for="trace_log_enabled"><?php esc_html_e("Enabled", 'duplicator') ?> </label><br/>
-                <p class="description">
-                    <?php
-                    esc_html_e('Turns on detailed operation logging. Logging will occur in both PHP error and local trace logs.', 'duplicator');
-                    echo ('<br/>');
-                    esc_html_e('WARNING: Only turn on this setting when asked to by support as tracing will impact performance.', 'duplicator');
-                    ?>
-                </p><br/>
-                <button class="button" <?php
-                if (!DUP_Log::TraceFileExists()) {
-                    echo 'disabled';
-                }
-                ?> onclick="Duplicator.Pack.DownloadTraceLog(); return false">
-                    <i class="fa fa-download"></i> <?php echo esc_html__('Download Trace Log', 'duplicator') . ' (' . DUP_LOG::GetTraceStatus() . ')'; ?>
-                </button>
-            </td>
-        </tr>
-    </table><br/>
 
     <!-- ===============================
     ADVANCED SETTINGS -->
@@ -277,17 +151,19 @@ $actionUrl              = ControllersManager::getMenuLink(ControllersManager::SE
 
     <p class="submit" style="margin: 20px 0px 0xp 5px;">
         <br/>
-        <input 
+        <input
             type="submit"
-            name="submit" 
-            id="submit" 
-            class="button-primary" 
-            value="<?php esc_attr_e("Save General Settings", 'duplicator') ?>" 
-            style="display: inline-block;" 
+            name="submit"
+            id="submit"
+            class="button-primary"
+            value="<?php esc_attr_e("Save General Settings", 'duplicator') ?>"
+            style="display: inline-block;"
         />
     </p>
 
 </form>
+
+<?php TplMng::getInstance()->render('admin_pages/settings/partials/connector-form'); ?>
 
 <!-- ==========================================
 THICK-BOX DIALOGS: -->
@@ -336,14 +212,6 @@ $msg_response_success->initMessage();
     jQuery(document).ready(function ($)
     {
         var msgDebug = <?php echo DUP_Util::isWpDebug() ? 'true' : 'false'; ?>;
-
-        // which: 0=installer, 1=archive, 2=sql file, 3=log
-        Duplicator.Pack.DownloadTraceLog = function ()
-        {
-            var actionLocation = ajaxurl + '?action=DUP_CTRL_Tools_getTraceLog&nonce=' + '<?php echo wp_create_nonce('DUP_CTRL_Tools_getTraceLog'); ?>';
-            location.href = actionLocation;
-        };
-
         Duplicator.Pack.ConfirmResetAll = function ()
         {
 <?php $reset_confirm->showConfirm(); ?>

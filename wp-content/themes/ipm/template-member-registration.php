@@ -140,15 +140,22 @@ get_header();
 
                         <div class="form-section">
                             <h3>Billing Address</h3>
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="postal_address">Postal Address</label>
-                                    <input type="address" name="postal_address" id="postal_address">
-                                </div>
-                                <div class="form-group">
-                                    <label for="city_or_town">City or Town</label>
-                                    <input type="text" name="city_or_town" id="city_or_town">
-                                </div>
+                            <p class="alert-text" style="color: #666; font-style: italic; margin-bottom: 20px;">
+                                Please list employer address if your employer is part of our group invoicing scheme
+                            </p>
+                            <div class="form-group">
+                                <label for="payment_method">Payment Method</label>
+                                <select name="payment_method" id="payment_method">
+                                    <option value="">Select payment method</option>
+                                    <option value="Direct Invoiced">Direct Invoiced</option>
+                                    <option value="Employer Invoiced">Employer Invoiced</option>
+                                    <option value="Not Invoiced">Not Invoiced</option>
+                                    <option value="NA">NA</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="city_or_town">City or Town</label>
+                                <input type="text" name="city_or_town" id="city_or_town">
                             </div>
                             <div class="form-group">
                                 <label for="address_line_1">Address Line 1</label>
@@ -166,16 +173,7 @@ get_header();
 
                         <div class="form-section">
                             <h3>Additional Information</h3>
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="payment_method">Payment Method</label>
-                                    <select name="payment_method" id="payment_method">
-                                        <option value="">Select payment method</option>
-                                        <option value="Direct Invoiced">Direct Invoiced</option>
-                                        <option value="Not Invoiced">Not Invoiced</option>
-                                        <option value="NA">NA</option>
-                                    </select>
-                                </div>
+                            <!-- <div class="form-row">
                                 <div class="form-group">
                                     <label for="eircode_p">Personal Eircode</label>
                                     <input type="text" name="eircode_p" id="eircode_p">
@@ -186,10 +184,10 @@ get_header();
                                     <label for="eircode_w">Work Eircode</label>
                                     <input type="text" name="eircode_w" id="eircode_w">
                                 </div>
-                                <div class="form-group">
-                                    <label for="correspondence_email">Correspondence Email</label>
-                                    <input type="email" name="correspondence_email" id="correspondence_email">
-                                </div>
+                            </div> -->
+                            <div class="form-group">
+                                <label for="correspondence_email">Correspondence Email</label>
+                                <input type="email" name="correspondence_email" id="correspondence_email">
                             </div>
                             <div class="form-group">
                                 <label for="user_notes">User Notes</label>
@@ -990,6 +988,51 @@ jQuery(document).ready(function($){
             $('#organisation_name').val('Error loading organisation');
         });
     }
+    
+    // Handle payment method change
+    $('#payment_method').on('change', function(){
+        var selectedMethod = $(this).val();
+        
+        if (selectedMethod === 'Employer Invoiced') {
+            // Get organisation address if available
+            var organisationId = $('#organisation_id').val();
+            if (organisationId) {
+                $.ajax({
+                    url: (typeof iipm_ajax !== 'undefined' ? iipm_ajax.ajax_url : '<?php echo admin_url('admin-ajax.php'); ?>'),
+                    type: 'POST',
+                    dataType: 'json',
+                    data: {
+                        action: 'iipm_get_organisation_name',
+                        organisation_id: organisationId,
+                        nonce: (typeof iipm_ajax !== 'undefined' ? iipm_ajax.nonce : '<?php echo wp_create_nonce('iipm_portal_nonce'); ?>')
+                    }
+                }).done(function(resp){
+                    if (resp && resp.success && resp.data) {
+                        // Populate address fields with organization address_line3
+                        if (resp.data.address_line3 && resp.data.address_line3.trim() !== '' && resp.data.address_line3.toLowerCase() !== 'please enter') {
+                            $('#address_line_1').val(resp.data.address_line3);
+                            $('#address_line_2').val(resp.data.address_line2 || '');
+                            $('#address_line_3').val(resp.data.address_line1 || '');
+                        } else {
+                            // If address_line3 is not available, use address_line1
+                            if (resp.data.address_line1 && resp.data.address_line1.trim() !== '' && resp.data.address_line1.toLowerCase() !== 'please enter') {
+                                $('#address_line_1').val(resp.data.address_line1);
+                                $('#address_line_2').val(resp.data.address_line2 || '');
+                                $('#address_line_3').val(resp.data.address_line3 || '');
+                            }
+                        }
+                    }
+                }).fail(function(){
+                    console.log('Error loading organization address');
+                });
+            }
+        } else {
+            // Clear address fields when not Employer Invoiced
+            $('#address_line_1').val('');
+            $('#address_line_2').val('');
+            $('#address_line_3').val('');
+        }
+    });
 });
 
 

@@ -4,7 +4,7 @@ Tags: backup, transfer, copy, move, clone
 Requires at least: 3.3
 Tested up to: 6.8
 Requires PHP: 5.3
-Stable tag: 7.98
+Stable tag: 7.99
 License: GPLv3 or later
 
 Trusted by 60M+ sites: The gold standard for WordPress migrations, backups, and site transfers since 2013.
@@ -113,6 +113,21 @@ All-in-One WP Migration is in full compliance with General Data Protection Regul
 See our [GDPR Compliant Privacy Policy here](https://www.iubenda.com/privacy-policy/946881).
 
 == Changelog ==
+= 7.99 =
+**Added**
+
+* Gzip compression support for file operations to improve backup file handling
+
+**Fixed**
+
+* jQuery deprecated bind() method replaced with on() for better compatibility
+* File upload security by removing stripslashes_deep on $_FILES input
+
+**Improved**
+
+* Stream operations replaced with ai1wm_write() for enhanced reliability
+* Update javascript dependencies to use latest versions
+
 = 7.98 =
 **Added**
 

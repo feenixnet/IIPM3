@@ -85,7 +85,7 @@ if ( ! class_exists( 'Ai1wmve_Schedule_Events' ) ) {
 		public function delete( $id ) {
 			if ( $event = $this->find( $id ) ) {
 				$event->clear_schedule()
-					->delete_data();
+					->delete_logs();
 				unset( $this->events[ $id ] );
 
 				return $this->update_option();

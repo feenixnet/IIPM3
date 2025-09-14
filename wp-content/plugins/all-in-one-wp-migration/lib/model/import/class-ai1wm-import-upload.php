@@ -31,14 +31,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class Ai1wm_Import_Upload {
 
-	public static function execute( $params, $files = array() ) {
-		if ( empty( $files ) ) {
-			$files = stripslashes_deep( $_FILES );
-		}
+	public static function execute( $params ) {
 
 		// Get upload tmp name
-		if ( isset( $files['upload_file']['tmp_name'] ) ) {
-			$upload_tmp_name = $files['upload_file']['tmp_name'];
+		if ( isset( $_FILES['upload_file']['tmp_name'] ) ) {
+			$upload_tmp_name = $_FILES['upload_file']['tmp_name'];
 		} else {
 			throw new Ai1wm_Upload_Exception(
 				wp_kses(
@@ -54,8 +51,8 @@ class Ai1wm_Import_Upload {
 		}
 
 		// Get upload error
-		if ( isset( $files['upload_file']['error'] ) ) {
-			$upload_error = $files['upload_file']['error'];
+		if ( isset( $_FILES['upload_file']['error'] ) ) {
+			$upload_error = $_FILES['upload_file']['error'];
 		} else {
 			throw new Ai1wm_Upload_Exception(
 				wp_kses(

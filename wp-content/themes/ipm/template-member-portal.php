@@ -18,29 +18,53 @@ require_once get_template_directory() . '/includes/cpd-record-api.php';
 $current_user_id = get_current_user_id();
 $current_year = date('Y');
 
-// Get CPD stats to check if user is assigned
-$cpd_stats = iipm_get_cpd_stats($current_user_id, $current_year);
-$is_user_assigned = isset($cpd_stats['is_user_assigned']) ? $cpd_stats['is_user_assigned'] : false;
+// Check if user has active membership status
+global $wpdb;
+$member_status = $wpdb->get_var($wpdb->prepare(
+    "SELECT membership_status FROM {$wpdb->prefix}test_iipm_members WHERE user_id = %d",
+    $current_user_id
+));
+
+// Auto-assign to 2025 CPD if user has active membership and is not already assigned
+if ($member_status === 'active') {
+    $cpd_stats = iipm_get_cpd_stats($current_user_id, $current_year);
+    $is_user_assigned = isset($cpd_stats['is_user_assigned']) ? $cpd_stats['is_user_assigned'] : false;
+    
+    // If not assigned, automatically assign to CPD
+    if (!$is_user_assigned) {
+        $assignment_result = iipm_assign_user_to_cpd($current_user_id);
+        if ($assignment_result) {
+            // Refresh CPD stats after assignment
+            $cpd_stats = iipm_get_cpd_stats($current_user_id, $current_year);
+            $is_user_assigned = isset($cpd_stats['is_user_assigned']) ? $cpd_stats['is_user_assigned'] : false;
+        }
+    }
+} else {
+    // For inactive members, still check assignment status but don't auto-assign
+    $cpd_stats = iipm_get_cpd_stats($current_user_id, $current_year);
+    $is_user_assigned = isset($cpd_stats['is_user_assigned']) ? $cpd_stats['is_user_assigned'] : false;
+}
+
+// Check if logging period is currently active
+$is_logging_period_active = false;
+if ($is_user_assigned && isset($cpd_stats['is_logging_period_available'])) {
+    $is_logging_period_active = $cpd_stats['is_logging_period_available'];
+}
 
 get_header(); 
 ?>
 
-<div class="member-portal-page">
+<div class="member-portal-page main-container">
     <!-- Header -->
-    <div class="portal-header">
-        <div class="container">
-            <div class="header-content">
-                <div class="breadcrumb">
-                    <a href="<?php echo home_url('/dashboard/'); ?>">🏠</a>
-                    <span class="separator">></span>
-                    <span>Member Portal</span>
-                </div>
-                <h1>Member Portal</h1>
+    <div class="container" style="position: relative; z-index: 2;">
+        <div class="page-header" style="text-align: center; margin-bottom: 40px;">
+            <div>
+                <h1 style="color: white; font-size: 2.5rem; margin-bottom: 10px;">Member Portal</h1>
+                <p style="color: rgba(255,255,255,0.9); font-size: 1.1rem;">
+                    Welcome to this CPD training course.
+                </p>
             </div>
         </div>
-    </div>
-
-    <div class="container">
         <!-- Success Alert for Completed CPD -->
         <?php if ($is_user_assigned && !empty($cpd_stats['courses_summary'])): 
             $total_completed = 0;
@@ -65,42 +89,16 @@ get_header();
             <?php endif; ?>
         <?php endif; ?>
         
-        <div class="portal-layout <?php echo !$is_user_assigned ? 'welcome-layout' : ''; ?>">
-            <?php if (!$is_user_assigned): ?>
-            <!-- Unassigned User Section -->
-            <div class="cpd-welcome-panel">
-                <div class="cpd-course-card">
-                    <div class="unassigned-user-section" id="unassigned-user-section">
-                        <div class="unassigned-content">
-                            <div class="unassigned-icon"><i class="fas fa-graduation-cap"></i></div>
-                            <h3>Welcome to CPD Training</h3>
-                            <p class="unassigned-description">
-                                You haven't been assigned to the current CPD cycle yet. Click the button below to join and start your professional development journey.
-                            </p>
-                            
-                            <button class="btn btn-primary assign-btn-large" id="assign-to-cpd-btn-large">
-                                <span class="btn-icon"><i class="fas fa-edit"></i></span>
-                                Assign to CPD
-                            </button>
-                            
-                            <div class="logging-period-info" id="logging-period-info">
-                                <div class="period-icon"><i class="fas fa-calendar"></i></div>
-                                <div class="period-details">
-                                    <h4>Logging Period</h4>
-                                    <p id="logging-period-text">Loading dates...</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <?php else: ?>
+        <div class="portal-layout">
+            <?php if ($is_user_assigned): ?>
             <!-- Left Side - My CPD Course (for assigned users) -->
             <div class="cpd-course-panel">
                 <div class="cpd-course-card">
                     <h3>My CPD Course</h3>
                     
-                    <button class="btn btn-primary" id="log-training-btn">Log Training</button>
+                    <button class="btn btn-primary" id="log-training-btn" <?php echo !$is_logging_period_active ? 'disabled' : ''; ?>>
+                        <?php echo $is_logging_period_active ? 'Log Training' : 'Logging Period Closed'; ?>
+                    </button>
                     
                     <div class="progress-section">
                         <div class="progress-header">
@@ -220,13 +218,13 @@ get_header();
                     <div class="quick-link-card" id="all-courses-card">
                         <div class="card-icon"><i class="fas fa-book"></i></div>
                         <h4>All Courses</h4>
-                        <a href="<?php echo home_url('/cpd-courses/'); ?>" class="card-link">Browse courses <i class="fas fa-arrow-right"></i></a>
+                        <a href="<?php echo home_url('/cpd-courses/?logging_available=' . ($is_logging_period_active ? '1' : '0')); ?>" class="card-link">Browse courses <i class="fas fa-arrow-right"></i></a>
                     </div>
                     
                     <div class="quick-link-card">
                         <div class="card-icon"><i class="fas fa-calendar"></i></div>
                         <h4>Submit Leave Request</h4>
-                        <a href="#" class="card-link">Submit <i class="fas fa-arrow-right"></i></a>
+                        <a href="<?php echo home_url('/leave-request/') ?>" class="card-link">Submit <i class="fas fa-arrow-right"></i></a>
                     </div>
                 </div>
 
@@ -239,11 +237,28 @@ get_header();
                             <div class="no-training-icon">💻</div>
                             <h4>No training history yet</h4>
                             <p>Start your CPD journey by logging your first training session</p>
-                            <button class="btn btn-primary" id="log-first-training-btn">Log your first training</button>
+                            <button class="btn btn-primary" id="log-first-training-btn" <?php echo !$is_logging_period_active ? 'disabled' : ''; ?>>
+                                <?php echo $is_logging_period_active ? 'Log your first training' : 'Logging Period Closed'; ?>
+                            </button>
                         </div>
                     </div>
-                    
-                    <a href="#" class="see-history-link">See training history <i class="fas fa-arrow-right"></i></a>
+                </div>
+            </div>
+            <?php else: ?>
+            <!-- Inactive Member Section -->
+            <div class="inactive-member-panel">
+                <div class="cpd-course-card">
+                    <div class="inactive-content">
+                        <div class="inactive-icon"><i class="fas fa-user-slash"></i></div>
+                        <h3>Account Inactive</h3>
+                        <p class="inactive-description">
+                            Your membership is currently inactive. Please contact support to reactivate your account and access CPD training.
+                        </p>
+                        <a href="mailto:info@iipm.ie" class="btn btn-primary">
+                            <span class="btn-icon"><i class="fas fa-envelope"></i></span>
+                            Contact Support
+                        </a>
+                    </div>
                 </div>
             </div>
             <?php endif; ?>
@@ -265,13 +280,13 @@ get_header();
             <div class="training-options">
                 <div class="training-option" id="pre-approved-option">
                     <div class="option-icon"><i class="fas fa-book"></i></div>
-                    <h4>Pre-approved Course</h4>
+                    <h4>Add from our course list</h4>
                     <p>Select from our library of approved courses. Automatically approved upon submission.</p>
                 </div>
                 
                 <div class="training-option" id="external-training-option">
                     <div class="option-icon"><i class="fas fa-edit"></i></div>
-                    <h4>External Training</h4>
+                    <h4>Ask for a couse to be added to our list</h4>
                     <p>Submit training from external providers. Requires approval from admin.</p>
                 </div>
             </div>
@@ -306,7 +321,6 @@ get_header();
 
 <style>
     .member-portal-page {
-        background: #f8fafc;
         min-height: 100vh;
         padding-top: 0;
     }
@@ -459,6 +473,46 @@ get_header();
         padding: 0;
         box-shadow: none;
         background: transparent;
+    }
+    
+    .inactive-member-panel {
+        width: 100%;
+        max-width: 700px;
+        margin: 0 auto;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 60vh;
+    }
+    
+    .inactive-member-panel .cpd-course-card {
+        padding: 0;
+        box-shadow: none;
+        background: transparent;
+    }
+    
+    .inactive-content {
+        text-align: center;
+        padding: 40px;
+    }
+    
+    .inactive-icon {
+        font-size: 48px;
+        color: #ef4444;
+        margin-bottom: 20px;
+    }
+    
+    .inactive-content h3 {
+        color: #374151;
+        margin-bottom: 16px;
+        font-size: 24px;
+    }
+    
+    .inactive-description {
+        color: #6b7280;
+        margin-bottom: 24px;
+        font-size: 16px;
+        line-height: 1.5;
     }
 
     .cpd-course-card {
@@ -684,6 +738,23 @@ get_header();
         gap: 12px;
         margin-bottom: 30px;
         transition: all 0.3s ease;
+    }
+    
+    /* Disabled button styles */
+    .btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        pointer-events: none;
+        background-color: #9ca3af !important;
+        border-color: #9ca3af !important;
+        color: #ffffff !important;
+    }
+    
+    .btn:disabled:hover {
+        background-color: #9ca3af !important;
+        border-color: #9ca3af !important;
+        transform: none !important;
+        box-shadow: none !important;
     }
 
     .assign-btn-large:hover {
@@ -1991,8 +2062,9 @@ get_header();
          */
         function selectPreApprovedTraining() {
             hideLogTrainingModal();
-            // Redirect to CPD courses page
-            window.location.href = '<?php echo home_url('/cpd-courses/'); ?>';
+            // Redirect to CPD courses page with logging period status
+            const loggingAvailable = <?php echo $is_logging_period_active ? '1' : '0'; ?>;
+            window.location.href = '<?php echo home_url('/cpd-courses/'); ?>?logging_available=' + loggingAvailable;
         }
         
         /**
@@ -2000,8 +2072,8 @@ get_header();
          */
         function selectExternalTraining() {
             hideLogTrainingModal();
-            // Show external training form or redirect
-            alert('External training functionality coming soon!');
+            // Redirect to external courses page
+            window.location.href = '<?php echo home_url('/external-courses/'); ?>';
         }
         
         /**

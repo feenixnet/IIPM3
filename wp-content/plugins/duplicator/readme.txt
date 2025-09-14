@@ -4,7 +4,7 @@ Tags: backup, database backup, wordpress backup, cloud backup, migration
 Requires at least: 5.3
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 1.5.13
+Stable tag: 1.5.13.2
 License: GPLv2
 
 The best WordPress backup and migration plugin. Quickly and easily backup ,migrate, copy, move, or clone your site from one location to another. Simplify backups & migrations without limits.

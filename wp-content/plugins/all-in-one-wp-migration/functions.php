@@ -1542,6 +1542,29 @@ function ai1wm_open( $file, $mode ) {
 }
 
 /**
+ * Opens a gzipped file in specified mode
+ *
+ * @param  string   $file Path to the file to open
+ * @param  string   $mode Mode in which to open the file
+ * @return resource
+ * @throws Ai1wm_Not_Accessible_Exception
+ */
+function ai1wm_gzopen( $file, $mode ) {
+	$file_handle = @fopen( "compress.zlib://{$file}", $mode );
+	if ( false === $file_handle ) {
+		throw new Ai1wm_Not_Accessible_Exception(
+			wp_kses(
+				/* translators: 1: File path, 2: mode */
+				sprintf( __( 'Could not open %1$s with mode %2$s. The process cannot continue. <a href="https://help.servmask.com/knowledgebase/invalid-file-permissions/" target="_blank">Technical details</a>', 'all-in-one-wp-migration' ), $file, $mode ),
+				ai1wm_allowed_html_tags()
+			)
+		);
+	}
+
+	return $file_handle;
+}
+
+/**
  * Write contents to a file
  *
  * @param  resource $handle  File handle to write to
@@ -1769,6 +1792,28 @@ function ai1wm_copy( $target_file, $output_file, $output_file_offset = 0 ) {
 }
 
 /**
+ * Copies gzipped file's contents while uncompressing to another
+ *
+ * @param  string  $target_file        File to copy the contents from
+ * @param  string  $output_file        File to copy the contents to
+ * @param  integer $output_file_offset Output file offset bytes
+ * @return void
+ */
+function ai1wm_copy_gz( $target_file, $output_file, $output_file_offset = 0 ) {
+	$target_handle = ai1wm_gzopen( $target_file, 'rb' );
+	$output_handle = ai1wm_open( $output_file, 'cb' );
+	if ( ai1wm_seek( $output_handle, $output_file_offset, SEEK_SET ) !== -1 ) {
+		while ( ( $file_buffer = ai1wm_read( $target_handle, 4096 ) ) ) {
+			ai1wm_write( $output_handle, $file_buffer );
+		}
+	}
+
+	ai1wm_close( $target_handle );
+	ai1wm_close( $output_handle );
+}
+
+
+/**
  * Check whether file size is supported by current PHP version
  *
  * @param  string  $file         Path to file
@@ -1826,6 +1871,28 @@ function ai1wm_is_filedata_supported( $file ) {
 		}
 
 		@fclose( $file_handle );
+	}
+
+	return false;
+}
+
+/**
+ * Check whether gzipped file data is supported by All-in-One WP Migration
+ *
+ * @param  string  $file Path to file
+ * @return boolean
+ */
+function ai1wm_is_gzipped_filedata_supported( $file ) {
+	if ( ( $file_handle = @gzopen( $file, 'rb' ) ) ) {
+		if ( ( $file_buffer = @gzread( $file_handle, 4377 ) ) ) {
+			if ( ( $file_data = @unpack( 'a255filename/a14size/a12mtime/a4096path', $file_buffer ) ) !== false ) {
+				if ( AI1WM_PACKAGE_NAME === trim( $file_data['filename'] ) ) {
+					return true;
+				}
+			}
+		}
+
+		@gzclose( $file_handle );
 	}
 
 	return false;

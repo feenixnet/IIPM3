@@ -305,7 +305,7 @@ class AdminNotices
         foreach ($shouldBeActivated as $slug => $title) {
             $activateURL              = wp_nonce_url(admin_url('plugins.php?action=activate&plugin=' . $slug), 'activate-plugin_' . $slug);
             $anchorTitle              = sprintf(esc_html__('Activate %s', 'duplicator'), $title);
-            $activatePluginsAnchors[] = '<a href="' . $activateURL . '" 
+            $activatePluginsAnchors[] = '<a href="' . $activateURL . '"
                                             title="' . esc_attr($anchorTitle) . '">' .
                 $title . '</a>';
         }
@@ -396,19 +396,19 @@ class AdminNotices
         <div class="notice updated duplicator-message duplicator-message-dismissed" data-notice_id="<?php echo esc_attr($notice_id); ?>">
             <div class="duplicator-message-inner">
                 <div class="duplicator-message-icon">
-                    <img 
-                        src="<?php echo esc_url(DUPLICATOR_PLUGIN_URL . "assets/img/logo.png"); ?>" 
+                    <img
+                        src="<?php echo esc_url(DUPLICATOR_PLUGIN_URL . "assets/img/logo.png"); ?>"
                         style="text-align:top; margin:0; height:60px; width:60px;" alt="Duplicator">
                 </div>
                 <div class="duplicator-message-content">
                     <p>
                         <strong>
                             <?php echo __('Congrats!', 'duplicator'); ?>
-                        </strong> 
+                        </strong>
                         <?php
                         printf(
                             esc_html__(
-                                'You created over %d backups with Duplicator. Great job! If you can spare a minute, 
+                                'You created over %d backups with Duplicator. Great job! If you can spare a minute,
                                 please help us by leaving a five star review on WordPress.org.',
                                 'duplicator'
                             ),
@@ -416,8 +416,8 @@ class AdminNotices
                         ); ?>
                     </p>
                     <p class="duplicator-message-actions">
-                        <a 
-                            href="https://wordpress.org/support/plugin/duplicator/reviews/?filter=5/#new-post" 
+                        <a
+                            href="https://wordpress.org/support/plugin/duplicator/reviews/?filter=5/#new-post"
                             target="_blank" class="button button-primary duplicator-notice-rate-now"
                         >
                             <?php esc_html_e("Sure! I'd love to help", 'duplicator'); ?>
@@ -446,7 +446,7 @@ class AdminNotices
                 'duplicator menu missing'
             ));
             $errorMessage = __(
-                '<strong>Duplicator</strong><hr> Your logged-in user role does not have export 
+                '<strong>Duplicator</strong><hr> Your logged-in user role does not have export
                 capability so you don\'t have access to Duplicator functionality.',
                 'duplicator'
             ) .
@@ -475,7 +475,7 @@ class AdminNotices
         if (
             !ControllersManager::isDuplicatorPage() ||
             ControllersManager::isCurrentPage(ControllersManager::ABOUT_US_SUBMENU_SLUG) ||
-            ControllersManager::isCurrentPage(ControllersManager::SETTINGS_SUBMENU_SLUG, 'license')
+            ControllersManager::isCurrentPage(ControllersManager::SETTINGS_SUBMENU_SLUG, 'general')
         ) {
             return;
         }

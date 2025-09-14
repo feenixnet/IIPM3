@@ -23,35 +23,36 @@ $current_tab = isset($_REQUEST['tab']) ? sanitize_text_field($_REQUEST['tab']) :
     <?php duplicator_header(__("Settings", 'duplicator')) ?>
 
     <h2 class="nav-tab-wrapper">
-        <a 
-            href="<?php echo esc_url(ControllersManager::getMenuLink(ControllersManager::SETTINGS_SUBMENU_SLUG, 'general')); ?> " 
+        <a
+            href="<?php echo esc_url(ControllersManager::getMenuLink(ControllersManager::SETTINGS_SUBMENU_SLUG, 'general')); ?> "
             class="nav-tab <?php echo ($current_tab == 'general') ? 'nav-tab-active' : '' ?>"
         >
             <?php esc_html_e('General', 'duplicator'); ?>
         </a>
-        <a 
-            href="<?php echo esc_url(ControllersManager::getMenuLink(ControllersManager::SETTINGS_SUBMENU_SLUG, 'package')); ?> " 
+        <a
+            href="<?php echo esc_url(ControllersManager::getMenuLink(ControllersManager::SETTINGS_SUBMENU_SLUG, 'package')); ?> "
             class="nav-tab <?php echo ($current_tab == 'package') ? 'nav-tab-active' : '' ?>"
         >
             <?php esc_html_e('Backups', 'duplicator'); ?>
         </a>
-        <a 
-            href="<?php echo esc_url(ControllersManager::getMenuLink(ControllersManager::SETTINGS_SUBMENU_SLUG, 'storage')); ?> " 
+        <a
+            href="<?php echo esc_url(ControllersManager::getMenuLink(ControllersManager::SETTINGS_SUBMENU_SLUG, 'storage')); ?> "
             class="nav-tab <?php echo ($current_tab == 'storage') ? 'nav-tab-active' : '' ?>"
         >
             <?php esc_html_e('Storage', 'duplicator'); ?>
         </a>
-        <a 
-            href="<?php echo esc_url(ControllersManager::getMenuLink(ControllersManager::SETTINGS_SUBMENU_SLUG, 'access')); ?> " 
+        <a
+            href="<?php echo esc_url(ControllersManager::getMenuLink(ControllersManager::SETTINGS_SUBMENU_SLUG, 'access')); ?> "
             class="nav-tab <?php echo ($current_tab == 'access') ? 'nav-tab-active' : '' ?>"
         >
             <?php esc_html_e('Access', 'duplicator'); ?>
         </a>
-        <a 
-            href="<?php echo esc_url(ControllersManager::getMenuLink(ControllersManager::SETTINGS_SUBMENU_SLUG, 'license')); ?> " 
-            class="nav-tab <?php echo ($current_tab == 'license') ? 'nav-tab-active' : '' ?>"
+
+        <a
+            href="<?php echo esc_url(ControllersManager::getMenuLink(ControllersManager::SETTINGS_SUBMENU_SLUG, 'misc')); ?> "
+            class="nav-tab <?php echo ($current_tab == 'misc') ? 'nav-tab-active' : '' ?>"
         >
-            <?php esc_html_e('License', 'duplicator'); ?>
+            <?php esc_html_e('Misc', 'duplicator'); ?>
         </a>
     </h2>
 
@@ -70,8 +71,9 @@ $current_tab = isset($_REQUEST['tab']) ? sanitize_text_field($_REQUEST['tab']) :
             Bootstrap::mocksStyles();
             TplMng::getInstance()->render("mocks/settings/access/capabilities");
             break;
-        case 'license':
-            include(DUPLICATOR_PLUGIN_PATH . "views/settings/license.php");
+
+        case 'misc':
+            TplMng::getInstance()->render("admin_pages/settings/misc/misc");
             break;
     }
     do_action('duplicator_settings_page_footer');

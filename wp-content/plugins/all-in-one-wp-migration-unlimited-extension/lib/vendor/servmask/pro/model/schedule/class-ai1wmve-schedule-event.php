@@ -36,9 +36,10 @@ if ( ! class_exists( 'Ai1wmve_Schedule_Event' ) ) {
 		const TYPE_EXPORT = 'Export';
 		const TYPE_IMPORT = 'Import';
 
-		const LAST_RUN_NONE    = 'None';
-		const LAST_RUN_FAILED  = 'Failed';
-		const LAST_RUN_SUCCESS = 'Success';
+		const LAST_STATUS_NONE    = 'None';
+		const LAST_STATUS_FAILED  = 'Failed';
+		const LAST_STATUS_SUCCESS = 'Success';
+		const LAST_STATUS_RUNNING = 'Running';
 
 		const INTERVAL_HOURLY  = 'Hourly';
 		const INTERVAL_DAILY   = 'Daily';
@@ -334,19 +335,28 @@ if ( ! class_exists( 'Ai1wmve_Schedule_Event' ) ) {
 		}
 
 		public function mark_success( $params = null ) {
-			$this->last_run( self::LAST_RUN_SUCCESS );
+			$this->last_run( self::LAST_STATUS_SUCCESS );
 
 			$log = new Ai1wmve_Schedule_Event_Log( $this->event_id );
-			$log->add( self::LAST_RUN_SUCCESS );
+			$log->add( self::LAST_STATUS_SUCCESS );
 
 			$this->notify_success( $params );
 		}
 
-		public function mark_failed( $message = null ) {
-			$this->last_run( self::LAST_RUN_FAILED );
+		public function mark_running( $params = null ) {
+			$this->last_run( self::LAST_STATUS_RUNNING );
 
 			$log = new Ai1wmve_Schedule_Event_Log( $this->event_id );
-			$log->add( self::LAST_RUN_FAILED, $message );
+			$log->add( self::LAST_STATUS_RUNNING );
+
+			$this->notify_running( $params );
+		}
+
+		public function mark_failed( $message = null ) {
+			$this->last_run( self::LAST_STATUS_FAILED );
+
+			$log = new Ai1wmve_Schedule_Event_Log( $this->event_id );
+			$log->add( self::LAST_STATUS_FAILED, $message );
 
 			$this->notify_failed( $message );
 		}
@@ -357,7 +367,7 @@ if ( ! class_exists( 'Ai1wmve_Schedule_Event' ) ) {
 				return update_option( $option_key, $status );
 			}
 
-			return get_option( $option_key, self::LAST_RUN_NONE );
+			return get_option( $option_key, self::LAST_STATUS_NONE );
 		}
 
 		protected function notify_success( $params ) {
@@ -384,6 +394,9 @@ if ( ! class_exists( 'Ai1wmve_Schedule_Event' ) ) {
 			);
 		}
 
+		protected function notify_running( $params ) {
+
+		}
 
 		protected function notify_failed( $error ) {
 			add_filter( 'ai1wm_notification_error_toggle', array( $this, 'is_failed_notification_enabled' ) );
@@ -434,7 +447,7 @@ if ( ! class_exists( 'Ai1wmve_Schedule_Event' ) ) {
 			);
 		}
 
-		public function delete_data() {
+		public function delete_logs() {
 			delete_option( self::option_key( 'last_run', $this->event_id ) );
 			delete_option( self::option_key( 'log', $this->event_id ) );
 		}

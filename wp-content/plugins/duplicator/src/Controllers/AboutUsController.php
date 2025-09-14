@@ -57,7 +57,6 @@ class AboutUsController
                 'activated' => esc_html__('Activated', 'duplicator'),
             )
         );
-
         wp_localize_script(
             'duplicator-extra-plugins',
             'duplicator_extra_plugins',

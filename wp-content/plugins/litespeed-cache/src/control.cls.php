@@ -1,12 +1,11 @@
 <?php
+// phpcs:ignoreFile
 
 /**
  * The plugin cache-control class for X-Litespeed-Cache-Control
  *
  * @since       1.1.3
  * @package     LiteSpeed
- * @subpackage  LiteSpeed/inc
- * @author      LiteSpeed Technologies <info@litespeedtech.com>
  */
 
 namespace LiteSpeed;
@@ -467,7 +466,7 @@ class Control extends Root {
 			$current_url = Tag::build_uri_tag(true);
 			// Use time limit ttl
 			$scheduled_time = strtotime($timed_urls_time);
-			$ttl            = $scheduled_time - time();
+			$ttl            = $scheduled_time - current_time('timestamp');
 			if ($ttl < 0) {
 				$ttl += 86400; // add one day
 			}

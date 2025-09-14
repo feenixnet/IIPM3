@@ -172,6 +172,47 @@ if ( ! class_exists( 'Ai1wmve_Schedules_Controller' ) ) {
 			exit;
 		}
 
+		public static function event_clean() {
+			ai1wm_setup_environment();
+
+			// Set params
+			if ( empty( $params ) ) {
+				$params = stripslashes_deep( $_POST );
+			}
+
+			// Set secret key
+			$secret_key = null;
+			if ( isset( $params['secret_key'] ) ) {
+				$secret_key = trim( $params['secret_key'] );
+			}
+
+			// Check for event_id
+			if ( ! isset( $params['event_id'] ) ) {
+				ai1wm_json_response( array( 'errors' => __( 'Unable to find event', AI1WM_PLUGIN_NAME ) ) );
+				exit;
+			}
+
+			try {
+				// Ensure that unauthorized people cannot access delete action
+				ai1wm_verify_secret_key( $secret_key );
+			} catch ( Ai1wm_Not_Valid_Secret_Key_Exception $e ) {
+				exit;
+			}
+
+			try {
+				$events = new Ai1wmve_Schedule_Events();
+				$event  = $events->find( $params['event_id'] );
+				$event->delete_logs();
+				exit;
+			} catch ( Ai1wmve_Schedules_Exception $e ) {
+				ai1wm_json_response( array( 'errors' => array( $e->getMessage() ) ) );
+				exit;
+			}
+
+			ai1wm_json_response( array( 'errors' => array() ) );
+			exit;
+		}
+
 		public static function save( $params = array() ) {
 			ai1wm_setup_environment();
 			// Set params
@@ -239,6 +280,8 @@ if ( ! class_exists( 'Ai1wmve_Schedules_Controller' ) ) {
 				exit;
 			}
 
+			delete_transient( 'doing_cron' );
+
 			try {
 				$events = new Ai1wmve_Schedule_Events();
 				$event  = $events->find( $params['event_id'] );
@@ -261,12 +304,64 @@ if ( ! class_exists( 'Ai1wmve_Schedules_Controller' ) ) {
 			return file_put_contents( AI1WM_STORAGE_PATH . DIRECTORY_SEPARATOR . 'cron.log', 'Event not found ' . $event_id . PHP_EOL, FILE_APPEND );
 		}
 
+
+		public static function event_status() {
+			ai1wm_setup_environment();
+
+			// Set params
+			if ( empty( $params ) ) {
+				$params = stripslashes_deep( $_GET );
+			}
+
+			// Set secret key
+			$secret_key = null;
+			if ( isset( $params['secret_key'] ) ) {
+				$secret_key = trim( $params['secret_key'] );
+			}
+
+			// Check for event_id
+			if ( ! isset( $params['event_id'] ) ) {
+				ai1wm_json_response( array( 'errors' => __( 'Unable to find event', AI1WM_PLUGIN_NAME ) ) );
+				exit;
+			}
+
+			try {
+				// Ensure that unauthorized people cannot access delete action
+				ai1wm_verify_secret_key( $secret_key );
+			} catch ( Ai1wm_Not_Valid_Secret_Key_Exception $e ) {
+				exit;
+			}
+
+			try {
+				$events = new Ai1wmve_Schedule_Events();
+				$event  = $events->find( $params['event_id'] );
+				ai1wm_json_response( array( 'status' => $event->last_run() ) );
+				exit;
+			} catch ( Ai1wmve_Schedules_Exception $e ) {
+				ai1wm_json_response( array( 'errors' => array( $e->getMessage() ) ) );
+				exit;
+			}
+
+			ai1wm_json_response( array( 'errors' => array() ) );
+			exit;
+		}
+
 		public static function log_success( $params ) {
 			if ( isset( $params['event_id'] ) ) {
 				$event_id = $params['event_id'];
 				$events   = new Ai1wmve_Schedule_Events();
 				if ( $event = $events->find( $event_id ) ) {
 					$event->mark_success( $params );
+				}
+			}
+		}
+
+		public static function log_running( $params ) {
+			if ( isset( $params['event_id'] ) ) {
+				$event_id = $params['event_id'];
+				$events   = new Ai1wmve_Schedule_Events();
+				if ( $event = $events->find( $event_id ) ) {
+					$event->mark_running( $params );
 				}
 			}
 		}

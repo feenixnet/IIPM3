@@ -55,6 +55,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 				<div id="ai1wmve-schedules-event-log">
 					<event-log></event-log>
 				</div>
+
+				<div id="ai1wmve-schedules-event-clean">
+					<event-log-clean></event-log-clean>
+				</div>
 			</div>
 
 		</div>

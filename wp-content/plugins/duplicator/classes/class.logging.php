@@ -245,7 +245,7 @@ class DUP_Log
     /**
      * Gets the active trace file path
      *
-     * @return string   Returns the full path to the active trace file (i.e. dup-pro_hash.log)
+     * @return string Returns the full path to the active trace file
      */
     public static function GetTraceFilepath()
     {

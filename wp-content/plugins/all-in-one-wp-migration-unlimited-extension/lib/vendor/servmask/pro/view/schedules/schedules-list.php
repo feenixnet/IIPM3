@@ -64,7 +64,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 			<td class="ai1wm-column-time">
 				<?php echo $event->time(); ?>
 			</td>
-			<td class="ai1wm-column-last-run ai1wm-column-last-run-<?php echo strtolower( $event->last_run() ); ?>"">
+			<td class="ai1wm-column-last-run ai1wm-column-last-status-<?php echo strtolower( $event->last_run() ); ?>"">
 				<span><?php echo $event->last_run(); ?></span>
 			</td>
 			<td class="ai1wm-column-actions ai1wmve-schedule-actions">
@@ -90,6 +90,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 								<a tabindex="-1" href="#" data-event_id="<?php echo esc_attr( $event->event_id() ); ?>" data-event_title="<?php echo esc_attr( $event->title() ); ?>" role="menuitem" aria-label="<?php _e( 'View log', AI1WM_PLUGIN_NAME ); ?>" class="ai1wmve-schedule-view-log">
 									<i class="ai1wm-icon-eye"></i>
 									<span><?php _e( 'View log', AI1WM_PLUGIN_NAME ); ?></span>
+								</a>
+							</li>
+							<li>
+								<a tabindex="-1" href="#" data-event_id="<?php echo esc_attr( $event->event_id() ); ?>" role="menuitem" aria-label="<?php _e( 'Clean log', AI1WM_PLUGIN_NAME ); ?>" class="ai1wmve-schedule-clean-log">
+									<i class="ai1wm-icon-broom"></i>
+									<span><?php _e( 'Clean log', AI1WM_PLUGIN_NAME ); ?></span>
 								</a>
 							</li>
 							<li class="divider"></li>

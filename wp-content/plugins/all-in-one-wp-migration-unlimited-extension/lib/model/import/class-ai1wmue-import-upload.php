@@ -84,43 +84,43 @@ class Ai1wmue_Import_Upload {
 			);
 		}
 
-		// Verify file extension
-		if ( ! ai1wm_is_filename_supported( ai1wm_archive_path( $params ) ) ) {
-			throw new Ai1wm_Upload_Exception(
-				wp_kses(
-					__(
-						'Invalid file type. Please ensure your file is a <strong>.wpress</strong> backup created with All-in-One WP Migration.
-						<a href="https://help.servmask.com/knowledgebase/invalid-backup-file/" target="_blank">Technical details</a>',
-						'all-in-one-wp-migration'
-					),
-					ai1wm_allowed_html_tags()
-				),
-				415
-			);
-		}
-
-		// Verify file data
-		if ( $upload_offset <= 4377 ) {
-			if ( ! ai1wm_is_filedata_supported( $upload_tmp_name ) ) {
-				throw new Ai1wm_Upload_Exception(
-					wp_kses(
-						__(
-							'Invalid file data. Please ensure your file is a <strong>.wpress</strong> backup created with All-in-One WP Migration.
-							<a href="https://help.servmask.com/knowledgebase/invalid-backup-file/" target="_blank">Technical details</a>',
-							'all-in-one-wp-migration'
-						),
-						ai1wm_allowed_html_tags()
-					),
-					415
-				);
-			}
-		}
-
 		// Upload file data
 		switch ( $upload_error ) {
 			case UPLOAD_ERR_OK:
+				// Verify file extension
+				if ( ! ai1wm_is_filename_supported( ai1wm_archive_path( $params ) ) ) {
+					throw new Ai1wm_Upload_Exception(
+						wp_kses(
+							__(
+								'Invalid file type. Please ensure your file is a <strong>.wpress</strong> backup created with All-in-One WP Migration.
+								<a href="https://help.servmask.com/knowledgebase/invalid-backup-file/" target="_blank">Technical details</a>',
+								'all-in-one-wp-migration'
+							),
+							ai1wm_allowed_html_tags()
+						),
+						415
+					);
+				}
+
+				// Verify file data
+				if ( $upload_offset <= 4377 ) {
+					if ( ! ai1wm_is_gzipped_filedata_supported( $upload_tmp_name ) ) {
+						throw new Ai1wm_Upload_Exception(
+							wp_kses(
+								__(
+									'Invalid file data. Please ensure your file is a <strong>.wpress</strong> backup created with All-in-One WP Migration.
+									<a href="https://help.servmask.com/knowledgebase/invalid-backup-file/" target="_blank">Technical details</a>',
+									'all-in-one-wp-migration'
+								),
+								ai1wm_allowed_html_tags()
+							),
+							415
+						);
+					}
+				}
+
 				try {
-					ai1wm_copy( $upload_tmp_name, ai1wm_archive_path( $params ), $upload_offset );
+					ai1wm_copy_gz( $upload_tmp_name, ai1wm_archive_path( $params ), $upload_offset );
 					ai1wm_unlink( $upload_tmp_name );
 				} catch ( Exception $e ) {
 					/* translators: Error message. */

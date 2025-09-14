@@ -11,6 +11,9 @@ if (!current_user_can('administrator')) {
     exit;
 }
 
+// Get the active tab from URL, default to 'by-admin'
+$active_tab = isset($_GET['tab']) ? sanitize_text_field($_GET['tab']) : 'by-admin';
+
 get_header();
 
 // Include notification system if not already loaded
@@ -29,19 +32,40 @@ if (!function_exists('add_success_notification')) {
                 </p>
             </div>
         </div>
-        <!-- Course Management Actions -->
-        <div class="course-management-header">
-            <div class="header-left">
-                <h2>Course Library</h2>
-                <p>Manage your CPD course database</p>
-            </div>
-            <div class="header-right">
-                <button class="btn btn-primary" id="add-course-btn">
-                    <span class="btn-icon"><i class="fas fa-plus"></i></span>
-                    Add New Course
-                </button>
+        <!-- Tab Navigation -->
+        <div class="tab-navigation" style="margin-bottom: 30px;">
+            <div style="display: flex; justify-content: center; gap: 20px;">
+                <a href="?tab=by-admin" class="tab-button <?php echo $active_tab === 'by-admin' ? 'active' : ''; ?>" 
+                   style="padding: 12px 24px; background: <?php echo $active_tab === 'by-admin' ? '#f8a135' : '#6b4c93'; ?>; color: white; border-radius: 8px; text-decoration: none; font-weight: 500; transition: all 0.3s ease;">
+                    <span style="margin-right: 8px;"><i class="fas fa-user-shield"></i></span>
+                    By Admin
+                </a>
+                <a href="?tab=by-users" class="tab-button <?php echo $active_tab === 'by-users' ? 'active' : ''; ?>"
+                   style="padding: 12px 24px; background: <?php echo $active_tab === 'by-users' ? '#f8a135' : '#6b4c93'; ?>; color: white; border-radius: 8px; text-decoration: none; font-weight: 500; transition: all 0.3s ease;">
+                    <span style="margin-right: 8px;"><i class="fas fa-users"></i></span>
+                    By Users
+                </a>
             </div>
         </div>
+
+        <!-- Tab Content -->
+        <div class="tab-content main-content">
+            <?php if ($active_tab === 'by-admin'): ?>
+            <!-- By Admin Tab Content -->
+            <div class="by-admin-content">
+            <!-- Course Management Actions -->
+            <div class="course-management-header">
+                <div class="header-left">
+                    <h2>Course Library</h2>
+                    <p>Manage your CPD course database</p>
+                </div>
+                <div class="header-right">
+                    <button class="btn btn-primary" id="add-course-btn">
+                        <span class="btn-icon"><i class="fas fa-plus"></i></span>
+                        Add New Course
+                    </button>
+                </div>
+            </div>
 
         <!-- Filters and Search -->
         <div class="course-filters">
@@ -121,7 +145,109 @@ if (!function_exists('add_success_notification')) {
                     </tbody>
                 </table>
             </div>
+            </div>
+            </div>
+            <?php else: ?>
+            <!-- By Users Tab Content -->
+            <div class="by-users-content">
+            <!-- Pending Courses Section -->
+            <div class="section-header">
+                <h2>Pending Courses</h2>
+                <p>Review and approve courses submitted by users</p>
+            </div>
+            
+            <div class="pending-courses-container">
+                <div class="table-responsive">
+                    <table class="courses-table">
+                        <thead>
+                            <tr>
+                                <th>Course Name</th>
+                                <th>Course Code</th>
+                                <th>Category</th>
+                                <th>Provider</th>
+                                <th>Duration</th>
+                                <th>Submitted By</th>
+                                <th>Date Submitted</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pending-courses-table-body">
+                            <!-- Pending courses will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Pagination for pending courses -->
+                <div class="pagination-container">
+                    <div class="pagination-info">
+                        <span id="pending-pagination-info">Loading...</span>
+                    </div>
+                    <div class="pagination-controls">
+                        <button class="btn btn-outline" id="pending-prev-page" disabled>Previous</button>
+                        <span id="pending-page-numbers"></span>
+                        <button class="btn btn-outline" id="pending-next-page" disabled>Next</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Active/Inactive Courses Section -->
+            <div class="section-header">
+                <h2>User Courses Management</h2>
+                <p>Manage active and inactive courses submitted by users</p>
+            </div>
+            
+            <div class="user-courses-filters">
+                <div class="filter-group">
+                    <label for="user-status-filter">Status:</label>
+                    <select id="user-status-filter" class="form-control">
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="user-search">Search:</label>
+                    <input type="text" id="user-search" class="form-control" placeholder="Search courses...">
+                </div>
+                <button class="btn btn-outline" id="clear-user-filters">Clear Filters</button>
+            </div>
+            
+            <div class="user-courses-container">
+                <div class="table-responsive">
+                    <table class="courses-table">
+                        <thead>
+                            <tr>
+                                <th>Course Name</th>
+                                <th>Course Code</th>
+                                <th>Category</th>
+                                <th>Provider</th>
+                                <th>Duration</th>
+                                <th>Submitted By</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="user-courses-table-body">
+                            <!-- User courses will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Pagination for user courses -->
+                <div class="pagination-container">
+                    <div class="pagination-info">
+                        <span id="user-pagination-info">Loading...</span>
+                    </div>
+                    <div class="pagination-controls">
+                        <button class="btn btn-outline" id="user-prev-page" disabled>Previous</button>
+                        <span id="user-page-numbers"></span>
+                        <button class="btn btn-outline" id="user-next-page" disabled>Next</button>
+                    </div>
+                </div>
+            </div>
+            </div>
+            <?php endif; ?>
         </div>
+    </div>
 </div>
 
 <!-- Add/Edit Course Modal -->
@@ -154,7 +280,9 @@ if (!function_exists('add_success_notification')) {
                 
                 <div class="form-group">
                     <label for="course-provider">Provider *</label>
-                    <input type="text" id="course-provider" name="course_provider" class="form-control" required>
+                    <select id="course-provider" name="course_provider" class="form-control" required>
+                        <option value="">Select Provider</option>
+                    </select>
                 </div>
                 
                 <div class="form-group">
@@ -199,6 +327,101 @@ if (!function_exists('add_success_notification')) {
 /* Course Management Page */
 .course-management-page {
     min-height: 100vh;
+}
+
+/* Tab Navigation Styles */
+.tab-navigation {
+    margin-bottom: 30px;
+}
+
+.tab-button {
+    padding: 12px 24px;
+    color: white;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.tab-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.tab-button.active {
+    background: #f8a135 !important;
+}
+
+.tab-button:not(.active) {
+    background: #6b4c93;
+}
+
+.tab-content {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+}
+
+.section-header {
+    padding: 24px 24px 0 24px;
+    border-bottom: 1px solid #e5e7eb;
+    margin-bottom: 24px;
+}
+
+.section-header h2 {
+    margin: 0 0 8px 0;
+    color: #1e293b;
+    font-size: 20px;
+    font-weight: 600;
+}
+
+.section-header p {
+    margin: 0 0 16px 0;
+    color: #64748b;
+    font-size: 14px;
+}
+
+.pending-courses-container,
+.user-courses-container {
+    padding: 0 24px 24px 24px;
+}
+
+.user-courses-filters {
+    display: flex;
+    gap: 20px;
+    align-items: end;
+    margin-bottom: 24px;
+    padding: 0 24px;
+}
+
+.user-courses-filters .filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.user-courses-filters .filter-group label {
+    font-weight: 500;
+    color: #374151;
+    font-size: 14px;
+}
+
+.user-courses-filters .form-control {
+    padding: 10px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 14px;
+    min-width: 200px;
+}
+
+.user-courses-filters .form-control:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 /* Course Header */
@@ -800,6 +1023,324 @@ body.modal-open {
 jQuery(document).ready(function($) {
 
     var ajaxurl = '<?php echo admin_url('admin-ajax.php'); ?>';
+    var currentTab = '<?php echo $active_tab; ?>';
+    var pendingCurrentPage = 1;
+    var userCurrentPage = 1;
+    var pendingTotalPages = 1;
+    var userTotalPages = 1;
+    
+    // Load data based on current tab
+    if (currentTab === 'by-users') {
+        loadPendingCourses();
+        loadUserCourses();
+    }
+    
+    // Load pending courses
+    function loadPendingCourses() {
+        var formData = new FormData();
+        formData.append('action', 'iipm_get_pending_courses');
+        formData.append('page', pendingCurrentPage);
+        
+        $.ajax({
+            url: ajaxurl,
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                if (response.success) {
+                    displayPendingCourses(response.data.courses);
+                    updatePendingPagination(response.data.pagination);
+                } else {
+                    console.error('Error loading pending courses:', response.data);
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error loading pending courses:', error);
+            }
+        });
+    }
+    
+    // Display pending courses
+    function displayPendingCourses(courses) {
+        var tbody = $('#pending-courses-table-body');
+        tbody.empty();
+        
+        if (courses.length === 0) {
+            tbody.html('<tr><td colspan="8" style="text-align: center; padding: 40px; color: #6b7280;">No pending courses found</td></tr>');
+            return;
+        }
+        
+        courses.forEach(function(course) {
+            var row = $('<tr>');
+            row.html(`
+                <td>${course.course_name || 'N/A'}</td>
+                <td>${course.course_code || 'N/A'}</td>
+                <td>${course.course_category || 'N/A'}</td>
+                <td>${course.course_provider || 'N/A'}</td>
+                <td>${course.course_duration || 'N/A'} mins</td>
+                <td>${course.display_name || 'N/A'}</td>
+                <td>${formatDate(course.created_at)}</td>
+                <td>
+                    <div class="action-buttons">
+                        <button class="btn btn-success btn-sm" onclick="approveCourse(${course.id})">
+                            <i class="fas fa-check"></i> Approve
+                        </button>
+                        <button class="btn btn-danger btn-sm" onclick="rejectCourse(${course.id})">
+                            <i class="fas fa-times"></i> Reject
+                        </button>
+                    </div>
+                </td>
+            `);
+            tbody.append(row);
+        });
+    }
+    
+    // Load user courses
+    function loadUserCourses() {
+        var formData = new FormData();
+        formData.append('action', 'iipm_get_user_courses_admin');
+        formData.append('page', userCurrentPage);
+        formData.append('status', $('#user-status-filter').val());
+        formData.append('search', $('#user-search').val());
+        
+        $.ajax({
+            url: ajaxurl,
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                if (response.success) {
+                    displayUserCourses(response.data.courses);
+                    updateUserPagination(response.data.pagination);
+                } else {
+                    console.error('Error loading user courses:', response.data);
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error loading user courses:', error);
+            }
+        });
+    }
+    
+    // Display user courses
+    function displayUserCourses(courses) {
+        var tbody = $('#user-courses-table-body');
+        tbody.empty();
+        
+        if (courses.length === 0) {
+            tbody.html('<tr><td colspan="8" style="text-align: center; padding: 40px; color: #6b7280;">No courses found</td></tr>');
+            return;
+        }
+        
+        courses.forEach(function(course) {
+            var statusBadge = course.status === 'active' ? 
+                '<span class="status-badge status-active">Active</span>' : 
+                '<span class="status-badge status-inactive">Inactive</span>';
+            
+            var actionButton = course.status === 'active' ? 
+                '<button class="btn btn-warning btn-sm" onclick="deactivateCourse(' + course.id + ')"><i class="fas fa-pause"></i> Deactivate</button>' :
+                '<button class="btn btn-success btn-sm" onclick="activateCourse(' + course.id + ')"><i class="fas fa-play"></i> Activate</button>';
+            
+            var row = $('<tr>');
+            row.html(`
+                <td>${course.course_name || 'N/A'}</td>
+                <td>${course.course_code || 'N/A'}</td>
+                <td>${course.course_category || 'N/A'}</td>
+                <td>${course.course_provider || 'N/A'}</td>
+                <td>${course.course_duration || 'N/A'} mins</td>
+                <td>${course.display_name || 'N/A'}</td>
+                <td>${statusBadge}</td>
+                <td>
+                    <div class="action-buttons">
+                        ${actionButton}
+                    </div>
+                </td>
+            `);
+            tbody.append(row);
+        });
+    }
+    
+    // Pagination functions
+    function updatePendingPagination(pagination) {
+        pendingCurrentPage = pagination.current_page;
+        pendingTotalPages = pagination.total_pages;
+        
+        $('#pending-prev-page').prop('disabled', pendingCurrentPage <= 1);
+        $('#pending-next-page').prop('disabled', pendingCurrentPage >= pendingTotalPages);
+        
+        var pageNumbers = $('#pending-page-numbers');
+        pageNumbers.empty();
+        for (var i = 1; i <= pendingTotalPages; i++) {
+            var pageBtn = $('<button>').addClass('page-number').text(i);
+            if (i === pendingCurrentPage) pageBtn.addClass('active');
+            pageBtn.on('click', function() { changePendingPage(parseInt($(this).text())); });
+            pageNumbers.append(pageBtn);
+        }
+        
+        $('#pending-pagination-info').text(`Showing ${pagination.start} to ${pagination.end} of ${pagination.total} courses`);
+    }
+    
+    function updateUserPagination(pagination) {
+        userCurrentPage = pagination.current_page;
+        userTotalPages = pagination.total_pages;
+        
+        $('#user-prev-page').prop('disabled', userCurrentPage <= 1);
+        $('#user-next-page').prop('disabled', userCurrentPage >= userTotalPages);
+        
+        var pageNumbers = $('#user-page-numbers');
+        pageNumbers.empty();
+        for (var i = 1; i <= userTotalPages; i++) {
+            var pageBtn = $('<button>').addClass('page-number').text(i);
+            if (i === userCurrentPage) pageBtn.addClass('active');
+            pageBtn.on('click', function() { changeUserPage(parseInt($(this).text())); });
+            pageNumbers.append(pageBtn);
+        }
+        
+        $('#user-pagination-info').text(`Showing ${pagination.start} to ${pagination.end} of ${pagination.total} courses`);
+    }
+    
+    function changePendingPage(page) {
+        if (page >= 1 && page <= pendingTotalPages) {
+            pendingCurrentPage = page;
+            loadPendingCourses();
+        }
+    }
+    
+    function changeUserPage(page) {
+        if (page >= 1 && page <= userTotalPages) {
+            userCurrentPage = page;
+            loadUserCourses();
+        }
+    }
+    
+    // Event listeners for pagination
+    $('#pending-prev-page').on('click', function() { changePendingPage(pendingCurrentPage - 1); });
+    $('#pending-next-page').on('click', function() { changePendingPage(pendingCurrentPage + 1); });
+    $('#user-prev-page').on('click', function() { changeUserPage(userCurrentPage - 1); });
+    $('#user-next-page').on('click', function() { changeUserPage(userCurrentPage + 1); });
+    
+    
+    // Global functions for course actions
+    window.approveCourse = function(courseId) {
+        if (confirm('Are you sure you want to approve this course?')) {
+            var formData = new FormData();
+            formData.append('action', 'iipm_approve_course');
+            formData.append('course_id', courseId);
+            
+            $.ajax({
+                url: ajaxurl,
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    if (response.success) {
+                        loadPendingCourses();
+                        loadUserCourses();
+                    } else {
+                        alert('Error: ' + (response.data || 'Unknown error'));
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error approving course:', error);
+                    alert('Error approving course. Please try again.');
+                }
+            });
+        }
+    };
+    
+    window.rejectCourse = function(courseId) {
+        if (confirm('Are you sure you want to reject this course?')) {
+            var formData = new FormData();
+            formData.append('action', 'iipm_reject_course');
+            formData.append('course_id', courseId);
+            
+            $.ajax({
+                url: ajaxurl,
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    if (response.success) {
+                        loadPendingCourses();
+                    } else {
+                        alert('Error: ' + (response.data || 'Unknown error'));
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error rejecting course:', error);
+                    alert('Error rejecting course. Please try again.');
+                }
+            });
+        }
+    };
+    
+    window.activateCourse = function(courseId) {
+        if (confirm('Are you sure you want to activate this course?')) {
+            var formData = new FormData();
+            formData.append('action', 'iipm_activate_course');
+            formData.append('course_id', courseId);
+            
+            $.ajax({
+                url: ajaxurl,
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    if (response.success) {
+                        loadUserCourses();
+                    } else {
+                        alert('Error: ' + (response.data || 'Unknown error'));
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error activating course:', error);
+                    alert('Error activating course. Please try again.');
+                }
+            });
+        }
+    };
+    
+    window.deactivateCourse = function(courseId) {
+        if (confirm('Are you sure you want to deactivate this course?')) {
+            var formData = new FormData();
+            formData.append('action', 'iipm_deactivate_course');
+            formData.append('course_id', courseId);
+            
+            $.ajax({
+                url: ajaxurl,
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    if (response.success) {
+                        loadUserCourses();
+                    } else {
+                        alert('Error: ' + (response.data || 'Unknown error'));
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error deactivating course:', error);
+                    alert('Error deactivating course. Please try again.');
+                }
+            });
+        }
+    };
+    
+    function formatDate(dateString) {
+        var date = new Date(dateString);
+        return date.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+        });
+    }
+    
     // var iipm_ajax = {
     //     nonce: '<?php echo wp_create_nonce('iipm_portal_nonce'); ?>'
     // };
@@ -819,75 +1360,99 @@ jQuery(document).ready(function($) {
     function initializePage() {
         loadCategories();
         loadProviders();
-        loadCourses();
+        
+        // Only load admin courses if we're on the by-admin tab
+        if (currentTab === 'by-admin') {
+            loadCourses();
+        }
+        
         setupEventListeners();
         setupInfiniteScroll();
     }
     
     function setupEventListeners() {
-        // Add course button
-        $('#add-course-btn').on('click', function() {
-            console.log('Add course button clicked');
-            openCourseModal();
-        });
-        
-        // View toggle buttons
-        $('.view-btn').on('click', function() {
-            const view = $(this).data('view');
-            $('.view-btn').removeClass('active');
-            $(this).addClass('active');
+        // Only set up admin-specific event listeners if we're on the by-admin tab
+        if (currentTab === 'by-admin') {
+            // Add course button
+            $('#add-course-btn').on('click', function() {
+                console.log('Add course button clicked');
+                openCourseModal();
+            });
             
-            if (view === 'table') {
-                $('#course-list').hide();
-                $('#table-container').show();
-            } else {
-                $('#table-container').hide();
-                $('#course-list').show();
-            }
+            // View toggle buttons
+            $('.view-btn').on('click', function() {
+                const view = $(this).data('view');
+                $('.view-btn').removeClass('active');
+                $(this).addClass('active');
+                
+                if (view === 'table') {
+                    $('#course-list').hide();
+                    $('#table-container').show();
+                } else {
+                    $('#table-container').hide();
+                    $('#course-list').show();
+                }
+                
+                // Redisplay courses in the selected view
+                displayCourses(courses);
+            });
             
-            // Redisplay courses in the selected view
-            displayCourses(courses);
-        });
-        
-        // Modal controls
-        $('#close-modal, #cancel-course').on('click', function() {
-            closeCourseModal();
-        });
-        
-        $('#close-delete-modal, #cancel-delete').on('click', function() {
-            closeDeleteModal();
-        });
-        
-        // Save course
-        $('#save-course').on('click', function() {
-            saveCourse();
-        });
-        
-        // Confirm delete
-        $('#confirm-delete').on('click', function() {
-            deleteCourse();
-        });
-        
-        // Filters
-        $('#category-filter, #provider-filter').on('change', function() {
-            filterCourses();
-        });
-        
-        // Search button
-        $('#search-button').on('click', function() {
-            filterCourses();
-        });
-        
-        // Search on Enter key
-        $('#search-courses').on('keypress', function(e) {
-            if (e.which === 13) { // Enter key
+            // Modal controls
+            $('#close-modal, #cancel-course').on('click', function() {
+                closeCourseModal();
+            });
+            
+            $('#close-delete-modal, #cancel-delete').on('click', function() {
+                closeDeleteModal();
+            });
+            
+            // Save course
+            $('#save-course').on('click', function() {
+                saveCourse();
+            });
+            
+            // Confirm delete
+            $('#confirm-delete').on('click', function() {
+                deleteCourse();
+            });
+            
+            // Filters
+            $('#category-filter, #provider-filter').on('change', function() {
                 filterCourses();
-            }
-        });
+            });
+            
+            // Search button
+            $('#search-button').on('click', function() {
+                filterCourses();
+            });
+            
+            // Search on Enter key
+            $('#search-courses').on('keypress', function(e) {
+                if (e.which === 13) { // Enter key
+                    filterCourses();
+                }
+            });
+            
+            $('#clear-filters').on('click', function() {
+                clearFilters();
+            });
+        }
         
-        $('#clear-filters').on('click', function() {
-            clearFilters();
-        });
+        // User-specific event listeners for by-users tab
+        if (currentTab === 'by-users') {
+            // Event listeners for filters
+            $('#user-status-filter, #user-search').on('change input', function() {
+                userCurrentPage = 1;
+                loadUserCourses();
+            });
+            
+            $('#clear-user-filters').on('click', function() {
+                $('#user-status-filter').val('active');
+                $('#user-search').val('');
+                userCurrentPage = 1;
+                loadUserCourses();
+            });
+        }
         
         $('#refresh-courses').on('click', function() {
             loadCourses(true);
@@ -1108,22 +1673,30 @@ jQuery(document).ready(function($) {
     }
     
     function updateProviderSelects() {
-        const $select = $('#provider-filter');
-        const currentValue = $select.val();
+        const $filterSelect = $('#provider-filter');
+        const $modalSelect = $('#course-provider');
+        const currentFilterValue = $filterSelect.val();
+        const currentModalValue = $modalSelect.val();
         
         // Clear existing options (except first)
-        $select.find('option:not(:first)').remove();
+        $filterSelect.find('option:not(:first)').remove();
+        $modalSelect.find('option:not(:first)').remove();
         
-        // Add provider options
+        // Add provider options to both selects
         providers.forEach(provider => {
-            $select.append(`<option value="${provider}">${provider}</option>`);
+            $filterSelect.append(`<option value="${provider}">${provider}</option>`);
+            $modalSelect.append(`<option value="${provider}">${provider}</option>`);
         });
         
-        // Restore selection or set to "all"
-        if (currentValue) {
-            $select.val(currentValue);
+        // Restore selections
+        if (currentFilterValue) {
+            $filterSelect.val(currentFilterValue);
         } else {
-            $select.val('all');
+            $filterSelect.val('all');
+        }
+        
+        if (currentModalValue) {
+            $modalSelect.val(currentModalValue);
         }
     }
     

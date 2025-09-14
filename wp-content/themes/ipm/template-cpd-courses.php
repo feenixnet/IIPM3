@@ -14,6 +14,10 @@ if (!is_user_logged_in()) {
 // Include the CPD courses API
 require_once get_template_directory() . '/includes/cpd-courses-api.php';
 
+// Check logging period status from URL parameter
+$logging_available = isset($_GET['logging_available']) ? (int)$_GET['logging_available'] : 1;
+$is_logging_period_active = ($logging_available === 1);
+
 get_header(); 
 ?>
 
@@ -33,6 +37,21 @@ get_header();
     </div>
 
     <div class="container">
+        <?php if (!$is_logging_period_active): ?>
+        <!-- Logging Period Closed Banner -->
+        <div class="logging-period-banner">
+            <div class="banner-content">
+                <div class="banner-icon">
+                    <i class="fas fa-lock"></i>
+                </div>
+                <div class="banner-text">
+                    <h3>Logging Period Closed</h3>
+                    <p>Course logging is currently disabled. You cannot add new courses to your learning path at this time.</p>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
+        
         <div class="cpd-courses-layout">
             <!-- Left Sidebar -->
             <div class="cpd-sidebar">
@@ -78,6 +97,14 @@ get_header();
                             <option value="">All Providers</option>
                             <!-- Providers will be loaded via jQuery -->
                         </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="my-courses-filter" class="form-checkbox">
+                            <span class="checkmark"></span>
+                            Courses added by me
+                        </label>
                     </div>
 
                     <button class="clear-filters-btn" id="clear-filters">Clear all filters</button>
@@ -367,6 +394,27 @@ get_header();
     .provider-select:hover {
         border-color: #9ca3af;
     }
+    
+    /* Checkbox Styles */
+    .checkbox-label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        font-weight: 500;
+        color: #374151;
+    }
+    
+    .form-checkbox {
+        width: 18px;
+        height: 18px;
+        accent-color: #8b5a96;
+        cursor: pointer;
+    }
+    
+    .checkmark {
+        font-size: 14px;
+    }
 
     .courses-grid {
         display: grid;
@@ -477,6 +525,42 @@ get_header();
 
     .add-course-btn.disabled:hover {
         background: #f3f4f6;
+    }
+    
+    /* Logging Period Banner */
+    .logging-period-banner {
+        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        border: 1px solid #f59e0b;
+        border-radius: 12px;
+        margin-bottom: 24px;
+        padding: 20px;
+        box-shadow: 0 4px 12px rgba(245, 158, 11, 0.15);
+    }
+    
+    .banner-content {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+    
+    .banner-icon {
+        font-size: 24px;
+        color: #d97706;
+        flex-shrink: 0;
+    }
+    
+    .banner-text h3 {
+        margin: 0 0 4px 0;
+        color: #92400e;
+        font-size: 18px;
+        font-weight: 600;
+    }
+    
+    .banner-text p {
+        margin: 0;
+        color: #92400e;
+        font-size: 14px;
+        line-height: 1.4;
     }
 
     .course-title {
@@ -689,6 +773,7 @@ get_header();
         const dateTo = document.getElementById('date-to');
         const categoryFilters = document.getElementById('category-filters');
         const providerSelect = document.getElementById('provider-select');
+        const myCoursesFilter = document.getElementById('my-courses-filter');
         const clearFiltersBtn = document.getElementById('clear-filters');
         const coursesGrid = document.getElementById('courses-grid');
         const pagination = document.getElementById('pagination');
@@ -724,6 +809,7 @@ get_header();
             if (dateFrom) dateFrom.addEventListener('change', filterCourses);
             if (dateTo) dateTo.addEventListener('change', filterCourses);
             if (providerSelect) providerSelect.addEventListener('change', filterCourses);
+            if (myCoursesFilter) myCoursesFilter.addEventListener('change', filterCourses);
             
             // Clear filters
             if (clearFiltersBtn) clearFiltersBtn.addEventListener('click', clearFilters);
@@ -758,6 +844,7 @@ get_header();
             if (filters.date_to) formData.append('date_to', filters.date_to);
             if (filters.categories) formData.append('categories', filters.categories);
             if (filters.providers) formData.append('providers', filters.providers);
+            if (filters.my_courses) formData.append('my_courses', filters.my_courses);
             if (filters.page) formData.append('page', filters.page);
             if (filters.per_page) formData.append('per_page', filters.per_page);
             
@@ -807,9 +894,27 @@ get_header();
                 // Check if course is in learning path (either completed or started)
                 const isInLearningPath = isCourseInLearningPath(course);
                 const isCompleted = isCourseCompleted(course);
-                const addButtonClass = isInLearningPath ? 'add-course-btn disabled' : 'add-course-btn';
-                const addButtonTitle = isInLearningPath ? (isCompleted ? 'Course completed' : 'Course in progress') : 'Add to learning path';
-                const addButtonIcon = isInLearningPath ? (isCompleted ? '<i class="fas fa-check"></i>' : '<i class="fas fa-clock"></i>') : '<i class="fas fa-plus"></i>';
+                const isLoggingPeriodActive = <?php echo $is_logging_period_active ? 'true' : 'false'; ?>;
+                
+                // Determine button state based on logging period and course status
+                let addButtonClass, addButtonTitle, addButtonIcon, isDisabled;
+                
+                if (!isLoggingPeriodActive) {
+                    addButtonClass = 'add-course-btn disabled';
+                    addButtonTitle = 'Logging period closed';
+                    addButtonIcon = '<i class="fas fa-lock"></i>';
+                    isDisabled = true;
+                } else if (isInLearningPath) {
+                    addButtonClass = 'add-course-btn disabled';
+                    addButtonTitle = isCompleted ? 'Course completed' : 'Course in progress';
+                    addButtonIcon = isCompleted ? '<i class="fas fa-check"></i>' : '<i class="fas fa-clock"></i>';
+                    isDisabled = true;
+                } else {
+                    addButtonClass = 'add-course-btn';
+                    addButtonTitle = 'Add to learning path';
+                    addButtonIcon = '<i class="fas fa-plus"></i>';
+                    isDisabled = false;
+                }
                 
                 html += `
                     <div class="course-card ${isCompleted ? 'course-completed' : ''} ${isInLearningPath && !isCompleted ? 'course-started' : ''}">
@@ -819,7 +924,7 @@ get_header();
                                 ${isCompleted ? '<span class="completed-badge">Completed</span>' : ''}
                                 ${isInLearningPath && !isCompleted ? '<span class="started-badge">In Progress</span>' : ''}
                             </div>
-                            <button class="${addButtonClass}" title="${addButtonTitle}" ${isInLearningPath ? 'disabled' : ''}>
+                            <button class="${addButtonClass}" title="${addButtonTitle}" ${isDisabled ? 'disabled' : ''}>
                                 <span class="plus-icon">${addButtonIcon}</span>
                             </button>
                         </div>
@@ -858,6 +963,12 @@ get_header();
             addCourseBtns.forEach((btn, index) => {
                 btn.addEventListener('click', function() {
                     const course = courses[index];
+                    // Double-check logging period before allowing course addition
+                    const isLoggingPeriodActive = <?php echo $is_logging_period_active ? 'true' : 'false'; ?>;
+                    if (!isLoggingPeriodActive) {
+                        showNotification('Cannot add courses during logging period closure', 'error');
+                        return;
+                    }
                     addCourseToLearningPath(course);
                 });
             });
@@ -1161,6 +1272,7 @@ get_header();
                 date_to: dateTo ? dateTo.value : '',
                 categories: Array.from(categoryFilters.querySelectorAll('input[name="category"]:checked')).map(cb => cb.value),
                 providers: providerSelect ? providerSelect.value : '',
+                my_courses: myCoursesFilter ? myCoursesFilter.checked : false,
                 page: 1,
                 per_page: coursesPerPage
             };
@@ -1177,6 +1289,7 @@ get_header();
             if (dateFrom) dateFrom.value = '';
             if (dateTo) dateTo.value = '';
             if (providerSelect) providerSelect.value = '';
+            if (myCoursesFilter) myCoursesFilter.checked = false;
             
             const categoryCheckboxes = categoryFilters.querySelectorAll('input[name="category"]');
             categoryCheckboxes.forEach(cb => cb.checked = true);
@@ -1323,6 +1436,7 @@ get_header();
                 date_to: dateTo ? dateTo.value : '',
                 categories: Array.from(categoryFilters.querySelectorAll('input[name="category"]:checked')).map(cb => cb.value),
                 providers: providerSelect ? providerSelect.value : '',
+                my_courses: myCoursesFilter ? myCoursesFilter.checked : false,
                 page: page,
                 per_page: coursesPerPage
             };

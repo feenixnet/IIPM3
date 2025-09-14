@@ -1131,27 +1131,32 @@ function iipm_send_bulk_invitation($email, $organisation_id, $profile_data) {
 		
 		$message = "
 Dear {$first_name} {$last_name},
-
+<br>
 You have been invited to join the Irish Institute of Pensions Management (IIPM) as part of {$organisation->name}.
-
+<br>
 Your organisation has set up an IIPM membership for you. To complete your registration and access your member benefits, please click the link below:
-
-{$registration_url}
-
+<br>
+<a href='{$registration_url}'>{$registration_url}</a>
+<br>
 As an IIPM member, you'll have access to:
+<br>
 • Professional development courses and CPD tracking
+<br>
 • Industry networking opportunities
+<br>
 • Exclusive member resources and downloads
+<br>
 • Annual conference and event access
+<br>
 • Professional certification and recognition
-
+<br>
 This invitation will expire in 14 days.
-
+<br>
 If you have any questions about your membership or the IIPM platform, please contact us at info@iipm.ie or +353 (0)1 613 0874.
-
+<br>
 Best regards,
 IIPM Administration Team
-
+<br>
 ---
 Irish Institute of Pensions Management
 www.iipm.ie
@@ -1462,18 +1467,24 @@ function iipm_send_invitation($email, $type = 'individual', $organisation_id = n
 		
 		$message = "
 Dear Colleague,
-
+<br>
 You have been invited to join the Irish Institute of Pensions Management (IIPM).
-
+<br>
 To complete your registration, please click the link below:
-{$registration_url}
-
+<br>
+<a href='{$registration_url}'>{$registration_url}</a>
+<br>
+<br>
 This invitation will expire in 7 days.
 
 If you have any questions, please contact us at info@iipm.ie
-
+<br>
 Best regards,
 IIPM Team
+<br>
+---
+Irish Institute of Pensions Management
+www.iipm.ie
 		";
 		
 		// Add headers for better email delivery
@@ -1544,7 +1555,6 @@ function iipm_process_member_registration($data, $token = null) {
         $email = sanitize_email($data['email']);
         $first_name = sanitize_text_field($data['first_name']);
         $last_name = sanitize_text_field($data['last_name']);
-        $postal_address = sanitize_text_field($data['postal_address']);
         $city_or_town = sanitize_text_field($data['city_or_town']);
         $address_line1 = sanitize_text_field($data['address_line_1']);
         $address_line2 = sanitize_text_field($data['address_line_2']);
@@ -1622,7 +1632,7 @@ function iipm_process_member_registration($data, $token = null) {
                 'email_verified' => 1,
                 'profile_completed' => 0
             ),
-            array('%d', '%s', '%d', '%s', '%s', '%d', '%d', '%d')
+            array('%d', '%s', '%s', '%s', '%s', '%d', '%d', '%d')
         );
 
         try {
@@ -1633,7 +1643,6 @@ function iipm_process_member_registration($data, $token = null) {
                     'user_phone' => sanitize_text_field($data['user_phone'] ?? ''),
                     'email_address' => $email,
                     'user_mobile' => sanitize_text_field($data['user_mobile'] ?? ''),
-                    'postal_address' => sanitize_text_field($data['postal_address'] ?? ''),
                     'city_or_town' => sanitize_text_field($data['city_or_town'] ?? ''),
                     'Address_1' => sanitize_text_field($data['address_line_1'] ?? ''),
                     'Address_2' => sanitize_text_field($data['address_line_2'] ?? ''),
@@ -1661,7 +1670,7 @@ function iipm_process_member_registration($data, $token = null) {
                     'theUsersStatus' => 'Full Member',
                     'employer_id' => $organisation_id,
                 ),
-                array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s')
+                array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s')
             );
             if ($member_result === false) {
                 error_log('IIPM: Failed to insert member. Database error: ' . $wpdb->last_error);
@@ -1776,24 +1785,24 @@ function iipm_send_welcome_email($user_id, $email, $first_name) {
 	$subject = 'Welcome to IIPM - Your Account is Active!';
 	
 	$message = "
-	Dear {$first_name},
+	Dear {$first_name},<br>
 
-	Welcome to the Irish Institute of Pensions Management!
+	Welcome to the Irish Institute of Pensions Management!<br>
 
-	Your account has been created successfully and is now ACTIVE. You can immediately access all member benefits:
+	Your account has been created successfully and is now ACTIVE. You can immediately access all member benefits:<br>
 	
-	<i class='fas fa-bullseye'></i> Access your member portal: {$portal_url}
-	<i class='fas fa-book'></i> Browse professional development courses
-	<i class='fas fa-graduation-cap'></i> Track your CPD points
-	<i class='fas fa-calendar'></i> Register for events and conferences
-	<i class='fas fa-clipboard-list'></i> Download member resources
+	<i class='fas fa-bullseye'></i> Access your member portal: <a href='{$portal_url}'>{$portal_url}</a><br>
+	<i class='fas fa-book'></i> Browse professional development courses<br>
+	<i class='fas fa-graduation-cap'></i> Track your CPD points<br>
+	<i class='fas fa-calendar'></i> Register for events and conferences<br>
+	<i class='fas fa-clipboard-list'></i> Download member resources<br>
 	
-	Your membership is now active and ready to use!
+	Your membership is now active and ready to use!<br>
 	
-	If you have any questions, please contact us at info@iipm.ie
+	If you have any questions, please contact us at info@iipm.ie<br>
 
-	Best regards,
-	IIPM Team
+	Best regards,<br>
+	IIPM Team<br>
 	";
 	
 	$headers = array(
@@ -4922,14 +4931,17 @@ function iipm_get_organisation_name_ajax() {
     
     $table = $wpdb->prefix . 'test_iipm_organisations';
     $org = $wpdb->get_row($wpdb->prepare(
-        "SELECT id, name FROM {$table} WHERE id = %d",
+        "SELECT id, name, address_line1, address_line2, address_line3 FROM {$table} WHERE id = %d",
         $organisation_id
     ));
     
     if ($org) {
         wp_send_json_success(array(
             'id' => $org->id,
-            'name' => $org->name
+            'name' => $org->name,
+            'address_line1' => $org->address_line1,
+            'address_line2' => $org->address_line2,
+            'address_line3' => $org->address_line3
         ));
     } else {
         wp_send_json_error('Organisation not found');

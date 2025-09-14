@@ -17,13 +17,14 @@ if ('d' == $current_tab) {
 }
 ?>
 
-<div class="wrap">  
+<div class="wrap">      
     <?php duplicator_header(__("Tools", 'duplicator')) ?>
 
     <h2 class="nav-tab-wrapper">  
         <a href="?page=duplicator-tools&tab=diagnostics" class="nav-tab <?php echo ($current_tab == 'diagnostics') ? 'nav-tab-active' : '' ?>"> <?php esc_html_e('General', 'duplicator'); ?></a>
         <a href="?page=duplicator-tools&tab=templates" class="nav-tab <?php echo ($current_tab == 'templates') ? 'nav-tab-active' : '' ?>"> <?php esc_html_e('Templates', 'duplicator'); ?></a>
         <a href="?page=duplicator-tools&tab=recovery" class="nav-tab <?php echo ($current_tab == 'recovery') ? 'nav-tab-active' : '' ?>"> <?php esc_html_e('Recovery', 'duplicator'); ?></a>
+        <a href="?page=duplicator-tools&tab=db-reset" class="nav-tab <?php echo ($current_tab == 'db-reset') ? 'nav-tab-active' : '' ?>"> <?php esc_html_e('DB Reset Plugin', 'duplicator'); ?></a>
     </h2>
 
     <?php
@@ -36,6 +37,9 @@ if ('d' == $current_tab) {
             break;
         case 'recovery':
             TplMng::getInstance()->render('mocks/recovery/recovery', array(), true);
+            break;
+        case 'db-reset':
+            TplMng::getInstance()->render('mocks/db_reset/db_reset', array(), true);
             break;
     }
     ?>

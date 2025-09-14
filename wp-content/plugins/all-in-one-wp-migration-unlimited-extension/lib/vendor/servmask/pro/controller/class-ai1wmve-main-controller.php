@@ -251,6 +251,7 @@ if ( ! class_exists( 'Ai1wmve_Main_Controller' ) ) {
 
 				// Schedule event log actions
 				add_action( 'ai1wm_status_export_done', 'Ai1wmve_Schedules_Controller::log_success' );
+				add_action( 'ai1wm_status_export_init', 'Ai1wmve_Schedules_Controller::log_running' );
 				add_action( 'ai1wm_status_export_error', 'Ai1wmve_Schedules_Controller::log_failed', 10, 2 );
 
 				// Register stats collect actions if URL is defined
@@ -457,9 +458,18 @@ if ( ! class_exists( 'Ai1wmve_Main_Controller' ) ) {
 				'ai1wmve_schedules',
 				array(
 					'ajax'       => array(
-						'delete' => wp_make_link_relative( admin_url( 'admin-ajax.php?action=ai1wm_schedule_event_delete' ) ),
-						'log'    => wp_make_link_relative( admin_url( 'admin-ajax.php?action=ai1wm_schedule_event_log' ) ),
-						'run'    => wp_make_link_relative( admin_url( 'admin-ajax.php?action=ai1wm_schedule_event_manual_run' ) ),
+						'delete' => wp_make_link_relative( add_query_arg( array( 'ai1wm_import' => 1 ), admin_url( 'admin-ajax.php?action=ai1wm_schedule_event_delete' ) ) ),
+						'log'    => wp_make_link_relative( add_query_arg( array( 'ai1wm_import' => 1 ), admin_url( 'admin-ajax.php?action=ai1wm_schedule_event_log' ) ) ),
+						'clean'  => wp_make_link_relative( add_query_arg( array( 'ai1wm_import' => 1 ), admin_url( 'admin-ajax.php?action=ai1wm_schedule_event_clean' ) ) ),
+						'run'    => wp_make_link_relative( add_query_arg( array( 'ai1wm_import' => 1 ), admin_url( 'admin-ajax.php?action=ai1wm_schedule_event_manual_run' ) ) ),
+						'status' => wp_make_link_relative( add_query_arg( array( 'ai1wm_import' => 1 ), admin_url( 'admin-ajax.php?action=ai1wm_schedule_event_status' ) ) ),
+						'cron'   => wp_make_link_relative( add_query_arg( array( 'ai1wm_import' => 1 ), site_url( 'wp-cron.php' ) ) ),
+					),
+					'status'     => array(
+						'none'    => Ai1wmve_Schedule_Event::LAST_STATUS_NONE,
+						'failed'  => Ai1wmve_Schedule_Event::LAST_STATUS_FAILED,
+						'success' => Ai1wmve_Schedule_Event::LAST_STATUS_SUCCESS,
+						'running' => Ai1wmve_Schedule_Event::LAST_STATUS_RUNNING,
 					),
 					'secret_key' => get_option( AI1WM_SECRET_KEY ),
 				)
@@ -505,6 +515,7 @@ if ( ! class_exists( 'Ai1wmve_Main_Controller' ) ) {
 					'how_may_we_help_you'                 => __( 'How may we help you?', AI1WM_PLUGIN_NAME ),
 					'thanks_for_submitting_your_feedback' => __( 'Thanks for submitting your feedback!', AI1WM_PLUGIN_NAME ),
 					'thanks_for_submitting_your_request'  => __( 'Thanks for submitting your request!', AI1WM_PLUGIN_NAME ),
+					'want_to_clean_this_log'              => __( 'Are you sure you want to clean this log?', AI1WM_PLUGIN_NAME ),
 					'want_to_delete_this_event'           => __( 'Are you sure you want to delete this event?', AI1WM_PLUGIN_NAME ),
 					'want_to_start_this_event'            => __( 'Are you sure you want to start this event?', AI1WM_PLUGIN_NAME ),
 					'event_log_modal_title'               => __( 'Event log', AI1WM_PLUGIN_NAME ),
@@ -848,7 +859,9 @@ if ( ! class_exists( 'Ai1wmve_Main_Controller' ) ) {
 		public function ai1wmve_router() {
 			add_action( 'wp_ajax_ai1wm_schedule_event_delete', 'Ai1wmve_Schedules_Controller::delete' );
 			add_action( 'wp_ajax_ai1wm_schedule_event_log', 'Ai1wmve_Schedules_Controller::event_log' );
+			add_action( 'wp_ajax_ai1wm_schedule_event_clean', 'Ai1wmve_Schedules_Controller::event_clean' );
 			add_action( 'wp_ajax_ai1wm_schedule_event_manual_run', 'Ai1wmve_Schedules_Controller::manual_run' );
+			add_action( 'wp_ajax_ai1wm_schedule_event_status', 'Ai1wmve_Schedules_Controller::event_status' );
 
 			if ( current_user_can( 'export' ) ) {
 				add_action( 'wp_ajax_ai1wmve_file_list', 'Ai1wmve_Export_Controller::list_files' );

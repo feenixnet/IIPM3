@@ -32,7 +32,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 // ==================
 // = Plugin Version =
 // ==================
-define( 'AI1WMUE_VERSION', '2.75' );
+define( 'AI1WMUE_VERSION', '2.76' );
 
 // ===============
 // = Plugin Name =
@@ -67,7 +67,7 @@ define( 'AI1WMUE_VENDOR_PATH', AI1WMUE_LIB_PATH . DIRECTORY_SEPARATOR . 'vendor'
 // ===============
 // = Service URL =
 // ===============
-define( 'AI1WMUE_SERVICE_URL', 'https://plugin-assets.wp-migration.com/v1/unlimited-extension/service.wasm' );
+define( 'AI1WMUE_SERVICE_URL', 'https://plugin-assets.wp-migration.com/v2/unlimited-extension/service.wasm' );
 
 // ==================
 // = Retention Path =
@@ -77,7 +77,7 @@ define( 'AI1WMUE_RETENTION_NAME', 'retention.json' );
 // ===============================
 // = Minimal Base Plugin Version =
 // ===============================
-define( 'AI1WMUE_MIN_AI1WM_VERSION', '7.98' );
+define( 'AI1WMUE_MIN_AI1WM_VERSION', '7.99' );
 
 // ===============
 // = Purchase ID =
