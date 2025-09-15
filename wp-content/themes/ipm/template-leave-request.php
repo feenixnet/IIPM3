@@ -59,117 +59,107 @@ foreach ($leave_requests as $request) {
 }
 ?>
 
-<main id="primary" class="iipm-leave-request-page">
+<main id="primary" class="iipm-leave-request-page main-container">
     <!-- Hero Section -->
-    <section class="leave-request-hero" style="padding-top: 160px; position: relative; z-index: 1;">
-        <div class="hero-background">
-            <div class="hero-overlay"></div>
+    <div class="container" style="position: relative; z-index: 2;">
+        <div class="page-header" style="text-align: center; margin-bottom: 40px;">
+            <div>
+                <h1 style="color: white; font-size: 2.5rem; margin-bottom: 10px;">Leave Request</h1>
+                <p style="color: rgba(255,255,255,0.9); font-size: 1.1rem;">
+                Submit and manage your leave requests
+                </p>
+            </div>
         </div>
-        <div class="hero-content">
-            <div class="container">
-                <h1 class="hero-title"><i class="fas fa-calendar-plus"></i> Leave Request</h1>
-                <p class="hero-subtitle">Submit and manage your leave requests</p>
-                <div class="admin-nav">
-                    <a href="<?php echo home_url('/member-portal/'); ?>" class="btn btn-outline">Dashboard</a>
-                    <a href="<?php echo home_url('/leave-admin/'); ?>" class="btn btn-outline">Admin Panel</a>
-                    <a href="<?php echo wp_logout_url(home_url()); ?>" class="btn btn-outline">Logout</a>
+        <div class="leave-request-content">
+            <!-- Submit Leave Request Section -->
+            <div class="leave-request-submit-section">
+                <div class="submit-card">
+                    <h2>Submit your leave request</h2>
+                    <button class="leave-request-btn" onclick="openLeaveRequestForm()">
+                        Leave Request Form
+                    </button>
+                </div>
+                
+                <div class="notice-card">
+                    <h3>Notice</h3>
+                    <p>If you request a leave from the course, a pro-rata adjustment will be applied based on the portion of the course completed up to the date of your request. This ensures fair and accurate allocation of course credit or fees.</p>
                 </div>
             </div>
-        </div>
-    </section>
 
-    <div class="leave-request-page" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding-bottom: 20px;">
-        <div class="container" style="max-width: 1400px; margin: 0 auto; padding: 0 20px;">
-
-    <div class="leave-request-content">
-        <!-- Submit Leave Request Section -->
-        <div class="leave-request-submit-section">
-            <div class="submit-card">
-                <h2>Submit your leave request</h2>
-                <button class="leave-request-btn" onclick="openLeaveRequestForm()">
-                    Leave Request Form
-                </button>
-            </div>
-            
-            <div class="notice-card">
-                <h3>Notice</h3>
-                <p>If you request a leave from the course, a pro-rata adjustment will be applied based on the portion of the course completed up to the date of your request. This ensures fair and accurate allocation of course credit or fees.</p>
-            </div>
-        </div>
-
-        <!-- Leave Requests Sections -->
-        <div class="leave-requests-grid">
-            <!-- Your Leave Requests -->
-            <div class="leave-requests-section">
-                <h2>Your Leave Requests</h2>
-                <div class="leave-requests-list">
-                    <?php if (!empty($current_requests)): ?>
-                        <?php foreach ($current_requests as $request): ?>
-                            <div class="leave-request-item" onclick="openLeaveRequestDetail(<?php echo $request->id; ?>)">
-                                <div class="request-header">
-                                    <span class="request-date">Requested on <?php echo date('F j, Y, g:iA', strtotime($request->created_at)); ?></span>
-                                    <span class="status-badge status-<?php echo esc_attr($request->status); ?>">
-                                        <?php echo ucfirst($request->status); ?>
-                                    </span>
+            <!-- Leave Requests Sections -->
+            <div class="leave-requests-grid main-content" style="padding: 30px;">
+                <!-- Your Leave Requests -->
+                <div class="leave-requests-section">
+                    <h2>Your Leave Requests</h2>
+                    <div class="leave-requests-list">
+                        <?php if (!empty($current_requests)): ?>
+                            <?php foreach ($current_requests as $request): ?>
+                                <div class="leave-request-item" onclick="openLeaveRequestDetail(<?php echo $request->id; ?>)">
+                                    <div class="request-header">
+                                        <span class="request-date">Requested on <?php echo date('F j, Y, g:iA', strtotime($request->created_at)); ?></span>
+                                        <span class="status-badge status-<?php echo esc_attr($request->status); ?>">
+                                            <?php echo ucfirst($request->status); ?>
+                                        </span>
+                                    </div>
+                                    <h4><?php echo esc_html($request->title); ?></h4>
+                                    <div class="request-details">
+                                        <p><strong>Leave Date:</strong> <?php echo date('m/d/Y', strtotime($request->leave_start_date)); ?> - <?php echo date('m/d/Y', strtotime($request->leave_end_date)); ?></p>
+                                        <p><strong>Leave Duration:</strong> <?php echo $request->duration_days; ?> days</p>
+                                    </div>
                                 </div>
-                                <h4><?php echo esc_html($request->title); ?></h4>
-                                <div class="request-details">
-                                    <p><strong>Leave Date:</strong> <?php echo date('m/d/Y', strtotime($request->leave_start_date)); ?> - <?php echo date('m/d/Y', strtotime($request->leave_end_date)); ?></p>
-                                    <p><strong>Leave Duration:</strong> <?php echo $request->duration_days; ?> days</p>
-                                </div>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <div class="no-requests">
+                                <p>No current leave requests found.</p>
                             </div>
-                        <?php endforeach; ?>
-                    <?php else: ?>
-                        <div class="no-requests">
-                            <p>No current leave requests found.</p>
-                        </div>
-                    <?php endif; ?>
+                        <?php endif; ?>
+                    </div>
                 </div>
-            </div>
 
-            <!-- Past Requests -->
-            <div class="leave-requests-section">
-                <h2>Past Requests</h2>
-                <div class="leave-requests-list">
-                    <?php if (!empty($past_requests)): ?>
-                        <?php foreach ($past_requests as $request): ?>
-                            <div class="leave-request-item" onclick="openLeaveRequestDetail(<?php echo $request->id; ?>)">
-                                <div class="request-header">
-                                    <span class="request-date">Requested on <?php echo date('F j, Y, g:iA', strtotime($request->created_at)); ?></span>
-                                    <span class="status-badge status-<?php echo esc_attr($request->status); ?>">
-                                        <?php echo ucfirst($request->status); ?>
-                                    </span>
+                <!-- Past Requests -->
+                <div class="leave-requests-section">
+                    <h2>Past Requests</h2>
+                    <div class="leave-requests-list">
+                        <?php if (!empty($past_requests)): ?>
+                            <?php foreach ($past_requests as $request): ?>
+                                <div class="leave-request-item" onclick="openLeaveRequestDetail(<?php echo $request->id; ?>)">
+                                    <div class="request-header">
+                                        <span class="request-date">Requested on <?php echo date('F j, Y, g:iA', strtotime($request->created_at)); ?></span>
+                                        <span class="status-badge status-<?php echo esc_attr($request->status); ?>">
+                                            <?php echo ucfirst($request->status); ?>
+                                        </span>
+                                    </div>
+                                    <h4><?php echo esc_html($request->title); ?></h4>
+                                    <div class="request-details">
+                                        <p><strong>Leave Date:</strong> <?php echo date('m/d/Y', strtotime($request->leave_start_date)); ?> - <?php echo date('m/d/Y', strtotime($request->leave_end_date)); ?></p>
+                                        <p><strong>Leave Duration:</strong> <?php echo $request->duration_days; ?> days</p>
+                                    </div>
                                 </div>
-                                <h4><?php echo esc_html($request->title); ?></h4>
-                                <div class="request-details">
-                                    <p><strong>Leave Date:</strong> <?php echo date('m/d/Y', strtotime($request->leave_start_date)); ?> - <?php echo date('m/d/Y', strtotime($request->leave_end_date)); ?></p>
-                                    <p><strong>Leave Duration:</strong> <?php echo $request->duration_days; ?> days</p>
-                                </div>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <div class="no-requests">
+                                <p>No past leave requests found.</p>
                             </div>
-                        <?php endforeach; ?>
-                    <?php else: ?>
-                        <div class="no-requests">
-                            <p>No past leave requests found.</p>
-                        </div>
-                    <?php endif; ?>
+                        <?php endif; ?>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Helpful Links -->
-        <div class="helpful-links-section">
-            <h3>Helpful Links</h3>
-            <div class="helpful-links">
-                <a href="#" class="helpful-link" onclick="showLeaveGuide()">
-                    How to request for leave →
-                </a>
-                <a href="#" class="helpful-link" onclick="showCancelGuide()">
-                    Cancel your leave request →
-                </a>
+            <!-- Helpful Links -->
+            <div class="helpful-links-section">
+                <h3>Helpful Links</h3>
+                <div class="helpful-links">
+                    <a href="#" class="helpful-link" onclick="showLeaveGuide()">
+                        How to request for leave →
+                    </a>
+                    <a href="#" class="helpful-link" onclick="showCancelGuide()">
+                        Cancel your leave request →
+                    </a>
+                </div>
             </div>
         </div>
     </div>
-</div>
+</main>
 
 <!-- Leave Request Form Modal -->
 <div id="leaveRequestModal" class="modal" style="display: none;">
@@ -216,7 +206,7 @@ foreach ($leave_requests as $request) {
                         </div>
                         
                         <div class="form-group">
-                            <label for="leave_note">Note (optional)</label>
+                            <label for="leave_note">Reason for Leave and make field compulsory (optional)</label>
                             <textarea id="leave_note" name="leave_note" rows="3" placeholder="Enter reason for leave..."></textarea>
                         </div>
                         
@@ -297,7 +287,7 @@ foreach ($leave_requests as $request) {
                     <span id="detail-dates"></span>
                 </div>
                 <div class="detail-item">
-                    <label>Note</label>
+                    <label>Reason for Leave and make field compulsory</label>
                     <span id="detail-note"></span>
                 </div>
             </div>
@@ -366,7 +356,7 @@ foreach ($leave_requests as $request) {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 20px;
-    margin-bottom: 40px;
+    margin-bottom: 20px;
 }
 
 .submit-card, .notice-card {
@@ -409,8 +399,8 @@ foreach ($leave_requests as $request) {
 .leave-requests-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 30px;
-    margin-bottom: 40px;
+    gap: 20px;
+    margin-bottom: 20px;
 }
 
 .leave-requests-section h2 {
@@ -1301,6 +1291,7 @@ function cancelLeaveRequestFromDetail() {
     // Close the detail modal and show confirmation
     closeLeaveRequestDetail();
     document.getElementById('cancelConfirmationModal').style.display = 'flex';
+
 }
 
 function closeCancelConfirmation() {

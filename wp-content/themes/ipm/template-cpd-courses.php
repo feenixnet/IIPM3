@@ -923,7 +923,7 @@ get_header();
                                 ${isCompleted ? '<span class="completed-badge">Completed</span>' : ''}
                                 ${isInLearningPath && !isCompleted ? '<span class="started-badge">In Progress</span>' : ''}
                             </div>
-                            <button class="${addButtonClass}" title="${addButtonTitle}" ${isDisabled ? 'disabled' : ''}>
+                            <button class="${addButtonClass}" title="${addButtonTitle}" ${isDisabled ? 'disabled' : ''} data-course-id="${course.id}">
                                 <span class="plus-icon">${addButtonIcon}</span>
                             </button>
                         </div>
@@ -959,9 +959,21 @@ get_header();
             
             // Add click event listeners to all add course buttons (only non-disabled ones)
             const addCourseBtns = document.querySelectorAll('.add-course-btn:not(.disabled)');
-            addCourseBtns.forEach((btn, index) => {
+            addCourseBtns.forEach((btn) => {
                 btn.addEventListener('click', function() {
-                    const course = courses[index];
+                    // Get course ID from the button's data attribute
+                    const courseId = this.getAttribute('data-course-id');
+                    console.log('Clicked course ID:', courseId);
+                    
+                    // Find the course by ID
+                    const course = courses.find(c => c.id == courseId);
+                    if (!course) {
+                        console.error('Course not found for ID:', courseId);
+                        return;
+                    }
+                    
+                    console.log('Found course:', course);
+                    
                     // Double-check logging period before allowing course addition
                     const isLoggingPeriodActive = <?php echo $is_logging_period_active ? 'true' : 'false'; ?>;
                     if (!isLoggingPeriodActive) {

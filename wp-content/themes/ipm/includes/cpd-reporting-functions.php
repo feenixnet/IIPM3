@@ -44,16 +44,14 @@ function iipm_get_cpd_compliance_stats($year = null) {
     $assigned_user_ids = array(); // Store assigned user IDs
     
     if (!empty($cpd_types)) {
-        // Get the primary CPD type or first one
+        // Find CPD type by matching year with Start of logging date
         $primary_type = null;
         foreach ($cpd_types as $type) {
-            if ($type->{'Is primary CPD Type'} == 1) {
+            $start_logging_year = date('Y', strtotime($type->{'Start of logging date'}));
+            if ($start_logging_year == $year) {
                 $primary_type = $type;
                 break;
             }
-        }
-        if (!$primary_type && !empty($cpd_types)) {
-            $primary_type = $cpd_types[0];
         }
         
         if ($primary_type) {
@@ -81,6 +79,24 @@ function iipm_get_cpd_compliance_stats($year = null) {
                 error_log('🔍 Parsed assigned user IDs (count: ' . count($assigned_user_ids) . '): ' . print_r($assigned_user_ids, true));
             }
         }
+    }
+    
+    // Get all leave requests for the year once for efficiency
+    $leave_requests_table = $wpdb->prefix . 'test_iipm_leave_requests';
+    $all_leave_requests = $wpdb->get_results($wpdb->prepare("
+        SELECT user_id, duration_days, status
+        FROM {$leave_requests_table} 
+        WHERE YEAR(leave_start_date) = %d AND status = 'approved'
+    ", $year));
+    
+    // Group leave requests by user
+    $user_leave_duration = array();
+    foreach ($all_leave_requests as $leave) {
+        $user_id = intval($leave->user_id);
+        if (!isset($user_leave_duration[$user_id])) {
+            $user_leave_duration[$user_id] = 0;
+        }
+        $user_leave_duration[$user_id] += intval($leave->duration_days);
     }
     
     // Get all active members
@@ -158,9 +174,18 @@ function iipm_get_cpd_compliance_stats($year = null) {
         $earned = $total_hours;
         $total_cpd_points += $earned; // Add to total CPD points
         
-        error_log('🔍 Member ID: ' . $user_id . ' earned points: ' . $earned . ', is assigned: ' . (in_array($user_id, $assigned_user_ids) ? 'Yes' : 'No'));
+        // Calculate adjusted target for this user based on their leave requests
+        $user_leave_days = isset($user_leave_duration[$user_id]) ? $user_leave_duration[$user_id] : 0;
+        $total_days_in_year = 365;
+        if (date('L', mktime(0, 0, 0, 1, 1, $year))) {
+            $total_days_in_year = 366; // Leap year
+        }
+        $adjusted_target = (($total_days_in_year - $user_leave_days) / $total_days_in_year) * $required_points;
+        $adjusted_target = round($adjusted_target, 1);
         
-        $progress_percentage = $required_points > 0 ? min(100, ($earned / $required_points) * 100) : 0;
+        error_log('🔍 Member ID: ' . $user_id . ' earned points: ' . $earned . ', original target: ' . $required_points . ', adjusted target: ' . $adjusted_target . ', leave days: ' . $user_leave_days . ', is assigned: ' . (in_array($user_id, $assigned_user_ids) ? 'Yes' : 'No'));
+        
+        $progress_percentage = $adjusted_target > 0 ? round(min(100, ($earned / $adjusted_target) * 100), 2) : 0;
         
         if ($progress_percentage >= 100) {
             $compliant_members++;
@@ -218,21 +243,37 @@ function iipm_get_detailed_compliance_data($year = null, $type = null, $page = 1
     $required_points = 8; // Default fallback
     
     if (!empty($cpd_types)) {
-        // Get the primary CPD type or first one
+        // Find CPD type by matching year with Start of logging date
         $primary_type = null;
         foreach ($cpd_types as $type_item) {
-            if ($type_item->{'Is primary CPD Type'} == 1) {
+            $start_logging_year = date('Y', strtotime($type_item->{'Start of logging date'}));
+            if ($start_logging_year == $year) {
                 $primary_type = $type_item;
                 break;
             }
-        }
-        if (!$primary_type && !empty($cpd_types)) {
-            $primary_type = $cpd_types[0];
         }
         
         if ($primary_type) {
             $required_points = intval($primary_type->{'Total Hours/Points Required'});
         }
+    }
+    
+    // Get all leave requests for the year once for efficiency
+    $leave_requests_table = $wpdb->prefix . 'test_iipm_leave_requests';
+    $all_leave_requests = $wpdb->get_results($wpdb->prepare("
+        SELECT user_id, duration_days, status
+        FROM {$leave_requests_table} 
+        WHERE YEAR(leave_start_date) = %d AND status = 'approved'
+    ", $year));
+    
+    // Group leave requests by user
+    $user_leave_duration = array();
+    foreach ($all_leave_requests as $leave) {
+        $user_id = intval($leave->user_id);
+        if (!isset($user_leave_duration[$user_id])) {
+            $user_leave_duration[$user_id] = 0;
+        }
+        $user_leave_duration[$user_id] += intval($leave->duration_days);
     }
     
     $members_table = $wpdb->prefix . 'test_iipm_members';
@@ -318,7 +359,17 @@ function iipm_get_detailed_compliance_data($year = null, $type = null, $page = 1
         
         // Convert to earned_points (matching CPD record API logic)
         $earned_points = $total_hours;
-        $progress_percentage = $required_points > 0 ? min(100, ($earned_points / $required_points) * 100) : 0;
+        
+        // Calculate adjusted target for this user based on their leave requests
+        $user_leave_days = isset($user_leave_duration[$user_data['user_id']]) ? $user_leave_duration[$user_data['user_id']] : 0;
+        $total_days_in_year = 365;
+        if (date('L', mktime(0, 0, 0, 1, 1, $year))) {
+            $total_days_in_year = 366; // Leap year
+        }
+        $adjusted_target = (($total_days_in_year - $user_leave_days) / $total_days_in_year) * $required_points;
+        $adjusted_target = round($adjusted_target, 1);
+        
+        $progress_percentage = $adjusted_target > 0 ? round(min(100, ($earned_points / $adjusted_target) * 100), 2) : 0;
         
         // Get role display name
         $role_display = 'Member';
@@ -347,11 +398,12 @@ function iipm_get_detailed_compliance_data($year = null, $type = null, $page = 1
             'role' => $role_display,
             'employer_id' => $user_data['employer_id'],
             'earned_points' => $earned_points,
-            'required_points' => $required_points,
-            'shortage' => max(0, $required_points - $earned_points),
-            'progress_percentage' => round($progress_percentage, 2),
+            'required_points' => $adjusted_target, // Use adjusted target
+            'original_target' => $required_points, // Keep original for reference
+            'shortage' => max(0, $adjusted_target - $earned_points), // Use adjusted target for shortage
+            'progress_percentage' => $progress_percentage,
             'days_left' => $days_left,
-            'compliance_status' => $earned_points >= $required_points ? 'Yes' : 'No',
+            'compliance_status' => $earned_points >= $adjusted_target ? 'Yes' : 'No', // Use adjusted target
             'is_high_risk' => $is_high_risk // High risk calculated in backend
         );
         
@@ -985,21 +1037,37 @@ function iipm_get_all_members_with_progress($year = null, $report_type = 'employ
     $required_points = 8; // Default fallback
     
     if (!empty($cpd_types)) {
-        // Get the primary CPD type or first one
+        // Find CPD type by matching year with Start of logging date
         $primary_type = null;
         foreach ($cpd_types as $type) {
-            if ($type->{'Is primary CPD Type'} == 1) {
+            $start_logging_year = date('Y', strtotime($type->{'Start of logging date'}));
+            if ($start_logging_year == $year) {
                 $primary_type = $type;
                 break;
             }
-        }
-        if (!$primary_type && !empty($cpd_types)) {
-            $primary_type = $cpd_types[0];
         }
         
         if ($primary_type) {
             $required_points = intval($primary_type->{'Total Hours/Points Required'});
         }
+    }
+    
+    // Get all leave requests for the year once for efficiency
+    $leave_requests_table = $wpdb->prefix . 'test_iipm_leave_requests';
+    $all_leave_requests = $wpdb->get_results($wpdb->prepare("
+        SELECT user_id, duration_days, status
+        FROM {$leave_requests_table} 
+        WHERE YEAR(leave_start_date) = %d AND status = 'approved'
+    ", $year));
+    
+    // Group leave requests by user
+    $user_leave_duration = array();
+    foreach ($all_leave_requests as $leave) {
+        $user_id = intval($leave->user_id);
+        if (!isset($user_leave_duration[$user_id])) {
+            $user_leave_duration[$user_id] = 0;
+        }
+        $user_leave_duration[$user_id] += intval($leave->duration_days);
     }
     
     $offset = ($page - 1) * $per_page;
@@ -1076,12 +1144,23 @@ function iipm_get_all_members_with_progress($year = null, $report_type = 'employ
         }
         
         $earned = $total_hours;
+        
+        // Calculate adjusted target for this user based on their leave requests
+        $user_leave_days = isset($user_leave_duration[$user_id]) ? $user_leave_duration[$user_id] : 0;
+        $total_days_in_year = 365;
+        if (date('L', mktime(0, 0, 0, 1, 1, $year))) {
+            $total_days_in_year = 366; // Leap year
+        }
+        $adjusted_target = (($total_days_in_year - $user_leave_days) / $total_days_in_year) * $required_points;
+        $adjusted_target = round($adjusted_target, 1);
+        
         $user_data['earned_points'] = $earned;
-        $user_data['required_points'] = $required_points;
+        $user_data['required_points'] = $adjusted_target; // Use adjusted target
+        $user_data['original_target'] = $required_points; // Keep original for reference
         
         // Calculate progress percentage
-        if ($required_points > 0) {
-            $user_data['progress_percentage'] = min(100, ($earned / $required_points) * 100);
+        if ($adjusted_target > 0) {
+            $user_data['progress_percentage'] = round(min(100, ($earned / $adjusted_target) * 100), 2);
         } else {
             $user_data['progress_percentage'] = 100;
         }
@@ -1102,7 +1181,7 @@ function iipm_get_all_members_with_progress($year = null, $report_type = 'employ
         $user_data['role'] = $role_display;
         
         // Determine compliance status
-        $user_data['compliance_status'] = $earned >= $required_points ? 'Yes' : 'No';
+        $user_data['compliance_status'] = $earned >= $adjusted_target ? 'Yes' : 'No';
         
         $members[] = $user_data;
     }

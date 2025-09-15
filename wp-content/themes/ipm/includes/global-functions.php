@@ -95,4 +95,93 @@ if (!function_exists('iipm_display_session_notifications')) {
         return $output;
     }
 }
+
+/**
+ * Calculate sum of leave request duration for a user in a specific year
+ * 
+ * @param int $user_id User ID
+ * @param int $year Year (default: current year)
+ * @return int Total leave duration in days
+ */
+if (!function_exists('iipm_calculate_user_leave_duration')) {
+    function iipm_calculate_user_leave_duration($user_id, $year = null) {
+        global $wpdb;
+        
+        if (!$year) {
+            $year = date('Y');
+        }
+        
+        $table_name = $wpdb->prefix . 'test_iipm_leave_requests';
+        
+        // Get all approved leave requests for the user in the specified year
+        $leave_requests = $wpdb->get_results($wpdb->prepare(
+            "SELECT duration_days, status 
+             FROM {$table_name} 
+             WHERE user_id = %d 
+             AND YEAR(leave_start_date) = %d 
+             AND status = 'approved'",
+            $user_id, $year
+        ));
+
+        error_log('IIPM: Leave requests: ' . print_r($leave_requests, true));
+        
+        $total_duration = 0;
+        
+        foreach ($leave_requests as $request) {
+            $total_duration += intval($request->duration_days);
+        }
+
+        error_log('IIPM: Total duration: ' . $total_duration);
+        
+        return $total_duration;
+    }
+}
+
+/**
+ * Calculate adjusted target points for a user based on leave requests
+ * 
+ * @param int $user_id User ID
+ * @param int $year Year (default: current year)
+ * @return int Adjusted target hours
+ */
+if (!function_exists('iipm_calculate_adjusted_target_points')) {
+    function iipm_calculate_adjusted_target_points($user_id, $year = null) {
+        global $wpdb;
+        
+        if (!$year) {
+            $year = date('Y');
+        }
+        
+        // Get the original target hours from CPD types table
+        // Find CPD type by matching year with Start of logging date
+        $cpd_types_table = $wpdb->prefix . 'cpd_types';
+        $original_target = $wpdb->get_var($wpdb->prepare(
+            "SELECT `Total Hours/Points Required` FROM {$cpd_types_table} WHERE YEAR(`Start of logging date`) = %d LIMIT 1",
+            $year
+        ));
+        
+        if (!$original_target) {
+            // Fallback to default target if not found
+            $original_target = 8; // Default 8 hours
+        }
+        
+        // Calculate total days in the year
+        $total_days_in_year = 365;
+        if (date('L', mktime(0, 0, 0, 1, 1, $year))) {
+            $total_days_in_year = 366; // Leap year
+        }
+        
+        // Get total leave duration for the user
+        $leave_duration = iipm_calculate_user_leave_duration($user_id, $year);
+        
+        // Calculate adjusted target using the formula:
+        // target_hours = ((total_days_in_year - leave_duration) / total_days_in_year) * original_target
+        $adjusted_target = (($total_days_in_year - $leave_duration) / $total_days_in_year) * $original_target;
+
+        error_log('IIPM: Adjusted target: ' . $adjusted_target . " " . $leave_duration);
+        
+        // Round to 1 decimal place
+        return round($adjusted_target, 1);
+    }
+}
 ?>

@@ -59,20 +59,21 @@ function iipm_get_cpd_stats($user_id, $year) {
     $is_user_assigned = false;
     
     if (!empty($cpd_types)) {
-        // Get the primary CPD type or first one
+        // Find CPD type by matching year with Start of logging date
         $primary_type = null;
         foreach ($cpd_types as $type) {
-            if ($type->{'Is primary CPD Type'} == 1) {
+            $start_logging_year = date('Y', strtotime($type->{'Start of logging date'}));
+            if ($start_logging_year == $year) {
                 $primary_type = $type;
                 break;
             }
         }
-        if (!$primary_type && !empty($cpd_types)) {
-            $primary_type = $cpd_types[0];
-        }
         
         if ($primary_type) {
-            $target_minutes = intval($primary_type->{'Total Hours/Points Required'}) * 60;
+            $original_target = intval($primary_type->{'Total Hours/Points Required'});
+            // Calculate adjusted target based on leave requests (returns hours with 1 decimal place)
+            $target_hours = iipm_calculate_adjusted_target_points($user_id, $year);
+            $target_minutes = $target_hours * 60; // Convert hours to minutes for compatibility
             $cpd_dates = array(
                 'start_logging' => $primary_type->{'Start of logging date'},
                 'end_logging' => $primary_type->{'End of logging date'},
@@ -115,8 +116,6 @@ function iipm_get_cpd_stats($user_id, $year) {
                         }
                     }
                 }
-                
-                error_log('Parsed user IDs: ' . print_r($assigned_user_ids, true));
                 $is_user_assigned = in_array(strval($user_id), $assigned_user_ids);
             }
         }
@@ -629,20 +628,20 @@ function iipm_get_completed_cpd_stats($user_id, $year) {
         $is_user_assigned = false;
         
         if (!empty($cpd_types)) {
-            // Get the primary CPD type or first one
+            // Find CPD type by matching year with Start of logging date
             $primary_type = null;
             foreach ($cpd_types as $type) {
-                if ($type->{'Is primary CPD Type'} == 1) {
+                $start_logging_year = date('Y', strtotime($type->{'Start of logging date'}));
+                if ($start_logging_year == $year) {
                     $primary_type = $type;
                     break;
                 }
             }
-            if (!$primary_type && !empty($cpd_types)) {
-                $primary_type = $cpd_types[0];
-            }
             
             if ($primary_type) {
-                $target_minutes = intval($primary_type->{'Total Hours/Points Required'}) * 60;
+                $original_target = intval($primary_type->{'Total Hours/Points Required'});
+                // Calculate adjusted target based on leave requests (returns hours)
+                $target_minutes = iipm_calculate_adjusted_target_points($user_id, $year) * 60; // Convert hours to minutes for compatibility
                 $cpd_dates = array(
                     'start_logging' => $primary_type->{'Start of logging date'},
                     'end_logging' => $primary_type->{'End of logging date'},
@@ -711,20 +710,21 @@ function iipm_get_completed_cpd_stats($user_id, $year) {
     $target_minutes = 0;
     
     if (!empty($cpd_types)) {
-        // Get the primary CPD type or first one
+        // Find CPD type by matching year with Start of logging date
         $primary_type = null;
         foreach ($cpd_types as $type) {
-            if ($type->{'Is primary CPD Type'} == 1) {
+            $start_logging_year = date('Y', strtotime($type->{'Start of logging date'}));
+            if ($start_logging_year == $year) {
                 $primary_type = $type;
                 break;
             }
         }
-        if (!$primary_type && !empty($cpd_types)) {
-            $primary_type = $cpd_types[0];
-        }
         
         if ($primary_type) {
-            $target_minutes = intval($primary_type->{'Total Hours/Points Required'}) * 60;
+            $original_target = intval($primary_type->{'Total Hours/Points Required'});
+            // Calculate adjusted target based on leave requests (returns hours with 1 decimal place)
+            $target_hours = iipm_calculate_adjusted_target_points($user_id, $year);
+            $target_minutes = $target_hours * 60; // Convert hours to minutes for compatibility
         }
     }
     
@@ -932,19 +932,21 @@ function iipm_get_uncompleted_cpd_stats($user_id, $year) {
     $target_minutes = 0;
     
     if (!empty($cpd_types)) {
+        // Find CPD type by matching year with Start of logging date
         $primary_type = null;
         foreach ($cpd_types as $type) {
-            if ($type->{'Is primary CPD Type'} == 1) {
+            $start_logging_year = date('Y', strtotime($type->{'Start of logging date'}));
+            if ($start_logging_year == $year) {
                 $primary_type = $type;
                 break;
             }
         }
-        if (!$primary_type && !empty($cpd_types)) {
-            $primary_type = $cpd_types[0];
-        }
         
         if ($primary_type) {
-            $target_minutes = intval($primary_type->{'Total Hours/Points Required'}) * 60;
+            $original_target = intval($primary_type->{'Total Hours/Points Required'});
+            // Calculate adjusted target based on leave requests (returns hours with 1 decimal place)
+            $target_hours = iipm_calculate_adjusted_target_points($user_id, $year);
+            $target_minutes = $target_hours * 60; // Convert hours to minutes for compatibility
         }
     }
     
