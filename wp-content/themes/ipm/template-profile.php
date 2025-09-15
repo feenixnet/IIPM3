@@ -14,14 +14,16 @@ if (!is_user_logged_in()) {
 $current_user = wp_get_current_user();
 $user_roles = $current_user->roles;
 
+error_log(print_r(json_encode($user_roles), true));
+
 // Check if user has IIPM member role
-if (!in_array('iipm_member', $user_roles) && 
-    !in_array('iipm_council_member', $user_roles) && 
-    !in_array('iipm_corporate_admin', $user_roles) &&
-    !in_array('administrator', $user_roles)) {
-    wp_redirect(home_url());
-    exit;
-}
+// if (!in_array('iipm_member', $user_roles) && 
+//     !in_array('iipm_council_member', $user_roles) && 
+//     !in_array('iipm_corporate_admin', $user_roles) &&
+//     !in_array('administrator', $user_roles)) {
+//     wp_redirect(home_url());
+//     exit;
+// }
 
 $user_id = $current_user->ID;
 
@@ -42,12 +44,19 @@ $profile = $wpdb->get_row($wpdb->prepare(
 
 // Get organisation data if applicable
 $organisation = null;
-if ($member && $member->organisation_id) {
+if ($profile && $profile->employer_id) {
     $organisation = $wpdb->get_row($wpdb->prepare(
         "SELECT * FROM {$wpdb->prefix}test_iipm_organisations WHERE id = %d",
-        $member->organisation_id
+        $profile->employer_id
     ));
 }
+
+// Get organization address lines for billing
+$org_address_line1 = $organisation ? $organisation->address_line1 : '';
+$org_address_line2 = $organisation ? $organisation->address_line2 : '';
+$org_address_line3 = $organisation ? $organisation->address_line3 : '';
+
+error_log(print_r(json_encode($organisation), true));
 
 // Create profile record if it doesn't exist
 if (!$profile) {
@@ -75,725 +84,792 @@ if ($member && $member->qualification_date) {
 }
 
 // Get user meta for address
-// $address_line1 = get_user_meta($user_id, 'address_line1', true) ?: '';
-// $address_line2 = get_user_meta($user_id, 'address_line2', true) ?: '';
-// $city = get_user_meta($user_id, 'city', true) ?: '';
-// $county = get_user_meta($user_id, 'county', true) ?: '';
-// $eircode = get_user_meta($user_id, 'eircode', true) ?: '';
+$user_payment_method = $profile->user_payment_method ? : '';
+$address_line1 = $profile->Address_1 ? : '';
+$address_line2 = $profile->Address_2 ? : '';
+$address_line3 = $profile->Address_3 ? : '';
+$address_line1_pers = $profile->Address_1_pers ? : '';
+$address_line2_pers = $profile->Address_2_pers ? : '';
+$address_line3_pers = $profile->Address_3_pers ? : '';
+$city = $profile->city_or_town ? : '';
 
-// // Format address
-// $full_address = array_filter(array($address_line1, $address_line2, $city, $county, $eircode));
-// $address_display = implode("\n", $full_address);
+
 
 get_header();
 ?>
 
-<div class="profile-page">
-    <!-- Hero Section -->
-    <div class="profile-hero">
-        <div class="container">
-            <div class="hero-content">
-                <div class="page-header">
-                    <h1>My Account</h1>
-                    <div class="user-welcome">
-                        <h2>Hi, <?php echo esc_html($current_user->first_name . ' ' . $current_user->last_name); ?>!</h2>
-                        <p class="designation">Your Designation: <?php echo esc_html($profile->professional_designation ?: 'MIIPM'); ?></p>
-                    </div>
-                </div>
+<div class="profile-page main-container">
+    <div class="container" style="position: relative; z-index: 2;">
+        <div class="page-header" style="text-align: center; margin-bottom: 40px;">
+            <div>
+                <h1 style="color: white; font-size: 2.5rem; margin-bottom: 10px;">My Account</h1>
+                <p style="color: rgba(255,255,255,0.9); font-size: 1.1rem;">
+                    Hi, <?php echo esc_html($current_user->first_name . ' ' . $current_user->last_name); ?>!
+                </p>
+                <p style="color: rgba(255,255,255,0.9); font-size: 1.1rem;">
+                    Your Designation: <?php echo esc_html($profile->user_designation ?: 'MIIPM'); ?>
+                </p>
             </div>
         </div>
-    </div>
-    
-    <div class="container">
-        <!-- Validation Error Alert -->
-        <div class="validation-alert" id="validation-alert" style="display: none;">
-            <div class="alert-icon">⚠</div>
-            <div class="alert-message">Cannot save changes. Please fix error(s) in the form.</div>
-        </div>
 
-        <div class="profile-layout">
+        <div>
+            <!-- Validation Error Alert -->
+            <div class="validation-alert" id="validation-alert" style="display: none;">
+                <div class="alert-icon">⚠</div>
+                <div class="alert-message">Cannot save changes. Please fix error(s) in the form.</div>
+            </div>
 
-            <div class="profile-content">
-                <!-- Left Sidebar Navigation -->
-                <div class="profile-sidebar">
-                    <nav class="profile-nav">
-                        <ul>
-                            <li class="nav-item active" data-section="profile">
-                                <a href="javascript:void(0)" onclick="showSection('profile')">
-                                    Your profile
-                                </a>
-                            </li>
-                            <li class="nav-item" data-section="payment">
-                                <a href="javascript:void(0)" onclick="showSection('payment')">
-                                    Payment
-                                </a>
-                            </li>
-                            <li class="nav-item" data-section="settings">
-                                <a href="javascript:void(0)" onclick="showSection('settings')">
-                                    Settings
-                                </a>
-                            </li>
-                            <li class="nav-item" data-section="help">
-                                <a href="javascript:void(0)" onclick="showSection('help')">
-                                    Help
-                                </a>
-                            </li>
-                            <li class="logout">
-                                <a href="<?php echo wp_logout_url(home_url()); ?>">
-                                    Log out
-                                </a>
-                            </li>
-                        </ul>
-                    </nav>
-                </div>
+            <div class="profile-layout">
 
-                <!-- Main Profile Content -->
-                <div class="profile-main" id="profile-section">
-                    <!-- Basic Information -->
-                    <div class="profile-section">
-                        <div class="section-header">
-                            <h3>Basic Information</h3>
-                            <button class="edit-btn" onclick="editSection('basic-info')" title="Edit">
-                                <span class="edit-icon">✎</span>
-                            </button>
-                        </div>
-                        <div class="section-content" id="basic-info">
-                            <div class="view-mode">
-                                <div class="form-group">
-                                    <label>Name*</label>
-                                    <div class="form-value" data-field="name"><?php echo esc_html($current_user->first_name . ' ' . $current_user->last_name); ?></div>
-                                </div>
-                                <div class="form-group">
-                                    <label>E-mail*</label>
-                                    <div class="form-value" data-field="email"><?php echo esc_html($current_user->user_email); ?></div>
-                                </div>
-                            </div>
-                            <div class="edit-mode" style="display: none;">
-                                <div class="form-group">
-                                    <label>First Name*</label>
-                                    <input type="text" class="form-input" name="first_name" value="<?php echo esc_attr($current_user->first_name); ?>" />
-                                </div>
-                                <div class="form-group">
-                                    <label>Last Name*</label>
-                                    <input type="text" class="form-input" name="last_name" value="<?php echo esc_attr($current_user->last_name); ?>" />
-                                </div>
-                                <div class="form-group">
-                                    <label>E-mail*</label>
-                                    <input type="email" class="form-input" name="email" value="<?php echo esc_attr($current_user->user_email); ?>" />
-                                </div>
-                            </div>
-                        </div>
+                <div class="profile-content">
+                    <!-- Left Sidebar Navigation -->
+                    <div class="profile-sidebar">
+                        <nav class="profile-nav">
+                            <ul>
+                                <li class="nav-item active" data-section="profile">
+                                    <a href="javascript:void(0)" onclick="showSection('profile')">
+                                        Your profile
+                                    </a>
+                                </li>
+                                <li class="nav-item" data-section="payment">
+                                    <a href="javascript:void(0)" onclick="showSection('payment')">
+                                        Payment
+                                    </a>
+                                </li>
+                                <li class="nav-item" data-section="settings">
+                                    <a href="javascript:void(0)" onclick="showSection('settings')">
+                                        Settings
+                                    </a>
+                                </li>
+                                <li class="nav-item" data-section="help">
+                                    <a href="javascript:void(0)" onclick="showSection('help')">
+                                        Help
+                                    </a>
+                                </li>
+                                <li class="logout">
+                                    <a href="<?php echo wp_logout_url(home_url()); ?>">
+                                        Log out
+                                    </a>
+                                </li>
+                            </ul>
+                        </nav>
                     </div>
 
-                    <!-- Contact Details -->
-                    <div class="profile-section">
-                        <div class="section-header">
-                            <h3>Contact Details</h3>
-                            <button class="edit-btn" onclick="editSection('contact-details')" title="Edit">
-                                <span class="edit-icon">✎</span>
-                            </button>
-                        </div>
-                        <div class="section-content" id="contact-details">
-                            <div class="view-mode">
-                                <div class="contact-grid">
-                                    <div class="contact-column">
-                                        <h4>Work</h4>
-                                        <div class="form-group">
-                                            <label>Phone*</label>
-                                            <div class="form-value" data-field="user_phone">
-                                                <?php if ($profile->user_phone): ?>
-                                                    <?php echo esc_html($profile->user_phone); ?>
-                                                <?php else: ?>
-                                                    <span class="placeholder-text">Not provided</span>
-                                                <?php endif; ?>
-                                            </div>
-                                        </div>
-                                        <div class="form-group">
-                                            <label>Mobile*</label>
-                                            <div class="form-value" data-field="user_mobile">
-                                                <?php if ($profile->user_mobile): ?>
-                                                    <?php echo esc_html($profile->user_mobile); ?>
-                                                <?php else: ?>
-                                                    <span class="placeholder-text">Not provided</span>
-                                                <?php endif; ?>
-                                            </div>
-                                        </div>
-                                        <div class="form-group">
-                                            <label>E-mail*</label>
-                                            <div class="form-value" data-field="user_email"><?php echo esc_html($current_user->user_email); ?></div>
-                                        </div>
+                    <!-- Main Profile Content -->
+                    <div class="profile-main" id="profile-section">
+                        <!-- Basic Information -->
+                        <div class="profile-section">
+                            <div class="section-header">
+                                <h3>Basic Information</h3>
+                                <button class="edit-btn" onclick="editSection('basic-info')" title="Edit">
+                                    <span class="edit-icon">✎</span>
+                                </button>
+                            </div>
+                            <div class="section-content" id="basic-info">
+                                <div class="view-mode">
+                                    <div class="form-group">
+                                        <label>Name*</label>
+                                        <div class="form-value" data-field="name"><?php echo esc_html($current_user->first_name . ' ' . $current_user->last_name); ?></div>
                                     </div>
-                                    <div class="contact-column">
-                                        <h4>Personal</h4>
-                                        <div class="form-group">
-                                            <label>Phone*</label>
-                                            <div class="form-value" data-field="user_phone_pers">
-                                                <?php if ($profile->user_phone_pers): ?>
-                                                    <?php echo esc_html($profile->user_phone_pers); ?>
-                                                <?php else: ?>
-                                                    <span class="placeholder-text">Not provided</span>
-                                                <?php endif; ?>
-                                            </div>
-                                        </div>
-                                        <div class="form-group">
-                                            <label>Mobile*</label>
-                                            <div class="form-value" data-field="user_mobile_pers">
-                                                <?php if ($profile->user_mobile_pers): ?>
-                                                    <?php echo esc_html($profile->user_mobile_pers); ?>
-                                                <?php else: ?>
-                                                    <span class="placeholder-text">Not provided</span>
-                                                <?php endif; ?>
-                                            </div>
-                                        </div>
-                                        <div class="form-group">
-                                            <label>E-mail</label>
-                                            <div class="form-value" data-field="email_address_pers">
-                                                <?php if ($profile->email_address_pers): ?>
-                                                    <?php echo esc_html($profile->email_address_pers); ?>
-                                                <?php else: ?>
-                                                    <span class="placeholder-text">Not provided</span>
-                                                <?php endif; ?>
-                                            </div>
-                                        </div>
+                                    <div class="form-group">
+                                        <label>E-mail*</label>
+                                        <div class="form-value" data-field="email"><?php echo esc_html($current_user->user_email); ?></div>
                                     </div>
                                 </div>
-                            </div>
-                            <div class="edit-mode" style="display: none;">
-                                <div class="contact-grid">
-                                    <div class="contact-column">
-                                        <h4>Work</h4>
-                                        <div class="form-group">
-                                            <label>Phone*</label>
-                                            <input type="text" class="form-input" name="user_phone" value="<?php echo esc_attr($profile->user_phone); ?>" />
-                                        </div>
-                                        <div class="form-group">
-                                            <label>Mobile*</label>
-                                            <input type="text" class="form-input" name="user_mobile" value="<?php echo esc_attr($profile->user_mobile); ?>" />
-                                            <!-- <input type="text" class="form-input" name="mobile" value="<?php echo esc_attr(get_user_meta($user_id, 'phone', true)); ?>" /> -->
-                                        </div>
-                                        <div class="form-group">
-                                            <label>E-mail*</label>
-                                            <input type="email" class="form-input" name="email_address" value="<?php echo esc_attr($current_user->user_email); ?>" readonly />
-                                        </div>
+                                <div class="edit-mode" style="display: none;">
+                                    <div class="form-group">
+                                        <label>First Name*</label>
+                                        <input type="text" class="form-input" name="first_name" value="<?php echo esc_attr($current_user->first_name); ?>" />
                                     </div>
-                                    <div class="contact-column">
-                                        <h4>Personal</h4>
-                                        <div class="form-group">
-                                            <label>Phone*</label>
-                                            <input type="text" class="form-input" name="user_phone_pers" value="<?php echo esc_attr($profile->user_phone_pers); ?>" />
-                                        </div>
-                                        <div class="form-group">
-                                            <label>Mobile*</label>
-                                            <input type="text" class="form-input" name="user_mobile_pers" value="<?php echo esc_attr($profile->user_mobile_pers); ?>" />
-                                            <!-- <input type="text" class="form-input" name="mobile" value="<?php echo esc_attr(get_user_meta($user_id, 'phone', true)); ?>" /> -->
-                                        </div>
-                                        <div class="form-group">
-                                            <label>E-mail</label>
-                                            <input type="email" class="form-input" name="email_address_pers" value="<?php echo esc_attr($profile->email_address_pers); ?>" />
-                                        </div>
+                                    <div class="form-group">
+                                        <label>Last Name*</label>
+                                        <input type="text" class="form-input" name="last_name" value="<?php echo esc_attr($current_user->last_name); ?>" />
+                                    </div>
+                                    <div class="form-group">
+                                        <label>E-mail*</label>
+                                        <input type="email" class="form-input" name="email" value="<?php echo esc_attr($current_user->user_email); ?>" />
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- Address -->
-                    <div class="profile-section">
-                        <div class="section-header">
-                            <h3>Address</h3>
-                            <button class="edit-btn" onclick="editSection('address')" title="Edit">
-                                <span class="edit-icon">✎</span>
-                            </button>
-                        </div>
-                        <div class="section-content" id="address">
-                            <!-- <div class="view-mode">
-                                <div class="form-group">
-                                    <label>Address*</label>
-                                    <div class="form-value address-value" data-field="address">
-                                        <?php if ($address_display): ?>
-                                            <?php echo nl2br(esc_html($address_display)); ?>
-                                        <?php else: ?>
-                                            <span class="placeholder-text">No address information on file</span>
-                                        <?php endif; ?>
+                        <!-- Contact Details -->
+                        <div class="profile-section">
+                            <div class="section-header">
+                                <h3>Contact Details</h3>
+                                <button class="edit-btn" onclick="editSection('contact-details')" title="Edit">
+                                    <span class="edit-icon">✎</span>
+                                </button>
+                            </div>
+                            <div class="section-content" id="contact-details">
+                                <div class="view-mode">
+                                    <div class="contact-grid">
+                                        <div class="contact-column">
+                                            <h4>Work</h4>
+                                            <div class="form-group">
+                                                <label>Phone*</label>
+                                                <div class="form-value" data-field="user_phone">
+                                                    <?php if ($profile->user_phone): ?>
+                                                        <?php echo esc_html($profile->user_phone); ?>
+                                                    <?php else: ?>
+                                                        <span class="placeholder-text">Not provided</span>
+                                                    <?php endif; ?>
+                                                </div>
+                                            </div>
+                                            <div class="form-group">
+                                                <label>Mobile*</label>
+                                                <div class="form-value" data-field="user_mobile">
+                                                    <?php if ($profile->user_mobile): ?>
+                                                        <?php echo esc_html($profile->user_mobile); ?>
+                                                    <?php else: ?>
+                                                        <span class="placeholder-text">Not provided</span>
+                                                    <?php endif; ?>
+                                                </div>
+                                            </div>
+                                            <div class="form-group">
+                                                <label>E-mail*</label>
+                                                <div class="form-value" data-field="email_address"><?php echo esc_html($current_user->user_email); ?></div>
+                                            </div>
+                                        </div>
+                                        <div class="contact-column">
+                                            <h4>Personal</h4>
+                                            <div class="form-group">
+                                                <label>Phone*</label>
+                                                <div class="form-value" data-field="user_phone_pers">
+                                                    <?php if ($profile->user_phone_pers): ?>
+                                                        <?php echo esc_html($profile->user_phone_pers); ?>
+                                                    <?php else: ?>
+                                                        <span class="placeholder-text">Not provided</span>
+                                                    <?php endif; ?>
+                                                </div>
+                                            </div>
+                                            <div class="form-group">
+                                                <label>Mobile*</label>
+                                                <div class="form-value" data-field="user_mobile_pers">
+                                                    <?php if ($profile->user_mobile_pers): ?>
+                                                        <?php echo esc_html($profile->user_mobile_pers); ?>
+                                                    <?php else: ?>
+                                                        <span class="placeholder-text">Not provided</span>
+                                                    <?php endif; ?>
+                                                </div>
+                                            </div>
+                                            <div class="form-group">
+                                                <label>E-mail</label>
+                                                <div class="form-value" data-field="email_address_pers">
+                                                    <?php if ($profile->email_address_pers): ?>
+                                                        <?php echo esc_html($profile->email_address_pers); ?>
+                                                    <?php else: ?>
+                                                        <span class="placeholder-text">Not provided</span>
+                                                    <?php endif; ?>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="edit-mode" style="display: none;">
+                                    <div class="contact-grid">
+                                        <div class="contact-column">
+                                            <h4>Work</h4>
+                                            <div class="form-group">
+                                                <label>Phone*</label>
+                                                <input type="text" class="form-input" name="user_phone" value="<?php echo esc_attr($profile->user_phone); ?>" />
+                                            </div>
+                                            <div class="form-group">
+                                                <label>Mobile*</label>
+                                                <input type="text" class="form-input" name="user_mobile" value="<?php echo esc_attr($profile->user_mobile); ?>" />
+                                                <!-- <input type="text" class="form-input" name="mobile" value="<?php echo esc_attr(get_user_meta($user_id, 'phone', true)); ?>" /> -->
+                                            </div>
+                                            <div class="form-group">
+                                                <label>E-mail*</label>
+                                                <input type="email" class="form-input" name="email_address" value="<?php echo esc_attr($current_user->user_email); ?>" disabled />
+                                            </div>
+                                        </div>
+                                        <div class="contact-column">
+                                            <h4>Personal</h4>
+                                            <div class="form-group">
+                                                <label>Phone*</label>
+                                                <input type="text" class="form-input" name="user_phone_pers" value="<?php echo esc_attr($profile->user_phone_pers); ?>" />
+                                            </div>
+                                            <div class="form-group">
+                                                <label>Mobile*</label>
+                                                <input type="text" class="form-input" name="user_mobile_pers" value="<?php echo esc_attr($profile->user_mobile_pers); ?>" />
+                                                <!-- <input type="text" class="form-input" name="mobile" value="<?php echo esc_attr(get_user_meta($user_id, 'phone', true)); ?>" /> -->
+                                            </div>
+                                            <div class="form-group">
+                                                <label>E-mail</label>
+                                                <input type="email" class="form-input" name="email_address_pers" value="<?php echo esc_attr($profile->email_address_pers); ?>" />
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                            <div class="edit-mode" style="display: none;">
-                                <div class="form-group">
-                                    <label>Address Line 1*</label>
-                                    <input type="text" class="form-input" name="address_line1" value="<?php echo esc_attr($address_line1); ?>" />
-                                </div>
-                                <div class="form-group">
-                                    <label>Address Line 2</label>
-                                    <input type="text" class="form-input" name="address_line2" value="<?php echo esc_attr($address_line2); ?>" />
-                                </div>
-                                <div class="form-group">
-                                    <label>City*</label>
-                                    <input type="text" class="form-input" name="city" value="<?php echo esc_attr($city); ?>" />
-                                </div>
-                                <div class="form-group">
-                                    <label>County</label>
-                                    <input type="text" class="form-input" name="county" value="<?php echo esc_attr($county); ?>" />
-                                </div>
-                                <div class="form-group">
-                                    <label>Eircode</label>
-                                    <input type="text" class="form-input" name="eircode" value="<?php echo esc_attr($eircode); ?>" />
-                                </div>
-                            </div> -->
                         </div>
-                    </div>
 
-                    <!-- Employment Details -->
-                    <div class="profile-section">
-                        <div class="section-header">
-                            <h3>Employment Details</h3>
-                            <button class="edit-btn" onclick="editSection('employment')" title="Edit">
-                                <span class="edit-icon">✎</span>
-                            </button>
-                        </div>
-                        <div class="section-content" id="employment">
-                            <div class="view-mode">
-                                <div class="form-group">
-                                    <label>Employer Name*</label>
-                                    <div class="form-value" data-field="employer_name">
-                                        <?php if ($profile->employer_name): ?>
-                                            <?php echo esc_html($profile->employer_name); ?>
-                                        <?php else: ?>
-                                            <span class="placeholder-text">No employer information on file</span>
-                                        <?php endif; ?>
+                        <!-- Address -->
+                        <div class="profile-section">
+                            <div class="section-header">
+                                <h3>Address</h3>
+                                <button class="edit-btn" onclick="editSection('address')" title="Edit">
+                                    <span class="edit-icon">✎</span>
+                                </button>
+                            </div>
+                            <div class="section-content" id="address">
+                                <div class="view-mode">
+                                    <div class="form-group">
+                                        <label>Payment Method</label>
+                                        <div class="form-value" data-field="payment_method">
+                                            <?php echo esc_html($user_payment_method ?: 'Not specified'); ?>
+                                        </div>
                                     </div>
-                                </div>
-                                <!-- <div class="form-group">
-                                    <label>Employer Address*</label>
-                                    <div class="form-value address-value" data-field="employer_address">
-                                        <?php if ($profile->employer_address_line1): ?>
+                                    <div class="form-group">
+                                        <label>Billing Address*</label>
+                                        <div class="form-value address-value" data-field="address">
                                             <?php 
-                                            $employer_address = array_filter(array(
-                                                $profile->employer_address_line1,
-                                                $profile->employer_address_line2,
-                                                $profile->employer_city,
-                                                $profile->employer_county,
-                                                $profile->employer_eircode
-                                            ));
-                                            echo nl2br(esc_html(implode("\n", $employer_address)));
+                                            // Determine which address to show based on payment method
+                                            if ($user_payment_method === 'Employer Invoiced') {
+                                                // Show organization address (first non-null value)
+                                                $display_address = '';
+                                                if ($org_address_line1) {
+                                                    $display_address = $org_address_line1;
+                                                } elseif ($org_address_line2) {
+                                                    $display_address = $org_address_line2;
+                                                } elseif ($org_address_line3) {
+                                                    $display_address = $org_address_line3;
+                                                }
+                                                
+                                                if ($display_address) {
+                                                    echo nl2br(esc_html($display_address));
+                                                } else {
+                                                    echo '<span class="placeholder-text">No organization address available</span>';
+                                                }
+                                            } else {
+                                                // Show personal address for all other payment methods (first non-null value)
+                                                $display_address = '';
+                                                if ($address_line1_pers) {
+                                                    $display_address = $address_line1_pers;
+                                                } elseif ($address_line2_pers) {
+                                                    $display_address = $address_line2_pers;
+                                                } elseif ($address_line3_pers) {
+                                                    $display_address = $address_line3_pers;
+                                                }
+                                                
+                                                if ($display_address) {
+                                                    echo nl2br(esc_html($display_address));
+                                                } else {
+                                                    echo '<span class="placeholder-text">No personal address information on file</span>';
+                                                }
+                                            }
                                             ?>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="edit-mode" style="display: none;">
+                                    <div class="form-group">
+                                        <label>Payment Method*</label>
+                                        <select class="form-input" name="user_payment_method" id="payment_method_select">
+                                            <option value="">Select payment method</option>
+                                            <option value="Direct Invoiced" <?php selected($user_payment_method, 'Direct Invoiced'); ?>>Direct Invoiced</option>
+                                            <option value="Employer Invoiced" <?php selected($user_payment_method, 'Employer Invoiced'); ?>>Employer Invoiced</option>
+                                            <option value="Not Invoiced" <?php selected($user_payment_method, 'Not Invoiced'); ?>>Not Invoiced</option>
+                                            <option value="NA" <?php selected($user_payment_method, 'NA'); ?>>NA</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <!-- Personal Address Fields -->
+                                    <div id="personal_address_fields" style="<?php echo ($user_payment_method === 'Employer Invoiced') ? 'display: none;' : ''; ?>">
+                                        <div class="form-group">
+                                            <label>Personal Address Line 1*</label>
+                                            <input type="text" class="form-input" name="Address_1_pers" value="<?php echo esc_attr($address_line1_pers); ?>" />
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Personal Address Line 2</label>
+                                            <input type="text" class="form-input" name="Address_2_pers" value="<?php echo esc_attr($address_line2_pers); ?>" />
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Personal Address Line 3</label>
+                                            <input type="text" class="form-input" name="Address_3_pers" value="<?php echo esc_attr($address_line3_pers); ?>" />
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Organization Address Fields (Read-only) -->
+                                    <div id="org_address_fields" style="<?php echo ($user_payment_method === 'Employer Invoiced') ? '' : 'display: none;'; ?>">
+                                        <div class="form-group">
+                                            <label>Organization Address Line 1</label>
+                                            <input type="text" class="form-input" name="Address_1" value="<?php echo esc_attr($org_address_line1); ?>" readonly />
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Organization Address Line 2</label>
+                                            <input type="text" class="form-input" name="Address_2" value="<?php echo esc_attr($org_address_line2); ?>" readonly />
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Organization Address Line 3</label>
+                                            <input type="text" class="form-input" name="Address_3" value="<?php echo esc_attr($org_address_line3); ?>" readonly />
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="form-group" style="margin-top: 20px;">
+                                        <label>City*</label>
+                                        <input type="text" class="form-input" name="city_or_town" value="<?php echo esc_attr($city); ?>" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Employment Details -->
+                        <div class="profile-section">
+                            <div class="section-header">
+                                <h3>Employment Details</h3>
+                            </div>
+                            <div class="section-content" id="employment">
+                                <div class="view-mode">
+                                    <div class="form-group">
+                                        <label>Employer Name*</label>
+                                        <div class="form-value" data-field="employer_name">
+                                            <?php if ($organisation): ?>
+                                                <?php echo esc_html($organisation->name); ?>
+                                            <?php else: ?>
+                                                <span class="placeholder-text">No employer information on file</span>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Qualifications -->
+                        <!-- <div class="profile-section">
+                            <div class="section-header">
+                                <h3>Qualifications</h3>
+                                <button class="edit-btn" onclick="editSection('qualifications')" title="Edit">
+                                    <span class="edit-icon">✎</span>
+                                </button>
+                            </div>
+                            <div class="section-content" id="qualifications">
+                                <div class="qualifications-table">
+                                    <div class="table-header">
+                                        <div class="header-cell">Qualifications</div>
+                                        <div class="header-cell">Awarding Institute</div>
+                                        <div class="header-cell">Date Attained</div>
+                                        <div class="header-cell">Current Designation</div>
+                                    </div>
+                                    <div class="table-body">
+                                        <?php if (!empty($qualifications)): ?>
+                                            <?php foreach ($qualifications as $qual): ?>
+                                                <div class="table-row">
+                                                    <div class="table-cell"><?php echo esc_html($qual['qualification']); ?></div>
+                                                    <div class="table-cell"><?php echo esc_html($qual['awarding_institute']); ?></div>
+                                                    <div class="table-cell"><?php echo esc_html($qual['date_attained']); ?></div>
+                                                    <div class="table-cell"><?php echo esc_html($qual['current_designation']); ?></div>
+                                                </div>
+                                            <?php endforeach; ?>
                                         <?php else: ?>
-                                            <span class="placeholder-text">No employer address information on file</span>
+                                            <div class="table-row">
+                                                <div class="table-cell">Financial Planning & Investment</div>
+                                                <div class="table-cell">IIPM</div>
+                                                <div class="table-cell">05/01/2023</div>
+                                                <div class="table-cell">Member</div>
+                                            </div>
                                         <?php endif; ?>
                                     </div>
-                                </div> -->
+                                </div>
                             </div>
-                            <div class="edit-mode" style="display: none;">
-                                <div class="form-group">
-                                    <label>Employer Name*</label>
-                                    <input type="text" class="form-input" name="employer_name" value="<?php echo esc_attr($profile->employer_name); ?>" />
-                                </div>
-                                <!-- <div class="form-group">
-                                    <label>Employer Address Line 1*</label>
-                                    <input type="text" class="form-input" name="employer_address_line1" value="<?php echo esc_attr($profile->employer_address_line1); ?>" />
-                                </div>
-                                <div class="form-group">
-                                    <label>Employer Address Line 2</label>
-                                    <input type="text" class="form-input" name="employer_address_line2" value="<?php echo esc_attr($profile->employer_address_line2); ?>" />
-                                </div>
-                                <div class="form-group">
-                                    <label>Employer City*</label>
-                                    <input type="text" class="form-input" name="employer_city" value="<?php echo esc_attr($profile->employer_city); ?>" />
-                                </div>
-                                <div class="form-group">
-                                    <label>Employer County</label>
-                                    <input type="text" class="form-input" name="employer_county" value="<?php echo esc_attr($profile->employer_county); ?>" />
-                                </div>
-                                <div class="form-group">
-                                    <label>Employer Eircode</label>
-                                    <input type="text" class="form-input" name="employer_eircode" value="<?php echo esc_attr($profile->employer_eircode); ?>" />
-                                </div> -->
-                            </div>
-                        </div>
-                    </div>
+                        </div> -->
 
-                    <!-- Qualifications -->
-                    <div class="profile-section">
-                        <div class="section-header">
-                            <h3>Qualifications</h3>
-                            <button class="edit-btn" onclick="editSection('qualifications')" title="Edit">
-                                <span class="edit-icon">✎</span>
+                        <!-- Save Button -->
+                        <div class="profile-actions">
+                            <button type="submit" class="save-btn" id="global-save-btn" onclick="saveProfile()" disabled>
+                                Save changes
                             </button>
                         </div>
-                        <div class="section-content" id="qualifications">
-                            <div class="qualifications-table">
-                                <div class="table-header">
-                                    <div class="header-cell">Qualifications</div>
-                                    <div class="header-cell">Awarding Institute</div>
-                                    <div class="header-cell">Date Attained</div>
-                                    <div class="header-cell">Current Designation</div>
-                                </div>
-                                <div class="table-body">
-                                    <?php if (!empty($qualifications)): ?>
-                                        <?php foreach ($qualifications as $qual): ?>
-                                            <div class="table-row">
-                                                <div class="table-cell"><?php echo esc_html($qual['qualification']); ?></div>
-                                                <div class="table-cell"><?php echo esc_html($qual['awarding_institute']); ?></div>
-                                                <div class="table-cell"><?php echo esc_html($qual['date_attained']); ?></div>
-                                                <div class="table-cell"><?php echo esc_html($qual['current_designation']); ?></div>
+                    </div>
+
+                    <!-- Payment Section -->
+                    <div class="payment-main" id="payment-section" style="display: none;">
+                        <div class="payment-header">
+                            <h2>Your Payments</h2>
+                        </div>
+
+                        <!-- Payment Filters -->
+                        <div class="payment-filters">
+                            <div class="filter-group">
+                                <select id="payment-method-filter" class="filter-select">
+                                    <option value="">All Payment Methods</option>
+                                    <option value="Direct Invoiced">Direct Invoiced</option>
+                                    <option value="Employer Invoiced">Employer Invoiced</option>
+                                </select>
+                            </div>
+                            <div class="filter-group">
+                                <select id="year-filter" class="filter-select">
+                                    <option value="">All Years</option>
+                                    <option value="2024">2024</option>
+                                    <option value="2023">2023</option>
+                                    <option value="2022">2022</option>
+                                    <option value="2021">2021</option>
+                                </select>
+                            </div>
+                            <div class="filter-group">
+                                <button id="clear-filters" class="clear-filters-btn">Clear Filters</button>
+                            </div>
+                        </div>
+
+                        <div class="payments-table-container">
+                            <table class="payments-table">
+                                <thead>
+                                    <tr>
+                                        <th>Order No.</th>
+                                        <th>Order Details</th>
+                                        <th>Order Date</th>
+                                        <th>Payment Method</th>
+                                        <th>Status</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr data-payment-method="Direct Invoiced" data-year="2024">
+                                        <td><a href="#" class="order-link">2210</a></td>
+                                        <td>
+                                            <div class="order-details">
+                                                <div>1x Membership IIPM</div>
+                                                <div>1x Fellowship IIPM</div>
                                             </div>
-                                        <?php endforeach; ?>
-                                    <?php else: ?>
-                                        <div class="table-row">
-                                            <div class="table-cell">Financial Planning & Investment</div>
-                                            <div class="table-cell">IIPM</div>
-                                            <div class="table-cell">05/01/2023</div>
-                                            <div class="table-cell">Member</div>
+                                        </td>
+                                        <td>05/01/2024</td>
+                                        <td><span class="payment-method">Direct Invoiced</span></td>
+                                        <td><span class="status awaiting">Awaiting Payment</span></td>
+                                        <td><button class="action-btn complete-payment" onclick="showOrderDetails('2210')">Complete Payment</button></td>
+                                    </tr>
+                                    <tr data-payment-method="Employer Invoiced" data-year="2024">
+                                        <td><a href="#" class="order-link">2316</a></td>
+                                        <td>
+                                            <div class="order-details">
+                                                <div>1x Membership IIPM</div>
+                                            </div>
+                                        </td>
+                                        <td>04/20/2024</td>
+                                        <td><span class="payment-method employer">Employer Invoiced</span></td>
+                                        <td><span class="status completed">Completed</span></td>
+                                        <td><button class="action-btn see-details" onclick="showOrderDetails('2316')">See Details</button></td>
+                                    </tr>
+                                    <tr data-payment-method="Direct Invoiced" data-year="2023">
+                                        <td><a href="#" class="order-link">2412</a></td>
+                                        <td>
+                                            <div class="order-details">
+                                                <div>1x Membership IIPM</div>
+                                            </div>
+                                        </td>
+                                        <td>12/10/2023</td>
+                                        <td><span class="payment-method direct">Direct Invoiced</span></td>
+                                        <td><span class="status completed">Completed</span></td>
+                                        <td><button class="action-btn see-details" onclick="showOrderDetails('2412')">See Details</button></td>
+                                    </tr>
+                                    <tr data-payment-method="Employer Invoiced" data-year="2023">
+                                        <td><a href="#" class="order-link">2518</a></td>
+                                        <td>
+                                            <div class="order-details">
+                                                <div>1x Membership IIPM</div>
+                                            </div>
+                                        </td>
+                                        <td>08/22/2023</td>
+                                        <td><span class="payment-method employer">Employer Invoiced</span></td>
+                                        <td><span class="status completed">Completed</span></td>
+                                        <td><button class="action-btn see-details" onclick="showOrderDetails('2518')">See Details</button></td>
+                                    </tr>
+                                    <tr data-payment-method="Direct Invoiced" data-year="2022">
+                                        <td><a href="#" class="order-link">2624</a></td>
+                                        <td>
+                                            <div class="order-details">
+                                                <div>1x Membership IIPM</div>
+                                            </div>
+                                        </td>
+                                        <td>06/15/2022</td>
+                                        <td><span class="payment-method direct">Direct Invoiced</span></td>
+                                        <td><span class="status completed">Completed</span></td>
+                                        <td><button class="action-btn see-details" onclick="showOrderDetails('2624')">See Details</button></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Order Details Section -->
+                    <div class="order-details-main" id="order-details-section" style="display: none;">
+                        <div class="order-details-header">
+                            <div class="back-navigation">
+                                <a href="javascript:void(0)" onclick="showSection('payment')" class="back-link">
+                                    <i class="fas fa-arrow-left"></i> Back to order list
+                                </a>
+                            </div>
+                            <h2 id="order-details-title">Order Details - 2210</h2>
+                        </div>
+
+                        <div class="order-info-grid">
+                            <div class="order-summary-card">
+                                <div class="order-meta">
+                                    <div class="meta-row">
+                                        <span class="meta-label">Order No.</span>
+                                        <span class="meta-value" id="order-number">2210</span>
+                                    </div>
+                                    <div class="meta-row">
+                                        <span class="meta-label">Order Date</span>
+                                        <span class="meta-value" id="order-date">05/01/2023</span>
+                                    </div>
+                                    <div class="meta-row">
+                                        <span class="meta-label">Status</span>
+                                        <span class="meta-value"><span class="status awaiting" id="order-status">Awaiting Payment</span></span>
+                                    </div>
+                                </div>
+
+                                <div class="billing-info">
+                                    <h4>Billing Address</h4>
+                                    <div class="billing-address">
+                                        <div>John Smith</div>
+                                        <div>123 Turn Road</div>
+                                        <div>Dublin</div>
+                                        <div>Dublin</div>
+                                        <div>1234567890</div>
+                                    </div>
+                                </div>
+
+                                <div class="email-info">
+                                    <h4>E-mail Address</h4>
+                                    <div class="email-address">jsmith@iipm.ie</div>
+                                </div>
+                            </div>
+
+                            <div class="order-items-card">
+                                <h4>Order Details</h4>
+                                <div class="order-items">
+                                    <div class="order-item">
+                                        <div class="item-icon">🎓</div>
+                                        <div class="item-details">
+                                            <div class="item-name">IIPM Fellowship</div>
+                                            <div class="item-quantity">1x</div>
                                         </div>
-                                    <?php endif; ?>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Save Button -->
-                    <div class="profile-actions">
-                        <button type="submit" class="save-btn" id="global-save-btn" onclick="saveProfile()" disabled>
-                            Save changes
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Payment Section -->
-                <div class="payment-main" id="payment-section" style="display: none;">
-                    <div class="payment-header">
-                        <h2>Your Payments</h2>
-                    </div>
-
-                    <div class="payments-table-container">
-                        <table class="payments-table">
-                            <thead>
-                                <tr>
-                                    <th>Order No.</th>
-                                    <th>Order Details</th>
-                                    <th>Order Date</th>
-                                    <th>Status</th>
-                                    <th>Action</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><a href="#" class="order-link">2210</a></td>
-                                    <td>
-                                        <div class="order-details">
-                                            <div>1x Membership IIPM</div>
-                                            <div>1x Fellowship IIPM</div>
+                                        <div class="item-price">€270.00</div>
+                                    </div>
+                                    <div class="order-item">
+                                        <div class="item-icon">🎓</div>
+                                        <div class="item-details">
+                                            <div class="item-name">IIPM Membership</div>
+                                            <div class="item-quantity">1x</div>
                                         </div>
-                                    </td>
-                                    <td>05/01/2023</td>
-                                    <td><span class="status awaiting">Awaiting Payment</span></td>
-                                    <td><button class="action-btn complete-payment" onclick="showOrderDetails('2210')">Complete Payment</button></td>
-                                </tr>
-                                <tr>
-                                    <td><a href="#" class="order-link">2316</a></td>
-                                    <td>
-                                        <div class="order-details">
-                                            <div>1x Membership IIPM</div>
-                                        </div>
-                                    </td>
-                                    <td>04/20/2023</td>
-                                    <td><span class="status completed">Completed</span></td>
-                                    <td><button class="action-btn see-details" onclick="showOrderDetails('2316')">See Details</button></td>
-                                </tr>
-                                <tr>
-                                    <td><a href="#" class="order-link">2316</a></td>
-                                    <td>
-                                        <div class="order-details">
-                                            <div>1x Membership IIPM</div>
-                                        </div>
-                                    </td>
-                                    <td>04/20/2023</td>
-                                    <td><span class="status cancelled">Cancelled</span></td>
-                                    <td><button class="action-btn see-details" onclick="showOrderDetails('2316')">See Details</button></td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Order Details Section -->
-                <div class="order-details-main" id="order-details-section" style="display: none;">
-                    <div class="order-details-header">
-                        <div class="back-navigation">
-                            <a href="javascript:void(0)" onclick="showSection('payment')" class="back-link">
-                                <i class="fas fa-arrow-left"></i> Back to order list
-                            </a>
-                        </div>
-                        <h2 id="order-details-title">Order Details - 2210</h2>
-                    </div>
-
-                    <div class="order-info-grid">
-                        <div class="order-summary-card">
-                            <div class="order-meta">
-                                <div class="meta-row">
-                                    <span class="meta-label">Order No.</span>
-                                    <span class="meta-value" id="order-number">2210</span>
-                                </div>
-                                <div class="meta-row">
-                                    <span class="meta-label">Order Date</span>
-                                    <span class="meta-value" id="order-date">05/01/2023</span>
-                                </div>
-                                <div class="meta-row">
-                                    <span class="meta-label">Status</span>
-                                    <span class="meta-value"><span class="status awaiting" id="order-status">Awaiting Payment</span></span>
-                                </div>
-                            </div>
-
-                            <div class="billing-info">
-                                <h4>Billing Address</h4>
-                                <div class="billing-address">
-                                    <div>John Smith</div>
-                                    <div>123 Turn Road</div>
-                                    <div>Dublin</div>
-                                    <div>Dublin</div>
-                                    <div>1234567890</div>
-                                </div>
-                            </div>
-
-                            <div class="email-info">
-                                <h4>E-mail Address</h4>
-                                <div class="email-address">jsmith@iipm.ie</div>
-                            </div>
-                        </div>
-
-                        <div class="order-items-card">
-                            <h4>Order Details</h4>
-                            <div class="order-items">
-                                <div class="order-item">
-                                    <div class="item-icon">🎓</div>
-                                    <div class="item-details">
-                                        <div class="item-name">IIPM Fellowship</div>
-                                        <div class="item-quantity">1x</div>
+                                        <div class="item-price">€130.00</div>
                                     </div>
-                                    <div class="item-price">€270.00</div>
                                 </div>
-                                <div class="order-item">
-                                    <div class="item-icon">🎓</div>
-                                    <div class="item-details">
-                                        <div class="item-name">IIPM Membership</div>
-                                        <div class="item-quantity">1x</div>
+
+                                <div class="order-totals">
+                                    <div class="total-row">
+                                        <span>Subtotal</span>
+                                        <span>€400.00</span>
                                     </div>
-                                    <div class="item-price">€130.00</div>
-                                </div>
-                            </div>
-
-                            <div class="order-totals">
-                                <div class="total-row">
-                                    <span>Subtotal</span>
-                                    <span>€400.00</span>
-                                </div>
-                                <div class="total-row">
-                                    <span>Tax</span>
-                                    <span>€0.00</span>
-                                </div>
-                                <div class="total-row total-final">
-                                    <span>Total</span>
-                                    <span>€400.00</span>
+                                    <div class="total-row">
+                                        <span>Tax</span>
+                                        <span>€0.00</span>
+                                    </div>
+                                    <div class="total-row total-final">
+                                        <span>Total</span>
+                                        <span>€400.00</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
 
-                    <div class="payment-section-grid">
-                        <div class="payment-notice">
-                            <h4>Payment Notice</h4>
-                            <p>You haven't completed your IIPM Membership payment. Please complete your payment by <strong>Thursday, May 3, 2025</strong>.</p>
-                            <p>Please contact administrator if you encounter any problem with your order. Thank you.</p>
-                        </div>
-
-                        <div class="payment-form-card">
-                            <h4>Complete Your Payment</h4>
-                            
-                            <div class="payment-methods">
-                                <div class="payment-method active">
-                                    <div class="method-icon">💳</div>
-                                </div>
-                                <div class="payment-method">
-                                    <div class="method-icon">📧</div>
-                                </div>
+                        <div class="payment-section-grid">
+                            <div class="payment-notice">
+                                <h4>Payment Notice</h4>
+                                <p>You haven't completed your IIPM Membership payment. Please complete your payment by <strong>Thursday, May 3, 2025</strong>.</p>
+                                <p>Please contact administrator if you encounter any problem with your order. Thank you.</p>
                             </div>
 
-                            <form class="payment-form">
-                                <div class="form-group">
-                                    <label>Cardholder Name</label>
-                                    <input type="text" class="payment-input" value="John Smith" />
-                                </div>
+                            <div class="payment-form-card">
+                                <h4>Complete Your Payment</h4>
                                 
-                                <div class="form-group">
-                                    <label>Card Number</label>
-                                    <input type="text" class="payment-input" placeholder="XXXX-XXXX-XXXX-XXXX" />
+                                <div class="payment-methods">
+                                    <div class="payment-method active">
+                                        <div class="method-icon">💳</div>
+                                    </div>
+                                    <div class="payment-method">
+                                        <div class="method-icon">📧</div>
+                                    </div>
                                 </div>
-                                
-                                <div class="form-row">
+
+                                <form class="payment-form">
                                     <div class="form-group">
-                                        <label>Expiration Date</label>
-                                        <input type="text" class="payment-input" placeholder="06/26" />
+                                        <label>Cardholder Name</label>
+                                        <input type="text" class="payment-input" value="John Smith" />
                                     </div>
-                                    <div class="form-group">
-                                        <label>CVV Code</label>
-                                        <input type="text" class="payment-input" placeholder="XXX" />
-                                    </div>
-                                </div>
-                                
-                                <button type="submit" class="complete-payment-btn">Complete Payment</button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Settings Section -->
-                <div class="settings-main" id="settings-section" style="display: none;">
-                    <div class="settings-content">
-                        <h2>Reset Password</h2>
-                        
-                        <form class="password-reset-form" id="password-reset-form">
-                            <div class="form-group">
-                                <label for="current-password">Current Password</label>
-                                <div class="password-input-container">
-                                    <input type="password" id="current-password" class="form-input password-input" placeholder="••••••••••" required>
-                                </div>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="new-password">New Password</label>
-                                <div class="password-input-container">
-                                    <input type="password" id="new-password" class="form-input password-input" placeholder="••••••••••" required>
-                                    <button type="button" class="password-toggle" onclick="togglePasswordVisibility('new-password', this)">
-                                        <span class="eye-icon">👁</span>
-                                    </button>
-                                </div>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="confirm-password">Confirm New Password</label>
-                                <div class="password-input-container">
-                                    <input type="password" id="confirm-password" class="form-input password-input" placeholder="••••••••••" required>
-                                    <button type="button" class="password-toggle" onclick="togglePasswordVisibility('confirm-password', this)">
-                                        <span class="eye-icon">👁</span>
-                                    </button>
-                                </div>
-                            </div>
-                            
-                            <button type="submit" class="change-password-btn">Change Password</button>
-                        </form>
-                        
-                        <div class="password-reset-help">
-                            <hr class="divider">
-                            <div class="forgot-password-section">
-                                <p class="forgot-title">Forgot your current password?</p>
-                                <a href="javascript:void(0)" class="reset-email-link" onclick="sendResetEmail()">Reset through e-mail</a>
-                                <p class="reset-description">We'll send you a reset link to reset your password.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Help Section -->
-                <div class="help-main" id="help-section" style="display: none;">
-                    <div class="help-content">
-                        <div class="faq-section">
-                            <h2>Frequently Asked Questions</h2>
-                            
-                            <div class="faq-list">
-                                <div class="faq-item">
-                                    <div class="faq-question" onclick="toggleFAQ(this)">
-                                        <span>How to log my CPD hours?</span>
-                                        <span class="faq-toggle"><i class="fas fa-chevron-down"></i></span>
-                                    </div>
-                                    <div class="faq-answer">
-                                        <p>You can log your CPD hours by going to the CPD Record section in your profile. Click "Add New Record" and fill in the details of your professional development activity including the date, duration, and description.</p>
-                                    </div>
-                                </div>
-                                
-                                <div class="faq-item">
-                                    <div class="faq-question" onclick="toggleFAQ(this)">
-                                        <span>How do I submit my CPD return?</span>
-                                        <span class="faq-toggle"><i class="fas fa-chevron-down"></i></span>
-                                    </div>
-                                    <div class="faq-answer">
-                                        <p>To submit your CPD return, navigate to the CPD Record page and click "Submit CPD Return" button. Ensure you have completed the minimum required hours before submitting.</p>
-                                    </div>
-                                </div>
-                                
-                                <div class="faq-item">
-                                    <div class="faq-question" onclick="toggleFAQ(this)">
-                                        <span>How do I reset my password?</span>
-                                        <span class="faq-toggle"><i class="fas fa-chevron-down"></i></span>
-                                    </div>
-                                    <div class="faq-answer">
-                                        <p>You can reset your password by going to Settings in your profile sidebar. Enter your current password and set a new one, or use the "Reset through e-mail" option to receive reset instructions via email.</p>
-                                    </div>
-                                </div>
-                                
-                                <div class="faq-item">
-                                    <div class="faq-question" onclick="toggleFAQ(this)">
-                                        <span>How do I submit a leave request?</span>
-                                        <span class="faq-toggle"><i class="fas fa-chevron-down"></i></span>
-                                    </div>
-                                    <div class="faq-answer">
-                                        <p><strong>To submit a leave request:</strong></p>
-                                        <ul>
-                                            <li><a href="#">Go to Submit Leave Request form homepage</a></li>
-                                            <li><a href="#">Fill the Leave Request form</a></li>
-                                            <li><a href="#">Click Submit</a></li>
-                                        </ul>
-                                        <p><strong>Note:</strong> You can apply for leave one year in advance from request date.</p>
-                                        <p class="info-text">Your request(s) will have to be approved by the administrator in 2-5 working days. You will be notified if your request has been processed.</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="contact-section">
-                            <div class="contact-layout">
-                                <div class="contact-info">
-                                    <h3>Still have questions?</h3>
-                                    <p class="contact-description">Fill out the contact form to reach the administrator to get help. We'll do our best to help you as fast as possible.</p>
-                                </div>
-                                
-                                <div class="contact-form-container">
-                                    <form class="help-contact-form" id="help-contact-form">
-                                <div class="form-row">
-                                    <div class="form-group">
-                                        <label for="help-full-name">Full Name*</label>
-                                        <input type="text" id="help-full-name" class="form-input" placeholder="John Doe" required>
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="help-email">Email Address*</label>
-                                        <input type="email" id="help-email" class="form-input" placeholder="johndoe@iipm.ie" required>
-                                    </div>
-                                </div>
-                                
-                                <div class="form-group">
-                                    <label for="help-phone">Phone Number*</label>
-                                    <input type="tel" id="help-phone" class="form-input" placeholder="08XXXXXXXX" required>
-                                </div>
-                                
-                                <div class="form-group">
-                                    <label for="help-message">Message*</label>
-                                    <textarea id="help-message" class="form-input message-textarea" placeholder="Write your message here" rows="5" required></textarea>
-                                </div>
-                                
-                                <div class="recaptcha-group">
-                                    <label>Verification*</label>
-                                    <div class="g-recaptcha" data-sitekey="<?php echo RECAPTCHA_SITE_KEY; ?>"></div>
-                                </div>
-                                
-                                <div class="form-group">
-                                    <label class="checkbox-groups">
-                                        <input type="checkbox" id="privacy-consent" required>
                                     
-                                        <span>I consent to my personal data being submitted in accordance to IIPM Privacy Policy.</span>
-                                    </label>
+                                    <div class="form-group">
+                                        <label>Card Number</label>
+                                        <input type="text" class="payment-input" placeholder="XXXX-XXXX-XXXX-XXXX" />
+                                    </div>
+                                    
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label>Expiration Date</label>
+                                            <input type="text" class="payment-input" placeholder="06/26" />
+                                        </div>
+                                        <div class="form-group">
+                                            <label>CVV Code</label>
+                                            <input type="text" class="payment-input" placeholder="XXX" />
+                                        </div>
+                                    </div>
+                                    
+                                    <button type="submit" class="complete-payment-btn">Complete Payment</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Settings Section -->
+                    <div class="settings-main" id="settings-section" style="display: none;">
+                        <div class="settings-content">
+                            <h2>Reset Password</h2>
+                            
+                            <form class="password-reset-form" id="password-reset-form">
+                                <div class="form-group">
+                                    <label for="current-password">Current Password</label>
+                                    <div class="password-input-container">
+                                        <input type="password" id="current-password" class="form-input password-input" placeholder="••••••••••" required>
+                                    </div>
                                 </div>
                                 
-                                        <button type="submit" class="send-message-btn">Send Message</button>
-                                    </form>
+                                <div class="form-group">
+                                    <label for="new-password">New Password</label>
+                                    <div class="password-input-container">
+                                        <input type="password" id="new-password" class="form-input password-input" placeholder="••••••••••" required>
+                                        <button type="button" class="password-toggle" onclick="togglePasswordVisibility('new-password', this)">
+                                            <span class="eye-icon">👁</span>
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="confirm-password">Confirm New Password</label>
+                                    <div class="password-input-container">
+                                        <input type="password" id="confirm-password" class="form-input password-input" placeholder="••••••••••" required>
+                                        <button type="button" class="password-toggle" onclick="togglePasswordVisibility('confirm-password', this)">
+                                            <span class="eye-icon">👁</span>
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <button type="submit" class="change-password-btn">Change Password</button>
+                            </form>
+                            
+                            <div class="password-reset-help">
+                                <hr class="divider">
+                                <div class="forgot-password-section">
+                                    <p class="forgot-title">Forgot your current password?</p>
+                                    <a href="javascript:void(0)" class="reset-email-link" onclick="sendResetEmail()">Reset through e-mail</a>
+                                    <p class="reset-description">We'll send you a reset link to reset your password.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Help Section -->
+                    <div class="help-main" id="help-section" style="display: none;">
+                        <div class="help-content">
+                            <div class="faq-section">
+                                <h2>Frequently Asked Questions</h2>
+                                
+                                <div class="faq-list">
+                                    <div class="faq-item">
+                                        <div class="faq-question" onclick="toggleFAQ(this)">
+                                            <span>How to log my CPD hours?</span>
+                                            <span class="faq-toggle"><i class="fas fa-chevron-down"></i></span>
+                                        </div>
+                                        <div class="faq-answer">
+                                            <p>You can log your CPD hours by going to the CPD Record section in your profile. Click "Add New Record" and fill in the details of your professional development activity including the date, duration, and description.</p>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="faq-item">
+                                        <div class="faq-question" onclick="toggleFAQ(this)">
+                                            <span>How do I submit my CPD return?</span>
+                                            <span class="faq-toggle"><i class="fas fa-chevron-down"></i></span>
+                                        </div>
+                                        <div class="faq-answer">
+                                            <p>To submit your CPD return, navigate to the CPD Record page and click "Submit CPD Return" button. Ensure you have completed the minimum required hours before submitting.</p>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="faq-item">
+                                        <div class="faq-question" onclick="toggleFAQ(this)">
+                                            <span>How do I reset my password?</span>
+                                            <span class="faq-toggle"><i class="fas fa-chevron-down"></i></span>
+                                        </div>
+                                        <div class="faq-answer">
+                                            <p>You can reset your password by going to Settings in your profile sidebar. Enter your current password and set a new one, or use the "Reset through e-mail" option to receive reset instructions via email.</p>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="faq-item">
+                                        <div class="faq-question" onclick="toggleFAQ(this)">
+                                            <span>How do I submit a leave request?</span>
+                                            <span class="faq-toggle"><i class="fas fa-chevron-down"></i></span>
+                                        </div>
+                                        <div class="faq-answer">
+                                            <p><strong>To submit a leave request:</strong></p>
+                                            <ul>
+                                                <li><a href="#">Go to Submit Leave Request form homepage</a></li>
+                                                <li><a href="#">Fill the Leave Request form</a></li>
+                                                <li><a href="#">Click Submit</a></li>
+                                            </ul>
+                                            <p><strong>Note:</strong> You can apply for leave one year in advance from request date.</p>
+                                            <p class="info-text">Your request(s) will have to be approved by the administrator in 2-5 working days. You will be notified if your request has been processed.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="contact-section">
+                                <div class="contact-layout">
+                                    <div class="contact-info">
+                                        <h3>Still have questions?</h3>
+                                        <p class="contact-description">Fill out the contact form to reach the administrator to get help. We'll do our best to help you as fast as possible.</p>
+                                    </div>
+                                    
+                                    <div class="contact-form-container">
+                                        <form class="help-contact-form" id="help-contact-form">
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label for="help-full-name">Full Name*</label>
+                                            <input type="text" id="help-full-name" class="form-input" placeholder="John Doe" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="help-email">Email Address*</label>
+                                            <input type="email" id="help-email" class="form-input" placeholder="johndoe@iipm.ie" required>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label for="help-phone">Phone Number*</label>
+                                        <input type="tel" id="help-phone" class="form-input" placeholder="08XXXXXXXX" required>
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label for="help-message">Message*</label>
+                                        <textarea id="help-message" class="form-input message-textarea" placeholder="Write your message here" rows="5" required></textarea>
+                                    </div>
+                                    
+                                    <div class="recaptcha-group">
+                                        <label>Verification*</label>
+                                        <div class="g-recaptcha" data-sitekey="<?php echo RECAPTCHA_SITE_KEY; ?>"></div>
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label class="checkbox-groups">
+                                            <input type="checkbox" id="privacy-consent" required>
+                                        
+                                            <span>I consent to my personal data being submitted in accordance to IIPM Privacy Policy.</span>
+                                        </label>
+                                    </div>
+                                    
+                                            <button type="submit" class="send-message-btn">Send Message</button>
+                                        </form>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -807,9 +883,7 @@ get_header();
 <style>
 /* Profile Page Styles */
 .profile-page {
-    background: #f8fafc;
     min-height: 100vh;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     margin: 0;
     padding: 0;
 }
@@ -1113,7 +1187,7 @@ get_header();
     letter-spacing: 0.5px;
 }
 
-.status.awaiting {
+/* .status.awaiting {
     background: #fef3c7;
     color: #92400e;
 }
@@ -1126,7 +1200,7 @@ get_header();
 .status.cancelled {
     background: #fee2e2;
     color: #991b1b;
-}
+} */
 
 .action-btn {
     padding: 8px 16px;
@@ -1374,8 +1448,6 @@ get_header();
 .payment-method {
     width: 48px;
     height: 48px;
-    border: 2px solid #e5e7eb;
-    border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -2398,6 +2470,127 @@ get_header();
         display: none;
     }
 }
+
+/* Payment Method and Address Styles */
+#payment_method_select {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 16px;
+    background-color: white;
+    transition: border-color 0.2s ease;
+}
+
+#payment_method_select:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+#personal_address_fields,
+#org_address_fields {
+    margin-top: 16px;
+    padding: 16px;
+    background-color: #f9fafb;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+}
+
+#org_address_fields input[readonly] {
+    background-color: #f3f4f6;
+    color: #6b7280;
+    cursor: not-allowed;
+}
+
+.address-field-group {
+    margin-bottom: 16px;
+}
+
+.address-field-group:last-child {
+    margin-bottom: 0;
+}
+
+/* Payment Filters */
+.payment-filters {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    margin-bottom: 20px;
+    padding: 16px;
+    background: #f8fafc;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.filter-group label {
+    font-size: 14px;
+    font-weight: 500;
+    color: #374151;
+}
+
+.filter-select {
+    padding: 8px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 14px;
+    background: white;
+    min-width: 150px;
+}
+
+.filter-select:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.clear-filters-btn {
+    padding: 8px 16px;
+    background: #6b7280;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.clear-filters-btn:hover {
+    background: #4b5563;
+}
+
+/* Payment Method Badges */
+.payment-method {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Responsive filters */
+@media (max-width: 768px) {
+    .payment-filters {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .filter-group {
+        width: 100%;
+    }
+    
+    .filter-select {
+        width: 100%;
+    }
+}
 </style>
 
 <script>
@@ -2676,21 +2869,60 @@ function updateViewMode(sectionId) {
             }
         });
     } else if (sectionId === 'address') {
-        // Update address view
-        // const addressLine1 = section.querySelector('input[name="address_line1"]').value;
-        // const addressLine2 = section.querySelector('input[name="address_line2"]').value;
-        // const city = section.querySelector('input[name="city"]').value;
-        // const county = section.querySelector('input[name="county"]').value;
-        // const eircode = section.querySelector('input[name="eircode"]').value;
+        // Update payment method view
+        const paymentMethodSelect = section.querySelector('select[name="user_payment_method"]');
+        const paymentMethodField = viewMode.querySelector('[data-field="payment_method"]');
+        if (paymentMethodSelect && paymentMethodField) {
+            paymentMethodField.textContent = paymentMethodSelect.value || 'Not specified';
+        }
         
-        // const addressField = viewMode.querySelector('[data-field="address"]');
-        // const addressParts = [addressLine1, addressLine2, city, county, eircode].filter(Boolean);
-        
-        // if (addressParts.length > 0) {
-        //     addressField.innerHTML = addressParts.join('<br>');
-        // } else {
-        //     addressField.innerHTML = '<span class="placeholder-text">No address information on file</span>';
-        // }
+        // Update address view based on payment method
+        const addressField = viewMode.querySelector('[data-field="address"]');
+        if (addressField) {
+            const selectedPaymentMethod = paymentMethodSelect ? paymentMethodSelect.value : '';
+            
+            if (selectedPaymentMethod === 'Employer Invoiced') {
+                // Show organization address (first non-null value)
+                const orgLine1 = section.querySelector('input[readonly]').value;
+                const orgLine2 = section.querySelectorAll('input[readonly]')[1].value;
+                const orgLine3 = section.querySelectorAll('input[readonly]')[2].value;
+                
+                let displayAddress = '';
+                if (orgLine1) {
+                    displayAddress = orgLine1;
+                } else if (orgLine2) {
+                    displayAddress = orgLine2;
+                } else if (orgLine3) {
+                    displayAddress = orgLine3;
+                }
+                
+                if (displayAddress) {
+                    addressField.innerHTML = displayAddress.replace(/\n/g, '<br>');
+                } else {
+                    addressField.innerHTML = '<span class="placeholder-text">No organization address available</span>';
+                }
+            } else {
+                // Show personal address for all other payment methods (first non-null value)
+                const persLine1 = section.querySelector('input[name="Address_1_pers"]').value;
+                const persLine2 = section.querySelector('input[name="Address_2_pers"]').value;
+                const persLine3 = section.querySelector('input[name="Address_3_pers"]').value;
+                
+                let displayAddress = '';
+                if (persLine1) {
+                    displayAddress = persLine1;
+                } else if (persLine2) {
+                    displayAddress = persLine2;
+                } else if (persLine3) {
+                    displayAddress = persLine3;
+                }
+                
+                if (displayAddress) {
+                    addressField.innerHTML = displayAddress.replace(/\n/g, '<br>');
+                } else {
+                    addressField.innerHTML = '<span class="placeholder-text">No personal address information on file</span>';
+                }
+            }
+        }
     } else if (sectionId === 'employment') {
         // Update employment view
         const employerNameInput = section.querySelector('input[name="employer_name"]');
@@ -2746,6 +2978,8 @@ function saveProfile() {
     const originalText = saveBtn.textContent;
     saveBtn.textContent = 'Saving...';
     saveBtn.disabled = true;
+
+    console.log(editingSections);
     
     // Save all editing sections
     Promise.all(Array.from(editingSections).map(sectionId => saveSection(sectionId)))
@@ -3433,6 +3667,71 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
     });
+});
+
+// Payment method change handler
+document.addEventListener('DOMContentLoaded', function() {
+    const paymentMethodSelect = document.getElementById('payment_method_select');
+    if (paymentMethodSelect) {
+        paymentMethodSelect.addEventListener('change', function() {
+            const selectedMethod = this.value;
+            const personalAddressFields = document.getElementById('personal_address_fields');
+            const orgAddressFields = document.getElementById('org_address_fields');
+            
+            if (selectedMethod === 'Employer Invoiced') {
+                personalAddressFields.style.display = 'none';
+                orgAddressFields.style.display = 'block';
+            } else {
+                // Show personal address for all other payment methods
+                personalAddressFields.style.display = 'block';
+                orgAddressFields.style.display = 'none';
+            }
+        });
+    }
+    
+    // Payment filters functionality
+    const paymentMethodFilter = document.getElementById('payment-method-filter');
+    const yearFilter = document.getElementById('year-filter');
+    const clearFiltersBtn = document.getElementById('clear-filters');
+    const paymentRows = document.querySelectorAll('tbody tr[data-payment-method]');
+    
+    function filterPayments() {
+        const selectedPaymentMethod = paymentMethodFilter.value;
+        const selectedYear = yearFilter.value;
+        
+        paymentRows.forEach(row => {
+            const rowPaymentMethod = row.getAttribute('data-payment-method');
+            const rowYear = row.getAttribute('data-year');
+            
+            let showRow = true;
+            
+            if (selectedPaymentMethod && rowPaymentMethod !== selectedPaymentMethod) {
+                showRow = false;
+            }
+            
+            if (selectedYear && rowYear !== selectedYear) {
+                showRow = false;
+            }
+            
+            row.style.display = showRow ? '' : 'none';
+        });
+    }
+    
+    if (paymentMethodFilter) {
+        paymentMethodFilter.addEventListener('change', filterPayments);
+    }
+    
+    if (yearFilter) {
+        yearFilter.addEventListener('change', filterPayments);
+    }
+    
+    if (clearFiltersBtn) {
+        clearFiltersBtn.addEventListener('click', function() {
+            paymentMethodFilter.value = '';
+            yearFilter.value = '';
+            filterPayments();
+        });
+    }
 });
 </script>
 

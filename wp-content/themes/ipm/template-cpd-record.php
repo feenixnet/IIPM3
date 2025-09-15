@@ -17,103 +17,97 @@ require_once get_template_directory() . '/includes/cpd-record-api.php';
 get_header(); 
 ?>
 
-<div class="cpd-record-page">
-    <!-- Header -->
-    <div class="cpd-header">
-        <div class="container">
-            <div class="header-content">
-                <div class="breadcrumb">
-                    <a href="<?php echo home_url('/dashboard/'); ?>">🏠</a>
-                    <span class="separator">></span>
-                    <span>CPD Record</span>
-                </div>
-                <h1>CPD Record</h1>
+<div class="cpd-record-page main-container">
+    <div class="container" style="position: relative; z-index: 2;">
+        <div class="page-header" style="text-align: center; margin-bottom: 40px;">
+            <div>
+                <h1 style="color: white; font-size: 2.5rem; margin-bottom: 10px;">CPD Record</h1>
+                <p style="color: rgba(255,255,255,0.9); font-size: 1.1rem;">
+                    You can check your status of cpd with only completed courses.
+                </p>
             </div>
         </div>
-    </div>
-
-    <div class="container">
-        <!-- Year Selector -->
-        <div class="year-selector">
-            <label for="year-select">Select Year:</label>
-            <select id="year-select">
-                <?php
-                $current_year = date('Y');
-                for ($year = $current_year; $year >= $current_year - 10; $year--) {
-                    $selected = ($year == $current_year) ? 'selected' : '';
-                    echo "<option value='{$year}' {$selected}>{$year}</option>";
-                }
-                ?>
-            </select>
-        </div>
-
-        <div class="cpd-record-layout">
-            <!-- Left Side - Stats -->
-            <div class="cpd-stats">
-                <div class="stats-card">
-                    <h3>CPD Progress</h3>
-                    
-                    <div class="progress-section">
-                        <div class="progress-info">
-                            <span class="progress-label">Progress</span>
-                            <span class="progress-percentage" id="progress-percentage">0%</span>
-                        </div>
-                        <div class="progress-bar">
-                            <div class="progress-fill" id="progress-fill"></div>
-                        </div>
-                        <div class="progress-text">
-                            <span id="current-minutes">0</span> / <span id="target-minutes">330</span> minutes
-                        </div>
-                    </div>
-                    
-                    <div class="stats-grid">
-                        <div class="stat-item">
-                            <div class="stat-label">Start Date</div>
-                            <div class="stat-value" id="start-date">-</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-label">Completion Date</div>
-                            <div class="stat-value" id="completion-date">-</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-label">Total CPD Minutes</div>
-                            <div class="stat-value" id="total-cpd-minutes">0</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-label">Total Hours</div>
-                            <div class="stat-value" id="total-hours">0</div>
-                        </div>
-                    </div>
-                </div>
+        <div>
+            <div class="year-selector">
+                <label for="year-select">Select Year:</label>
+                <select id="year-select">
+                    <?php
+                    $current_year = date('Y');
+                    for ($year = $current_year; $year >= $current_year - 10; $year--) {
+                        $selected = ($year == $current_year) ? 'selected' : '';
+                        echo "<option value='{$year}' {$selected}>{$year}</option>";
+                    }
+                    ?>
+                </select>
             </div>
 
-            <!-- Right Side - Courses Summary -->
-            <div class="cpd-summary">
-                <div class="summary-card">
-                    <h3>Courses Summary</h3>
-                    
-                    <div class="summary-content" id="summary-content">
-                        <div class="loading-message">
-                            <div class="loading-spinner">
-                                <div class="spinner"></div>
-                                <p>Loading summary...</p>
+            <div class="cpd-record-layout">
+                <!-- Left Side - Stats -->
+                <div class="cpd-stats">
+                    <div class="stats-card">
+                        <h3>CPD Progress</h3>
+                        
+                        <div class="progress-section">
+                            <div class="progress-info">
+                                <span class="progress-label">Progress</span>
+                                <span class="progress-percentage" id="progress-percentage">0%</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="progress-fill"></div>
+                            </div>
+                            <div class="progress-text">
+                                <span id="current-minutes">0</span> / <span id="target-minutes">330</span> minutes
+                            </div>
+                        </div>
+                        
+                        <div class="stats-grid">
+                            <div class="stat-item">
+                                <div class="stat-label">Start Date</div>
+                                <div class="stat-value" id="start-date">-</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">Completion Date</div>
+                                <div class="stat-value" id="completion-date">-</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">Total CPD Minutes</div>
+                                <div class="stat-value" id="total-cpd-minutes">0</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-label">Total Hours</div>
+                                <div class="stat-value" id="total-hours">0</div>
                             </div>
                         </div>
                     </div>
-                    
-                    <div class="summary-total">
-                        <div class="total-label">Total</div>
-                        <div class="total-value" id="summary-total">0 hours</div>
+                </div>
+
+                <!-- Right Side - Courses Summary -->
+                <div class="cpd-summary">
+                    <div class="summary-card">
+                        <h3>Courses Summary</h3>
+                        
+                        <div class="summary-content" id="summary-content">
+                            <div class="loading-message">
+                                <div class="loading-spinner">
+                                    <div class="spinner"></div>
+                                    <p>Loading summary...</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="summary-total">
+                            <div class="total-label">Total</div>
+                            <div class="total-value" id="summary-total">0 hours</div>
+                        </div>
                     </div>
                 </div>
-            </div>
+            </div>              
         </div>
     </div>
 </div>
 
 <style>
     .cpd-record-page {
-        background: #f8fafc;
         min-height: 100vh;
         padding-top: 0;
     }

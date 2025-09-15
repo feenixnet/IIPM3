@@ -2177,6 +2177,8 @@ function iipm_handle_update_profile() {
     $section = sanitize_text_field($_POST['section']);
     
     global $wpdb;
+
+    error_log(print_r(json_encode($_POST), true));
     
     switch ($section) {
         case 'basic-info':
@@ -2191,67 +2193,81 @@ function iipm_handle_update_profile() {
                 'last_name' => $last_name,
                 'user_email' => $email
             ));
+            $wpdb->update(
+                $wpdb->prefix . 'test_iipm_member_profiles',
+                array(
+                    'first_name' => $first_name,
+                    'sur_name' => $last_name,
+                    'email_address' => $email
+                ),
+                array('user_id' => $user_id)
+            );
             break;
             
         case 'contact-details':
             $user_phone = sanitize_text_field($_POST['user_phone']);
-            $mobile = sanitize_text_field($_POST['mobile']);
             $user_mobile = sanitize_text_field($_POST['user_mobile']);
-            $work_email = sanitize_email($_POST['work_email']);
+            $email_address = sanitize_email($_POST['email_address']);
+            $user_phone_pers = sanitize_text_field($_POST['user_phone_pers']);
+            $user_mobile_pers = sanitize_text_field($_POST['user_mobile_pers']);
+            $email_address_pers = sanitize_email($_POST['email_address_pers']);
             
             // Update user meta
-            update_user_meta($user_id, 'phone', $mobile);
+            update_user_meta($user_id, 'phone', $user_phone);
             
             // Update profile table
-            $wpdb->replace(
+            $wpdb->update(
                 $wpdb->prefix . 'test_iipm_member_profiles',
                 array(
-                    'user_id' => $user_id,
                     'user_phone' => $user_phone,
                     'user_mobile' => $user_mobile,
-                    'work_email' => $work_email
+                    'email_address' => $email_address,
+                    'user_phone_pers' => $user_phone_pers,
+                    'user_mobile_pers' => $user_mobile_pers,
+                    'email_address_pers' => $email_address_pers
                 ),
-                array('%d', '%s', '%s', '%s', '%s')
+                array('user_id' => $user_id)
             );
             break;
             
         case 'address':
-            $address_line1 = sanitize_text_field($_POST['address_line1']);
-            $address_line2 = sanitize_text_field($_POST['address_line2']);
-            $city = sanitize_text_field($_POST['city']);
-            $county = sanitize_text_field($_POST['county']);
-            $eircode = sanitize_text_field($_POST['eircode']);
+            $user_payment_method = sanitize_text_field($_POST['user_payment_method']);
+            if ($user_payment_method != 'Employer Invoiced') {
+                $address_line1 = sanitize_text_field($_POST['Address_1'] ?? '');
+                $address_line2 = sanitize_text_field($_POST['Address_2'] ?? '');
+                $address_line3 = sanitize_text_field($_POST['Address_3'] ?? '');
+                $address_line1_pers = sanitize_text_field($_POST['Address_1_pers'] ?? '');
+                $address_line2_pers = sanitize_text_field($_POST['Address_2_pers'] ?? '');
+                $address_line3_pers = sanitize_text_field($_POST['Address_3_pers'] ?? '');
+            }
+            $city = sanitize_text_field($_POST['city_or_town'] ?? '');
             
             // Update user meta
             update_user_meta($user_id, 'address_line1', $address_line1);
             update_user_meta($user_id, 'address_line2', $address_line2);
             update_user_meta($user_id, 'city', $city);
-            update_user_meta($user_id, 'county', $county);
-            update_user_meta($user_id, 'eircode', $eircode);
+
+
+            // Update profile table
+            $wpdb->update(
+                $wpdb->prefix . 'test_iipm_member_profiles',
+                array(
+                    'user_payment_method' => $user_payment_method,
+                    'Address_1' => $address_line1,
+                    'Address_2' => $address_line2,
+                    'Address_3' => $address_line3,
+                    'Address_1_pers' => $address_line1_pers,
+                    'Address_2_pers' => $address_line2_pers,
+                    'Address_3_pers' => $address_line3_pers,
+                    'city_or_town' => $city,
+                ),
+                array('user_id' => $user_id)
+            );
+
             break;
             
         case 'employment':
-            $employer_name = sanitize_text_field($_POST['employer_name']);
-            $employer_address_line1 = sanitize_text_field($_POST['employer_address_line1']);
-            $employer_address_line2 = sanitize_text_field($_POST['employer_address_line2']);
-            $employer_city = sanitize_text_field($_POST['employer_city']);
-            $employer_county = sanitize_text_field($_POST['employer_county']);
-            $employer_eircode = sanitize_text_field($_POST['employer_eircode']);
-            
-            // Update profile table
-            $wpdb->replace(
-                $wpdb->prefix . 'test_iipm_member_profiles',
-                array(
-                    'user_id' => $user_id,
-                    'employer_name' => $employer_name,
-                    'employer_address_line1' => $employer_address_line1,
-                    'employer_address_line2' => $employer_address_line2,
-                    'employer_city' => $employer_city,
-                    'employer_county' => $employer_county,
-                    'employer_eircode' => $employer_eircode
-                ),
-                array('%d', '%s', '%s', '%s', '%s', '%s', '%s')
-            );
+
             break;
             
         default:
