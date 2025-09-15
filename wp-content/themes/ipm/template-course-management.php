@@ -49,7 +49,7 @@ if (!function_exists('add_success_notification')) {
         </div>
 
         <!-- Tab Content -->
-        <div class="tab-content main-content">
+        <div>
             <?php if ($active_tab === 'by-admin'): ?>
             <!-- By Admin Tab Content -->
             <div class="by-admin-content">
@@ -70,19 +70,16 @@ if (!function_exists('add_success_notification')) {
         <!-- Filters and Search -->
         <div class="course-filters">
             <div class="filter-group">
-                <label for="category-filter">Category:</label>
                 <select id="category-filter" class="form-control">
                     <option value="all">All Categories</option>
                 </select>
             </div>
             <div class="filter-group">
-                <label for="provider-filter">Provider:</label>
                 <select id="provider-filter" class="form-control">
                     <option value="all">All Providers</option>
                 </select>
             </div>
             <div class="filter-group">
-                <label for="search-courses">Search:</label>
                 <div class="search-input-group">
                     <input type="text" id="search-courses" class="form-control" placeholder="Search courses...">
                     <button class="btn btn-primary" id="search-button" type="button">
@@ -149,7 +146,7 @@ if (!function_exists('add_success_notification')) {
             </div>
             <?php else: ?>
             <!-- By Users Tab Content -->
-            <div class="by-users-content">
+            <div class="by-users-content main-content">
             <!-- Pending Courses Section -->
             <div class="section-header">
                 <h2>Pending Courses</h2>
@@ -198,14 +195,12 @@ if (!function_exists('add_success_notification')) {
             
             <div class="user-courses-filters">
                 <div class="filter-group">
-                    <label for="user-status-filter">Status:</label>
                     <select id="user-status-filter" class="form-control">
                         <option value="active">Active</option>
-                        <option value="inactive">Inactive</option>
+                        <option value="rejected">Rejected</option>
                     </select>
                 </div>
                 <div class="filter-group">
-                    <label for="user-search">Search:</label>
                     <input type="text" id="user-search" class="form-control" placeholder="Search courses...">
                 </div>
                 <button class="btn btn-outline" id="clear-user-filters">Clear Filters</button>
@@ -422,6 +417,48 @@ if (!function_exists('add_success_notification')) {
     outline: none;
     border-color: #3b82f6;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Pagination Styles */
+.pagination-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    background: #f8fafc;
+    border-top: 1px solid #e5e7eb;
+}
+
+.pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.page-number {
+    padding: 8px 12px;
+    border: 1px solid #d1d5db;
+    background: white;
+    color: #374151;
+    text-decoration: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.page-number.active {
+    background: #3b82f6;
+    color: white;
+    border-color: #3b82f6;
+}
+
+.page-number:hover:not(.active) {
+    background: #f3f4f6;
+}
+
+.pagination-info {
+    color: #6b7280;
+    font-size: 14px;
 }
 
 /* Course Header */
@@ -1075,12 +1112,12 @@ jQuery(document).ready(function($) {
             var row = $('<tr>');
             row.html(`
                 <td>${course.course_name || 'N/A'}</td>
-                <td>${course.course_code || 'N/A'}</td>
+                <td>${course.LIA_Code || 'N/A'}</td>
                 <td>${course.course_category || 'N/A'}</td>
-                <td>${course.course_provider || 'N/A'}</td>
-                <td>${course.course_duration || 'N/A'} mins</td>
+                <td>${course.crs_provider || 'N/A'}</td>
+                <td>${course.course_cpd_mins || 'N/A'} mins</td>
                 <td>${course.display_name || 'N/A'}</td>
-                <td>${formatDate(course.created_at)}</td>
+                <td>${formatDate(course.course_date)}</td>
                 <td>
                     <div class="action-buttons">
                         <button class="btn btn-success btn-sm" onclick="approveCourse(${course.id})">
@@ -1137,19 +1174,19 @@ jQuery(document).ready(function($) {
         courses.forEach(function(course) {
             var statusBadge = course.status === 'active' ? 
                 '<span class="status-badge status-active">Active</span>' : 
-                '<span class="status-badge status-inactive">Inactive</span>';
+                '<span class="status-badge status-rejected">Rejected</span>';
             
             var actionButton = course.status === 'active' ? 
-                '<button class="btn btn-warning btn-sm" onclick="deactivateCourse(' + course.id + ')"><i class="fas fa-pause"></i> Deactivate</button>' :
-                '<button class="btn btn-success btn-sm" onclick="activateCourse(' + course.id + ')"><i class="fas fa-play"></i> Activate</button>';
+                '<button class="btn btn-warning btn-sm" onclick="rejectCourse(' + course.id + ')"><i class="fas fa-times"></i> Reject</button>' :
+                '<button class="btn btn-success btn-sm" onclick="activateCourse(' + course.id + ')"><i class="fas fa-check"></i> Activate</button>';
             
             var row = $('<tr>');
             row.html(`
                 <td>${course.course_name || 'N/A'}</td>
-                <td>${course.course_code || 'N/A'}</td>
+                <td>${course.LIA_Code || 'N/A'}</td>
                 <td>${course.course_category || 'N/A'}</td>
-                <td>${course.course_provider || 'N/A'}</td>
-                <td>${course.course_duration || 'N/A'} mins</td>
+                <td>${course.crs_provider || 'N/A'}</td>
+                <td>${course.course_cpd_mins || 'N/A'} mins</td>
                 <td>${course.display_name || 'N/A'}</td>
                 <td>${statusBadge}</td>
                 <td>
@@ -1239,13 +1276,24 @@ jQuery(document).ready(function($) {
                     if (response.success) {
                         loadPendingCourses();
                         loadUserCourses();
+                        if (window.notifications) {
+                            notifications.success("Success", "Course approved successfully!");
+                        }
                     } else {
-                        alert('Error: ' + (response.data || 'Unknown error'));
+                        if (window.notifications) {
+                            notifications.error("Error", response.data || 'Unknown error');
+                        } else {
+                            alert('Error: ' + (response.data || 'Unknown error'));
+                        }
                     }
                 },
                 error: function(xhr, status, error) {
                     console.error('Error approving course:', error);
-                    alert('Error approving course. Please try again.');
+                    if (window.notifications) {
+                        notifications.error("Error", "Error approving course. Please try again.");
+                    } else {
+                        alert('Error approving course. Please try again.');
+                    }
                 }
             });
         }
@@ -1266,13 +1314,25 @@ jQuery(document).ready(function($) {
                 success: function(response) {
                     if (response.success) {
                         loadPendingCourses();
+                        loadUserCourses();
+                        if (window.notifications) {
+                            notifications.success("Success", "Course rejected successfully!");
+                        }
                     } else {
-                        alert('Error: ' + (response.data || 'Unknown error'));
+                        if (window.notifications) {
+                            notifications.error("Error", response.data || 'Unknown error');
+                        } else {
+                            alert('Error: ' + (response.data || 'Unknown error'));
+                        }
                     }
                 },
                 error: function(xhr, status, error) {
                     console.error('Error rejecting course:', error);
-                    alert('Error rejecting course. Please try again.');
+                    if (window.notifications) {
+                        notifications.error("Error", "Error rejecting course. Please try again.");
+                    } else {
+                        alert('Error rejecting course. Please try again.');
+                    }
                 }
             });
         }
@@ -1281,7 +1341,7 @@ jQuery(document).ready(function($) {
     window.activateCourse = function(courseId) {
         if (confirm('Are you sure you want to activate this course?')) {
             var formData = new FormData();
-            formData.append('action', 'iipm_activate_course');
+            formData.append('action', 'iipm_approve_course');
             formData.append('course_id', courseId);
             
             $.ajax({
@@ -1292,48 +1352,61 @@ jQuery(document).ready(function($) {
                 contentType: false,
                 success: function(response) {
                     if (response.success) {
+                        loadPendingCourses();
                         loadUserCourses();
+                        if (window.notifications) {
+                            notifications.success("Success", "Course activated successfully!");
+                        }
                     } else {
-                        alert('Error: ' + (response.data || 'Unknown error'));
+                        if (window.notifications) {
+                            notifications.error("Error", response.data || 'Unknown error');
+                        } else {
+                            alert('Error: ' + (response.data || 'Unknown error'));
+                        }
                     }
                 },
                 error: function(xhr, status, error) {
                     console.error('Error activating course:', error);
-                    alert('Error activating course. Please try again.');
+                    if (window.notifications) {
+                        notifications.error("Error", "Error activating course. Please try again.");
+                    } else {
+                        alert('Error activating course. Please try again.');
+                    }
                 }
             });
         }
     };
     
-    window.deactivateCourse = function(courseId) {
-        if (confirm('Are you sure you want to deactivate this course?')) {
-            var formData = new FormData();
-            formData.append('action', 'iipm_deactivate_course');
-            formData.append('course_id', courseId);
-            
-            $.ajax({
-                url: ajaxurl,
-                type: 'POST',
-                data: formData,
-                processData: false,
-                contentType: false,
-                success: function(response) {
-                    if (response.success) {
-                        loadUserCourses();
-                    } else {
-                        alert('Error: ' + (response.data || 'Unknown error'));
-                    }
-                },
-                error: function(xhr, status, error) {
-                    console.error('Error deactivating course:', error);
-                    alert('Error deactivating course. Please try again.');
-                }
-            });
-        }
-    };
     
     function formatDate(dateString) {
+        if (!dateString) return 'N/A';
+        
+        // Handle the new date format (dd-mm-yyyy)
+        if (dateString.includes('-')) {
+            var parts = dateString.split('-');
+            if (parts.length === 3) {
+                var day = parts[0];
+                var month = parts[1];
+                var year = parts[2];
+                return day + '-' + month + '-' + year;
+            }
+        }
+        
+        // Handle legacy date format (dd.mm.yy)
+        if (dateString.includes('.')) {
+            var parts = dateString.split('.');
+            if (parts.length === 3) {
+                var day = parts[0];
+                var month = parts[1];
+                var year = parts[2]; // Keep as yy format
+                return day + '.' + month + '.' + year;
+            }
+        }
+        
+        // Fallback for other date formats
         var date = new Date(dateString);
+        if (isNaN(date.getTime())) return 'Invalid Date';
+        
         return date.toLocaleDateString('en-US', {
             year: 'numeric',
             month: 'short',

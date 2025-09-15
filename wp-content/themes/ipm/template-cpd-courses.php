@@ -100,10 +100,9 @@ get_header();
                     </div>
                     
                     <div class="filter-group">
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="my-courses-filter" class="form-checkbox">
-                            <span class="checkmark"></span>
-                            Courses added by me
+                        <label class="custom-checkbox-label">
+                            <input type="checkbox" id="my-courses-filter" name="my-courses" style="margin-right: 10px;" value="1">
+                            <span class="label-text" style="position: relative; top: -2px;">Courses added by me</span>
                         </label>
                     </div>
 

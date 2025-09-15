@@ -45,7 +45,6 @@ get_header();
         <!-- Course Status Filter -->
         <div class="course-filters">
             <div class="filter-group">
-                <label for="status-filter">Status:</label>
                 <select id="status-filter" class="form-control">
                     <option value="">All Status</option>
                     <option value="pending">Pending</option>
@@ -54,7 +53,6 @@ get_header();
                 </select>
             </div>
             <div class="filter-group">
-                <label for="title-search">Search:</label>
                 <input type="text" id="title-search" class="form-control" placeholder="Search course title...">
             </div>
             <button class="btn btn-outline" id="clear-filters">Clear Filters</button>
@@ -136,10 +134,6 @@ get_header();
                     <input type="number" id="course-duration" name="course_duration" class="form-control" required min="1">
                 </div>
                 
-                <div class="form-group">
-                    <label for="course-description">Description</label>
-                    <textarea id="course-description" name="course_description" class="form-control" rows="3"></textarea>
-                </div>
             </form>
         </div>
         
@@ -205,6 +199,7 @@ get_header();
         color: #374151;
         font-size: 14px;
     }
+
 
     .form-control {
         padding: 10px 12px;
@@ -508,8 +503,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 categorySelect.innerHTML = '<option value="">Select Category</option>';
                 data.data.forEach(category => {
                     const option = document.createElement('option');
-                    option.value = category;
-                    option.textContent = category;
+                    option.value = category.name;
+                    option.textContent = category.name;
                     categorySelect.appendChild(option);
                 });
             }
@@ -558,12 +553,12 @@ document.addEventListener('DOMContentLoaded', function() {
             const row = document.createElement('tr');
             row.innerHTML = `
                 <td>${course.course_name || 'N/A'}</td>
-                <td>${course.course_code || 'N/A'}</td>
+                <td>${course.LIA_Code || 'N/A'}</td>
                 <td>${course.course_category || 'N/A'}</td>
-                <td>${course.course_provider || 'N/A'}</td>
-                <td>${course.course_duration || 'N/A'} mins</td>
+                <td>${course.crs_provider || 'N/A'}</td>
+                <td>${course.course_cpd_mins || 'N/A'} mins</td>
                 <td><span class="status-badge status-${course.status}">${course.status}</span></td>
-                <td>${formatDate(course.created_at)}</td>
+                <td>${formatDate(course.course_date)}</td>
                 <td>
                     <div class="action-buttons">
                         <button class="btn btn-outline btn-sm" onclick="editCourse(${course.id})">
@@ -627,9 +622,18 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function saveCourse() {
         const formData = new FormData(courseForm);
-        formData.append('action', 'iipm_add_user_course');
-        formData.append('is_by_admin', '0');
-        formData.append('status', 'pending');
+        const courseId = document.getElementById('course-id').value;
+        
+        if (courseId) {
+            // Editing existing course
+            formData.append('action', 'iipm_update_user_course');
+            formData.append('course_id', courseId);
+        } else {
+            // Adding new course
+            formData.append('action', 'iipm_add_user_course');
+            formData.append('is_by_admin', '0');
+            formData.append('status', 'pending');
+        }
 
         saveCourseBtn.disabled = true;
         saveCourseBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
@@ -643,13 +647,25 @@ document.addEventListener('DOMContentLoaded', function() {
             if (data.success) {
                 closeModal();
                 loadCourses();
+                if (window.notifications) {
+                    const message = courseId ? (data.data || "Course updated successfully!") : "Course added successfully! It will be reviewed by admin.";
+                    notifications.success("Success", message);
+                }
             } else {
-                alert('Error: ' + (data.data || 'Unknown error'));
+                if (window.notifications) {
+                    notifications.error("Error", data.data || 'Unknown error');
+                } else {
+                    alert('Error: ' + (data.data || 'Unknown error'));
+                }
             }
         })
         .catch(error => {
             console.error('Error saving course:', error);
-            alert('Error saving course. Please try again.');
+            if (window.notifications) {
+                notifications.error("Error", "Error saving course. Please try again.");
+            } else {
+                alert('Error saving course. Please try again.');
+            }
         })
         .finally(() => {
             saveCourseBtn.disabled = false;
@@ -674,19 +690,26 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.getElementById('modal-title').textContent = 'Edit Course';
                 document.getElementById('course-id').value = course.id;
                 document.getElementById('course-name').value = course.course_name || '';
-                document.getElementById('course-code').value = course.course_code || '';
+                document.getElementById('course-code').value = course.LIA_Code || '';
                 document.getElementById('course-category').value = course.course_category || '';
-                document.getElementById('course-provider').value = course.course_provider || '';
-                document.getElementById('course-duration').value = course.course_duration || '';
-                document.getElementById('course-description').value = course.course_description || '';
+                document.getElementById('course-provider').value = course.crs_provider || '';
+                document.getElementById('course-duration').value = course.course_cpd_mins || '';
                 courseModal.style.display = 'flex';
             } else {
-                alert('Error loading course: ' + (data.data || 'Unknown error'));
+                if (window.notifications) {
+                    notifications.error("Error", "Error loading course: " + (data.data || 'Unknown error'));
+                } else {
+                    alert('Error loading course: ' + (data.data || 'Unknown error'));
+                }
             }
         })
         .catch(error => {
             console.error('Error loading course:', error);
-            alert('Error loading course. Please try again.');
+            if (window.notifications) {
+                notifications.error("Error", "Error loading course. Please try again.");
+            } else {
+                alert('Error loading course. Please try again.');
+            }
         });
     }
 
@@ -704,19 +727,57 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(data => {
                 if (data.success) {
                     loadCourses();
+                    if (window.notifications) {
+                        notifications.success("Success", "Course deleted successfully!");
+                    }
                 } else {
-                    alert('Error: ' + (data.data || 'Unknown error'));
+                    if (window.notifications) {
+                        notifications.error("Error", data.data || 'Unknown error');
+                    } else {
+                        alert('Error: ' + (data.data || 'Unknown error'));
+                    }
                 }
             })
             .catch(error => {
                 console.error('Error deleting course:', error);
-                alert('Error deleting course. Please try again.');
+                if (window.notifications) {
+                    notifications.error("Error", "Error deleting course. Please try again.");
+                } else {
+                    alert('Error deleting course. Please try again.');
+                }
             });
         }
     }
 
     function formatDate(dateString) {
+        if (!dateString) return 'N/A';
+        
+        // Handle the new date format (dd-mm-yyyy)
+        if (dateString.includes('-')) {
+            const parts = dateString.split('-');
+            if (parts.length === 3) {
+                const day = parts[0];
+                const month = parts[1];
+                const year = parts[2];
+                return `${day}-${month}-${year}`;
+            }
+        }
+        
+        // Handle legacy date format (dd.mm.yy)
+        if (dateString.includes('.')) {
+            const parts = dateString.split('.');
+            if (parts.length === 3) {
+                const day = parts[0];
+                const month = parts[1];
+                const year = parts[2]; // Convert yy to yyyy
+                return `${day}.${month}.${year}`;
+            }
+        }
+        
+        // Fallback for other date formats
         const date = new Date(dateString);
+        if (isNaN(date.getTime())) return 'Invalid Date';
+        
         return date.toLocaleDateString('en-US', {
             year: 'numeric',
             month: 'short',
