@@ -26,7 +26,7 @@ class IIPM_Navigation_Manager {
                 'User Management' => home_url('/user-management/'),
                 'Organisation Management' => home_url('/organisation-management/'),
                 
-                'Bulk Import' => array('url' => home_url('/bulk-import/'), 'badge' => 'working on...'),
+                'Bulk Import' => array('url' => home_url('/bulk-import/')),
                 'CPD Reports' => home_url('/cpd-reports/'),
                 'CPD Administration' => array('url' => home_url('/cpd-admin/'), 'badge' => 'working on...'),
                 'Course Management' => home_url('/course-management/'),

@@ -900,7 +900,7 @@ function iipm_get_recent_imports($user_id, $organisation_id = null) {
 /**
  * FIXED: Process bulk import - Create invitations only, not user accounts
  */
-function iipm_process_bulk_import($file_path, $organisation_id, $options = array()) {
+function iipm_process_bulk_import($file_path, $employer_id, $options = array()) {
 	global $wpdb;
 	
 	$results = array(
@@ -1023,12 +1023,19 @@ function iipm_process_bulk_import($file_path, $organisation_id, $options = array
 				'last_name' => sanitize_text_field($record['last_name']),
 				'email' => sanitize_email($record['email']),
 				'member_type' => 'organisation',
-				'organisation_id' => $organisation_id,
+				'employer_id' => $employer_id,
 				'user_phone' => sanitize_text_field($record['user_phone'] ?? ''),
-				'work_email' => sanitize_email($record['work_email'] ?? ''),
-				'user_mobile' => sanitize_text_field($record['user_mobile'] ?? ''),
-				'employer_name' => sanitize_text_field($record['employer_name'] ?? ''),
-				'professional_designation' => sanitize_text_field($record['professional_designation'] ?? ''),
+				'user_mobile' => sanitize_email($record['user_mobile'] ?? ''),
+				'user_designation' => sanitize_text_field($record['user_designation'] ?? ''),
+                'city_or_town' => sanitize_text_field($record['city_or_town'] ?? ''),
+                'user_payment_method' => sanitize_text_field($record['user_payment_method'] ?? ''),
+                'Address_1' => sanitize_text_field($record['Address_1'] ?? ''),
+                'Address_2' => sanitize_text_field($record['Address_2'] ?? ''),
+                'Address_3' => sanitize_text_field($record['Address_3'] ?? ''),
+                'Address_1_pers' => sanitize_text_field($record['Address_1_pers'] ?? ''),
+                'Address_2_pers' => sanitize_text_field($record['Address_2_pers'] ?? ''),
+                'Address_3_pers' => sanitize_text_field($record['Address_3_pers'] ?? ''),
+                'user_name_login' => sanitize_text_field($record['user_name_login'] ?? ''),
 				'gdpr_consent' => 1,
 				'marketing_consent' => 0
 			);
@@ -1036,7 +1043,7 @@ function iipm_process_bulk_import($file_path, $organisation_id, $options = array
 			// Send bulk invitation with profile data
 			$invitation_result = iipm_send_bulk_invitation(
 				$record['email'], 
-				$organisation_id, 
+				$employer_id, 
 				$profile_data
 			);
 			
@@ -3354,9 +3361,9 @@ function iipm_handle_bulk_import() {
 		return;
 	}
 	
-	$organisation_id = intval($_POST['organisation_id']);
-	if (!$organisation_id) {
-		wp_send_json_error('Organisation ID is required');
+	$employer_id = intval($_POST['organisation_id']);
+	if (!$employer_id) {
+		wp_send_json_error('Employer ID is required');
 		return;
 	}
 	
@@ -3398,7 +3405,7 @@ function iipm_handle_bulk_import() {
 			'total_records' => 0,
 			'import_type' => 'members',
 			'imported_by' => get_current_user_id(),
-			'organisation_id' => $organisation_id,
+			'employer_id' => $employer_id,
 			'status' => 'processing'
 		),
 		array('%s', '%d', '%s', '%d', '%d', '%s')
@@ -3410,7 +3417,7 @@ function iipm_handle_bulk_import() {
 		return;
 	}
 	
-	$result = iipm_process_bulk_import($temp_file, $organisation_id, $options);
+	$result = iipm_process_bulk_import($temp_file, $employer_id, $options);
 	
 	if ($result['success']) {
 		$data = $result['data'];

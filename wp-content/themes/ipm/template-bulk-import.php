@@ -42,13 +42,13 @@ wp_localize_script('iipm-portal-js', 'iipm_ajax', array(
 get_header();
 ?>
 
-<main id="primary" class="site-main">
-    <!-- Hero Section -->
-    <section class="bulk-import-hero">
-        <div class="container">
-            <div class="hero-content">
-                <h1>📊 Bulk Import Members</h1>
-                <p>
+<main id="primary" class="site-main main-container">
+    <div class="container" style="position: relative; z-index: 2;">
+        <!-- Page Header -->
+        <div class="page-header" style="text-align: center; margin-bottom: 40px;">
+            <div>
+                <h1 style="color: white; font-size: 2.5rem; margin-bottom: 10px;">Bulk Import Members</h1>
+                <p style="color: rgba(255,255,255,0.9); font-size: 1.1rem;">
                     <?php if ($is_org_admin && !$is_site_admin): ?>
                         Upload a CSV file to create multiple member accounts for <?php echo esc_html($user_organisation->name); ?>
                     <?php else: ?>
@@ -62,11 +62,7 @@ get_header();
                 <?php endif; ?>
             </div>
         </div>
-    </section>
-
-    <div class="iipm-bulk-import-page">
-        <div class="container">
-            
+        <div>
             <!-- Import Instructions & Form -->
             <div class="import-content">
                 <div class="import-instructions">
@@ -92,10 +88,17 @@ get_header();
                                 <h4>Optional Columns</h4>
                                 <ul class="optional-columns">
                                     <li>user_phone</li>
-                                    <li>work_email</li>
                                     <li>user_mobile</li>
-                                    <li>employer_name</li>
-                                    <li>professional_designation</li>
+                                    <li>user_designation</li>
+                                    <li>city_or_town</li>
+                                    <li>user_payment_method</li>
+                                    <li>Address_1</li>
+                                    <li>Address_2</li>
+                                    <li>Address_3</li>
+                                    <li>Address_1_pers</li>
+                                    <li>Address_2_pers</li>
+                                    <li>Address_3_pers</li>
+                                    <li>user_name_login</li>
                                 </ul>
                             </div>
                         </div>
@@ -337,7 +340,7 @@ get_header();
                         <button id="import-another" class="btn btn-secondary">
                             📁 Import Another File
                         </button>
-                        <a href="<?php echo home_url('/member-portal/'); ?>" class="btn btn-primary">
+                        <a href="<?php echo home_url('/dashboard/'); ?>" class="btn btn-primary">
                             🏠 Back to Dashboard
                         </a>
                     </div>
@@ -405,9 +408,35 @@ get_header();
                         </tbody>
                     </table>
                 </div>
-            </div>
+            </div>            
         </div>
     </div>
+    <!-- Hero Section -->
+    <!-- <section class="bulk-import-hero">
+        <div class="container">
+            <div class="hero-content">
+                <h1>📊 Bulk Import Members</h1>
+                <p>
+                    <?php if ($is_org_admin && !$is_site_admin): ?>
+                        Upload a CSV file to create multiple member accounts for <?php echo esc_html($user_organisation->name); ?>
+                    <?php else: ?>
+                        Upload a CSV file to create multiple member accounts at once
+                    <?php endif; ?>
+                </p>
+                <?php if ($user_organisation): ?>
+                    <div class="organisation-info">
+                        <span class="org-badge">🏢 <?php echo esc_html($user_organisation->name); ?></span>
+                    </div>
+                <?php endif; ?>
+            </div>
+        </div>
+    </section> -->
+
+    <!-- <div class="iipm-bulk-import-page">
+        <div class="container">
+        
+        </div>
+    </div> -->
 </main>
 
 <!-- Error Modal -->
@@ -1287,6 +1316,7 @@ get_header();
 <script>
 jQuery(document).ready(function($) {
     let importResults = null;
+    let isSubmitting = false;
     var isOrgAdmin = <?php echo json_encode($is_org_admin && !$is_site_admin); ?>;
     var userOrganisationId = <?php echo json_encode($user_organisation ? $user_organisation->id : null); ?>;
     
@@ -1317,8 +1347,19 @@ jQuery(document).ready(function($) {
     });
     
     // Form submission
-    $('#iipm-bulk-import-form').submit(function(e) {
+    $('#iipm-bulk-import-form').off('submit').on('submit', function(e) {
+        console.log("Form submission intercepted by enhanced handler");
+
         e.preventDefault();
+        e.stopImmediatePropagation();
+        
+        // Prevent multiple submissions
+        if (isSubmitting) {
+            console.log("Form already submitting, ignoring duplicate submission");
+            return false;
+        }
+        
+        isSubmitting = true;
         
         const $form = $(this);
         const $submitBtn = $form.find('button[type="submit"]');
@@ -1338,7 +1379,7 @@ jQuery(document).ready(function($) {
         }
         
         // Show loading state
-        $submitBtn.addClass('loading');
+        $submitBtn.addClass('loading').prop('disabled', true);
         $form.hide();
         $('#import-progress').show();
         
@@ -1369,10 +1410,16 @@ jQuery(document).ready(function($) {
                         importResults = response.data;
                         displayResults(response.data);
                         $('#import-results').show();
+                        
+                        // Reload page after 3 seconds to show updated data
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 3000);
                     } else {
                         alert('Error: ' + response.data);
                         $form.show();
                     }
+                    isSubmitting = false; // Reset submission flag
                 }, 1000);
             },
             error: function(xhr, status, error) {
@@ -1381,9 +1428,10 @@ jQuery(document).ready(function($) {
                 alert('An error occurred during import. Please try again.');
                 $('#import-progress').hide();
                 $form.show();
+                isSubmitting = false; // Reset submission flag
             },
             complete: function() {
-                $submitBtn.removeClass('loading');
+                $submitBtn.removeClass('loading').prop('disabled', false);
             }
         });
     });

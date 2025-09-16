@@ -12,18 +12,18 @@ if (!current_user_can('manage_iipm_members') && !current_user_can('administrator
 get_header();
 ?>
 
-<div class="cpd-admin-portal">
-    <!-- Admin Header -->
-    <section class="admin-hero">
-        <div class="container">
-            <div class="hero-content">
-                <h1 class="admin-title">CPD Administration Portal</h1>
-                <p class="admin-subtitle">Manage CPD courses, review submissions, and generate reports</p>
+<div class="cpd-admin-portal main-container">
+    <div class="container" style="position: relative; z-index: 2;">
+        <!-- Page Header -->
+        <div class="page-header" style="text-align: center; margin-bottom: 40px;">
+            <div>
+                <h1 style="color: white; font-size: 2.5rem; margin-bottom: 10px;">CPD Administration Portal</h1>
+                <p style="color: rgba(255,255,255,0.9); font-size: 1.1rem;">
+                    Review CPD submissions and manage certificates
+                </p>
             </div>
         </div>
-    </section>
-
-    <div class="container">
+        <div>
         <!-- Admin Navigation -->
         <div class="admin-nav">
             <button class="nav-btn active" data-section="submissions">
@@ -31,21 +31,9 @@ get_header();
                 Review Submissions
                 <span class="badge" id="pending-count">0</span>
             </button>
-            <button class="nav-btn" data-section="courses">
-                <span class="icon"><i class="fas fa-book"></i></span>
-                Manage Courses
-            </button>
-            <button class="nav-btn" data-section="reports">
-                <span class="icon"><i class="fas fa-chart-bar"></i></span>
-                CPD Reports
-            </button>
             <button class="nav-btn" data-section="certificates">
                 <span class="icon"><i class="fas fa-graduation-cap"></i></span>
                 Certificates
-            </button>
-            <button class="nav-btn" data-section="bulk-import">
-                <span class="icon">📤</span>
-                Bulk Import
             </button>
         </div>
 
@@ -67,125 +55,7 @@ get_header();
             </div>
         </div>
 
-        <!-- Course Management Section -->
-        <div id="courses-section" class="admin-section">
-            <div class="section-header">
-                <h2>Course Management</h2>
-                <div class="section-actions">
-                    <button class="btn btn-primary" id="add-course-btn">
-                        <span class="icon"><i class="fas fa-plus"></i></span>
-                        Add New Course
-                    </button>
-                </div>
-            </div>
-            
-            <!-- Course Management Content -->
-            <div class="course-management-content">
-                <!-- Filters and Search -->
-                <div class="course-filters">
-                    <div class="filter-group">
-                        <label for="category-filter">Category:</label>
-                        <select id="category-filter" class="form-control">
-                            <option value="all">All Categories</option>
-                        </select>
-                    </div>
-                    <div class="filter-group">
-                        <label for="provider-filter">Provider:</label>
-                        <select id="provider-filter" class="form-control">
-                            <option value="all">All Providers</option>
-                        </select>
-                    </div>
-                    <div class="filter-group">
-                        <label for="search-courses">Search:</label>
-                        <div class="search-input-group">
-                            <input type="text" id="search-courses" class="form-control" placeholder="Search courses...">
-                            <button class="btn btn-primary" id="search-button" type="button">
-                                <span class="btn-icon"><i class="fas fa-search"></i></span>
-                                Search
-                            </button>
-                        </div>
-                    </div>
-                    <div class="filter-group">
-                        <button class="btn btn-outline" id="clear-filters">Clear Filters</button>
-                    </div>
-                </div>
 
-                <!-- Course List -->
-                <div class="course-list-container">
-                    <div class="course-list-header">
-                        <div class="list-info">
-                            <span id="course-count">Loading courses...</span>
-                        </div>
-                        <div class="list-actions">
-                            <div class="view-toggle">
-                                <button class="btn btn-outline view-btn active" id="card-view-btn" data-view="card">
-                                    <span class="btn-icon"><i class="fas fa-clipboard-list"></i></span>
-                                    Card View
-                                </button>
-                                <button class="btn btn-outline view-btn" id="table-view-btn" data-view="table">
-                                    <span class="btn-icon"><i class="fas fa-chart-bar"></i></span>
-                                    Table View
-                                </button>
-                            </div>
-                            <button class="btn btn-outline" id="refresh-courses">
-                                <span class="btn-icon"><i class="fas fa-sync-alt"></i></span>
-                                Refresh
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <div class="course-list" id="course-list">
-                        <div class="loading-state">
-                            <div class="loading-spinner"></div>
-                            <p>Loading courses...</p>
-                        </div>
-                    </div>
-                    
-                    <!-- Table View -->
-                    <div class="table-container" id="table-container" style="display: none;">
-                        <table class="courses-table" id="courses-table">
-                            <thead>
-                                <tr>
-                                    <th>Course Name</th>
-                                    <th>Code</th>
-                                    <th>Category</th>
-                                    <th>Provider</th>
-                                    <th>Duration (CPD mins)</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="courses-table-body">
-                                <!-- Course rows will be populated here -->
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Reports Section -->
-        <div id="reports-section" class="admin-section">
-            <div class="section-header">
-                <h2>CPD Reports</h2>
-            </div>
-            <div class="reports-grid">
-                <div class="report-card">
-                    <h3>Compliance Report</h3>
-                    <p>View member CPD compliance status</p>
-                    <button class="btn btn-outline" onclick="generateComplianceReport()">Generate Report</button>
-                </div>
-                <div class="report-card">
-                    <h3>Course Popularity</h3>
-                    <p>Most popular CPD courses</p>
-                    <button class="btn btn-outline" onclick="generatePopularityReport()">Generate Report</button>
-                </div>
-                <div class="report-card">
-                    <h3>Provider Analysis</h3>
-                    <p>CPD points by provider</p>
-                    <button class="btn btn-outline" onclick="generateProviderReport()">Generate Report</button>
-                </div>
-            </div>
-        </div>
 
         <!-- Certificate Management Section -->
         <div id="certificates-section" class="admin-section">
@@ -248,146 +118,7 @@ get_header();
             </div>
         </div>
 
-        <!-- Bulk Import Section -->
-        <div id="bulk-import-section" class="admin-section">
-            <div class="section-header">
-                <h2>Bulk Import LIA Courses</h2>
-                <div class="header-notice">
-                    <div class="notice-content">
-                        <span class="notice-icon">💡</span>
-                        <div class="notice-text">
-                            <strong>Enhanced Course Import Available!</strong>
-                            <p>Use our advanced Course Import Management system for better features, statistics, and bulk operations.</p>
-                        </div>
-                        <a href="<?php echo home_url('/course-management/'); ?>" class="btn btn-gradient">
-                            <span class="btn-icon">🚀</span>
-                            Go to Course Import
-                        </a>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="import-alternatives">
-                <div class="alternative-option">
-                    <h3>🔗 Advanced Course Import</h3>
-                    <p>For comprehensive course management with enhanced features:</p>
-                    <ul>
-                        <li>✅ Better CSV validation and error handling</li>
-                        <li>✅ Course statistics and analytics</li>
-                        <li>✅ Provider-based organization</li>
-                        <li>✅ Sample CSV templates</li>
-                        <li>✅ Duplicate detection and management</li>
-                    </ul>
-                    <a href="<?php echo home_url('/course-management/'); ?>" class="btn btn-primary btn-large">
-                        <span>📊</span> Use Advanced Import System
-                    </a>
-                </div>
-                
-                <div class="alternative-divider">
-                    <span>OR</span>
-                </div>
-                
-                <div class="alternative-option">
-                    <h3>⚡ Quick Import (Legacy)</h3>
-                    <p>For simple, direct course imports (basic functionality):</p>
-                    
-                    <div class="import-instructions">
-                        <h4>Quick Import Instructions</h4>
-                        <ul>
-                            <li>Download the LIA course template CSV file</li>
-                            <li>Fill in course details: course_name, provider, category, cpd_points, course_code, description</li>
-                            <li>Upload the completed CSV file</li>
-                            <li>Review and confirm the import</li>
-                        </ul>
-                        <a href="<?php echo get_template_directory_uri(); ?>/assets/lia-courses-template.csv" class="btn btn-outline" download>
-                            📥 Download Template
-                        </a>
-                    </div>
-                    
-                    <form id="bulk-import-form" enctype="multipart/form-data">
-                        <div class="form-group">
-                            <label for="lia-courses-file">Select CSV File</label>
-                            <input type="file" id="lia-courses-file" name="lia_courses_file" accept=".csv" required>
-                        </div>
-                        <button type="submit" class="btn btn-secondary">
-                            <span class="btn-text">Import Courses (Legacy)</span>
-                            <span class="btn-loading" style="display: none;">Importing...</span>
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </div>
 
-        <!-- Add/Edit Course Modal -->
-        <div class="modal" id="course-modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3 id="modal-title">Add New Course</h3>
-                    <button class="modal-close" id="close-modal">×</button>
-                </div>
-                <div class="modal-body">
-                    <form id="course-form">
-                        <input type="hidden" id="course-id" name="course_id">
-                        
-                        <div class="form-group">
-                            <label for="course-name">Course Name *</label>
-                            <input type="text" id="course-name" name="course_name" class="form-control" required>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="course-code">Course Code</label>
-                            <input type="text" id="course-code" name="course_code" class="form-control">
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="course-category">Category *</label>
-                            <select id="course-category" name="course_category" class="form-control" required>
-                                <option value="">Select Category</option>
-                            </select>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="course-provider">Provider *</label>
-                            <input type="text" id="course-provider" name="course_provider" class="form-control" required>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="course-duration">Duration (CPD mins) *</label>
-                            <input type="number" id="course-duration" name="course_cpd_mins" class="form-control" min="1" step="1" required>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-outline" id="cancel-course">Cancel</button>
-                    <button type="button" class="btn btn-primary" id="save-course">
-                        <span class="btn-icon">💾</span>
-                        Save Course
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Delete Confirmation Modal -->
-        <div class="modal" id="delete-modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>Delete Course</h3>
-                    <button class="modal-close" id="close-delete-modal">×</button>
-                </div>
-                <div class="modal-body">
-                    <p>Are you sure you want to delete this course?</p>
-                    <div class="course-preview" id="delete-course-preview"></div>
-                    <p class="warning-text">This action cannot be undone.</p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-outline" id="cancel-delete">Cancel</button>
-                    <button type="button" class="btn btn-danger" id="confirm-delete">
-                        <span class="btn-icon">🗑️</span>
-                        Delete Course
-                    </button>
-                </div>
-            </div>
-        </div>
 
         <!-- Review Modal -->
         <div id="review-modal" class="modal">
@@ -419,17 +150,14 @@ get_header();
                     </form>
                 </div>
             </div>
+        </div>            
         </div>
-
-
     </div>
 </div>
 
 <style>
 /* CPD Admin Portal Styles */
 .cpd-admin-portal {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    background: #f8fafc;
     min-height: 100vh;
 }
 
@@ -636,190 +364,7 @@ get_header();
     color: #1f2937;
 }
 
-/* Courses Table Styles */
-.courses-table {
-    overflow-x: auto;
-    border-radius: 12px;
-    border: 1px solid #e5e7eb;
-    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
-    margin-top: 20px;
-}
 
-.courses-table table {
-    width: 100%;
-    border-collapse: collapse;
-    background: white;
-    min-width: 800px;
-}
-
-.courses-table th,
-.courses-table td {
-    padding: 16px 20px;
-    text-align: left;
-    border-bottom: 1px solid #f3f4f6;
-    vertical-align: middle;
-}
-
-.courses-table th {
-    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-    font-weight: 600;
-    color: #1e293b;
-    font-size: 0.875rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    position: sticky;
-    top: 0;
-    z-index: 10;
-    border-bottom: 2px solid #e2e8f0;
-}
-
-.courses-table tbody tr {
-    transition: all 0.2s ease;
-}
-
-.courses-table tbody tr:hover {
-    background: #f8fafc;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.courses-table tbody tr:last-child td {
-    border-bottom: none;
-}
-
-.courses-table td:first-child {
-    font-weight: 500;
-    color: #1e293b;
-}
-
-.courses-table td:nth-child(2) {
-    color: #64748b;
-    font-size: 0.9rem;
-}
-
-.courses-table td:nth-child(3) {
-    font-size: 0.9rem;
-}
-
-.courses-table td:nth-child(4) {
-    font-weight: 600;
-    color: #8b5a96;
-}
-
-.courses-table .status {
-    display: inline-flex;
-    align-items: center;
-    padding: 6px 12px;
-    border-radius: 20px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    min-width: 80px;
-    justify-content: center;
-}
-
-.courses-table .status.active {
-    background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
-    color: #065f46;
-    border: 1px solid #34d399;
-}
-
-.courses-table .status.inactive {
-    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-    color: #991b1b;
-    border: 1px solid #f87171;
-}
-
-.courses-table .actions-cell {
-    white-space: nowrap;
-}
-
-.courses-table .actions-cell .btn {
-    margin-right: 8px;
-    padding: 8px 16px;
-    font-size: 0.8rem;
-    border-radius: 6px;
-    font-weight: 500;
-    transition: all 0.2s ease;
-    border: none;
-    cursor: pointer;
-    text-decoration: none;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-}
-
-.courses-table .actions-cell .btn:last-child {
-    margin-right: 0;
-}
-
-.courses-table .actions-cell .btn:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-.courses-table .actions-cell .btn-edit {
-    background: linear-gradient(135deg, #8b5a96 0%, #7c5087 100%);
-    color: white;
-}
-
-.courses-table .actions-cell .btn-edit:hover {
-    background: linear-gradient(135deg, #7c5087 0%, #6d4578 100%);
-}
-
-.courses-table .actions-cell .btn-delete {
-    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-    color: white;
-}
-
-.courses-table .actions-cell .btn-delete:hover {
-    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
-}
-
-/* Loading State */
-.courses-table .loading-row {
-    text-align: center;
-    padding: 40px 20px;
-    color: #6b7280;
-    font-style: italic;
-}
-
-/* Empty State */
-.courses-table .empty-state {
-    text-align: center;
-    padding: 60px 20px;
-}
-
-.courses-table .empty-state h3 {
-    color: #374151;
-    margin-bottom: 8px;
-}
-
-.courses-table .empty-state p {
-    color: #6b7280;
-    margin-bottom: 20px;
-}
-
-.courses-table .empty-state a {
-    color: #8b5a96;
-    text-decoration: none;
-    font-weight: 500;
-}
-
-.courses-table .empty-state a:hover {
-    text-decoration: underline;
-}
-
-/* Search and Filter Styles */
-.courses-filters {
-    background: white;
-    border: 1px solid #e5e7eb;
-    border-radius: 12px;
-    padding: 24px;
-    margin: 20px 0;
-    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
-}
 
 .filters-row {
     display: grid;
@@ -1443,26 +988,7 @@ get_header();
     font-size: 0.9rem;
 }
 
-/* Course Management Content Styles */
-.course-management-content {
-    background: white;
-    border-radius: 12px;
-    padding: 24px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
 
-/* Course Filters */
-.course-filters {
-    display: flex;
-    gap: 20px;
-    margin-bottom: 30px;
-    padding: 20px;
-    background: #f8fafc;
-    border-radius: 12px;
-    border: 1px solid #e2e8f0;
-    flex-wrap: wrap;
-    align-items: end;
-}
 
 .filter-group {
     display: flex;
@@ -1501,55 +1027,6 @@ get_header();
     overflow: hidden;
 }
 
-.course-list-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 20px;
-    background: #f8fafc;
-    border-bottom: 1px solid #e2e8f0;
-}
-
-.list-info {
-    font-weight: 500;
-    color: #6b7280;
-}
-
-.list-actions {
-    display: flex;
-    gap: 12px;
-    align-items: center;
-}
-
-.view-toggle {
-    display: flex;
-    gap: 4px;
-}
-
-.view-btn {
-    padding: 8px 16px;
-    font-size: 0.875rem;
-    border-radius: 6px;
-    transition: all 0.2s ease;
-}
-
-.view-btn.active {
-    background: #8b5a96;
-    color: white;
-    border-color: #8b5a96;
-}
-
-/* Course List */
-.course-list {
-    padding: 20px;
-    min-height: 200px;
-}
-
-.loading-state {
-    text-align: center;
-    padding: 40px 20px;
-    color: #6b7280;
-}
 
 .loading-spinner {
     width: 40px;
@@ -1566,114 +1043,12 @@ get_header();
     100% { transform: rotate(360deg); }
 }
 
-/* Course Cards */
-.course-card {
-    background: white;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    padding: 20px;
-    margin-bottom: 16px;
-    transition: all 0.2s ease;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.course-card:hover {
-    border-color: #8b5a96;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(139, 90, 150, 0.15);
-}
-
-.course-card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 12px;
-}
-
-.course-name {
-    font-size: 1.125rem;
-    font-weight: 600;
-    color: #1f2937;
-    margin: 0;
-}
-
-.course-actions {
-    display: flex;
-    gap: 8px;
-}
-
-.course-meta {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 12px;
-    margin-bottom: 16px;
-}
-
-.meta-item {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-
-.meta-label {
-    font-size: 0.75rem;
-    font-weight: 500;
-    color: #6b7280;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
 
 .meta-value {
     font-weight: 500;
     color: #1f2937;
 }
 
-/* Table View */
-.table-container {
-    overflow-x: auto;
-}
-
-.courses-table {
-    width: 100%;
-    border-collapse: collapse;
-    background: white;
-}
-
-.courses-table th,
-.courses-table td {
-    padding: 16px 20px;
-    text-align: left;
-    border-bottom: 1px solid #f3f4f6;
-    vertical-align: middle;
-}
-
-.courses-table th {
-    background: #f8fafc;
-    font-weight: 600;
-    color: #1e293b;
-    font-size: 0.875rem;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    border-bottom: 2px solid #e2e8f0;
-}
-
-.courses-table tbody tr {
-    transition: all 0.2s ease;
-}
-
-.courses-table tbody tr:hover {
-    background: #f8fafc;
-}
-
-.courses-table td:first-child {
-    font-weight: 500;
-    color: #1e293b;
-}
-
-.course-name-cell {
-    font-weight: 500;
-    color: #1e293b;
-}
 
 .course-description-small {
     font-size: 0.875rem;
@@ -1932,31 +1307,7 @@ get_header();
 }
 
 @media (max-width: 768px) {
-    .courses-table {
-        margin: 20px -20px 0;
-        border-radius: 0;
-        border-left: none;
-        border-right: none;
-    }
     
-    .courses-table th,
-    .courses-table td {
-        padding: 12px 16px;
-        font-size: 0.85rem;
-    }
-    
-    .courses-table .actions-cell .btn {
-        padding: 6px 12px;
-        font-size: 0.75rem;
-        margin-right: 4px;
-    }
-    
-    .courses-filters {
-        margin: 20px -20px;
-        border-radius: 0;
-        border-left: none;
-        border-right: none;
-    }
     
     .pagination-container {
         margin: 20px -20px;
@@ -2024,11 +1375,6 @@ get_header();
     }
 }
 
-.reports-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 24px;
-}
 
 .report-card {
     border: 1px solid #e5e7eb;
@@ -2336,15 +1682,6 @@ jQuery(document).ready(function($) {
             case 'submissions':
                 loadSubmissions();
                 break;
-            case 'courses':
-                loadCourses();
-                break;
-            case 'reports':
-                // Reports are static for now
-                break;
-            case 'bulk-import':
-                // Bulk import is static form
-                break;
         }
     }
     
@@ -2423,156 +1760,8 @@ jQuery(document).ready(function($) {
         $('#submissions-content').html(html);
     }
     
-    // Course Management Variables
-    let courses = [];
-    let categories = [];
-    let providers = [];
-    let currentCourseId = null;
-    let isLoading = false;
-    let hasMoreCourses = true;
-    let coursesPerPage = 10;
-    let currentView = 'card'; // 'card' or 'table'
     
-    // Course Management Functions
-    function loadCourses() {
-        if (isLoading) return;
-        
-        isLoading = true;
-        showLoading();
-        
-        const ajaxData = {
-            action: 'iipm_get_all_courses_paginated',
-            page: currentPage,
-            per_page: coursesPerPage,
-            nonce: iipm_ajax.nonce
-        };
-        
-        // Add filter parameters
-        const categoryFilter = $('#category-filter').val();
-        const providerFilter = $('#provider-filter').val();
-        const searchTerm = $('#search-courses').val();
-        
-        if (categoryFilter && categoryFilter !== 'all') {
-            ajaxData.category_filter = categoryFilter;
-        }
-        if (providerFilter && providerFilter !== 'all') {
-            ajaxData.provider_filter = providerFilter;
-        }
-        if (searchTerm) {
-            ajaxData.search_term = searchTerm;
-        }
-        
-        $.ajax({
-            url: iipm_ajax.ajax_url,
-            type: 'POST',
-            data: ajaxData,
-            success: function(response) {
-                if (response.success) {
-                    const data = response.data;
-                    
-                    if (currentPage === 1) {
-                        courses = data.courses || [];
-                    } else {
-                        courses = courses.concat(data.courses || []);
-                    }
-                    
-                    hasMoreCourses = data.pagination && data.pagination.page < data.pagination.total_pages;
-                    updateCourseCount(data.pagination);
-                    displayCourses(courses);
-                    
-                    if (currentPage === 1) {
-                        loadCategories();
-                        loadProviders();
-                    }
-                } else {
-                    showError('Failed to load courses');
-                }
-            },
-            error: function() {
-                showError('Failed to load courses');
-            },
-            complete: function() {
-                isLoading = false;
-                hideLoading();
-            }
-        });
-    }
     
-    function loadCategories() {
-        $.ajax({
-            url: iipm_ajax.ajax_url,
-            type: 'POST',
-            data: {
-                action: 'iipm_get_categories',
-                nonce: iipm_ajax.nonce
-            },
-            success: function(response) {
-                if (response.success) {
-                    categories = response.data;
-                    updateCategorySelects();
-                }
-            }
-        });
-    }
-    
-    function loadProviders() {
-        $.ajax({
-            url: iipm_ajax.ajax_url,
-            type: 'POST',
-            data: {
-                action: 'iipm_get_providers',
-                nonce: iipm_ajax.nonce
-            },
-            success: function(response) {
-                if (response.success) {
-                    providers = response.data;
-                    updateProviderSelects();
-                }
-            }
-        });
-    }
-    
-    function updateCategorySelects() {
-        const $selects = $('#category-filter, #course-category');
-        $selects.each(function() {
-            const $select = $(this);
-            const currentValue = $select.val();
-            
-            // Clear existing options except first
-            $select.find('option:not(:first)').remove();
-            
-            // Add category options
-            categories.forEach(function(category) {
-                $select.append(`<option value="${category.id}">${category.name}</option>`);
-            });
-            
-            // Restore previous value if it exists
-            if (currentValue) {
-                $select.val(currentValue);
-            }
-        });
-    }
-    
-    function updateProviderSelects() {
-        const $selects = $('#provider-filter');
-        $selects.each(function() {
-            const $select = $(this);
-            const currentValue = $select.val();
-            
-            // Clear existing options except first
-            $select.find('option:not(:first)').remove();
-            
-            // Add provider options
-            providers.forEach(function(provider) {
-                $select.append(`<option value="${provider}">${provider}</option>`);
-            });
-            
-            // Restore previous value if it exists
-            if (currentValue) {
-                $select.val(currentValue);
-            }
-        });
-    }
     
     // Update pending count badge
     function updatePendingCount() {
@@ -2662,41 +1851,6 @@ jQuery(document).ready(function($) {
     
 
     
-    // Bulk import form
-    $('#bulk-import-form').submit(function(e) {
-        e.preventDefault();
-        
-        const $form = $(this);
-        const $submitBtn = $form.find('button[type="submit"]');
-        const formData = new FormData(this);
-        formData.append('action', 'iipm_bulk_import_lia_courses');
-        formData.append('nonce', iipm_ajax.cpd_admin_nonce);
-        
-        $submitBtn.addClass('loading');
-        
-        $.ajax({
-            url: iipm_ajax.ajax_url,
-            type: 'POST',
-            data: formData,
-            processData: false,
-            contentType: false,
-            success: function(response) {
-                if (response.success) {
-                    const data = response.data;
-                    showAlert(`Import completed: ${data.successful} successful, ${data.failed} failed`, 'success');
-                    $form[0].reset();
-                } else {
-                    showAlert('Error: ' + response.data, 'error');
-                }
-            },
-            error: function() {
-                showAlert('Import failed', 'error');
-            },
-            complete: function() {
-                $submitBtn.removeClass('loading');
-            }
-        });
-    });
     
     // Modal handlers
     $('.modal-close').click(function() {
@@ -2714,368 +1868,8 @@ jQuery(document).ready(function($) {
         loadSubmissions();
     });
     
-    // Course Management Display Functions
-    function displayCourses(coursesToShow) {
-        if (currentView === 'card') {
-            displayCardView(coursesToShow);
-        } else {
-            displayTableView(coursesToShow);
-        }
-        setupCourseEventListeners();
-    }
     
-    function displayCardView(coursesToShow) {
-        let html = '';
-        
-        if (coursesToShow && coursesToShow.length > 0) {
-            coursesToShow.forEach(function(course) {
-                html += `
-                    <div class="course-card" data-course-id="${course.id}">
-                        <div class="course-card-header">
-                            <h3 class="course-name">${course.course_name}</h3>
-                            <div class="course-actions">
-                                <button class="btn btn-outline btn-sm edit-course-btn" data-course-id="${course.id}">
-                                    <span class="btn-icon">✏️</span>
-                                    Edit
-                                </button>
-                                <button class="btn btn-danger btn-sm delete-course-btn" data-course-id="${course.id}">
-                                    <span class="btn-icon">🗑️</span>
-                                    Delete
-                                </button>
-                            </div>
-                        </div>
-                        <div class="course-meta">
-                            <div class="meta-item">
-                                <span class="meta-label">Code</span>
-                                <span class="meta-value">${course.LIA_Code || 'N/A'}</span>
-                            </div>
-                            <div class="meta-item">
-                                <span class="meta-label">Category</span>
-                                <span class="meta-value">${course.course_category || 'N/A'}</span>
-                            </div>
-                            <div class="meta-item">
-                                <span class="meta-label">Provider</span>
-                                <span class="meta-value">${course.crs_provider || 'N/A'}</span>
-                            </div>
-                            <div class="meta-item">
-                                <span class="meta-label">Duration</span>
-                                <span class="meta-value">${course.course_cpd_mins} CPD mins</span>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            });
-        } else {
-            html = `
-                <div class="empty-state">
-                    <h3>No courses found</h3>
-                    <p>Start by adding your first course to the database.</p>
-                    <button class="btn btn-primary" id="add-first-course">
-                        <span class="btn-icon">➕</span>
-                        Add First Course
-                    </button>
-                </div>
-            `;
-        }
-        
-        $('#course-list').html(html);
-    }
     
-    function displayTableView(coursesToShow) {
-        let html = '';
-        
-        if (coursesToShow && coursesToShow.length > 0) {
-            coursesToShow.forEach(function(course) {
-                html += `
-                    <tr data-course-id="${course.id}">
-                        <td class="course-name-cell">
-                            <strong>${course.course_name}</strong>
-                        </td>
-                        <td>${course.LIA_Code || 'N/A'}</td>
-                        <td>${course.course_category || 'N/A'}</td>
-                        <td>${course.crs_provider || 'N/A'}</td>
-                        <td>${course.course_cpd_mins} CPD mins</td>
-                        <td>
-                            <button class="btn btn-outline btn-sm edit-course-btn" data-course-id="${course.id}">
-                                <span class="btn-icon">✏️</span>
-                                Edit
-                            </button>
-                            <button class="btn btn-danger btn-sm delete-course-btn" data-course-id="${course.id}">
-                                <span class="btn-icon">🗑️</span>
-                                Delete
-                            </button>
-                        </td>
-                    </tr>
-                `;
-            });
-        } else {
-            html = `
-                <tr>
-                    <td colspan="6" class="text-center">
-                        <div class="empty-state">
-                            <h3>No courses found</h3>
-                            <p>Start by adding your first course to the database.</p>
-                            <button class="btn btn-primary" id="add-first-course">
-                                <span class="btn-icon">➕</span>
-                                Add First Course
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-            `;
-        }
-        
-        $('#courses-table-body').html(html);
-    }
-    
-    function setupCourseEventListeners() {
-        // Edit course buttons
-        $('.edit-course-btn').off('click').on('click', function() {
-            const courseId = $(this).data('course-id');
-            editCourse(courseId);
-        });
-        
-        // Delete course buttons
-        $('.delete-course-btn').off('click').on('click', function() {
-            const courseId = $(this).data('course-id');
-            deleteCourse(courseId);
-        });
-        
-        // Add first course button
-        $('#add-first-course').off('click').on('click', function() {
-            openAddCourseModal();
-        });
-    }
-    
-    function editCourse(courseId) {
-        const course = courses.find(c => c.id == courseId);
-        if (!course) return;
-        
-        currentCourseId = courseId;
-        $('#modal-title').text('Edit Course');
-        $('#course-id').val(course.id);
-        $('#course-name').val(course.course_name);
-        $('#course-code').val(course.LIA_Code || '');
-        $('#course-provider').val(course.crs_provider || '');
-        $('#course-duration').val(course.course_cpd_mins || '');
-        
-        // Set category
-        const categoryId = categories.find(c => c.name === course.course_category)?.id;
-        if (categoryId) {
-            $('#course-category').val(categoryId);
-        }
-        
-        $('#course-modal').show();
-    }
-    
-    function deleteCourse(courseId) {
-        const course = courses.find(c => c.id == courseId);
-        if (!course) return;
-        
-        currentCourseId = courseId;
-        $('#delete-course-preview').html(`
-            <strong>${course.course_name}</strong><br>
-            <small>Provider: ${course.crs_provider || 'N/A'}</small>
-        `);
-        $('#delete-modal').show();
-    }
-    
-    function openAddCourseModal() {
-        currentCourseId = null;
-        $('#modal-title').text('Add New Course');
-        $('#course-form')[0].reset();
-        $('#course-modal').show();
-    }
-    
-    function saveCourse() {
-        const formData = {
-            action: currentCourseId ? 'iipm_update_course_v1' : 'iipm_add_course',
-            course_id: $('#course-id').val(),
-            course_name: $('#course-name').val(),
-            course_code: $('#course-code').val(),
-            course_category: $('#course-category').val(),
-            course_provider: $('#course-provider').val(),
-            course_cpd_mins: $('#course-duration').val(),
-            nonce: iipm_ajax.nonce
-        };
-        
-        // Validate required fields
-        if (!formData.course_name || !formData.course_category || !formData.course_provider || !formData.course_cpd_mins) {
-            showError('Please fill in all required fields');
-            return;
-        }
-        
-        $.ajax({
-            url: iipm_ajax.ajax_url,
-            type: 'POST',
-            data: formData,
-            success: function(response) {
-                if (response.success) {
-                    showSuccess(currentCourseId ? 'Course updated successfully!' : 'Course added successfully!');
-                    $('#course-modal').hide();
-                    currentPage = 1;
-                    courses = [];
-                    loadCourses();
-                } else {
-                    showError(response.data || 'Failed to save course');
-                }
-            },
-            error: function() {
-                showError('Failed to save course');
-            }
-        });
-    }
-    
-    function confirmDelete() {
-        $.ajax({
-            url: iipm_ajax.ajax_url,
-            type: 'POST',
-            data: {
-                action: 'iipm_delete_course_v1',
-                course_id: currentCourseId,
-                nonce: iipm_ajax.nonce
-            },
-            success: function(response) {
-                if (response.success) {
-                    showSuccess('Course deleted successfully!');
-                    $('#delete-modal').hide();
-                    currentPage = 1;
-                    courses = [];
-                    loadCourses();
-                } else {
-                    showError(response.data || 'Failed to delete course');
-                }
-            },
-            error: function() {
-                showError('Failed to delete course');
-            }
-        });
-    }
-    
-    function filterCourses() {
-        currentPage = 1;
-        courses = [];
-        loadCourses();
-    }
-    
-    function clearFilters() {
-        $('#category-filter').val('all');
-        $('#provider-filter').val('all');
-        $('#search-courses').val('');
-        filterCourses();
-    }
-    
-    function updateCourseCount(pagination) {
-        if (pagination) {
-            const total = pagination.total;
-            const current = courses.length;
-            $('#course-count').text(`Showing ${current} of ${total} courses`);
-        }
-    }
-    
-    function showLoading() {
-        if (currentView === 'card') {
-            $('#course-list').html(`
-                <div class="loading-state">
-                    <div class="loading-spinner"></div>
-                    <p>Loading courses...</p>
-                </div>
-            `);
-        } else {
-            $('#courses-table-body').html(`
-                <tr>
-                    <td colspan="6" class="text-center">
-                        <div class="loading-state">
-                            <div class="loading-spinner"></div>
-                            <p>Loading courses...</p>
-                        </div>
-                    </td>
-                </tr>
-            `);
-        }
-    }
-    
-    function hideLoading() {
-        // Loading state is replaced by displayCourses
-    }
-    
-    function showSuccess(message) {
-        showAlert(message, 'success');
-    }
-    
-    function showError(message) {
-        showAlert(message, 'error');
-    }
-    
-    // Course Management Event Listeners
-    $('#add-course-btn').click(function() {
-        openAddCourseModal();
-    });
-    
-    $('#save-course').click(function() {
-        saveCourse();
-    });
-    
-    $('#cancel-course').click(function() {
-        $('#course-modal').hide();
-    });
-    
-    $('#confirm-delete').click(function() {
-        confirmDelete();
-    });
-    
-    $('#cancel-delete').click(function() {
-        $('#delete-modal').hide();
-    });
-    
-    $('#close-modal, #close-delete-modal').click(function() {
-        $(this).closest('.modal').hide();
-    });
-    
-    // Filter event listeners
-    $('#category-filter, #provider-filter').change(function() {
-        filterCourses();
-    });
-    
-    $('#search-button').click(function() {
-        filterCourses();
-    });
-    
-    $('#search-courses').keypress(function(e) {
-        if (e.which === 13) {
-            filterCourses();
-        }
-    });
-    
-    $('#clear-filters').click(function() {
-        clearFilters();
-    });
-    
-    // View toggle
-    $('.view-btn').click(function() {
-        const view = $(this).data('view');
-        currentView = view;
-        
-        $('.view-btn').removeClass('active');
-        $(this).addClass('active');
-        
-        if (view === 'card') {
-            $('#course-list').show();
-            $('#table-container').hide();
-        } else {
-            $('#course-list').hide();
-            $('#table-container').show();
-        }
-        
-        displayCourses(courses);
-    });
-    
-    // Refresh courses
-    $('#refresh-courses').click(function() {
-        currentPage = 1;
-        courses = [];
-        loadCourses();
-    });
     
     // Utility functions
     function showAlert(message, type) {
@@ -3134,36 +1928,6 @@ jQuery(document).ready(function($) {
         });
     }
     
-    // Report generation functions
-    window.generateComplianceReport = function() {
-        window.open(`${iipm_ajax.ajax_url}?action=iipm_generate_compliance_report&nonce=${iipm_ajax.cpd_admin_nonce}`, '_blank');
-    };
-    
-    window.generatePopularityReport = function() {
-        window.open(`${iipm_ajax.ajax_url}?action=iipm_generate_popularity_report&nonce=${iipm_ajax.cpd_admin_nonce}`, '_blank');
-    };
-    
-    window.generateProviderReport = function() {
-        window.open(`${iipm_ajax.ajax_url}?action=iipm_generate_provider_report&nonce=${iipm_ajax.cpd_admin_nonce}`, '_blank');
-    };
-    
-
-    
-    // Report generation functions
-    window.generateComplianceReport = function() {
-        // Redirect to the CPD Reports page with compliance section
-        window.location.href = '<?php echo home_url('/cpd-reports/'); ?>?report=compliance';
-    };
-
-    window.generatePopularityReport = function() {
-        // Redirect to the CPD Reports page with popularity section
-        window.location.href = '<?php echo home_url('/cpd-reports/'); ?>?report=popularity';
-    };
-
-    window.generateProviderReport = function() {
-        // Redirect to the CPD Reports page with provider section
-        window.location.href = '<?php echo home_url('/cpd-reports/'); ?>?report=provider';
-    };
 
     // Initialize
     loadSubmissions();
