@@ -109,6 +109,14 @@ get_header();
                 <p style="color: rgba(255,255,255,0.9); font-size: 1.1rem;">
                     Your Designation: <?php echo esc_html($profile->user_designation ?: 'MIIPM'); ?>
                 </p>
+                <?php if ($member): ?>
+                <p style="color: rgba(255,255,255,0.9); font-size: 1.1rem; margin-top: 8px;">
+                    Membership Status: 
+                    <span class="membership-status membership-status-<?php echo esc_attr(strtolower($member->membership_status)); ?>" style="margin-left: 8px;">
+                        <?php echo esc_html(ucfirst($member->membership_status)); ?>
+                    </span>
+                </p>
+                <?php endif; ?>
             </div>
         </div>
 
@@ -175,6 +183,34 @@ get_header();
                                         <label>E-mail*</label>
                                         <div class="form-value" data-field="email"><?php echo esc_html($current_user->user_email); ?></div>
                                     </div>
+                                    <?php if ($member): ?>
+                                    <div class="form-group">
+                                        <label>Membership Status</label>
+                                        <div class="form-value">
+                                            <span class="membership-status membership-status-<?php echo esc_attr(strtolower($member->membership_status)); ?>">
+                                                <?php echo esc_html(ucfirst($member->membership_status)); ?>
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Membership Level</label>
+                                        <div class="form-value">
+                                            <?php 
+                                            $membership_level = $member->membership_level;
+                                            if (is_numeric($membership_level)) {
+                                                // Get membership name from memberships table
+                                                $membership_info = $wpdb->get_row($wpdb->prepare(
+                                                    "SELECT name FROM {$wpdb->prefix}memberships WHERE id = %d",
+                                                    $membership_level
+                                                ));
+                                                echo $membership_info ? esc_html($membership_info->name) : esc_html($membership_level);
+                                            } else {
+                                                echo esc_html(ucfirst($membership_level));
+                                            }
+                                            ?>
+                                        </div>
+                                    </div>
+                                    <?php endif; ?>
                                 </div>
                                 <div class="edit-mode" style="display: none;">
                                     <div class="form-group">
@@ -489,26 +525,26 @@ get_header();
                             <h2>Your Payments</h2>
                         </div>
 
-                        <!-- Payment Filters -->
-                        <div class="payment-filters">
-                            <div class="filter-group">
-                                <select id="payment-method-filter" class="filter-select">
-                                    <option value="">All Payment Methods</option>
-                                    <option value="Direct Invoiced">Direct Invoiced</option>
-                                    <option value="Employer Invoiced">Employer Invoiced</option>
-                                </select>
+                        <!-- Payment Controls -->
+                        <div class="payment-controls" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <div class="payment-filters" style="display: flex; gap: 15px; align-items: center;">
+                                <div class="filter-group">
+                                    <select id="subscription-status-filter" class="filter-select">
+                                        <option value="">All Statuses</option>
+                                        <option value="1">Paid</option>
+                                        <option value="0">Unpaid</option>
+                                    </select>
+                                </div>
+                                <div class="filter-group">
+                                    <button id="refresh-subscriptions" class="btn btn-secondary" style="padding: 8px 16px; background: #6b7280; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                                        Refresh
+                                    </button>
+                                </div>
                             </div>
-                            <div class="filter-group">
-                                <select id="year-filter" class="filter-select">
-                                    <option value="">All Years</option>
-                                    <option value="2024">2024</option>
-                                    <option value="2023">2023</option>
-                                    <option value="2022">2022</option>
-                                    <option value="2021">2021</option>
-                                </select>
-                            </div>
-                            <div class="filter-group">
-                                <button id="clear-filters" class="clear-filters-btn">Clear Filters</button>
+                            <div class="create-subscription">
+                                <button id="create-subscription-order" class="btn btn-primary" style="padding: 10px 20px; background: #8b5a96; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                                    Create Subscription Order
+                                </button>
                             </div>
                         </div>
 
@@ -524,67 +560,11 @@ get_header();
                                         <th>Action</th>
                                     </tr>
                                 </thead>
-                                <tbody>
-                                    <tr data-payment-method="Direct Invoiced" data-year="2024">
-                                        <td><a href="#" class="order-link">2210</a></td>
-                                        <td>
-                                            <div class="order-details">
-                                                <div>1x Membership IIPM</div>
-                                                <div>1x Fellowship IIPM</div>
-                                            </div>
+                                <tbody id="subscription-orders-tbody">
+                                    <tr>
+                                        <td colspan="6" style="text-align: center; padding: 40px; color: #6b7280;">
+                                            Loading subscription orders...
                                         </td>
-                                        <td>05/01/2024</td>
-                                        <td><span class="payment-method">Direct Invoiced</span></td>
-                                        <td><span class="status awaiting">Awaiting Payment</span></td>
-                                        <td><button class="action-btn complete-payment" onclick="showOrderDetails('2210')">Complete Payment</button></td>
-                                    </tr>
-                                    <tr data-payment-method="Employer Invoiced" data-year="2024">
-                                        <td><a href="#" class="order-link">2316</a></td>
-                                        <td>
-                                            <div class="order-details">
-                                                <div>1x Membership IIPM</div>
-                                            </div>
-                                        </td>
-                                        <td>04/20/2024</td>
-                                        <td><span class="payment-method employer">Employer Invoiced</span></td>
-                                        <td><span class="status completed">Completed</span></td>
-                                        <td><button class="action-btn see-details" onclick="showOrderDetails('2316')">See Details</button></td>
-                                    </tr>
-                                    <tr data-payment-method="Direct Invoiced" data-year="2023">
-                                        <td><a href="#" class="order-link">2412</a></td>
-                                        <td>
-                                            <div class="order-details">
-                                                <div>1x Membership IIPM</div>
-                                            </div>
-                                        </td>
-                                        <td>12/10/2023</td>
-                                        <td><span class="payment-method direct">Direct Invoiced</span></td>
-                                        <td><span class="status completed">Completed</span></td>
-                                        <td><button class="action-btn see-details" onclick="showOrderDetails('2412')">See Details</button></td>
-                                    </tr>
-                                    <tr data-payment-method="Employer Invoiced" data-year="2023">
-                                        <td><a href="#" class="order-link">2518</a></td>
-                                        <td>
-                                            <div class="order-details">
-                                                <div>1x Membership IIPM</div>
-                                            </div>
-                                        </td>
-                                        <td>08/22/2023</td>
-                                        <td><span class="payment-method employer">Employer Invoiced</span></td>
-                                        <td><span class="status completed">Completed</span></td>
-                                        <td><button class="action-btn see-details" onclick="showOrderDetails('2518')">See Details</button></td>
-                                    </tr>
-                                    <tr data-payment-method="Direct Invoiced" data-year="2022">
-                                        <td><a href="#" class="order-link">2624</a></td>
-                                        <td>
-                                            <div class="order-details">
-                                                <div>1x Membership IIPM</div>
-                                            </div>
-                                        </td>
-                                        <td>06/15/2022</td>
-                                        <td><span class="payment-method direct">Direct Invoiced</span></td>
-                                        <td><span class="status completed">Completed</span></td>
-                                        <td><button class="action-btn see-details" onclick="showOrderDetails('2624')">See Details</button></td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -956,6 +936,41 @@ get_header();
     font-size: 1rem;
     margin: 0;
     font-weight: 400;
+}
+
+/* Membership Status Styles */
+.membership-status {
+    display: inline-block;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.membership-status-active {
+    background: #dcfce7;
+    color: #166534;
+    border: 1px solid #bbf7d0;
+}
+
+.membership-status-pending {
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fde68a;
+}
+
+.membership-status-inactive {
+    background: #fee2e2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+}
+
+.membership-status-suspended {
+    background: #f3f4f6;
+    color: #6b7280;
+    border: 1px solid #d1d5db;
 }
 
 .profile-layout {
@@ -3732,6 +3747,148 @@ document.addEventListener('DOMContentLoaded', function() {
             filterPayments();
         });
     }
+});
+
+// Subscription Orders Management
+jQuery(document).ready(function($) {
+    // Load subscription orders when payment section is shown
+    $(document).on('click', 'a[onclick*="showSection(\'payment\')"]', function() {
+        setTimeout(loadSubscriptionOrders, 100);
+    });
+    
+    // Load subscription orders on page load if payment section is active
+    if ($('#payment-section').is(':visible')) {
+        loadSubscriptionOrders();
+    }
+    
+    // Refresh button
+    $('#refresh-subscriptions').on('click', function() {
+        loadSubscriptionOrders();
+    });
+    
+    // Create subscription order button
+    $('#create-subscription-order').on('click', function() {
+        createSubscriptionOrder();
+    });
+    
+    // Status filter
+    $('#subscription-status-filter').on('change', function() {
+        loadSubscriptionOrders();
+    });
+    
+    function loadSubscriptionOrders() {
+        const statusFilter = $('#subscription-status-filter').val();
+        
+        $.ajax({
+            url: iipm_ajax.ajax_url,
+            type: 'POST',
+            dataType: 'json',
+            data: {
+                action: 'iipm_get_user_subscription_orders',
+                status_filter: statusFilter,
+                nonce: iipm_ajax.nonce
+            },
+            success: function(response) {
+                if (response.success) {
+                    displaySubscriptionOrders(response.data);
+                } else {
+                    $('#subscription-orders-tbody').html(
+                        '<tr><td colspan="6" style="text-align: center; padding: 40px; color: #ef4444;">Error loading subscription orders</td></tr>'
+                    );
+                }
+            },
+            error: function() {
+                $('#subscription-orders-tbody').html(
+                    '<tr><td colspan="6" style="text-align: center; padding: 40px; color: #ef4444;">Failed to load subscription orders</td></tr>'
+                );
+            }
+        });
+    }
+    
+    function displaySubscriptionOrders(orders) {
+        if (orders.length === 0) {
+            $('#subscription-orders-tbody').html(
+                '<tr><td colspan="6" style="text-align: center; padding: 40px; color: #6b7280;">No subscription orders found</td></tr>'
+            );
+            return;
+        }
+        
+        let html = '';
+        orders.forEach(function(order) {
+            const statusBadge = order.status == 1 ? 
+                '<span class="status completed" style="background: #dcfce7; color: #166534; padding: 4px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 600;">Paid</span>' :
+                '<span class="status awaiting" style="background: #fee2e2; color: #dc2626; padding: 4px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 600;">Unpaid</span>';
+            
+            const startDate = new Date(order.start_date).toLocaleDateString();
+            const endDate = new Date(order.end_date).toLocaleDateString();
+            const paidDate = order.paid_date ? new Date(order.paid_date).toLocaleDateString() : '-';
+            
+            const actionButton = order.status == 1 ? 
+                '<button class="action-btn see-details" onclick="showOrderDetails(\'' + order.id + '\')">View Details</button>' :
+                '<button class="action-btn complete-payment" onclick="processPayment(\'' + order.id + '\')">Pay Now</button>';
+            
+            html += `
+                <tr data-status="${order.status}">
+                    <td><a href="#" class="order-link">#${order.id}</a></td>
+                    <td>
+                        <div class="order-details">
+                            <div>1x ${order.membership_name || 'Membership'}</div>
+                            <div style="font-size: 0.85rem; color: #6b7280;">€${order.amount}</div>
+                        </div>
+                    </td>
+                    <td>${startDate}</td>
+                    <td><span class="payment-method">${getPaymentMethodText()}</span></td>
+                    <td>${statusBadge}</td>
+                    <td>${actionButton}</td>
+                </tr>
+            `;
+        });
+        
+        $('#subscription-orders-tbody').html(html);
+    }
+    
+    function createSubscriptionOrder() {
+        if (confirm('Create a new subscription order based on your current membership level?')) {
+            $.ajax({
+                url: iipm_ajax.ajax_url,
+                type: 'POST',
+                dataType: 'json',
+                data: {
+                    action: 'iipm_create_user_subscription_order',
+                    nonce: iipm_ajax.nonce
+                },
+                success: function(response) {
+                    if (response.success) {
+                        alert('Subscription order created successfully!');
+                        loadSubscriptionOrders();
+                    } else {
+                        alert('Failed to create subscription order: ' + response.data);
+                    }
+                },
+                error: function() {
+                    alert('Error creating subscription order');
+                }
+            });
+        }
+    }
+    
+    function getPaymentMethodText() {
+        // Get payment method from profile data
+        const paymentMethod = '<?php echo esc_js($user_payment_method); ?>';
+        return paymentMethod || 'Direct Invoiced';
+    }
+    
+    // Global functions for order actions
+    window.processPayment = function(orderId) {
+        alert('Payment processing would be integrated with Stripe here. Order ID: ' + orderId);
+        // In a real implementation, this would redirect to Stripe checkout
+    };
+    
+    window.showOrderDetails = function(orderId) {
+        // Find the order data and show details
+        // This would integrate with the existing order details modal
+        alert('Order details for subscription order #' + orderId);
+    };
 });
 </script>
 

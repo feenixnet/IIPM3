@@ -665,6 +665,28 @@ function iipm_create_enhanced_tables() {
 		KEY created_at (created_at)
 	) $charset_collate;";
 
+	// Subscription orders table
+	$table_subscriptions = $wpdb->prefix . 'test_iipm_subscription_orders';
+	$sql_subscriptions = "CREATE TABLE $table_subscriptions (
+		id int(11) NOT NULL AUTO_INCREMENT,
+		user_id bigint(20) NOT NULL,
+		start_date timestamp DEFAULT CURRENT_TIMESTAMP,
+		end_date timestamp NULL,
+		status tinyint(1) DEFAULT 0 COMMENT '1=paid, 0=unpaid',
+		paid_date timestamp NULL,
+		membership_id int(11) NOT NULL,
+		amount decimal(10,2) NOT NULL,
+		stripe_payment_intent_id varchar(255) NULL,
+		created_at timestamp DEFAULT CURRENT_TIMESTAMP,
+		updated_at timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+		PRIMARY KEY (id),
+		KEY user_id (user_id),
+		KEY membership_id (membership_id),
+		KEY status (status),
+		KEY start_date (start_date),
+		KEY end_date (end_date)
+	) $charset_collate;";
+
 	require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
 	dbDelta($sql_organisations);
 	dbDelta($sql_members);
@@ -1627,13 +1649,38 @@ function iipm_process_member_registration($data, $token = null) {
         // Set membership status to 'active' for all registrations
         $membership_status = 'active';
         
+        // Get membership ID and designation from form data
+        $membership_id = isset($data['membership_id']) ? intval($data['membership_id']) : null;
+        $user_designation = isset($data['user_designation']) ? sanitize_text_field($data['user_designation']) : '';
+        
+        // Determine membership level based on selected membership ID
+        $membership_level = 'member'; // default fallback
+        if ($membership_id) {
+            // Use the membership ID as the membership level
+            $membership_level = $membership_id;
+            
+            // Create subscription order for the user
+            $membership_info = $wpdb->get_row($wpdb->prepare(
+                "SELECT * FROM {$wpdb->prefix}memberships WHERE id = %d",
+                $membership_id
+            ));
+            
+            if ($membership_info) {
+                iipm_create_subscription_order(
+                    $user_id, 
+                    $membership_id, 
+                    $membership_info->fee
+                );
+            }
+        }
+        
         $wpdb->insert(
             $wpdb->prefix . 'test_iipm_members',
             array(
                 'user_id' => $user_id,
                 'member_type' => $member_type,
                 'membership_status' => $membership_status,
-                'membership_level' => 'member',
+                'membership_level' => $membership_level,
                 'gdpr_consent' => $gdpr_consent,
                 'marketing_consent' => $marketing_consent,
                 'email_verified' => 1,
@@ -1659,7 +1706,7 @@ function iipm_process_member_registration($data, $token = null) {
                     'sur_name' => sanitize_text_field($last_name ?? ''),
                     'first_name' => sanitize_text_field($first_name ?? ''),
                     'user_is_admin' => 0,
-                    'user_designation' => sanitize_text_field($data['user_designation'] ?? ''),
+                    'user_designation' => $user_designation,
                     'user_name_login' => sanitize_text_field($data['login_name'] ?? ''),
                     'email_address_pers' => sanitize_email($data['email_address_pers'] ?? ''),
                     'user_phone_pers' => sanitize_text_field($data['user_phone_pers'] ?? ''),
@@ -3257,7 +3304,7 @@ function iipm_handle_enhanced_member_registration_v2() {
     //     return;
     // }
     
-    $required_fields = ['first_name', 'last_name', 'email', 'password', 'address'];
+    $required_fields = ['first_name', 'last_name', 'email', 'password', 'address', 'membership_id'];
     $missing_fields = [];
     
     foreach ($required_fields as $field) {
@@ -3344,6 +3391,28 @@ remove_action('wp_ajax_nopriv_iipm_register_member', 'iipm_handle_enhanced_membe
 
 add_action('wp_ajax_iipm_register_member', 'iipm_handle_enhanced_member_registration_v2');
 add_action('wp_ajax_nopriv_iipm_register_member', 'iipm_handle_enhanced_member_registration_v2');
+
+/**
+ * AJAX handler to fetch membership data for registration form
+ */
+function iipm_get_membership_data() {
+    global $wpdb;
+    
+    $memberships = $wpdb->get_results("
+        SELECT id, name, designation, fee, cpd_requirement 
+        FROM {$wpdb->prefix}memberships 
+        WHERE designation IS NOT NULL AND designation != '' 
+        ORDER BY id ASC
+    ");
+    
+    if ($memberships) {
+        wp_send_json_success($memberships);
+    } else {
+        wp_send_json_error('No membership data found');
+    }
+}
+add_action('wp_ajax_iipm_get_membership_data', 'iipm_get_membership_data');
+add_action('wp_ajax_nopriv_iipm_get_membership_data', 'iipm_get_membership_data');
 
 /**
  * Bulk Import AJAX Handler

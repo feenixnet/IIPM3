@@ -18,12 +18,33 @@ require_once get_template_directory() . '/includes/cpd-record-api.php';
 $current_user_id = get_current_user_id();
 $current_year = date('Y');
 
+// Check if user is admin based on user_is_admin field in member profiles
+global $wpdb;
+$user_is_admin = $wpdb->get_var($wpdb->prepare(
+    "SELECT user_is_admin FROM {$wpdb->prefix}test_iipm_member_profiles WHERE user_id = %d",
+    $current_user_id
+));
+
+// Redirect admins away from member portal
+if ($user_is_admin != 0) {
+    wp_redirect(home_url('/admin-dashboard/'));
+    exit;
+}
+
 // Check if user has active membership status
 global $wpdb;
 $member_status = $wpdb->get_var($wpdb->prepare(
     "SELECT membership_status FROM {$wpdb->prefix}test_iipm_members WHERE user_id = %d",
     $current_user_id
 ));
+
+// Check subscription status and update membership status if needed
+if (function_exists('iipm_check_subscription_status')) {
+    $updated_status = iipm_check_subscription_status($current_user_id);
+    if ($updated_status !== $member_status) {
+        $member_status = $updated_status;
+    }
+}
 
 // Auto-assign to 2025 CPD if user has active membership and is not already assigned
 if ($member_status === 'active') {

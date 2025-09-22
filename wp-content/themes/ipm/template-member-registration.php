@@ -132,9 +132,12 @@ get_header();
                             <h3>Professional Information</h3>
                             
                             <div class="form-group">
-                                <label for="user_designation">User Designation</label>
-                                <input type="text" name="user_designation" id="user_designation" 
-                                       placeholder="e.g., QFA, CPA, etc.">
+                                <label for="membership_selection">User Designation *</label>
+                                <input type="text" name="membership_selection" id="membership_selection" 
+                                       placeholder="Click to select your designation" readonly required>
+                                <input type="hidden" name="membership_id" id="membership_id">
+                                <input type="hidden" name="user_designation" id="user_designation">
+                                <small>Select your professional designation to determine membership level and requirements</small>
                             </div>
                         </div>
 
@@ -287,6 +290,26 @@ get_header();
                             </button>
                         </div>
                     </form>
+                    
+                    <!-- Membership Selection Modal -->
+                    <div id="membership-modal" class="membership-modal" style="display: none;">
+                        <div class="membership-modal-overlay"></div>
+                        <div class="membership-modal-content">
+                            <div class="membership-modal-header">
+                                <h3>Select Your Professional Designation</h3>
+                                <button type="button" class="membership-modal-close">&times;</button>
+                            </div>
+                            <div class="membership-modal-body">
+                                <div id="membership-list">
+                                    <div class="loading-message">Loading membership options...</div>
+                                </div>
+                            </div>
+                            <div class="membership-modal-footer">
+                                <button type="button" class="btn btn-secondary" id="cancel-membership-selection">Cancel</button>
+                                <button type="button" class="btn btn-primary" id="confirm-membership-selection" disabled>Select Designation</button>
+                            </div>
+                        </div>
+                    </div>
                     
                     <!-- Enhanced Success Message -->
                     <div id="registration-success" class="enhanced-success-message" style="display:none;">
@@ -580,7 +603,8 @@ jQuery(document).ready(function($) {
             'last_name': 'Last Name', 
             'email': 'Email Address',
             'password': 'Password',
-            'address': 'Address'
+            'address': 'Address',
+            'membership_id': 'Professional Designation'
         };
         
         // Validate login_name length if provided
@@ -1033,6 +1057,103 @@ jQuery(document).ready(function($){
             $('#address_line_3').val('');
         }
     });
+    
+    // Membership Selection Modal Functionality
+    var selectedMembership = null;
+    var membershipData = [];
+    
+    // Load membership data when page loads
+    function loadMembershipData() {
+        $.ajax({
+            url: (typeof iipm_ajax !== 'undefined' ? iipm_ajax.ajax_url : '<?php echo admin_url('admin-ajax.php'); ?>'),
+            type: 'POST',
+            dataType: 'json',
+            data: {
+                action: 'iipm_get_membership_data',
+                nonce: (typeof iipm_ajax !== 'undefined' ? iipm_ajax.nonce : '<?php echo wp_create_nonce('iipm_portal_nonce'); ?>')
+            }
+        }).done(function(resp) {
+            if (resp && resp.success && resp.data) {
+                membershipData = resp.data;
+                renderMembershipList();
+            } else {
+                $('#membership-list').html('<div class="error-message">Failed to load membership options</div>');
+            }
+        }).fail(function() {
+            $('#membership-list').html('<div class="error-message">Error loading membership options</div>');
+        });
+    }
+    
+    // Render membership list in modal
+    function renderMembershipList() {
+        var html = '';
+        membershipData.forEach(function(membership, index) {
+            var isSelected = index === 0 ? 'selected' : ''; // First item selected by default
+            if (isSelected) {
+                selectedMembership = membership;
+                $('#confirm-membership-selection').prop('disabled', false);
+            }
+            
+            html += '<div class="membership-option ' + isSelected + '" data-membership-id="' + membership.id + '">';
+            html += '<div class="membership-option-header">';
+            html += '<h4>' + membership.name + '</h4>';
+            html += '<div class="membership-designation">' + membership.designation + '</div>';
+            html += '</div>';
+            html += '<div class="membership-option-details">';
+            html += '<div class="detail-row">';
+            html += '<span class="detail-label">Annual Fee:</span>';
+            html += '<span class="detail-value">€' + membership.fee + '</span>';
+            html += '</div>';
+            html += '<div class="detail-row">';
+            html += '<span class="detail-label">CPD Requirement:</span>';
+            html += '<span class="detail-value">' + membership.cpd_requirement + ' hours</span>';
+            html += '</div>';
+            html += '</div>';
+            html += '</div>';
+        });
+        
+        $('#membership-list').html(html);
+    }
+    
+    // Open modal when clicking on membership selection input
+    $('#membership_selection').on('click', function() {
+        $('#membership-modal').fadeIn(300);
+        $('body').addClass('modal-open');
+    });
+    
+    // Close modal
+    function closeMembershipModal() {
+        $('#membership-modal').fadeOut(300);
+        $('body').removeClass('modal-open');
+    }
+    
+    // Modal close handlers
+    $('.membership-modal-close, #cancel-membership-selection').on('click', closeMembershipModal);
+    $('.membership-modal-overlay').on('click', closeMembershipModal);
+    
+    // Handle membership option selection
+    $(document).on('click', '.membership-option', function() {
+        $('.membership-option').removeClass('selected');
+        $(this).addClass('selected');
+        
+        var membershipId = $(this).data('membership-id');
+        selectedMembership = membershipData.find(function(m) { return m.id == membershipId; });
+        
+        $('#confirm-membership-selection').prop('disabled', false);
+    });
+    
+    // Confirm membership selection
+    $('#confirm-membership-selection').on('click', function() {
+        if (selectedMembership) {
+            $('#membership_selection').val(selectedMembership.name + ' (' + selectedMembership.designation + ')');
+            $('#membership_id').val(selectedMembership.id);
+            $('#user_designation').val(selectedMembership.designation);
+            closeMembershipModal();
+        }
+    });
+    
+    // Load membership data on page load
+    loadMembershipData();
 });
 
 
@@ -1494,6 +1615,197 @@ jQuery(document).ready(function($){
   margin: 0 0 25px 0 !important;
 }
 
+/* Membership Selection Modal Styles */
+.membership-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.membership-modal-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+}
+
+.membership-modal-content {
+    position: relative;
+    background: white;
+    border-radius: 12px;
+    max-width: 600px;
+    width: 90%;
+    max-height: 80vh;
+    overflow: hidden;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+    animation: modalSlideIn 0.3s ease-out;
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-50px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.membership-modal-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f8fafc;
+}
+
+.membership-modal-header h3 {
+    margin: 0;
+    color: #1f2937;
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.membership-modal-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: #6b7280;
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.membership-modal-close:hover {
+    background: #e5e7eb;
+    color: #374151;
+}
+
+.membership-modal-body {
+    padding: 24px;
+    max-height: 50vh;
+    overflow-y: auto;
+}
+
+.membership-modal-footer {
+    padding: 20px 24px;
+    border-top: 1px solid #e5e7eb;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    background: #f8fafc;
+}
+
+.membership-option {
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: white;
+}
+
+.membership-option:hover {
+    border-color: #8b5a96;
+    box-shadow: 0 4px 12px rgba(139, 90, 150, 0.1);
+}
+
+.membership-option.selected {
+    border-color: #8b5a96;
+    background: #f8f7ff;
+    box-shadow: 0 4px 12px rgba(139, 90, 150, 0.15);
+}
+
+.membership-option-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.membership-option-header h4 {
+    margin: 0;
+    color: #1f2937;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.membership-designation {
+    background: #8b5a96;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.membership-option-details {
+    display: grid;
+    gap: 8px;
+}
+
+.detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.detail-label {
+    color: #6b7280;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.detail-value {
+    color: #1f2937;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.loading-message, .error-message {
+    text-align: center;
+    padding: 40px 20px;
+    color: #6b7280;
+}
+
+.error-message {
+    color: #ef4444;
+}
+
+/* Body scroll lock when modal is open */
+body.modal-open {
+    overflow: hidden;
+}
+
+/* Input styling for membership selection */
+#membership_selection {
+    cursor: pointer;
+    background: white;
+}
+
+#membership_selection:focus {
+    border-color: #8b5a96;
+    box-shadow: 0 0 0 3px rgba(139, 90, 150, 0.1);
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     .enhanced-success-message {
@@ -1519,6 +1831,31 @@ jQuery(document).ready(function($){
     
     .requirement {
         font-size: 12px;
+    }
+    
+    .membership-modal-content {
+        width: 95%;
+        margin: 20px;
+    }
+    
+    .membership-modal-header,
+    .membership-modal-body,
+    .membership-modal-footer {
+        padding: 16px;
+    }
+    
+    .membership-option {
+        padding: 12px;
+    }
+    
+    .membership-option-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    
+    .membership-option-header h4 {
+        font-size: 1rem;
     }
 }
 
