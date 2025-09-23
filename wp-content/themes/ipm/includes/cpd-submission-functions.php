@@ -481,8 +481,12 @@ function iipm_download_certificate() {
     if (!$certificate) {
         wp_die('Certificate not found');
     }
+    
+    // Debug: Log certificate data
+    error_log('Certificate data: ' . print_r($certificate, true));
+    error_log('Avatar URL field: ' . ($certificate->avatar_url ?? 'NOT SET'));
 
-    // Generate PDF content using simple PDF format
+    // Generate PDF content with avatar image
     $pdf_content = generate_certificate_pdf($certificate, $user_name, $user_email, $contact_address, $submission_year);
     
     // Set headers for PDF download
@@ -506,12 +510,131 @@ function iipm_download_certificate() {
 }
 
 /**
- * Generate certificate PDF content
+ * Generate certificate PDF content using TCPDF
  */
 function generate_certificate_pdf($certificate, $user_name, $user_email, $contact_address, $submission_year) {
-    // Generate a simple PDF using basic PDF format
-    // This creates a minimal PDF that should work in most PDF viewers
+    // Check if TCPDF is available
+    if (!class_exists('TCPDF')) {
+        // Fallback to simple PDF if TCPDF is not available
+        return generate_simple_pdf($certificate, $user_name, $user_email, $contact_address, $submission_year);
+    }
     
+    // Create new PDF document
+    $pdf = new TCPDF(PDF_PAGE_ORIENTATION, PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
+    
+    // Set document information
+    $pdf->SetCreator('IIPM System');
+    $pdf->SetAuthor('Institute of Insurance and Pension Management');
+    $pdf->SetTitle('CPD Certificate - ' . $certificate->name);
+    $pdf->SetSubject('Continuing Professional Development Certificate');
+    $pdf->SetKeywords('CPD, Certificate, IIPM, Professional Development');
+    
+    // Set default header data
+    $pdf->SetHeaderData('', 0, 'CERTIFICATE OF COMPLETION', 'Continuing Professional Development (CPD)');
+    
+    // Set header and footer fonts
+    $pdf->setHeaderFont(Array(PDF_FONT_NAME_MAIN, '', PDF_FONT_SIZE_MAIN));
+    $pdf->setFooterFont(Array(PDF_FONT_NAME_DATA, '', PDF_FONT_SIZE_DATA));
+    
+    // Set default monospaced font
+    $pdf->SetDefaultMonospacedFont(PDF_FONT_MONOSPACED);
+    
+    // Set margins
+    $pdf->SetMargins(PDF_MARGIN_LEFT, PDF_MARGIN_TOP, PDF_MARGIN_RIGHT);
+    $pdf->SetHeaderMargin(PDF_MARGIN_HEADER);
+    $pdf->SetFooterMargin(PDF_MARGIN_FOOTER);
+    
+    // Set auto page breaks
+    $pdf->SetAutoPageBreak(TRUE, PDF_MARGIN_BOTTOM);
+    
+    // Set image scale factor
+    $pdf->setImageScale(PDF_IMAGE_SCALE_RATIO);
+    
+    // Add a page
+    $pdf->AddPage();
+    
+    // Set font
+    $pdf->SetFont('helvetica', 'B', 20);
+    
+    // Certificate title
+    $pdf->Cell(0, 15, $certificate->name, 0, 1, 'C');
+    $pdf->Ln(10);
+    
+    
+    // Award text
+    $pdf->SetFont('helvetica', '', 16);
+    $pdf->Cell(0, 10, 'This is to certify that', 0, 1, 'C');
+    $pdf->Ln(5);
+    
+    // Recipient name
+    $pdf->SetFont('helvetica', 'B', 18);
+    $pdf->Cell(0, 10, $user_name, 0, 1, 'C');
+    $pdf->Ln(5);
+    
+    // Completion text
+    $pdf->SetFont('helvetica', '', 16);
+    $pdf->Cell(0, 10, 'has successfully completed the Continuing Professional Development', 0, 1, 'C');
+    $pdf->Cell(0, 10, 'requirements for the year ' . $submission_year . '.', 0, 1, 'C');
+    $pdf->Ln(20);
+    
+    // Details section
+    $pdf->SetFont('helvetica', 'B', 14);
+    $pdf->Cell(0, 10, 'Certificate Details:', 0, 1, 'L');
+    $pdf->Ln(5);
+    
+    $pdf->SetFont('helvetica', '', 12);
+    $pdf->Cell(60, 8, 'Certificate Name:', 0, 0, 'L');
+    $pdf->Cell(0, 8, $certificate->name, 0, 1, 'L');
+    
+    $pdf->Cell(60, 8, 'Certificate Year:', 0, 0, 'L');
+    $pdf->Cell(0, 8, $certificate->year, 0, 1, 'L');
+    
+    $pdf->Cell(60, 8, 'Submission Year:', 0, 0, 'L');
+    $pdf->Cell(0, 8, $submission_year, 0, 1, 'L');
+    
+    $pdf->Cell(60, 8, 'Recipient Name:', 0, 0, 'L');
+    $pdf->Cell(0, 8, $user_name, 0, 1, 'L');
+    
+    $pdf->Cell(60, 8, 'Email Address:', 0, 0, 'L');
+    $pdf->Cell(0, 8, $user_email, 0, 1, 'L');
+    
+    if (!empty($contact_address)) {
+        $pdf->Cell(60, 8, 'Contact Address:', 0, 0, 'L');
+        $pdf->Cell(0, 8, $contact_address, 0, 1, 'L');
+    }
+    
+    if (!empty($certificate->description)) {
+        $pdf->Cell(60, 8, 'Description:', 0, 0, 'L');
+        $pdf->Cell(0, 8, $certificate->description, 0, 1, 'L');
+    }
+    
+    $pdf->Ln(20);
+    
+    // Issue date
+    $pdf->SetFont('helvetica', '', 14);
+    $pdf->Cell(0, 10, 'Issued on: ' . date('F j, Y'), 0, 1, 'C');
+    $pdf->Ln(20);
+    
+    // Signatures
+    $pdf->SetFont('helvetica', '', 12);
+    $pdf->Cell(90, 10, 'Administrator', 0, 0, 'C');
+    $pdf->Cell(90, 10, 'Date', 0, 1, 'C');
+    $pdf->Ln(10);
+    
+    // Footer
+    $pdf->SetFont('helvetica', '', 10);
+    $pdf->Cell(0, 8, 'This certificate is issued by the Institute of Insurance and Pension Management (IIPM)', 0, 1, 'C');
+    $pdf->Cell(0, 8, 'For verification purposes, please contact: info@iipm.com', 0, 1, 'C');
+    
+    // Return PDF content
+    return $pdf->Output('', 'S');
+}
+
+/**
+ * Fallback simple PDF generation
+ */
+function generate_simple_pdf($certificate, $user_name, $user_email, $contact_address, $submission_year) {
+    // Generate a simple PDF using basic PDF format
     $pdf_content = "%PDF-1.4\n";
     $pdf_content .= "1 0 obj\n";
     $pdf_content .= "<<\n";
@@ -539,6 +662,14 @@ function generate_certificate_pdf($certificate, $user_name, $user_email, $contac
     $page_content .= "0 -80 Td\n";
     $page_content .= "/F1 20 Tf\n";
     $page_content .= "(" . $certificate->name . ") Tj\n";
+    
+    // Add avatar information if available
+    if (!empty($certificate->avatar_url)) {
+        $page_content .= "0 -30 Td\n";
+        $page_content .= "/F2 12 Tf\n";
+        $page_content .= "(Certificate Avatar: " . $certificate->avatar_url . ") Tj\n";
+    }
+    
     $page_content .= "0 -60 Td\n";
     $page_content .= "/F2 14 Tf\n";
     $page_content .= "(This is to certify that) Tj\n";

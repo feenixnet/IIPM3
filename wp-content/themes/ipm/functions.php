@@ -1665,14 +1665,6 @@ function iipm_process_member_registration($data, $token = null) {
                 "SELECT * FROM {$wpdb->prefix}memberships WHERE id = %d",
                 $membership_id
             ));
-            
-            if ($membership_info) {
-                iipm_create_subscription_order(
-                    $user_id, 
-                    $membership_id, 
-                    $membership_info->fee
-                );
-            }
         }
         
         $wpdb->insert(
@@ -5801,3 +5793,8 @@ add_action('wp_ajax_iipm_delete_course_v1', 'iipm_handle_delete_course_v1');
 // Include CPD certificate CRUD
 require_once get_template_directory() . '/includes/cpd-certificate-functions.php';
 require_once get_template_directory() . '/includes/cpd-submission-functions.php';
+
+// Include TCPDF library for PDF generation
+if (!class_exists('TCPDF')) {
+    require_once get_template_directory() . '/includes/tcpdf/tcpdf.php';
+}

@@ -241,7 +241,7 @@ get_header();
                     <!-- <button class="btn btn-outline" id="submit-return-btn">Submit my return</button> -->
                     
                     <!-- CPD Assignment and Submission Buttons -->
-                    <?php if (!$is_submitted): ?>
+                    <?php if (!$is_submitted && floatval($cpd_stats["completion_percentage"]) >= 100): ?>
                         <div class="cpd-action-buttons" id="cpd-action-buttons" style="display: none;">
                             <button class="btn btn-success" id="submit-cpd-btn">
                                 <span class="btn-icon"><i class="fas fa-check"></i></span>

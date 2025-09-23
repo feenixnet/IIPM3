@@ -21,138 +21,136 @@ $is_logging_period_active = ($logging_available === 1);
 get_header(); 
 ?>
 
-<div class="cpd-courses-page">
+<div class="cpd-courses-page main-container">
     <!-- Header -->
-    <div class="cpd-header">
-        <div class="container">
-            <div class="header-content">
-                <div class="breadcrumb">
-                    <a href="<?php echo home_url('/dashboard/'); ?>">🏠</a>
-                    <span class="separator">></span>
-                    <span>All CPD Courses</span>
-                </div>
-                <h1>All CPD Courses</h1>
+    <div class="container" style="position: relative; z-index: 2;">
+        <div class="page-header" style="text-align: center; margin-bottom: 40px;">
+            <div>
+                <h1 style="color: white; font-size: 2.5rem; margin-bottom: 10px;">All CPD Courses</h1>
+                <p style="color: rgba(255,255,255,0.9); font-size: 1.1rem;">
+                    Select the course in this library to train CPD.
+                </p>
             </div>
         </div>
-    </div>
 
-    <div class="container">
-        <?php if (!$is_logging_period_active): ?>
-        <!-- Logging Period Closed Banner -->
-        <div class="logging-period-banner">
-            <div class="banner-content">
-                <div class="banner-icon">
-                    <i class="fas fa-lock"></i>
-                </div>
-                <div class="banner-text">
-                    <h3>Logging Period Closed</h3>
-                    <p>Course logging is currently disabled. You cannot add new courses to your learning path at this time.</p>
+        <div>
+            <?php if (!$is_logging_period_active): ?>
+            <!-- Logging Period Closed Banner -->
+            <div class="logging-period-banner">
+                <div class="banner-content">
+                    <div class="banner-icon">
+                        <i class="fas fa-lock"></i>
+                    </div>
+                    <div class="banner-text">
+                        <h3>Logging Period Closed</h3>
+                        <p>Course logging is currently disabled. You cannot add new courses to your learning path at this time.</p>
+                    </div>
                 </div>
             </div>
-        </div>
-        <?php endif; ?>
-        
-        <div class="cpd-courses-layout">
-            <!-- Left Sidebar -->
-            <div class="cpd-sidebar">
-                <!-- Filters Section -->
-                <div class="filters-widget">
-                    <h3>Filter Courses</h3>
-                    
-                    <div class="filter-group">
-                        <label for="title-search">Title</label>
-                        <div class="search-input">
-                            <input type="text" id="title-search" placeholder="Search course title">
-                            <span class="search-icon"><i class="fas fa-search"></i></span>
+            <?php endif; ?>
+            
+            <div class="cpd-courses-layout">
+                <!-- Left Sidebar -->
+                <div class="cpd-sidebar">
+                    <!-- Filters Section -->
+                    <div class="filters-widget">
+                        <h3>Filter Courses</h3>
+                        
+                        <div class="filter-group">
+                            <label for="title-search">Title</label>
+                            <div class="search-input">
+                                <input type="text" id="title-search" placeholder="Search course title">
+                                <span class="search-icon"><i class="fas fa-search"></i></span>
+                            </div>
                         </div>
-                    </div>
 
-                    <div class="filter-group">
-                        <label for="lia-code-search">LIA Code</label>
-                        <div class="search-input">
-                            <input type="text" id="lia-code-search" placeholder="Search LIA code">
-                            <span class="search-icon"><i class="fas fa-search"></i></span>
+                        <div class="filter-group">
+                            <label for="lia-code-search">LIA Code</label>
+                            <div class="search-input">
+                                <input type="text" id="lia-code-search" placeholder="Search LIA code">
+                                <span class="search-icon"><i class="fas fa-search"></i></span>
+                            </div>
                         </div>
-                    </div>
 
-                    <div class="filter-group">
-                        <label>Date Range</label>
-                        <div class="date-range">
-                            <input type="date" id="date-from" placeholder="From">
-                            <span class="date-separator">to</span>
-                            <input type="date" id="date-to" placeholder="To">
+                        <div class="filter-group">
+                            <label>Date Range</label>
+                            <div class="date-range">
+                                <input type="date" id="date-from" placeholder="From">
+                                <span class="date-separator">to</span>
+                                <input type="date" id="date-to" placeholder="To">
+                            </div>
                         </div>
-                    </div>
 
-                    <div class="filter-group">
-                        <label>Category</label>
-                        <div class="category-filters" id="category-filters">
-                            <!-- Categories will be loaded via jQuery -->
+                        <div class="filter-group">
+                            <label>Category</label>
+                            <div class="category-filters" id="category-filters">
+                                <!-- Categories will be loaded via jQuery -->
+                            </div>
                         </div>
-                    </div>
 
-                    <div class="filter-group">
-                        <label for="provider-select">Provider</label>
-                        <select id="provider-select" class="provider-select">
-                            <option value="">All Providers</option>
-                            <!-- Providers will be loaded via jQuery -->
-                        </select>
-                    </div>
-                    
-                    <div class="filter-group">
-                        <label class="custom-checkbox-label">
-                            <input type="checkbox" id="my-courses-filter" name="my-courses" style="margin-right: 10px;" value="1">
-                            <span class="label-text" style="position: relative; top: -2px;">Courses added by me</span>
-                        </label>
-                    </div>
+                        <div class="filter-group">
+                            <label for="provider-select">Provider</label>
+                            <select id="provider-select" class="provider-select">
+                                <option value="">All Providers</option>
+                                <!-- Providers will be loaded via jQuery -->
+                            </select>
+                        </div>
+                        
+                        <div class="filter-group">
+                            <label class="custom-checkbox-label">
+                                <input type="checkbox" id="my-courses-filter" name="my-courses" style="margin-right: 10px;" value="1">
+                                <span class="label-text" style="position: relative; top: -2px;">Courses added by me</span>
+                            </label>
+                        </div>
 
-                    <button class="clear-filters-btn" id="clear-filters">Clear all filters</button>
-                </div>
-            </div>
-
-            <!-- Main Content -->
-            <div class="cpd-main-content">
-                <!-- Loading Indicator -->
-                <div class="loading-overlay" id="loading-overlay" style="display: none;">
-                    <div class="loading-spinner">
-                        <div class="spinner"></div>
-                        <p>Loading courses...</p>
+                        <button class="clear-filters-btn" id="clear-filters">Clear all filters</button>
                     </div>
                 </div>
 
-                <div class="courses-grid" id="courses-grid">
-                    <!-- Courses will be loaded here via jQuery -->
-                    <div class="loading-message">
+                <!-- Main Content -->
+                <div class="cpd-main-content">
+                    <!-- Loading Indicator -->
+                    <div class="loading-overlay" id="loading-overlay" style="display: none;">
                         <div class="loading-spinner">
                             <div class="spinner"></div>
                             <p>Loading courses...</p>
                         </div>
                     </div>
-                </div>
 
-                <!-- Pagination -->
-                <div class="pagination" id="pagination" style="display: none;">
-                    <button class="pagination-btn prev" id="prev-btn" disabled>‹ Previous</button>
-                    
-                    <div class="pagination-numbers" id="pagination-numbers">
-                        <span class="pagination-number active">1</span>
+                    <div class="courses-grid" id="courses-grid">
+                        <!-- Courses will be loaded here via jQuery -->
+                        <div class="loading-message">
+                            <div class="loading-spinner">
+                                <div class="spinner"></div>
+                                <p>Loading courses...</p>
+                            </div>
+                        </div>
                     </div>
 
-                    <button class="pagination-btn next" id="next-btn">Next ›</button>
-                </div>
-                
-                <!-- Pagination Info -->
-                <div class="pagination-info" id="pagination-info">
-                    Showing 0-0 of 0 courses
+                    <!-- Pagination -->
+                    <div class="pagination" id="pagination" style="display: none;">
+                        <button class="pagination-btn prev" id="prev-btn" disabled>‹ Previous</button>
+                        
+                        <div class="pagination-numbers" id="pagination-numbers">
+                            <span class="pagination-number active">1</span>
+                        </div>
+
+                        <button class="pagination-btn next" id="next-btn">Next ›</button>
+                    </div>
+                    
+                    <!-- Pagination Info -->
+                    <div class="pagination-info" id="pagination-info">
+                        Showing 0-0 of 0 courses
+                    </div>
                 </div>
             </div>
         </div>
+
     </div>
 </div>
 
 <style>
     .cpd-courses-page {
-        background: #f8fafc;
         min-height: 100vh;
         padding-top: 0;
     }
@@ -672,6 +670,8 @@ get_header();
         text-align: center;
         padding: 10px 0;
         border-top: 1px solid #e5e7eb;
+        background-color: white;
+        border-radius: 12px;
         margin-top: 10px;
     }
 

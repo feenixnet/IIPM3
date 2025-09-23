@@ -3317,6 +3317,72 @@ jQuery(document).ready(function($) {
     loadSubmissions();
     updatePendingCount();
 });
+
+// Mobile menu functionality for CPD Admin Portal
+document.addEventListener("DOMContentLoaded", function () {
+    const burger = document.getElementById("burger");
+    const header = document.querySelector(".header");
+    const headerWrapper = document.querySelector(".header__wrapper");
+    const body = document.body;
+    const overlay = document.querySelector(".overlay");
+    const mobileMenu = document.querySelector(".mobile-menu");
+    const mobileMenuClose = document.querySelector(".mobile-menu-close");
+
+    // Only add event listeners if all elements exist
+    if (burger && header && overlay && mobileMenu && headerWrapper) {
+        burger.addEventListener("click", function () {
+            const isOpen = header.classList.toggle("open");
+            body.classList.toggle("open");
+
+            // Prevent scrolling when menu is open
+            document.documentElement.style.overflow = isOpen ? "hidden" : "";
+            body.style.overflow = isOpen ? "hidden" : "";
+
+            // Set header__wrapper height to 100vh when burger is clicked
+            if (isOpen) {
+                headerWrapper.style.height = "100vh";
+                overlay.style.visibility = "visible";
+                overlay.style.opacity = "1";
+                mobileMenu.style.left = "0";
+            } else {
+                headerWrapper.style.height = "";
+                overlay.style.visibility = "hidden";
+                overlay.style.opacity = "0";
+                mobileMenu.style.left = "-300px";
+            }
+        });
+
+        // Close menu when clicking overlay
+        overlay.addEventListener("click", function () {
+            closeMobileMenu();
+        });
+
+        // Close menu when clicking close button
+        if (mobileMenuClose) {
+            mobileMenuClose.addEventListener("click", function () {
+                closeMobileMenu();
+            });
+        }
+
+        // Function to close mobile menu
+        function closeMobileMenu() {
+            header.classList.remove("open");
+            body.classList.remove("open");
+
+            // Restore scrolling
+            document.documentElement.style.overflow = "";
+            body.style.overflow = "";
+
+            // Reset header__wrapper height
+            headerWrapper.style.height = "";
+
+            // Hide overlay and mobile menu
+            overlay.style.visibility = "hidden";
+            overlay.style.opacity = "0";
+            mobileMenu.style.left = "-300px";
+        }
+    }
+});
 </script>
 
 <?php get_footer(); ?>

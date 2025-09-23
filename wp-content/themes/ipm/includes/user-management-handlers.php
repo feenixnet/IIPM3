@@ -35,7 +35,7 @@ function iipm_get_users() {
     $per_page = 20;
     $offset = ($page - 1) * $per_page;
     $search = sanitize_text_field($_POST['search'] ?? '');
-    $role_filter = sanitize_text_field($_POST['role_filter'] ?? '');
+    $membership_filter = sanitize_text_field($_POST['membership_filter'] ?? '');
     $status_filter = sanitize_text_field($_POST['status_filter'] ?? '');
     
     // Build WHERE clause
@@ -80,10 +80,15 @@ function iipm_get_users() {
         $where_params[] = $status_filter;
     }
     
-    // Role filter
-    if (!empty($role_filter)) {
-        $where_conditions[] = "mp.theUsersStatus = %s";
-        $where_params[] = $role_filter;
+    // Membership filter (membership level filter)
+    if (!empty($membership_filter)) {
+        if ($membership_filter === 'Admin') {
+            // Special case for Admin - check if user has administrator role
+            $where_conditions[] = "EXISTS (SELECT 1 FROM {$wpdb->usermeta} um WHERE um.user_id = u.ID AND um.meta_key = '{$wpdb->prefix}capabilities' AND um.meta_value LIKE '%administrator%')";
+        } else {
+            $where_conditions[] = "mem.id = %d";
+            $where_params[] = intval($membership_filter);
+        }
     }
     
     // Build WHERE clause
@@ -99,6 +104,7 @@ function iipm_get_users() {
         LEFT JOIN {$wpdb->prefix}test_iipm_members m ON u.ID = m.user_id
         LEFT JOIN {$wpdb->prefix}test_iipm_member_profiles mp ON u.ID = mp.user_id
         LEFT JOIN {$wpdb->prefix}test_iipm_organisations o ON mp.employer_id = o.id
+        LEFT JOIN {$wpdb->prefix}memberships mem ON m.membership_level = mem.id
         {$where_clause}
     ";
     
@@ -108,11 +114,12 @@ function iipm_get_users() {
     $users_sql = "
         SELECT u.ID, u.display_name, u.user_email, u.user_registered,
                m.membership_status, m.last_login, mp.employer_id, mp.theUsersStatus,
-               o.name as organisation_name
+               o.name as organisation_name, mem.name as membership_name, mem.id as membership_id
         FROM {$wpdb->users} u
         LEFT JOIN {$wpdb->prefix}test_iipm_members m ON u.ID = m.user_id
         LEFT JOIN {$wpdb->prefix}test_iipm_member_profiles mp ON u.ID = mp.user_id
         LEFT JOIN {$wpdb->prefix}test_iipm_organisations o ON mp.employer_id = o.id
+        LEFT JOIN {$wpdb->prefix}memberships mem ON m.membership_level = mem.id
         {$where_clause}
         ORDER BY u.display_name ASC
         LIMIT %d OFFSET %d
@@ -127,24 +134,12 @@ function iipm_get_users() {
         $wp_user = get_user_by('id', $user->ID);
         $user_roles = $wp_user->roles;
         
-        // Get the actual role from query result
-        $actual_role = $user->theUsersStatus ?: '';
+        // Get membership name from database, fallback to 'Member' if not found
+        $membership_display = $user->membership_name ?: 'Member';
         
-        // Get role display name - simplified mapping based on actual stored role
-        $role_display = 'Member';
-        if ($actual_role === 'Systems Admin' || in_array('administrator', $user_roles)) {
-            $role_display = 'Systems Admin';
-        } elseif ($actual_role === 'EmployerContact') {
-            $role_display = 'Employer Contact';
-        } elseif ($actual_role === 'Full Member') {
-            $role_display = 'Full Member';
-        } elseif ($actual_role === 'Life Member') {
-            $role_display = 'Life Member';
-        } elseif ($actual_role === 'QPT Member') {
-            $role_display = 'QPT Member';
-        } else {
-            // For any other member types, show as "Member"
-            $role_display = 'Member';
+        // Special case for administrators
+        if (in_array('administrator', $user_roles)) {
+            $membership_display = 'Admin';
         }
         
         $processed_users[] = array(
@@ -154,7 +149,9 @@ function iipm_get_users() {
             'membership_status' => $user->membership_status ?: 'pending',
             'organisation_name' => $user->organisation_name,
             'last_login' => $user->last_login ? date('M j, Y g:i A', strtotime($user->last_login)) : null,
-            'role_display' => $role_display,
+            'role_display' => $membership_display,
+            'membership_id' => $user->membership_id,
+            'membership_name' => $user->membership_name,
             'roles' => $user_roles
         );
     }
@@ -172,6 +169,37 @@ function iipm_get_users() {
     ));
 }
 add_action('wp_ajax_iipm_get_users', 'iipm_get_users');
+
+// Get membership levels for dropdowns
+function iipm_get_membership_levels() {
+    // Check permissions
+    if (!current_user_can('administrator') && 
+        !current_user_can('manage_organisation_members') && 
+        !in_array('iipm_corporate_admin', wp_get_current_user()->roles)) {
+        wp_send_json_error('Insufficient permissions');
+        return;
+    }
+    
+    // Verify nonce
+    if (!wp_verify_nonce($_POST['nonce'], 'iipm_user_management_nonce')) {
+        wp_send_json_error('Security check failed');
+        return;
+    }
+    
+    global $wpdb;
+    
+    // Get all membership levels from the memberships table
+    $memberships = $wpdb->get_results("
+        SELECT id, name, designation, fee, cpd_requirement 
+        FROM {$wpdb->prefix}memberships 
+        ORDER BY name ASC
+    ");
+    
+    wp_send_json_success(array(
+        'memberships' => $memberships
+    ));
+}
+add_action('wp_ajax_iipm_get_membership_levels', 'iipm_get_membership_levels');
 
 // Get user details for editing
 function iipm_get_user_details() {
@@ -243,6 +271,7 @@ function iipm_get_user_details() {
         'user_email' => $user->user_email,
         'roles' => array($member_profile_data->theUsersStatus),
         'membership_status' => $member_data ? $member_data->membership_status : 'pending',
+        "membership_level" => $member_data ? $member_data->membership_level : 0,
         'employer_id' => $member_profile_data->employer_id,
         'last_login' => $member_data ? ($member_data->last_login ? date('M j, Y g:i A', strtotime($member_data->last_login)) : 'Never') : 'Never'
     ));
@@ -269,7 +298,7 @@ function iipm_update_user() {
     $first_name = sanitize_text_field($_POST['first_name']);
     $last_name = sanitize_text_field($_POST['last_name']);
     $email = sanitize_email($_POST['email']);
-    $role = sanitize_text_field($_POST['role']);
+    $membership = sanitize_text_field($_POST['membership']);
     $status = sanitize_text_field($_POST['status']);
     $employer_id = intval($_POST['employer_id'] ?? 0);
     
@@ -300,7 +329,7 @@ function iipm_update_user() {
         }
         
         // Org admins cannot assign administrator role
-        if ($role === 'Systems Admin') {
+        if ($membership === 'Admin' || $membership === 'Systems Admin') {
             wp_send_json_error('You cannot assign administrator role');
             return;
         }
@@ -313,8 +342,38 @@ function iipm_update_user() {
         return;
     }
     
-    // Check if employer is being changed and handle admin role cleanup
+    // Get current membership level to detect changes
     global $wpdb;
+    $current_membership_data = $wpdb->get_row($wpdb->prepare(
+        "SELECT m.membership_level, mem.designation 
+         FROM {$wpdb->prefix}test_iipm_members m 
+         LEFT JOIN {$wpdb->prefix}memberships mem ON m.membership_level = mem.id 
+         WHERE m.user_id = %d",
+        $user_id
+    ));
+    
+    $current_membership_level = $current_membership_data ? $current_membership_data->membership_level : null;
+    $current_designation = $current_membership_data ? $current_membership_data->designation : null;
+    
+    // Determine new membership level ID
+    $new_membership_level = null;
+    if ($membership !== 'Admin' && $membership !== 'Systems Admin' && is_numeric($membership)) {
+        $new_membership_level = intval($membership);
+    }
+    
+    // Check if membership level has changed
+    $membership_changed = ($current_membership_level != $new_membership_level);
+    
+    // Get new designation if membership level changed
+    $new_designation = null;
+    if ($membership_changed && $new_membership_level) {
+        $new_designation = $wpdb->get_var($wpdb->prepare(
+            "SELECT designation FROM {$wpdb->prefix}memberships WHERE id = %d",
+            $new_membership_level
+        ));
+    }
+    
+    // Check if employer is being changed and handle admin role cleanup
     $current_employer = $wpdb->get_var($wpdb->prepare(
         "SELECT employer_id FROM {$wpdb->prefix}test_iipm_member_profiles WHERE user_id = %d",
         $user_id
@@ -366,39 +425,87 @@ function iipm_update_user() {
         return;
     }
     
-    // Update user role
+    // Update user role - handle membership ID vs role name
     $user = new WP_User($user_id);
-    $user->set_role($role);
+    if ($membership === 'Admin' || $membership === 'Systems Admin') {
+        $user->set_role('administrator');
+    } else {
+        // For membership levels, set a default role
+        $user->set_role('subscriber');
+    }
     
-    // Update membership status
-    global $wpdb;
+    // Get membership level ID - membership parameter now contains the membership ID
+    $membership_id = null;
+    if ($membership !== 'Admin' && $membership !== 'Systems Admin' && is_numeric($membership)) {
+        $membership_id = intval($membership);
+    }
+    
+    // Update membership status and level
+    // Get membership name for theUsersStatus field
+    $membership_name = $membership;
+    if (is_numeric($membership)) {
+        $membership_name = $wpdb->get_var($wpdb->prepare(
+            "SELECT name FROM {$wpdb->prefix}memberships WHERE id = %d",
+            intval($membership)
+        ));
+    }
+    
+    // Prepare member profiles update data
+    $profile_update_data = array(
+        'theUsersStatus' => $membership_name, 
+        'email_address' => $email, 
+        'first_name' => $first_name, 
+        'sur_name' => $last_name, 
+        'user_fullName' => $first_name . ' ' . $last_name,
+        'user_is_admin' => ($membership === 'Admin' || $membership === 'Systems Admin') ? 1 : 0,
+        'employer_id' => $employer_id,
+        'dateOfUpdateGen' => current_time('mysql')
+    );
+    
+    // Add designation if membership level changed
+    if ($membership_changed && $new_designation !== null) {
+        $profile_update_data['user_designation'] = $new_designation;
+    }
+    
+    // Prepare format array based on whether designation is included
+    $format_array = array('%s', '%s', '%s', '%s', '%s', '%d', '%d', '%s');
+    if ($membership_changed && $new_designation !== null) {
+        $format_array[] = '%s'; // Add format for designation
+    }
+    
     $wpdb->update(
         $wpdb->prefix . 'test_iipm_member_profiles',
-        array(
-            'theUsersStatus' => $role, 
-            'email_address' => $email, 
-            'first_name' => $first_name, 
-            'sur_name' => $last_name, 
-            'user_fullName' => $first_name . ' ' . $last_name,
-            'user_is_admin' => $role === 'Systems Admin' ? 1 : 0,
-            'employer_id' => $employer_id,
-            'dateOfUpdateGen' => current_time('mysql')
-        ),
+        $profile_update_data,
         array('user_id' => $user_id),
-        array('%s', '%s', '%s', '%s', '%s', '%d', '%d', '%s'),
+        $format_array,
         array('%d')
     );
 
     $wpdb->update(
         $wpdb->prefix . 'test_iipm_members',
-        array('membership_status' => $status),
+        array(
+            'membership_status' => $status,
+            'membership_level' => $membership_id
+        ),
         array('user_id' => $user_id),
-        array('%s'),
+        array('%s', '%d'),
         array('%d')
     );
     
     // Log activity
     $log_message = "Updated user: {$first_name} {$last_name} ({$email})";
+    
+    // Add membership change info to log if applicable
+    if ($membership_changed) {
+        $old_membership_name = $current_membership_level ? 
+            $wpdb->get_var($wpdb->prepare("SELECT name FROM {$wpdb->prefix}memberships WHERE id = %d", $current_membership_level)) : 
+            'None';
+        $new_membership_name = $membership_name;
+        $log_message .= " - Membership changed from '{$old_membership_name}' to '{$new_membership_name}'";
+        if ($new_designation) {
+            $log_message .= " (Designation: {$new_designation})";
+        }
+    }
     
     // Add admin role removal info to log if applicable
     if ($current_employer != $employer_id && $was_org_admin == $user_id) {

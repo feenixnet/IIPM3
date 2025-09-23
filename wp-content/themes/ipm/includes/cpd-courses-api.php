@@ -94,8 +94,28 @@ function iipm_get_courses($filters = array(), $pagination = array()) {
     $table_name = $wpdb->prefix . 'coursesbyadminbku';
     
     // Build WHERE clause
-    $where_conditions = array("status = 'active'"); // Only show active courses
+    $where_conditions = array();
     $query_params = array();
+    
+    // Get current user ID
+    $current_user_id = get_current_user_id();
+    
+    // Course visibility rules:
+    // 1. Admin courses: status = 'active' AND is_by_admin = 1 (visible to all users)
+    // 2. User's own external courses: status = 'active' AND is_by_admin = 0 AND user_id = current_user_id
+    // 3. Hide other users' external courses: status = 'active' AND is_by_admin = 0 AND user_id != current_user_id (hidden)
+    
+    // Show both admin courses and user's own external courses
+    if ($current_user_id) {
+        $where_conditions[] = "(
+            (status = 'active' AND is_by_admin = 1) OR 
+            (status = 'active' AND is_by_admin = 0 AND user_id = %d)
+        )";
+        $query_params[] = $current_user_id;
+    } else {
+        // For non-logged in users, only show admin courses
+        $where_conditions[] = "status = 'active' AND is_by_admin = 1";
+    }
     
     // Title search filter
     if (!empty($filters['title_search'])) {
@@ -135,19 +155,28 @@ function iipm_get_courses($filters = array(), $pagination = array()) {
         $query_params[] = $provider;
     }
     
-    // My courses filter
+    // My courses filter - show only user's own external courses
     if (!empty($filters['my_courses']) && ($filters['my_courses'] === 'true' || $filters['my_courses'] === true || $filters['my_courses'] === '1')) {
-        $user_id = get_current_user_id();
-        if ($user_id) {
-            $where_conditions[] = "user_id = %d";
-            $query_params[] = $user_id;
+        if ($current_user_id) {
+            // Override the main visibility rule to show only user's own external courses
+            $where_conditions = array("status = 'active' AND is_by_admin = 0 AND user_id = %d");
+            $query_params = array($current_user_id);
         }
     }
     
     $where_clause = !empty($where_conditions) ? "WHERE " . implode(" AND ", $where_conditions) : "";
     
+    // Debug logging
+    error_log('CPD Courses Query Debug:');
+    error_log('Table: ' . $table_name);
+    error_log('Where clause: ' . $where_clause);
+    error_log('Query params: ' . print_r($query_params, true));
+    error_log('Current user ID: ' . $current_user_id);
+    
     // Get total count for pagination
     $count_query = "SELECT COUNT(*) FROM {$table_name} {$where_clause}";
+
+    error_log('Count query: ' . $count_query);
     
     if (!empty($query_params)) {
         $total_courses = $wpdb->get_var($wpdb->prepare($count_query, $query_params));

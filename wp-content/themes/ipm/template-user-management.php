@@ -105,21 +105,24 @@ if (!function_exists('add_success_notification')) {
                         </div>
                         
                         <div class="filter-controls" style="display: flex; gap: 15px; align-items: center;">
-                            <select id="role-filter" style="padding: 12px 16px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 14px;">
-                                <option value="">All Roles</option>
-                                <option value="EmployerContact">Employer Contact</option>
-                                <option value="Full Member">Full Member</option>
-                                <option value="Life Member">Life Member</option>
-                                <option value="QPT Member">QPT Member</option>
-                                <option value="Systems Admin">Systems Admin</option>
+                            <select id="membership-filter" style="padding: 12px 16px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 14px;">
+                                <option value="">All Membership Levels</option>
+                                <!-- Membership levels will be loaded dynamically -->
                             </select>
                             
                             <select id="status-filter" style="padding: 12px 16px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 14px;">
                                 <option value="">All Status</option>
                                 <option value="active">Active</option>
-                                <option value="pending">Pending</option>
                                 <option value="inactive">Inactive</option>
+                                <option value="pending">Pending</option>
                                 <option value="suspended">Suspended</option>
+                                <option value="lapsed">Lapsed</option>
+                                <option value="revoked">Revoked</option>
+                                <option value="resigned">Resigned</option>
+                                <option value="retired">Retired</option>
+                                <option value="leftsector">Left Sector</option>
+                                <option value="paused">Paused</option>
+                                <option value="deceased">Deceased</option>
                             </select>
                             
                             <button id="refresh-users" style="padding: 12px 20px; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 500;">
@@ -135,7 +138,7 @@ if (!function_exists('add_success_notification')) {
                                 <tr>
                                     <th style="padding: 16px; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Name</th>
                                     <th style="padding: 16px; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Email</th>
-                                    <th style="padding: 16px; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Role</th>
+                                    <th style="padding: 16px; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Membership Level</th>
                                     <th style="padding: 16px; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Status</th>
                                     <th style="padding: 16px; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Organization</th>
                                     <th style="padding: 16px; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Last Login</th>
@@ -176,28 +179,28 @@ if (!function_exists('add_success_notification')) {
                                 <label for="type">Invitation Type *</label>
                                 <select name="type" id="type" required>
                                     <option value="individual">Individual Member</option>
-                                    <option value="bulk">Organisation Member</option>
+                                    <option value="bulk">Organization Member</option>
                                 </select>
                             </div>
                             
                             <?php if ($is_org_admin && !$is_site_admin): ?>
-                                <!-- Corporate admin - auto-set organisation -->
+                                <!-- Corporate admin - auto-set organization -->
                                 <input type="hidden" name="organisation_id" value="<?php echo $user_organisation->id; ?>">
                                 <div class="form-group">
-                                    <label>Organisation</label>
+                                    <label>Organization</label>
                                     <div class="readonly-field">
                                         <span class="organisation-badge">
                                             <i class="fas fa-building"></i> <?php echo esc_html($user_organisation->name); ?>
                                         </span>
-                                        <small class="field-note">Invitations will be sent for your organisation</small>
+                                        <small class="field-note">Invitations will be sent for your organization</small>
                                     </div>
                                 </div>
                             <?php else: ?>
-                                <!-- Site admin - can select organisation -->
+                                <!-- Site admin - can select organization -->
                                 <div class="form-group organisation-field" style="display:none;">
-                                    <label for="organisation_id">Organisation</label>
+                                    <label for="organisation_id">Organization</label>
                                     <select name="organisation_id" id="organisation_id">
-                                        <option value="">Select Organisation</option>
+                                        <option value="">Select Organization</option>
                                         <?php
                                         global $wpdb;
                                         $organisations = $wpdb->get_results("SELECT id, name FROM {$wpdb->prefix}test_iipm_organisations WHERE is_active = 1 ORDER BY name");
@@ -224,7 +227,7 @@ if (!function_exists('add_success_notification')) {
                                         <th>Email</th>
                                         <th>Type</th>
                                         <?php if ($is_site_admin): ?>
-                                            <th>Organisation</th>
+                                            <th>Organization</th>
                                         <?php endif; ?>
                                         <th>Status</th>
                                         <th>Sent Date</th>
@@ -289,16 +292,10 @@ if (!function_exists('add_success_notification')) {
             
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
                 <div>
-                    <label style="display: block; margin-bottom: 5px; font-weight: 500; color: #374151;">Role</label>
-                    <select id="edit-role" name="role" 
+                    <label style="display: block; margin-bottom: 5px; font-weight: 500; color: #374151;">Membership Level</label>
+                    <select id="edit-membership" name="membership" 
                             style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px;">
-                        <option value="EmployerContact">Employer Contact</option>
-                        <option value="Full Member">Full Member</option>
-                        <option value="Life Member">Life Member</option>
-                        <option value="QPT Member">QPT Member</option>
-                        <?php if ($is_site_admin): ?>
-                        <option value="Systems Admin">Administrator</option>
-                        <?php endif; ?>
+                        <!-- Membership levels will be loaded dynamically -->
                     </select>
                 </div>
                 <div>
@@ -306,9 +303,16 @@ if (!function_exists('add_success_notification')) {
                     <select id="edit-status" name="status" 
                             style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px;">
                         <option value="active">Active</option>
-                        <option value="pending">Pending</option>
                         <option value="inactive">Inactive</option>
+                        <option value="pending">Pending</option>
                         <option value="suspended">Suspended</option>
+                        <option value="lapsed">Lapsed</option>
+                        <option value="revoked">Revoked</option>
+                        <option value="resigned">Resigned</option>
+                        <option value="retired">Retired</option>
+                        <option value="leftsector">Left Sector</option>
+                        <option value="paused">Paused</option>
+                        <option value="deceased">Deceased</option>
                     </select>
                 </div>
             </div>
@@ -510,6 +514,96 @@ if (!function_exists('add_success_notification')) {
     font-size: 12px;
 }
 
+.status-active {
+    display: inline-block;
+    padding: 4px 8px;
+    background: #d1fae5;
+    color: #065f46;
+    border-radius: 4px;
+    font-size: 12px;
+}
+
+.status-inactive {
+    display: inline-block;
+    padding: 4px 8px;
+    background: #f3f4f6;
+    color: #6b7280;
+    border-radius: 4px;
+    font-size: 12px;
+}
+
+.status-suspended {
+    display: inline-block;
+    padding: 4px 8px;
+    background: #fee2e2;
+    color: #991b1b;
+    border-radius: 4px;
+    font-size: 12px;
+}
+
+.status-lapsed {
+    display: inline-block;
+    padding: 4px 8px;
+    background: #fef3c7;
+    color: #92400e;
+    border-radius: 4px;
+    font-size: 12px;
+}
+
+.status-revoked {
+    display: inline-block;
+    padding: 4px 8px;
+    background: #fee2e2;
+    color: #991b1b;
+    border-radius: 4px;
+    font-size: 12px;
+}
+
+.status-resigned {
+    display: inline-block;
+    padding: 4px 8px;
+    background: #e5e7eb;
+    color: #374151;
+    border-radius: 4px;
+    font-size: 12px;
+}
+
+.status-retired {
+    display: inline-block;
+    padding: 4px 8px;
+    background: #e5e7eb;
+    color: #374151;
+    border-radius: 4px;
+    font-size: 12px;
+}
+
+.status-leftsector {
+    display: inline-block;
+    padding: 4px 8px;
+    background: #e5e7eb;
+    color: #374151;
+    border-radius: 4px;
+    font-size: 12px;
+}
+
+.status-paused {
+    display: inline-block;
+    padding: 4px 8px;
+    background: #fef3c7;
+    color: #92400e;
+    border-radius: 4px;
+    font-size: 12px;
+}
+
+.status-deceased {
+    display: inline-block;
+    padding: 4px 8px;
+    background: #f3f4f6;
+    color: #6b7280;
+    border-radius: 4px;
+    font-size: 12px;
+}
+
 .btn-small {
     padding: 4px 8px;
     background: #6b4c93;
@@ -552,13 +646,59 @@ if (!function_exists('add_success_notification')) {
 jQuery(document).ready(function($) {
     let currentPage = 1;
     let currentSearch = '';
-    let currentRoleFilter = '';
+    let currentMembershipFilter = '';
     let currentStatusFilter = '';
     let userToDelete = null;
 
     // Load users and organizations on page load
+    loadMembershipLevels();
     loadUsers();
     fetchOrganizations();
+
+    // Load membership levels from database
+    function loadMembershipLevels() {
+        $.ajax({
+            url: '<?php echo admin_url('admin-ajax.php'); ?>',
+            type: 'POST',
+            data: {
+                action: 'iipm_get_membership_levels',
+                nonce: '<?php echo wp_create_nonce('iipm_user_management_nonce'); ?>'
+            },
+            success: function(response) {
+                if (response.success) {
+                    populateMembershipDropdowns(response.data.memberships);
+                } else {
+                    console.error('Error loading membership levels:', response.data);
+                }
+            },
+            error: function() {
+                console.error('Error loading membership levels');
+            }
+        });
+    }
+
+    // Populate membership dropdowns
+    function populateMembershipDropdowns(memberships) {
+        const membershipFilter = $('#membership-filter');
+        const editMembership = $('#edit-membership');
+        
+        // Clear existing options except the first one
+        membershipFilter.find('option:not(:first)').remove();
+        editMembership.empty();
+        
+        // Add membership options to both dropdowns
+        memberships.forEach(function(membership) {
+            const option = `<option value="${membership.id}">${membership.name}</option>`;
+            membershipFilter.append(option);
+            editMembership.append(option);
+        });
+        
+        // Add Admin option for site admins
+        <?php if ($is_site_admin): ?>
+        membershipFilter.append('<option value="Admin">Admin</option>');
+        editMembership.append('<option value="Admin">Admin</option>');
+        <?php endif; ?>
+    }
 
     // Search functionality
     $('#user-search').on('input', function() {
@@ -568,8 +708,8 @@ jQuery(document).ready(function($) {
     });
 
     // Filter functionality
-    $('#role-filter, #status-filter').on('change', function() {
-        currentRoleFilter = $('#role-filter').val();
+    $('#membership-filter, #status-filter').on('change', function() {
+        currentMembershipFilter = $('#membership-filter').val();
         currentStatusFilter = $('#status-filter').val();
         currentPage = 1;
         loadUsers();
@@ -631,7 +771,7 @@ jQuery(document).ready(function($) {
                 nonce: '<?php echo wp_create_nonce('iipm_user_management_nonce'); ?>',
                 page: currentPage,
                 search: currentSearch,
-                role_filter: currentRoleFilter,
+                membership_filter: currentMembershipFilter,
                 status_filter: currentStatusFilter
             },
             success: function(response) {
@@ -811,7 +951,9 @@ jQuery(document).ready(function($) {
                     $('#edit-first-name').val(user.first_name);
                     $('#edit-last-name').val(user.last_name);
                     $('#edit-email').val(user.user_email);
-                    $('#edit-role').val(user.roles[0]);
+                    // Set membership level - use membership_id if available, otherwise fallback to membership name
+                    const membershipValue = user.membership_level;
+                    $('#edit-membership').val(membershipValue);
                     $('#edit-status').val(user.membership_status);
                     
                     // Set employer
@@ -857,7 +999,7 @@ jQuery(document).ready(function($) {
             first_name: $('#edit-first-name').val(),
             last_name: $('#edit-last-name').val(),
             email: $('#edit-email').val(),
-            role: $('#edit-role').val(),
+            membership: $('#edit-membership').val(),
             status: $('#edit-status').val(),
             employer_id: $('#edit-employer').val()
         };

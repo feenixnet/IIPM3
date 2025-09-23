@@ -1,6 +1,6 @@
 <?php
 /*
-Template Name: Organisation Management
+Template Name: Organization Management
 */
 
 // Check if user has permission (IIPM Admin or Administrator only)
@@ -29,9 +29,9 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
         <!-- Page Header -->
         <div class="page-header" style="text-align: center; margin-bottom: 40px;">
             <div>
-                <h1 style="color: white; font-size: 2.5rem; margin-bottom: 10px;">Organisation Management</h1>
+                <h1 style="color: white; font-size: 2.5rem; margin-bottom: 10px;">Organization Management</h1>
                 <p style="color: rgba(255,255,255,0.9); font-size: 1.1rem;">
-                    Manage member organisations and their administrators
+                    Manage member organizations and their administrators
                 </p>
             </div>
         </div>
@@ -51,7 +51,7 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
                     <div class="stat-icon"><i class="fas fa-building"></i></div>
                     <div class="stat-content">
                         <div class="stat-number"><?php echo $total_orgs; ?></div>
-                        <div class="stat-label">Total Organisations</div>
+                        <div class="stat-label">Total Organizations</div>
                     </div>
                 </div>
                 
@@ -67,7 +67,7 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
                     <div class="stat-icon"><i class="fas fa-chart-bar"></i></div>
                     <div class="stat-content">
                         <div class="stat-number"><?php echo $total_org_members; ?></div>
-                        <div class="stat-label">Organisation Members</div>
+                        <div class="stat-label">Organization Members</div>
                     </div>
                 </div>
                 
@@ -88,7 +88,7 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
                         <line x1="12" y1="8" x2="12" y2="16"/>
                         <line x1="8" y1="12" x2="16" y2="12"/>
                     </svg>
-                    Add New Organisation
+                    Add New Organization
                 </button>
                 
                 <!-- <button id="bulk-setup-btn" class="btn btn-secondary">
@@ -110,12 +110,12 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
                 </button>
             </div>
             
-            <!-- Organisations Table -->
+            <!-- Organizations Table -->
             <div class="organisations-section">
                 <div class="section-header">
-                    <h2><i class="fas fa-clipboard-list"></i> Organisations</h2>
+                    <h2><i class="fas fa-clipboard-list"></i> Organizations</h2>
                     <div class="search-filter">
-                        <input type="text" id="org-search" placeholder="Search organisations..." class="search-input">
+                        <input type="text" id="org-search" placeholder="Search organizations..." class="search-input">
                         <select id="status-filter" class="filter-select">
                             <option value="">All Status</option>
                             <option value="setup">Setup Complete</option>
@@ -129,7 +129,7 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
                     <table class="organisations-table" id="organisations-table">
                         <thead>
                             <tr>
-                                <th>Organisation</th>
+                                <th>Organization</th>
                                 <th>Contact Info</th>
                                 <th>Admin Status</th>
                                 <th>Members</th>
@@ -153,7 +153,7 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
                             ");
                             
                             if (empty($organisations)) {
-                                echo "<tr><td colspan='6' class='no-data'>No organisations found</td></tr>";
+                                echo "<tr><td colspan='6' class='no-data'>No organizations found</td></tr>";
                             } else {
                                 foreach ($organisations as $org) {
                                     $admin_status = $org->admin_user_id ? 'setup' : 'pending';
@@ -221,7 +221,7 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
 <div id="organisation-modal" class="modal" style="display:none;">
     <div class="modal-content large">
         <div class="modal-header">
-            <h3 id="modal-title">Add New Organisation</h3>
+            <h3 id="modal-title">Add New Organization</h3>
             <button class="modal-close">&times;</button>
         </div>
         <div class="modal-body">
@@ -230,10 +230,10 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
                 <?php wp_nonce_field('iipm_org_management_nonce', 'nonce'); ?>
                 
                 <div class="form-section">
-                    <h4><i class="fas fa-building"></i> Organisation Details</h4>
+                    <h4><i class="fas fa-building"></i> Organization Details</h4>
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="org-name">Organisation Name *</label>
+                            <label for="org-name">Organization Name *</label>
                             <input type="text" id="org-name" name="name" required>
                         </div>
                         
@@ -311,7 +311,7 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
                 
                 <div class="form-actions">
                     <button type="submit" class="btn btn-primary">
-                        <span class="btn-text">Save Organisation</span>
+                        <span class="btn-text">Save Organization</span>
                         <span class="btn-loading" style="display:none;">Saving...</span>
                     </button>
                     <button type="button" class="btn btn-secondary modal-close">Cancel</button>
@@ -325,7 +325,7 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
 <div id="setup-admin-modal" class="modal" style="display:none;">
     <div class="modal-content">
         <div class="modal-header">
-            <h3>Setup Organisation Administrator</h3>
+            <h3>Setup Organization Administrator</h3>
             <button class="modal-close">&times;</button>
         </div>
         <div class="modal-body">
@@ -334,14 +334,14 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
                 <?php wp_nonce_field('iipm_setup_admin_nonce', 'nonce'); ?>
                 
                 <div class="org-info-display">
-                    <h4 id="setup-org-name">Organisation Name</h4>
-                    <p id="setup-org-details">Organisation details will appear here</p>
+                    <h4 id="setup-org-name">Organization Name</h4>
+                    <p id="setup-org-details">Organization details will appear here</p>
                 </div>
                 
                 <div class="form-group">
                     <label for="setup-admin-email">Administrator Email Address *</label>
                     <input type="email" id="setup-admin-email" name="admin_email" required>
-                    <small>This person will become the organisation administrator</small>
+                    <small>This person will become the organization administrator</small>
                 </div>
                 
                 <div class="form-group">
@@ -360,8 +360,8 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
                 <div class="invitation-preview">
                     <h5><i class="fas fa-envelope"></i> Invitation Preview</h5>
                     <div class="preview-content">
-                        <p><strong>Subject:</strong> IIPM Organisation Administrator Invitation</p>
-                        <p><strong>Message:</strong> You have been invited to become the administrator for <span id="preview-org-name">[Organisation]</span> on the IIPM platform...</p>
+                        <p><strong>Subject:</strong> IIPM Organization Administrator Invitation</p>
+                        <p><strong>Message:</strong> You have been invited to become the administrator for <span id="preview-org-name">[Organization]</span> on the IIPM platform...</p>
                     </div>
                 </div>
                 
@@ -389,7 +389,7 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
                 <div class="notice-icon"><i class="fas fa-exclamation-triangle"></i></div>
                 <div class="notice-content">
                     <strong>Local Development Mode</strong>
-                    <p>This feature allows you to directly assign an existing user as an organisation admin without sending emails. Use this for testing in local environments.</p>
+                    <p>This feature allows you to directly assign an existing user as an organization admin without sending emails. Use this for testing in local environments.</p>
                 </div>
             </div>
             
@@ -398,7 +398,7 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
                 <?php wp_nonce_field('iipm_portal_nonce', 'nonce'); ?>
                 
                 <div class="org-info-display">
-                    <h4 id="direct-assign-org-name">Organisation Name</h4>
+                    <h4 id="direct-assign-org-name">Organization Name</h4>
                 </div>
                 
                 <div class="form-group">
@@ -406,7 +406,7 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
                     <select id="direct-assign-user" name="user_id" class="user-select" required>
                         <option value="">Loading users...</option>
                     </select>
-                    <small>This user will be assigned as the organisation administrator</small>
+                    <small>This user will be assigned as the organization administrator</small>
                 </div>
                 
                 <div class="form-actions">
@@ -425,7 +425,7 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
 <div id="view-members-modal" class="modal" style="display:none;">
     <div class="modal-content large">
         <div class="modal-header">
-            <h3 id="members-modal-title">Organisation Members</h3>
+            <h3 id="members-modal-title">Organization Members</h3>
             <button class="modal-close">&times;</button>
         </div>
         <div class="modal-body">
