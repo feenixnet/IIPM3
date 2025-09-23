@@ -118,6 +118,27 @@ get_header();
             <?php endif; ?>
         <?php endif; ?>
         
+        <!-- Submission Status Section -->
+        <?php if ($is_submitted): ?>
+        <div class="submission-status-section">
+            <div class="submission-status-card">
+                <div class="status-header">
+                    <div class="status-icon">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <div class="status-content">
+                        <h2>CPD Submission Complete!</h2>
+                        <p>Congratulations! You have successfully submitted your CPD training for <?php echo $current_year; ?>.</p>
+                    </div>
+                </div>
+                
+                <div class="submission-details" id="submission-details">
+                    <div class="loading-spinner"></div>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
+        
         <div class="portal-layout">
             <?php if ($is_user_assigned): ?>
             <!-- Left Side - My CPD Course (for assigned users) -->
@@ -125,8 +146,16 @@ get_header();
                 <div class="cpd-course-card">
                     <h3>My CPD Course</h3>
                     
-                    <button class="btn btn-primary" id="log-training-btn" <?php echo !$is_logging_period_active ? 'disabled' : ''; ?>>
-                        <?php echo $is_logging_period_active ? 'Log Training' : 'Logging Period Closed'; ?>
+                    <button class="btn btn-primary" id="log-training-btn" <?php echo (!$is_logging_period_active || $is_submitted) ? 'disabled' : ''; ?>>
+                        <?php 
+                        if ($is_submitted) {
+                            echo 'Training Logging Disabled';
+                        } elseif ($is_logging_period_active) {
+                            echo 'Log Training';
+                        } else {
+                            echo 'Logging Period Closed';
+                        }
+                        ?>
                     </button>
                     
                     <div class="progress-section">
@@ -249,13 +278,21 @@ get_header();
                     <div class="quick-link-card" id="all-courses-card">
                         <div class="card-icon"><i class="fas fa-book"></i></div>
                         <h4>All Courses</h4>
-                        <a href="<?php echo home_url('/cpd-courses/?logging_available=' . ($is_logging_period_active ? '1' : '0')); ?>" class="card-link">Browse courses <i class="fas fa-arrow-right"></i></a>
+                        <?php if ($is_submitted): ?>
+                            <span class="card-link disabled" style="color: #9ca3af; cursor: not-allowed;">Disabled <i class="fas fa-lock"></i></span>
+                        <?php else: ?>
+                            <a href="<?php echo home_url('/cpd-courses/?logging_available=' . ($is_logging_period_active ? '1' : '0')); ?>" class="card-link">Browse courses <i class="fas fa-arrow-right"></i></a>
+                        <?php endif; ?>
                     </div>
                     
                     <div class="quick-link-card">
                         <div class="card-icon"><i class="fas fa-calendar"></i></div>
                         <h4>Submit Leave Request</h4>
-                        <a href="<?php echo home_url('/leave-request/') ?>" class="card-link">Submit <i class="fas fa-arrow-right"></i></a>
+                        <?php if ($is_submitted): ?>
+                            <span class="card-link disabled" style="color: #9ca3af; cursor: not-allowed;">Disabled <i class="fas fa-lock"></i></span>
+                        <?php else: ?>
+                            <a href="<?php echo home_url('/leave-request/') ?>" class="card-link">Submit <i class="fas fa-arrow-right"></i></a>
+                        <?php endif; ?>
                     </div>
                 </div>
 
@@ -268,8 +305,16 @@ get_header();
                             <div class="no-training-icon">💻</div>
                             <h4>No training history yet</h4>
                             <p>Start your CPD journey by logging your first training session</p>
-                            <button class="btn btn-primary" id="log-first-training-btn" <?php echo !$is_logging_period_active ? 'disabled' : ''; ?>>
-                                <?php echo $is_logging_period_active ? 'Log your first training' : 'Logging Period Closed'; ?>
+                            <button class="btn btn-primary" id="log-first-training-btn" <?php echo (!$is_logging_period_active || $is_submitted) ? 'disabled' : ''; ?>>
+                                <?php 
+                                if ($is_submitted) {
+                                    echo 'Training Logging Disabled';
+                                } elseif ($is_logging_period_active) {
+                                    echo 'Log your first training';
+                                } else {
+                                    echo 'Logging Period Closed';
+                                }
+                                ?>
                             </button>
                         </div>
                     </div>
@@ -926,6 +971,228 @@ get_header();
         text-decoration: underline;
     }
 
+    .card-link.disabled {
+        color: #9ca3af !important;
+        cursor: not-allowed !important;
+        text-decoration: none !important;
+    }
+
+    .card-link.disabled:hover {
+        text-decoration: none !important;
+    }
+
+    /* Submission Status Section */
+    .submission-status-section {
+        margin-bottom: 40px;
+    }
+
+    .submission-status-card {
+        background: white;
+        border-radius: 20px;
+        padding: 40px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        text-align: center;
+    }
+
+    .status-header {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+
+    .status-icon {
+        width: 80px;
+        height: 80px;
+        background: linear-gradient(135deg, #10b981, #059669);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 2.5rem;
+        box-shadow: 0 10px 20px rgba(16, 185, 129, 0.3);
+    }
+
+    .status-content h2 {
+        color: #1f2937;
+        font-size: 2rem;
+        font-weight: 700;
+        margin: 0 0 10px 0;
+    }
+
+    .status-content p {
+        color: #6b7280;
+        font-size: 1.1rem;
+        margin: 0;
+    }
+
+    .submission-details {
+        background: #f8fafc;
+        border-radius: 16px;
+        padding: 30px;
+        margin-top: 20px;
+    }
+
+    .status-info {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+
+    .status-item {
+        background: white;
+        padding: 20px;
+        border-radius: 12px;
+        border-left: 4px solid #8b5a96;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+
+    .status-item h4 {
+        color: #374151;
+        font-size: 0.9rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin: 0 0 8px 0;
+    }
+
+    .status-item .value {
+        color: #1f2937;
+        font-size: 1.2rem;
+        font-weight: 700;
+        margin: 0;
+    }
+
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .status-badge.pending {
+        background: #fef3c7;
+        color: #92400e;
+    }
+
+    .status-badge.approved {
+        background: #d1fae5;
+        color: #065f46;
+    }
+
+    .status-badge.rejected {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .certificate-section {
+        background: white;
+        border-radius: 12px;
+        padding: 25px;
+        border: 2px solid #e5e7eb;
+        margin-top: 20px;
+    }
+
+    .certificate-section.has-certificate {
+        border-color: #10b981;
+        background: linear-gradient(135deg, #f0fdf4, #ecfdf5);
+    }
+
+    .certificate-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 15px;
+    }
+
+    .certificate-icon {
+        width: 40px;
+        height: 40px;
+        background: #10b981;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.2rem;
+    }
+
+    .certificate-title {
+        color: #1f2937;
+        font-size: 1.3rem;
+        font-weight: 700;
+        margin: 0;
+    }
+
+    .certificate-info {
+        color: #6b7280;
+        font-size: 1rem;
+        margin: 0 0 20px 0;
+    }
+
+    .download-btn {
+        background: linear-gradient(135deg, #8b5a96, #6b4c93);
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        text-decoration: none;
+    }
+
+    .download-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(139, 90, 150, 0.3);
+        color: white;
+        text-decoration: none;
+    }
+
+    .download-btn:disabled {
+        background: #9ca3af;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+    }
+
+    @media (max-width: 768px) {
+        .submission-status-card {
+            padding: 30px 20px;
+        }
+
+        .status-header {
+            flex-direction: column;
+            text-align: center;
+        }
+
+        .status-icon {
+            width: 60px;
+            height: 60px;
+            font-size: 2rem;
+        }
+
+        .status-content h2 {
+            font-size: 1.5rem;
+        }
+
+        .status-info {
+            grid-template-columns: 1fr;
+        }
+    }
+
     .recently-logged-training {
         background: white;
         border-radius: 12px;
@@ -1334,6 +1601,11 @@ get_header();
         // Initialize the page
         initializePage();
         
+        // Load submission details if user has submitted
+        <?php if ($is_submitted): ?>
+        loadSubmissionDetails();
+        <?php endif; ?>
+        
         /**
          * Initialize the page
          */
@@ -1469,15 +1741,16 @@ get_header();
                         submitBtn.style.background = '#10b981';
                         submitBtn.style.color = 'white';
                         
-                        // Show success message
-                        alert('Your CPD submission was submitted successfully!');
+                        // Show congratulations alert
+                        showCongratulationsAlert();
                         
-                        // Hide button after submission
-                        // setTimeout(() => {
-                        //     submitBtn.style.display = 'none';
-                        // }, 2000);
-
-                        location.reload();
+                        // Load submission details
+                        loadSubmissionDetails();
+                        
+                        // Reload page after a delay to show the new status section
+                        setTimeout(() => {
+                            location.reload();
+                        }, 3000);
                     } else {
                         submitBtn.textContent = 'Error!';
                         submitBtn.style.background = '#ef4444';
@@ -2014,6 +2287,282 @@ get_header();
             trainingContent.innerHTML = html;
         }
         
+        /**
+         * Show congratulations alert
+         */
+        function showCongratulationsAlert() {
+            // Create a beautiful congratulations modal
+            const alertHtml = `
+                <div class="congratulations-overlay" style="
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(0, 0, 0, 0.8);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    z-index: 10000;
+                    animation: fadeIn 0.3s ease;
+                ">
+                    <div class="congratulations-card" style="
+                        background: white;
+                        border-radius: 20px;
+                        padding: 40px;
+                        text-align: center;
+                        max-width: 500px;
+                        width: 90%;
+                        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+                        animation: slideUp 0.5s ease;
+                    ">
+                        <div class="celebration-icon" style="
+                            width: 100px;
+                            height: 100px;
+                            background: linear-gradient(135deg, #10b981, #059669);
+                            border-radius: 50%;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            margin: 0 auto 20px;
+                            color: white;
+                            font-size: 3rem;
+                            box-shadow: 0 10px 20px rgba(16, 185, 129, 0.3);
+                        ">
+                            🎉
+                        </div>
+                        <h2 style="
+                            color: #1f2937;
+                            font-size: 2rem;
+                            font-weight: 700;
+                            margin: 0 0 15px 0;
+                        ">Congratulations!</h2>
+                        <p style="
+                            color: #6b7280;
+                            font-size: 1.1rem;
+                            margin: 0 0 25px 0;
+                            line-height: 1.6;
+                        ">You have successfully submitted your CPD training for ${new Date().getFullYear()}!</p>
+                        <button onclick="closeCongratulationsAlert()" style="
+                            background: linear-gradient(135deg, #8b5a96, #6b4c93);
+                            color: white;
+                            border: none;
+                            padding: 12px 30px;
+                            border-radius: 8px;
+                            font-size: 1rem;
+                            font-weight: 600;
+                            cursor: pointer;
+                            transition: all 0.3s ease;
+                        ">Continue</button>
+                    </div>
+                </div>
+                <style>
+                    @keyframes fadeIn {
+                        from { opacity: 0; }
+                        to { opacity: 1; }
+                    }
+                    @keyframes slideUp {
+                        from { transform: translateY(50px); opacity: 0; }
+                        to { transform: translateY(0); opacity: 1; }
+                    }
+                </style>
+            `;
+            
+            document.body.insertAdjacentHTML('beforeend', alertHtml);
+        }
+        
+        /**
+         * Close congratulations alert
+         */
+        function closeCongratulationsAlert() {
+            const overlay = document.querySelector('.congratulations-overlay');
+            if (overlay) {
+                overlay.remove();
+            }
+        }
+        
+        /**
+         * Load submission details
+         */
+        function loadSubmissionDetails() {
+            const submissionDetails = document.getElementById('submission-details');
+            if (!submissionDetails) return;
+            
+            // Show loading state
+            submissionDetails.innerHTML = '<div class="loading-spinner"></div>';
+            
+            // Fetch submission status
+            jQuery.ajax({
+                url: ajaxurl,
+                type: 'POST',
+                data: {
+                    action: 'iipm_get_user_submission_status',
+                    year: new Date().getFullYear()
+                },
+                success: function(response) {
+                    if (response.success) {
+                        renderSubmissionStatus(response.data);
+                    } else {
+                        submissionDetails.innerHTML = '<p>Error loading submission details: ' + response.data + '</p>';
+                    }
+                },
+                error: function() {
+                    submissionDetails.innerHTML = '<p>Failed to load submission details</p>';
+                }
+            });
+        }
+        
+        /**
+         * Render submission status
+         */
+        function renderSubmissionStatus(data) {
+            const submissionDetails = document.getElementById('submission-details');
+            if (!submissionDetails) return;
+            
+            const submission = data.submission;
+            const user = data.user;
+            const certificate = data.certificate;
+            
+            // Format dates
+            const submittedDate = new Date(submission.created_at).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+            
+            const reviewedDate = submission.reviewed_at ? 
+                new Date(submission.reviewed_at).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                }) : 'Not reviewed yet';
+            
+            // Status badge class
+            const statusClass = submission.status;
+            const statusText = submission.status.charAt(0).toUpperCase() + submission.status.slice(1);
+            
+            let html = `
+                <div class="status-info">
+                    <div class="status-item">
+                        <h4>Submission Status</h4>
+                        <span class="status-badge ${statusClass}">${statusText}</span>
+                    </div>
+                    <div class="status-item">
+                        <h4>Submitted Date</h4>
+                        <p class="value">${submittedDate}</p>
+                    </div>
+                    <div class="status-item">
+                        <h4>Reviewed Date</h4>
+                        <p class="value">${reviewedDate}</p>
+                    </div>
+                    <div class="status-item">
+                        <h4>Submission Year</h4>
+                        <p class="value">${submission.year}</p>
+                    </div>
+                </div>
+            `;
+            
+            // Add certificate section if certificate exists
+            if (certificate) {
+                html += `
+                    <div class="certificate-section has-certificate">
+                        <div class="certificate-header">
+                            <div class="certificate-icon">
+                                <i class="fas fa-certificate"></i>
+                            </div>
+                            <h3 class="certificate-title">Certificate Available</h3>
+                        </div>
+                        <p class="certificate-info">
+                            <strong>${certificate.name}</strong> (${certificate.year})
+                            ${certificate.description ? '<br>' + certificate.description : ''}
+                        </p>
+                        <button class="download-btn" onclick="downloadCertificate(${certificate.id}, '${user.name}', '${user.email}', '${user.contact_address}', '${submission.year}')">
+                            <i class="fas fa-download"></i>
+                            Download Certificate
+                        </button>
+                    </div>
+                `;
+            } else {
+                html += `
+                    <div class="certificate-section">
+                        <div class="certificate-header">
+                            <div class="certificate-icon" style="background: #9ca3af;">
+                                <i class="fas fa-clock"></i>
+                            </div>
+                            <h3 class="certificate-title">Certificate Pending</h3>
+                        </div>
+                        <p class="certificate-info">
+                            Your certificate will be available once your submission is approved by an administrator.
+                        </p>
+                    </div>
+                `;
+            }
+            
+            // Add admin notes if available
+            if (submission.admin_notes) {
+                html += `
+                    <div class="admin-notes" style="
+                        background: #f3f4f6;
+                        border-radius: 8px;
+                        padding: 15px;
+                        margin-top: 20px;
+                        border-left: 4px solid #8b5a96;
+                    ">
+                        <h4 style="margin: 0 0 8px 0; color: #374151; font-size: 0.9rem;">Admin Notes:</h4>
+                        <p style="margin: 0; color: #6b7280; font-size: 0.9rem;">${submission.admin_notes}</p>
+                    </div>
+                `;
+            }
+            
+            submissionDetails.innerHTML = html;
+        }
+        
+        /**
+         * Download certificate PDF
+         */
+        window.downloadCertificate = function(certificateId, userName, userEmail, contactAddress, submissionYear) {
+            // Show loading state
+            const downloadBtn = event.target;
+            const originalText = downloadBtn.innerHTML;
+            downloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating PDF...';
+            downloadBtn.disabled = true;
+            
+            // Create form data
+            const formData = new FormData();
+            formData.append('action', 'iipm_download_certificate');
+            formData.append('certificate_id', certificateId);
+            formData.append('user_name', userName);
+            formData.append('user_email', userEmail);
+            formData.append('contact_address', contactAddress);
+            formData.append('submission_year', submissionYear);
+            formData.append('nonce', '<?php echo wp_create_nonce('iipm_portal_nonce'); ?>');
+            
+            // Create a temporary form to submit
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = ajaxurl;
+            form.style.display = 'none';
+            
+            // Add form data as hidden inputs
+            for (let [key, value] of formData.entries()) {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = key;
+                input.value = value;
+                form.appendChild(input);
+            }
+            
+            document.body.appendChild(form);
+            form.submit();
+            document.body.removeChild(form);
+            
+            // Reset button after a delay
+            setTimeout(() => {
+                downloadBtn.innerHTML = originalText;
+                downloadBtn.disabled = false;
+            }, 2000);
+        }
+
         /**
          * Show log training modal
          */

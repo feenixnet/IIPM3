@@ -522,6 +522,7 @@ $iipm_includes = array(
     get_template_directory() . '/includes/navigation-manager.php',
     get_template_directory() . '/includes/cpd-courses-api.php',
     get_template_directory() . '/includes/cpd-record-api.php',
+    get_template_directory() . '/includes/cpd-submission-functions.php',
 );
 
 foreach ($iipm_includes as $file) {
@@ -3259,8 +3260,8 @@ function iipm_final_init() {
     }
     
     // Initialize CPD certificate table (Milestone 4)
-    if (function_exists('iipm_create_cpd_certificates_table')) {
-        iipm_create_cpd_certificates_table();
+    if (function_exists('iipm_create_cpd_certifications_table')) {
+        iipm_create_cpd_certifications_table();
     }
     
     // Initialize CPD returns table

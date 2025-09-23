@@ -7,8 +7,8 @@ if (!defined('ABSPATH')) { exit; }
  * Fields: id, name, year, description, avatar_url, created_at, updated_at
  */
 
-if (!function_exists('iipm_create_cpd_certificates_table')) {
-    function iipm_create_cpd_certificates_table() {
+if (!function_exists('iipm_create_cpd_certifications_table')) {
+    function iipm_create_cpd_certifications_table() {
         global $wpdb;
         $charset_collate = $wpdb->get_charset_collate();
         $table = $wpdb->prefix . 'test_iipm_certifications';
@@ -30,7 +30,7 @@ if (!function_exists('iipm_create_cpd_certificates_table')) {
 }
 
 // Ensure table on theme switch/init
-add_action('after_switch_theme', 'iipm_create_cpd_certificates_table');
+add_action('after_switch_theme', 'iipm_create_cpd_certifications_table');
 
 // Permission check helper (WP caps + custom flag)
 function iipm_certs_user_can_admin() {
@@ -66,6 +66,8 @@ function iipm_certs_save() {
     if (!wp_verify_nonce($_POST['nonce'] ?? '', 'iipm_portal_nonce')) { wp_send_json_error('Bad nonce'); }
 
     global $wpdb; $table = $wpdb->prefix . 'test_iipm_certifications';
+    error_log('Table name: ' . $table);
+    error_log('Table exists: ' . ($wpdb->get_var("SHOW TABLES LIKE '$table'") ? 'YES' : 'NO'));
     $id = isset($_POST['id']) ? intval($_POST['id']) : 0;
     $name = sanitize_text_field($_POST['name'] ?? '');
     $year = sanitize_text_field($_POST['year'] ?? date('Y'));
@@ -111,12 +113,23 @@ function iipm_certs_save() {
 
     if ($id > 0) {
         $result = $wpdb->update($table, $data, array('id' => $id), $format, array('%d'));
+        error_log('Update result: ' . $result);
+        error_log('Update data: ' . print_r($data, true));
+        error_log('Update format: ' . print_r($format, true));
+        error_log('Last error: ' . $wpdb->last_error);
     } else {
         $result = $wpdb->insert($table, $data, $format);
+        error_log('Insert result: ' . $result);
+        error_log('Insert data: ' . print_r($data, true));
+        error_log('Insert format: ' . print_r($format, true));
+        error_log('Last error: ' . $wpdb->last_error);
         if ($result !== false) { $id = intval($wpdb->insert_id); }
     }
 
-    if ($result === false) { wp_send_json_error('Database error saving certificate'); }
+    if ($result === false) { 
+        error_log('Database error: ' . $wpdb->last_error);
+        wp_send_json_error('Database error saving certificate: ' . $wpdb->last_error); 
+    }
 
     $row = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE id = %d", $id));
     wp_send_json_success($row);

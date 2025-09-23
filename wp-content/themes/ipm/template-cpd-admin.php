@@ -24,34 +24,86 @@ get_header();
             </div>
         </div>
         <div>
-        <!-- Admin Navigation -->
-        <div class="admin-nav">
-            <button class="nav-btn active" data-section="submissions">
-                <span class="icon"><i class="fas fa-clipboard-list"></i></span>
-                Review Submissions
-                <span class="badge" id="pending-count">0</span>
-            </button>
-            <button class="nav-btn" data-section="certificates">
-                <span class="icon"><i class="fas fa-graduation-cap"></i></span>
-                Certificates
-            </button>
+        <!-- Tab Navigation -->
+        <div class="tab-navigation" style="margin-bottom: 30px;">
+            <div style="display: flex; justify-content: center; gap: 20px;">
+                <button class="tab-button active" data-section="submissions" 
+                   style="padding: 12px 24px; background: #f8a135; color: white; border-radius: 8px; text-decoration: none; font-weight: 500; transition: all 0.3s ease; border: none; cursor: pointer;">
+                    <span style="margin-right: 8px;"><i class="fas fa-clipboard-list"></i></span>
+                    Review Submissions
+                </button>
+                <button class="tab-button" data-section="certificates"
+                   style="padding: 12px 24px; background: #6b4c93; color: white; border-radius: 8px; text-decoration: none; font-weight: 500; transition: all 0.3s ease; border: none; cursor: pointer;">
+                    <span style="margin-right: 8px;"><i class="fas fa-graduation-cap"></i></span>
+                    Certificates
+                </button>
+            </div>
         </div>
 
         <!-- Submissions Review Section -->
         <div id="submissions-section" class="admin-section active">
             <div class="section-header">
                 <h2>CPD Submissions Review</h2>
-                <div class="section-filters">
-                    <select id="submission-status">
-                        <option value="pending">Pending Review</option>
-                        <option value="approved">Approved</option>
-                        <option value="rejected">Rejected</option>
-                    </select>
+                <div class="section-actions">
+                    <button id="refresh-submissions" class="btn btn-outline">
+                        <span>🔄</span> Refresh
+                    </button>
                 </div>
             </div>
-            <div id="submissions-content">
-                <div class="loading-spinner"></div>
-                <p>Loading submissions...</p>
+            
+            <!-- Submission Filters -->
+            <div class="submission-filters">
+                <div class="filters-row">
+                    <div class="filter-group">
+                        <select id="submission-status">
+                            <option value="">All Status</option>
+                            <option value="pending" selected>Pending Review</option>
+                            <option value="approved">Approved</option>
+                            <option value="rejected">Rejected</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <select id="submission-year">
+                            <option value="">All Years</option>
+                            <?php 
+                            $current_year = date('Y');
+                            for ($i = $current_year; $i >= $current_year - 5; $i--): 
+                            ?>
+                                <option value="<?php echo $i; ?>" <?php echo $i == $current_year ? 'selected' : ''; ?>><?php echo $i; ?></option>
+                            <?php endfor; ?>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <input type="text" id="user-search" placeholder="Name, username, or email..." class="form-control" />
+                    </div>
+                    
+                    <div class="filter-actions">
+                        <button type="button" id="clear-filters" class="btn btn-secondary">
+                            <span>🗑️</span> Clear
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Submissions Table -->
+            <div class="submissions-table-container">
+                <div id="submissions-content">
+                    <div class="loading-spinner"></div>
+                </div>
+            </div>
+            
+            <!-- Pagination -->
+            <div id="submissions-pagination" class="pagination-container" style="display: none;">
+                <div class="pagination-info">
+                    <span id="pagination-info"></span>
+                </div>
+                <div class="pagination-controls">
+                    <button id="prev-page" class="btn btn-outline" disabled>Previous</button>
+                    <div id="page-numbers" class="page-numbers"></div>
+                    <button id="next-page" class="btn btn-outline" disabled>Next</button>
+                </div>
             </div>
         </div>
 
@@ -92,7 +144,7 @@ get_header();
             </div>
             
             <!-- Create/Edit Certificate Modal -->
-            <div id="certificate-modal" class="modal" style="display:none;">
+            <div id="certificate-modal" class="modal">
                 <div class="modal-content" style="max-width:720px;">
                     <div class="modal-header">
                         <h2 id="certificate-modal-title">Create Certificate</h2>
@@ -174,6 +226,37 @@ get_header();
 
 
 
+        <!-- Submission Details Modal -->
+        <div id="submission-details-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>CPD Submission Details</h2>
+                    <button class="modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div id="submission-details-content">
+                        <div class="loading-spinner"></div>
+                        <p>Loading submission details...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Certificate Assignment Modal -->
+        <div id="certificate-assignment-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Assign Certificate</h2>
+                    <button class="modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div id="certificate-assignment-content">
+                        <div class="loading-spinner"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Review Modal -->
         <div id="review-modal" class="modal">
             <div class="modal-content">
@@ -253,51 +336,6 @@ get_header();
     opacity: 0.9;
 }
 
-.admin-nav {
-    display: flex;
-    gap: 8px;
-    margin: 40px 0;
-    background: white;
-    padding: 8px;
-    border-radius: 12px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-}
-
-.nav-btn {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 12px 20px;
-    background: transparent;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    font-weight: 500;
-    color: #6b7280;
-    position: relative;
-}
-
-.nav-btn:hover {
-    background: #f3f4f6;
-    color: #1f2937;
-}
-
-.nav-btn.active {
-    background: #8b5a96;
-    color: white;
-}
-
-.nav-btn .badge {
-    background: #ef4444;
-    color: white;
-    border-radius: 10px;
-    padding: 2px 8px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    min-width: 20px;
-    text-align: center;
-}
 
 .admin-section {
     display: none;
@@ -310,6 +348,519 @@ get_header();
 
 .admin-section.active {
     display: block;
+}
+
+/* Submission Filters */
+.submission-filters {
+    margin-top: 24px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 24px;
+}
+
+.filters-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 2fr auto;
+    gap: 16px;
+    align-items: end;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.filter-group label {
+    font-weight: 600;
+    color: #374151;
+    font-size: 0.875rem;
+}
+
+.filter-group select,
+.filter-group input {
+    padding: 8px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    background: white;
+}
+
+.filter-group select:focus,
+.filter-group input:focus {
+    outline: none;
+    border-color: #8b5a96;
+    box-shadow: 0 0 0 3px rgba(139, 90, 150, 0.1);
+}
+
+.filter-actions {
+    display: flex;
+    gap: 8px;
+}
+
+/* Submissions Table */
+.submissions-table-container {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.submissions-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.submissions-table th {
+    background: #f8fafc;
+    padding: 16px;
+    text-align: left;
+    font-weight: 600;
+    color: #374151;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 0.875rem;
+}
+
+.submissions-table td {
+    padding: 16px;
+    border-bottom: 1px solid #f3f4f6;
+    vertical-align: middle;
+}
+
+.submissions-table tr:hover {
+    background: #f9fafb;
+}
+
+.status-badge {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.status-pending {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.status-approved {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.status-rejected {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-small {
+    padding: 6px 12px;
+    font-size: 0.75rem;
+    border-radius: 6px;
+}
+
+/* Pagination */
+.pagination-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 24px;
+    padding: 16px 0;
+}
+
+.pagination-info {
+    color: #6b7280;
+    font-size: 0.875rem;
+}
+
+.pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.page-numbers {
+    display: flex;
+    gap: 4px;
+}
+
+.page-number {
+    padding: 8px 12px;
+    border: 1px solid #d1d5db;
+    background: white;
+    color: #374151;
+    text-decoration: none;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.page-number:hover {
+    background: #f3f4f6;
+    border-color: #9ca3af;
+}
+
+.page-number.active {
+    background: #8b5a96;
+    color: white;
+    border-color: #8b5a96;
+}
+
+/* Modal Styles - Same as Course Management */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    animation: fadeIn 0.3s ease-out;
+}
+
+body.modal-open {
+    overflow: hidden;
+}
+
+.modal.show {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 12px;
+    width: 98%;
+    max-width: 1600px; /* Much wider for better content display */
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    animation: slideUp 0.3s ease-out;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.modal-header h2 {
+    margin: 0;
+    color: #2d3748;
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #718096;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background 0.2s;
+}
+
+.modal-close:hover {
+    background: #f7fafc;
+}
+
+.modal-body {
+    padding: 20px;
+    overflow-y: auto;
+    flex: 1;
+    max-height: calc(90vh - 120px);
+}
+
+
+/* Animations */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.details-section {
+    padding: 20px;
+    background: #ffffff;
+    border-radius: 12px;
+    border: 2px solid #e5e7eb;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    transition: all 0.2s ease;
+    width: calc(50% - 8px);
+}
+
+.details-section h3 {
+    margin: 0 0 16px 0;
+    color: #1f2937;
+    font-size: 1.25rem;
+    font-weight: 700;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #f3f4f6;
+}
+
+.details-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px;
+    min-height: 300px;
+}
+
+.detail-item {
+    flex: 1 1 calc(50% - 12px);
+    min-width: 300px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+    padding: 32px 24px;
+    background: #f9fafb;
+    border-radius: 12px;
+    border: 2px solid #e5e7eb;
+    text-align: center;
+    min-height: 120px;
+    transition: all 0.2s ease;
+}
+
+.detail-item:hover {
+    border-color: #8b5a96;
+    background: #f8fafc;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(139, 90, 150, 0.1);
+}
+
+.detail-label {
+    font-weight: 600;
+    color: #6b7280;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.detail-value {
+    color: #1f2937;
+    font-size: 1.25rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex-direction: column;
+}
+
+.status-icon {
+    font-size: 1.5rem;
+    font-weight: bold;
+    display: inline-block;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 4px;
+}
+
+.status-success {
+    background-color: #d1fae5;
+    color: #059669;
+    border: 2px solid #10b981;
+}
+
+.status-error {
+    background-color: #fee2e2;
+    color: #dc2626;
+    border: 2px solid #ef4444;
+}
+
+.status-text {
+    font-size: 0.9rem;
+    font-weight: 500;
+    text-align: center;
+}
+
+.courses-list {
+    display: flex;
+    flex-direction: row;
+    gap: 12px;
+}
+
+.course-item {
+    width: calc(25% - 9px);
+    padding: 16px;
+    background: white;
+    border-radius: 10px;
+    border: 2px solid #e5e7eb;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    transition: all 0.2s ease;
+}
+
+.course-item:hover {
+    border-color: #8b5a96;
+    box-shadow: 0 4px 8px rgba(139, 90, 150, 0.1);
+}
+
+.course-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.course-name {
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.course-status {
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.course-status.completed {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.course-status.pending {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.course-details {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.course-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    font-size: 0.75rem;
+}
+
+.meta-item {
+    flex: 1 1 calc(50% - 8px);
+    min-width: 140px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px;
+    background: #f8fafc;
+    border-radius: 6px;
+    border: 1px solid #e2e8f0;
+}
+
+.meta-label {
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    font-size: 0.7rem;
+}
+
+.meta-value {
+    color: #1f2937;
+    font-weight: 500;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 8px;
+    background: #e5e7eb;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-top: 8px;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #10b981, #059669);
+    transition: width 0.3s ease;
+    border-radius: 4px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .filters-row {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    
+    .submissions-table {
+        font-size: 0.75rem;
+    }
+    
+    .submissions-table th,
+    .submissions-table td {
+        padding: 8px;
+    }
+    
+    .action-buttons {
+        flex-direction: column;
+        gap: 4px;
+    }
+    
+    .pagination-container {
+        flex-direction: column;
+        gap: 16px;
+        text-align: center;
+    }
+    
+    .details-grid {
+        flex-direction: column;
+        gap: 20px;
+        min-height: auto;
+    }
+    
+    .detail-item {
+        flex: 1 1 100%;
+        min-width: auto;
+        min-height: 100px;
+        padding: 24px 20px;
+    }
+    
+    .course-meta {
+        flex-direction: column;
+        gap: 12px;
+    }
+    
+    .meta-item {
+        flex: 1 1 100%;
+        min-width: auto;
+    }
 }
 
 .section-header {
@@ -405,8 +956,8 @@ get_header();
 }
 
 .submission-details {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    display: flex;
+    flex-wrap: wrap;
     gap: 16px;
     margin-bottom: 16px;
     padding: 16px;
@@ -1161,26 +1712,13 @@ get_header();
     backdrop-filter: blur(4px);
 }
 
-.modal-content {
-    background-color: white;
-    margin: 5% auto;
-    border-radius: 16px;
-    width: 90%;
-    max-width: 600px;
-    max-height: 90vh;
-    overflow: hidden;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-    display: flex;
-    flex-direction: column;
-}
-
 .modal-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     padding: 24px 32px;
     border-bottom: 1px solid #e5e7eb;
-    background: #f8fafc;
+    background: white;
 }
 
 .modal-header h3 {
@@ -1222,7 +1760,7 @@ get_header();
 }
 
 .form-group {
-    margin-bottom: 20px;
+    margin-bottom: 16px;
 }
 
 .form-group label {
@@ -1625,23 +2163,13 @@ get_header();
     backdrop-filter: blur(4px);
 }
 
-.modal-content {
-    background-color: white;
-    margin: 5% auto;
-    border-radius: 16px;
-    width: 90%;
-    max-width: 600px;
-    max-height: 90vh;
-    overflow-y: auto;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-}
-
 .modal-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     padding: 24px 32px;
     border-bottom: 1px solid #e5e7eb;
+    background: white;
 }
 
 .modal-header h2 {
@@ -1660,6 +2188,10 @@ get_header();
     padding: 4px;
     border-radius: 4px;
     transition: all 0.2s ease;
+}
+
+#certificate-assignment-modal .modal-content {
+    max-width: 600px !important;
 }
 
 .modal-close:hover {
@@ -1733,14 +2265,18 @@ jQuery(document).ready(function($) {
     var portal_nonce = '<?php echo wp_create_nonce('iipm_portal_nonce'); ?>';
     
     // Navigation handling
-    $('.nav-btn').click(function() {
+    $('.tab-button').click(function() {
         const section = $(this).data('section');
         switchSection(section);
     });
     
     function switchSection(section) {
-        $('.nav-btn').removeClass('active');
-        $(`.nav-btn[data-section="${section}"]`).addClass('active');
+        $('.tab-button').removeClass('active');
+        $(`.tab-button[data-section="${section}"]`).addClass('active');
+        
+        // Update button styles
+        $('.tab-button').css('background', '#6b4c93');
+        $(`.tab-button[data-section="${section}"]`).css('background', '#f8a135');
         
         $('.admin-section').removeClass('active');
         $(`#${section}-section`).addClass('active');
@@ -1755,24 +2291,38 @@ jQuery(document).ready(function($) {
         }
     }
     
-    // Load CPD submissions
-    function loadSubmissions() {
-        const status = $('#submission-status').val() || 'pending';
+    // Load CPD submissions with pagination and filtering
+    let currentPage = 1;
+    let totalPages = 1;
+    let currentSubmissions = []; // Store current submissions data
+    
+    function loadSubmissions(page = 1) {
+        const status = $('#submission-status').val() || '';
+        const year = $('#submission-year').val() || '';
+        const userSearch = $('#user-search').val() || '';
+        
+        $('#submissions-content').html('<div class="loading-spinner"></div>');
         
         $.ajax({
-            url: iipm_ajax.ajax_url,
+            url: ajaxurl,
             type: 'POST',
             data: {
-                action: 'iipm_get_cpd_submissions',
+                action: 'iipm_get_admin_submissions',
+                page: page,
+                per_page: 10,
                 status: status,
+                year: year,
+                user_search: userSearch,
                 nonce: portal_nonce
             },
             success: function(response) {
                 if (response.success) {
+                    currentSubmissions = response.data.submissions; // Store submissions data
                     renderSubmissions(response.data.submissions);
+                    updatePagination(response.data.pagination);
                     updatePendingCount();
                 } else {
-                    $('#submissions-content').html('<p>Error loading submissions</p>');
+                    $('#submissions-content').html('<p>Error loading submissions: ' + response.data + '</p>');
                 }
             },
             error: function() {
@@ -1781,54 +2331,146 @@ jQuery(document).ready(function($) {
         });
     }
     
-    // Render submissions
+    // Render submissions table
     function renderSubmissions(submissions) {
         let html = '';
         
         if (submissions && submissions.length > 0) {
+            html = `
+                <table class="submissions-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>User</th>
+                            <th>Year</th>
+                            <th>Status</th>
+                            <th>Certificate</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
             submissions.forEach(function(submission) {
+                const statusClass = `status-${submission.status}`;
+                const userName = submission.display_name || submission.user_login || 'Unknown User';
+                
+                // Certificate display logic
+                let certificateDisplay = '';
+                if (submission.certificate_id && submission.certificate_name) {
+                    certificateDisplay = `
+                        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                            <span class="status-badge status-approved" style="background: #10b981; color: white;">
+                                <i class="fas fa-certificate" style="margin-right: 4px;"></i>
+                                ${submission.certificate_name}
+                            </span>
+                            <small style="color: #6b7280;">(${submission.certificate_year})</small>
+                            <button class="btn btn-outline btn-small" onclick="removeCertificate(${submission.id}, '${userName}')" style="font-size: 0.7rem; padding: 2px 6px; margin-left: 4px;">
+                                <i class="fas fa-times" style="margin-right: 2px;"></i>
+                                Remove
+                            </button>
+                        </div>
+                    `;
+                } else if (submission.status === 'approved') {
+                    certificateDisplay = `
+                        <button class="btn btn-outline btn-small" onclick="showCertificateAssignment(${submission.id}, '${userName}')" style="font-size: 0.75rem; padding: 4px 8px;">
+                            <i class="fas fa-plus" style="margin-right: 4px;"></i>
+                            Set Certificate
+                        </button>
+                    `;
+                } else {
+                    certificateDisplay = '<span style="color: #9ca3af;">-</span>';
+                }
+
                 html += `
-                    <div class="submission-item">
-                        <div class="submission-header">
-                            <div class="submission-info">
-                                <h3>${submission.activity_title}</h3>
-                                <div class="submission-meta">
-                                    Member: ${submission.display_name} (${submission.user_email})<br>
-                                    Provider: ${submission.external_provider || 'N/A'}<br>
-                                    Submitted: ${new Date(submission.created_at).toLocaleDateString()}
-                                </div>
+                    <tr>
+                        <td>${submission.id}</td>
+                        <td>
+                            <div>
+                                <strong>${userName}</strong><br>
+                                <small style="color: #6b7280;">${submission.user_email}</small>
                             </div>
-                            <div class="submission-actions">
-                                <button class="btn btn-primary btn-small" onclick="reviewSubmissionModal(${submission.id})">
-                                    Review
+                        </td>
+                        <td>${submission.year}</td>
+                        <td>
+                            <span class="status-badge ${statusClass}">${submission.status}</span>
+                        </td>
+                        <td>
+                            ${certificateDisplay}
+                        </td>
+                        <td>
+                            <div class="action-buttons">
+                                <button class="btn btn-outline btn-small" onclick="viewSubmissionDetails(${submission.id})">
+                                    Details
                                 </button>
+                                ${submission.status === 'pending' ? `
+                                    <button class="btn btn-success btn-small" onclick="showApproveRejectModal(${submission.id}, 'approve', '${userName}', '${submission.year}')">
+                                        Approve
+                                    </button>
+                                    <button class="btn btn-danger btn-small" onclick="showApproveRejectModal(${submission.id}, 'reject', '${userName}', '${submission.year}')">
+                                        Reject
+                                    </button>
+                                ` : submission.status === 'approved' ? `
+                                    <button class="btn btn-danger btn-small" onclick="showApproveRejectModal(${submission.id}, 'reject', '${userName}', '${submission.year}')">
+                                        Reject
+                                    </button>
+                                ` : submission.status === 'rejected' ? `
+                                    <button class="btn btn-success btn-small" onclick="showApproveRejectModal(${submission.id}, 'approve', '${userName}', '${submission.year}')">
+                                        Approve
+                                    </button>
+                                ` : ''}
                             </div>
-                        </div>
-                        <div class="submission-details">
-                            <div class="detail-item">
-                                <span class="detail-label">Category</span>
-                                <span class="detail-value">${submission.category_name || 'N/A'}</span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label">CPD Points</span>
-                                <span class="detail-value">${submission.cpd_points}</span>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-label">Completion Date</span>
-                                <span class="detail-value">${submission.completion_date}</span>
-                            </div>
-                        </div>
-                        ${submission.description ? `<div class="submission-description"><strong>Description:</strong> ${submission.description}</div>` : ''}
-                        ${submission.certificate_path ? `<div class="submission-certificate"><a href="${submission.certificate_path}" target="_blank" class="btn btn-outline btn-small">View Certificate</a></div>` : ''}
-                    </div>
+                        </td>
+                    </tr>
                 `;
             });
+            
+            html += `
+                    </tbody>
+                </table>
+            `;
         } else {
-            html = '<p>No submissions found.</p>';
+            html = '<div style="text-align: center; padding: 40px; color: #6b7280;">No submissions found.</div>';
         }
         
         $('#submissions-content').html(html);
     }
+    
+    // Update pagination
+    function updatePagination(pagination) {
+        currentPage = pagination.current_page;
+        totalPages = pagination.total_pages;
+        
+        if (totalPages > 1) {
+            $('#submissions-pagination').show();
+            $('#pagination-info').text(`Showing ${((currentPage - 1) * pagination.per_page) + 1} to ${Math.min(currentPage * pagination.per_page, pagination.total_items)} of ${pagination.total_items} entries`);
+            
+            // Update pagination controls
+            $('#prev-page').prop('disabled', currentPage === 1);
+            $('#next-page').prop('disabled', currentPage === totalPages);
+            
+            // Generate page numbers
+            let pageNumbersHtml = '';
+            const startPage = Math.max(1, currentPage - 2);
+            const endPage = Math.min(totalPages, currentPage + 2);
+            
+            for (let i = startPage; i <= endPage; i++) {
+                const activeClass = i === currentPage ? 'active' : '';
+                pageNumbersHtml += `<span class="page-number ${activeClass}" onclick="goToPage(${i})">${i}</span>`;
+            }
+            
+            $('#page-numbers').html(pageNumbersHtml);
+        } else {
+            $('#submissions-pagination').hide();
+        }
+    }
+    
+    // Go to specific page
+    window.goToPage = function(page) {
+        if (page >= 1 && page <= totalPages) {
+            loadSubmissions(page);
+        }
+    };
     
     
     
@@ -1836,20 +2478,299 @@ jQuery(document).ready(function($) {
     // Update pending count badge
     function updatePendingCount() {
         $.ajax({
-            url: iipm_ajax.ajax_url,
+            url: ajaxurl,
             type: 'POST',
             data: {
-                action: 'iipm_get_cpd_submissions',
+                action: 'iipm_get_admin_submissions',
                 status: 'pending',
+                per_page: 1,
                 nonce: portal_nonce
             },
             success: function(response) {
                 if (response.success) {
-                    $('#pending-count').text(response.data.total_submissions);
+                    $('#pending-count').text(response.data.pagination.total_items);
                 }
             }
         });
     }
+    
+    // View submission details
+    window.viewSubmissionDetails = function(submissionId) {
+        // Find the submission in current data
+        const submission = currentSubmissions.find(s => s.id == submissionId);
+        
+        if (!submission) {
+            $('#submission-details-content').html('<p>Submission not found</p>');
+            showModal('submission-details-modal');
+            return;
+        }
+        
+        // Handle double-encoded JSON string
+        let details;
+        try {
+            // First, try to use the pre-decoded details from backend
+            if (submission.details_decoded && typeof submission.details_decoded === 'object') {
+                details = submission.details_decoded;
+            } else {
+                // If not available, parse the raw details string
+                // The string appears to be double-encoded, so we need to handle it properly
+                let detailsString = submission.details;
+                
+                // Remove outer quotes if present
+                if (detailsString.startsWith('"') && detailsString.endsWith('"')) {
+                    detailsString = detailsString.slice(1, -1);
+                }
+                
+                // Unescape the JSON string
+                detailsString = detailsString.replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+                
+                // Parse the JSON
+                details = JSON.parse(detailsString);
+            }
+        } catch (e) {
+            console.error('Failed to parse details JSON:', e);
+            details = {};
+        }
+        
+        console.log("details111", details);
+        // Render details directly from stored data
+        renderSubmissionDetails(submission, details);
+        showModal('submission-details-modal');
+    };
+    
+    // Render submission details in modal
+    function renderSubmissionDetails(submission, details) {
+        const userName = submission.display_name || submission.user_login || 'Unknown User';
+        
+        // Ensure details is an object
+        if (!details || typeof details !== 'object') {
+            details = {};
+        }
+
+        console.log("details", details);
+        
+        let html = `
+            <div class="submission-details">
+                <div class="details-section">
+                    <h3>Submission Information</h3>
+                    <div class="details-grid">
+                        <div class="detail-item">
+                            <div class="detail-label">Submission ID</div>
+                            <div class="detail-value">${submission.id}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">User</div>
+                            <div class="detail-value">${userName}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Email</div>
+                            <div class="detail-value">${submission.user_email}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Year</div>
+                            <div class="detail-value">${submission.year}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Status</div>
+                            <div class="detail-value">
+                                <span class="status-badge status-${submission.status}">${submission.status}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="details-section">
+                    <h3>CPD Progress Summary</h3>
+                    <div class="details-grid">
+                        <div class="detail-item">
+                            <div class="detail-label">Target Minutes</div>
+                            <div class="detail-value">${details.target_minutes || 0} minutes</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Total CPD Minutes</div>
+                            <div class="detail-value">${details.total_cpd_minutes || 0} minutes</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Completion Percentage</div>
+                            <div class="detail-value">${details.completion_percentage || 0}%</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Start Date</div>
+                            <div class="detail-value">${details.start_date || 'N/A'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Completion Date</div>
+                            <div class="detail-value">${details.completion_date || 'N/A'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Total Hours</div>
+                            <div class="detail-value">${details.total_hours || 0} hours</div>
+                        </div>
+                    </div>
+                </div>
+        `;
+        
+        // Add CPD dates if available
+        if (details.cpd_dates) {
+            html += `
+                <div class="details-section">
+                    <h3>CPD Periods</h3>
+                    <div class="details-grid">
+                        <div class="detail-item">
+                            <div class="detail-label">Start Logging</div>
+                            <div class="detail-value">${details.cpd_dates.start_logging || 'N/A'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">End Logging</div>
+                            <div class="detail-value">${details.cpd_dates.end_logging || 'N/A'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Start Submission</div>
+                            <div class="detail-value">${details.cpd_dates.start_submission || 'N/A'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">End Submission</div>
+                            <div class="detail-value">${details.cpd_dates.end_submission || 'N/A'}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        html += `
+                 <div class="details-section">
+                     <h3>System Status</h3>
+                     <div class="details-grid">
+                         <div class="detail-item">
+                             <div class="detail-label">Logging Period Available</div>
+                             <div class="detail-value">
+                                 <span class="status-icon ${details.is_logging_period_available ? 'status-success' : 'status-error'}">
+                                     ${details.is_logging_period_available ? '✓' : '✗'}
+                                 </span>
+                                 <span class="status-text">${details.is_logging_period_available ? 'Available' : 'Not Available'}</span>
+                             </div>
+                         </div>
+                         <div class="detail-item">
+                             <div class="detail-label">Submission Period Available</div>
+                             <div class="detail-value">
+                                 <span class="status-icon ${details.is_submission_period_available ? 'status-success' : 'status-error'}">
+                                     ${details.is_submission_period_available ? '✓' : '✗'}
+                                 </span>
+                                 <span class="status-text">${details.is_submission_period_available ? 'Available' : 'Not Available'}</span>
+                             </div>
+                         </div>
+                         <div class="detail-item">
+                             <div class="detail-label">User Assigned</div>
+                             <div class="detail-value">
+                                 <span class="status-icon ${details.is_user_assigned ? 'status-success' : 'status-error'}">
+                                     ${details.is_user_assigned ? '✓' : '✗'}
+                                 </span>
+                                 <span class="status-text">${details.is_user_assigned ? 'Assigned' : 'Not Assigned'}</span>
+                             </div>
+                         </div>
+                     </div>
+                 </div>
+                
+            </div>
+        `;
+        
+                // Add courses summary if available
+                if (details.courses_summary && details.courses_summary.length > 0) {
+            html += `
+                <div class="details-section" style="width: 100%;">
+                    <h3>Course Categories Summary</h3>
+                    <div class="courses-list">
+            `;
+            
+            details.courses_summary.forEach(function(course) {
+                const statusClass = course.completed ? 'completed' : 'pending';
+                const progressBar = course.required ? 
+                    `<div class="progress-bar">
+                        <div class="progress-fill" style="width: ${course.completed ? '100' : '0'}%"></div>
+                    </div>` : '';
+                
+                html += `
+                    <div class="course-item">
+                        <div class="course-header">
+                            <div class="course-name">${course.category}</div>
+                            <div class="course-status ${statusClass}">${course.status}</div>
+                        </div>
+                        <div class="course-details">
+                            <div class="course-meta">
+                                <div class="meta-item">
+                                    <span class="meta-label">Courses Count:</span>
+                                    <span class="meta-value">${course.count}</span>
+                                </div>
+                                <div class="meta-item">
+                                    <span class="meta-label">Total Hours:</span>
+                                    <span class="meta-value">${course.total_hours}</span>
+                                </div>
+                                <div class="meta-item">
+                                    <span class="meta-label">Total Minutes:</span>
+                                    <span class="meta-value">${course.total_minutes}</span>
+                                </div>
+                                <div class="meta-item">
+                                    <span class="meta-label">Credits:</span>
+                                    <span class="meta-value">${course.credits}</span>
+                                </div>
+                                <div class="meta-item">
+                                    <span class="meta-label">Required:</span>
+                                    <span class="meta-value">${course.required ? 'Yes' : 'No'}</span>
+                                </div>
+                                <div class="meta-item">
+                                    <span class="meta-label">Completed:</span>
+                                    <span class="meta-value">${course.completed ? 'Yes' : 'No'}</span>
+                                </div>
+                            </div>
+                            ${progressBar}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += `
+                    </div>
+                </div>
+            `;
+        }
+
+        $('#submission-details-content').html(html);
+    }
+    
+    // Show approve/reject confirmation dialog
+    window.showApproveRejectModal = function(submissionId, action, userName, year) {
+        const confirmMessage = action === 'approve' 
+            ? `Do you really want to approve ${userName}'s submission?`
+            : `Do you really want to reject ${userName}'s submission?`;
+        
+        const confirmResult = confirm(confirmMessage);
+        
+        if (confirmResult) {
+            // User confirmed, proceed with the action
+            $.ajax({
+                url: iipm_ajax.ajax_url,
+                type: 'POST',
+                data: {
+                    action: 'iipm_update_submission_status',
+                    submission_id: submissionId,
+                    status: action === 'approve' ? 'approved' : 'rejected',
+                    admin_notes: '',
+                    nonce: portal_nonce
+                },
+                success: function(response) {
+                    if (response.success) {
+                        showAlert(response.data.message, 'success');
+                        loadSubmissions(currentPage);
+                    } else {
+                        showAlert('Error: ' + response.data, 'error');
+                    }
+                },
+                error: function() {
+                    showAlert('An error occurred. Please try again.', 'error');
+                }
+            });
+        }
+    };
     
     // Review submission modal
     window.reviewSubmissionModal = function(entryId) {
@@ -1881,7 +2802,7 @@ jQuery(document).ready(function($) {
                     `;
                     
                     $('#review-content').html(reviewHtml);
-                    $('#review-modal').show();
+                    showModal('review-modal');
                 }
             }
         });
@@ -1907,7 +2828,7 @@ jQuery(document).ready(function($) {
             success: function(response) {
                 if (response.success) {
                     showAlert(response.data.message, 'success');
-                    $('#review-modal').hide();
+                    hideModal('review-modal');
                     loadSubmissions();
                 } else {
                     showAlert('Error: ' + response.data, 'error');
@@ -1924,19 +2845,70 @@ jQuery(document).ready(function($) {
     
     // Modal handlers
     $('.modal-close').click(function() {
-        $('.modal').hide();
+        $('.modal').removeClass('show');
+        $('body').removeClass('modal-open');
     });
     
     $('.modal').click(function(e) {
         if (e.target === this) {
-            $(this).hide();
+            $(this).removeClass('show');
+            $('body').removeClass('modal-open');
         }
     });
     
-    // Filter change handler
-    $('#submission-status').change(function() {
-        loadSubmissions();
+    // Show modal function
+    function showModal(modalId) {
+        $('#' + modalId).addClass('show');
+        $('body').addClass('modal-open');
+    }
+    
+    // Hide modal function
+    function hideModal(modalId) {
+        $('#' + modalId).removeClass('show');
+        $('body').removeClass('modal-open');
+    }
+    
+    // Filter change handlers
+    $('#submission-status, #submission-year').change(function() {
+        currentPage = 1;
+        loadSubmissions(1);
     });
+    
+    $('#user-search').on('input', function() {
+        clearTimeout(this.searchTimeout);
+        this.searchTimeout = setTimeout(() => {
+            currentPage = 1;
+            loadSubmissions(1);
+        }, 500);
+    });
+    
+    // Clear filters
+    $('#clear-filters').click(function() {
+        $('#submission-status').val('');
+        $('#submission-year').val('');
+        $('#user-search').val('');
+        currentPage = 1;
+        loadSubmissions(1);
+    });
+    
+    // Refresh submissions
+    $('#refresh-submissions').click(function() {
+        loadSubmissions(currentPage);
+    });
+    
+    // Pagination handlers
+    $('#prev-page').click(function() {
+        if (currentPage > 1) {
+            loadSubmissions(currentPage - 1);
+        }
+    });
+    
+    $('#next-page').click(function() {
+        if (currentPage < totalPages) {
+            loadSubmissions(currentPage + 1);
+        }
+    });
+    
     
     
     
@@ -1978,7 +2950,7 @@ jQuery(document).ready(function($) {
             </div>
         `;
         
-        $('.modal').hide();
+        $('.modal').removeClass('show');
         $('body').append(modalHtml);
         
         $('#success-ok-btn').click(function() {
@@ -2111,7 +3083,8 @@ jQuery(document).ready(function($) {
             $('#cert-avatar-empty').show();
         }
 
-        $('#certificate-modal').show();
+        $('#certificate-modal').addClass('show');
+        $('body').addClass('modal-open');
     });
 
     // Delete
@@ -2145,15 +3118,20 @@ jQuery(document).ready(function($) {
         $('#cert-avatar-name').text('');
         $('#cert-avatar-preview').hide();
         $('#cert-avatar-empty').show();
-        $('#certificate-modal').show();
+        $('#certificate-modal').addClass('show');
+        $('body').addClass('modal-open');
     });
 
     // Close modal handlers
     $('#cancel-certificate, .modal-close').click(function(){
-        $('#certificate-modal').hide();
+        $('#certificate-modal').removeClass('show');
+        $('body').removeClass('modal-open');
     });
     $('#certificate-modal').on('click', function(e){
-        if (e.target === this) { $('#certificate-modal').hide(); }
+        if (e.target === this) { 
+            $('#certificate-modal').removeClass('show');
+            $('body').removeClass('modal-open');
+        }
     });
 
     // Avatar upload interactions (click, drag&drop, preview, remove)
@@ -2201,7 +3179,8 @@ jQuery(document).ready(function($) {
             success: function(resp){
                 if (resp.success) {
                     showAlert('Saved successfully','success');
-                    $('#certificate-modal').hide();
+                    $('#certificate-modal').removeClass('show');
+                    $('body').removeClass('modal-open');
                     loadCertificates();
                 } else {
                     showAlert(resp.data || 'Save failed','error');
@@ -2218,6 +3197,118 @@ jQuery(document).ready(function($) {
         
         if (section === 'certificates') {
             loadCertificates();
+        }
+    };
+
+    // Certificate Assignment Functions
+    window.showCertificateAssignment = function(submissionId, userName) {
+        $('#certificate-assignment-content').html('<div class="loading-spinner"></div>');
+        showModal('certificate-assignment-modal');
+        
+        // Load available certificates
+        $.ajax({
+            url: ajaxurl,
+            type: 'POST',
+            data: {
+                action: 'iipm_get_available_certificates',
+                nonce: portal_nonce
+            },
+            success: function(response) {
+                if (response.success) {
+                    renderCertificateAssignment(submissionId, userName, response.data);
+                } else {
+                    $('#certificate-assignment-content').html('<p>Error loading certificates: ' + response.data + '</p>');
+                }
+            },
+            error: function() {
+                $('#certificate-assignment-content').html('<p>Failed to load certificates</p>');
+            }
+        });
+    };
+    
+    function renderCertificateAssignment(submissionId, userName, certificates) {
+        let html = `
+            <div class="certificate-assignment">
+                <p><strong>Assign certificate to ${userName}'s submission</strong></p>
+                <div class="form-group">
+                    <select id="certificate-select" class="form-control">
+                        <option value="">Choose a certificate...</option>
+        `;
+        
+        certificates.forEach(function(cert) {
+            html += `<option value="${cert.id}">${cert.name} (${cert.year})</option>`;
+        });
+        
+        html += `
+                    </select>
+                </div>
+                <div class="form-actions" style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px;">
+                    <button type="button" class="btn btn-secondary" onclick="hideModal('certificate-assignment-modal')">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="assignCertificate(${submissionId})">Assign Certificate</button>
+                </div>
+            </div>
+        `;
+        
+        $('#certificate-assignment-content').html(html);
+    }
+    
+    window.assignCertificate = function(submissionId) {
+        const certificateId = $('#certificate-select').val();
+        
+        if (!certificateId) {
+            showAlert('Please select a certificate', 'error');
+            return;
+        }
+        
+        $.ajax({
+            url: ajaxurl,
+            type: 'POST',
+            data: {
+                action: 'iipm_assign_certificate',
+                submission_id: submissionId,
+                certificate_id: certificateId,
+                nonce: portal_nonce
+            },
+            success: function(response) {
+                if (response.success) {
+                    showAlert(response.data.message, 'success');
+                    hideModal('certificate-assignment-modal');
+                    loadSubmissions(currentPage); // Refresh the submissions list
+                } else {
+                    showAlert('Error: ' + response.data, 'error');
+                }
+            },
+            error: function() {
+                showAlert('An error occurred. Please try again.', 'error');
+            }
+        });
+    };
+    
+    window.removeCertificate = function(submissionId, userName) {
+        const confirmMessage = `Do you really want to remove the certificate from ${userName}'s submission?`;
+        const confirmResult = confirm(confirmMessage);
+        
+        if (confirmResult) {
+            $.ajax({
+                url: ajaxurl,
+                type: 'POST',
+                data: {
+                    action: 'iipm_remove_certificate',
+                    submission_id: submissionId,
+                    nonce: portal_nonce
+                },
+                success: function(response) {
+                    if (response.success) {
+                        showAlert(response.data.message, 'success');
+                        loadSubmissions(currentPage); // Refresh the submissions list
+                    } else {
+                        showAlert('Error: ' + response.data, 'error');
+                    }
+                },
+                error: function() {
+                    showAlert('An error occurred. Please try again.', 'error');
+                }
+            });
         }
     };
 
