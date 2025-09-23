@@ -151,7 +151,7 @@ $theme_includes = array(
     '/includes/cpd-reporting-functions.php',
     '/includes/enhanced-cpd-search.php',
     '/includes/cpd-compliance-monitoring.php',
-    '/includes/cpd-certification-functions.php',
+    // replaced by /includes/cpd-certificate-functions.php
     '/includes/cpd-certification-handlers.php'
 );
 
@@ -5797,3 +5797,6 @@ function iipm_handle_delete_course_v1() {
 }
 add_action('wp_ajax_iipm_delete_course_v1', 'iipm_handle_delete_course_v1');
 
+// Include CPD certificate CRUD
+require_once get_template_directory() . '/includes/cpd-certificate-functions.php';
+require_once get_template_directory() . '/includes/cpd-submission-functions.php';

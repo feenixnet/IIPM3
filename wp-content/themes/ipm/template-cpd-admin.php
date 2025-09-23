@@ -62,9 +62,9 @@ get_header();
             <div class="section-header">
                 <h2>Certificate Management</h2>
                 <div class="section-actions">
-                    <button id="auto-generate-certificates" class="btn btn-success">
+                    <button id="create-certificate-btn" class="btn btn-success">
                         <span class="icon">🎓</span>
-                        Auto-Generate Certificates
+                        Create Certificate
                     </button>
                 </div>
             </div>
@@ -72,7 +72,6 @@ get_header();
             <div class="certificate-filters">
                 <div class="filters-row">
                     <div class="filter-group">
-                        <label for="cert-year-filter">Year</label>
                         <select id="cert-year-filter">
                             <option value="">All Years</option>
                             <?php 
@@ -84,26 +83,6 @@ get_header();
                         </select>
                     </div>
                     
-                    <div class="filter-group">
-                        <label for="cert-status-filter">Status</label>
-                        <select id="cert-status-filter">
-                            <option value="">All Status</option>
-                            <option value="issued">Issued</option>
-                            <option value="pending">Pending</option>
-                            <option value="revoked">Revoked</option>
-                        </select>
-                    </div>
-                    
-                    <div class="filter-group">
-                        <label for="cert-compliance-filter">Compliance</label>
-                        <select id="cert-compliance-filter">
-                            <option value="">All</option>
-                            <option value="compliant">Compliant</option>
-                            <option value="non_compliant">Non-Compliant</option>
-                            <option value="partial">Partial</option>
-                        </select>
-                    </div>
-                    
                     <div class="filter-actions">
                         <button type="button" id="refresh-certificates" class="btn btn-outline">
                             <span>🔄</span> Refresh
@@ -112,9 +91,84 @@ get_header();
                 </div>
             </div>
             
+            <!-- Create/Edit Certificate Modal -->
+            <div id="certificate-modal" class="modal" style="display:none;">
+                <div class="modal-content" style="max-width:720px;">
+                    <div class="modal-header">
+                        <h2 id="certificate-modal-title">Create Certificate</h2>
+                        <button class="modal-close" aria-label="Close">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="certificate-form" enctype="multipart/form-data">
+                            <input type="hidden" id="cert-id" name="id" value="">
+                            <input type="hidden" name="avatar_remove" value="0">
+                            <div class="form-row" style="display:grid; grid-template-columns: 1fr 220px; gap: 16px;">
+                                <div>
+                                    <div class="form-group">
+                                        <label for="cert-name">Name</label>
+                                        <input type="text" id="cert-name" name="name" class="form-control" placeholder="Certificate name" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="cert-description">Description</label>
+                                        <textarea id="cert-description" name="description" class="form-control" rows="3" placeholder="Optional description..."></textarea>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="cert-year">Year</label>
+                                        <input type="text" id="cert-year" name="year" class="form-control" value="<?php echo date('Y'); ?>" readonly>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="form-group">
+                                        <label for="cert-avatar">Avatar</label>
+                                        <div id="cert-avatar-dropzone" style="border: 2px dashed #e5e7eb; border-radius: 8px; padding: 16px; text-align: center; cursor: pointer; background:#fafafa;">
+                                            <div id="cert-avatar-empty" style="color:#6b7280;">
+                                                <div style="font-size:32px;">📄</div>
+                                                <div>Drag & drop image here, or click to browse</div>
+                                            </div>
+                                            <div id="cert-avatar-preview" style="display:none; align-items:center; gap:12px; justify-content:center;">
+                                                <img id="cert-avatar-img" src="" alt="preview" style="width:120px;height:120px;object-fit:cover;border-radius:12px;border:1px solid #e5e7eb;" />
+                                                <div>
+                                                    <div id="cert-avatar-name" style="font-weight:600"></div>
+                                                    <button type="button" id="cert-avatar-remove" class="btn btn-secondary btn-small" style="margin-top:8px;">Remove</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <input type="file" id="cert-avatar" name="avatar" accept="image/*" style="display:none;">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-actions" style="display:flex; gap:8px; justify-content:flex-end; margin-top: 16px; padding-top: 8px; border-top: 1px solid #e5e7eb;">
+                                <button type="button" class="btn btn-secondary" id="cancel-certificate">Cancel</button>
+                                <button type="submit" id="save-certificate" class="btn btn-primary">Save</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
             <div id="certificates-content">
-                <div class="loading-spinner"></div>
-                <p>Loading certificates...</p>
+                <div class="certificates-table-container">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Avatar</th>
+                                <th>Name</th>
+                                <th>Year</th>
+                                <th>Description</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="certificates-tbody">
+                            <tr>
+                                <td colspan="7" style="text-align: center; padding: 40px; color: #6b7280;">
+                                    Loading certificates...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
@@ -159,6 +213,21 @@ get_header();
 /* CPD Admin Portal Styles */
 .cpd-admin-portal {
     min-height: 100vh;
+}
+
+.admin-table {
+    border: 1px solid #e5e7eb;
+    border-collapse: collapse;
+}
+
+.admin-table th,
+.admin-table td {
+    border: 1px solid #e5e7eb;
+    padding: 5px 10px;
+}
+
+.admin-table th{
+    text-align: left !important;
 }
 
 .admin-hero {
@@ -372,6 +441,7 @@ get_header();
     gap: 20px;
     align-items: end;
     margin-bottom: 16px;
+    margin-top: 16px;
 }
 
 .search-group,
@@ -1056,6 +1126,7 @@ get_header();
     margin-top: 4px;
     display: -webkit-box;
     -webkit-line-clamp: 2;
+    line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
 }
@@ -1658,9 +1729,8 @@ jQuery(document).ready(function($) {
     let allCourses = [];
     let filteredCourses = [];
     let availableProviders = [];
-    let currentPage = 1;
-    let pageSize = 25;
-    let totalPages = 1;
+    var ajaxurl = '<?php echo admin_url('admin-ajax.php'); ?>';
+    var portal_nonce = '<?php echo wp_create_nonce('iipm_portal_nonce'); ?>';
     
     // Navigation handling
     $('.nav-btn').click(function() {
@@ -1695,7 +1765,7 @@ jQuery(document).ready(function($) {
             data: {
                 action: 'iipm_get_cpd_submissions',
                 status: status,
-                nonce: iipm_ajax.cpd_admin_nonce
+                nonce: portal_nonce
             },
             success: function(response) {
                 if (response.success) {
@@ -1771,7 +1841,7 @@ jQuery(document).ready(function($) {
             data: {
                 action: 'iipm_get_cpd_submissions',
                 status: 'pending',
-                nonce: iipm_ajax.cpd_admin_nonce
+                nonce: portal_nonce
             },
             success: function(response) {
                 if (response.success) {
@@ -1790,7 +1860,7 @@ jQuery(document).ready(function($) {
             data: {
                 action: 'iipm_get_cpd_submission_details',
                 entry_id: entryId,
-                nonce: iipm_ajax.cpd_admin_nonce
+                nonce: portal_nonce
             },
             success: function(response) {
                 if (response.success) {
@@ -1832,7 +1902,7 @@ jQuery(document).ready(function($) {
                 action_type: action,
                 cpd_points: cpdPoints,
                 admin_comments: comments,
-                nonce: iipm_ajax.cpd_admin_nonce
+                nonce: portal_nonce
             },
             success: function(response) {
                 if (response.success) {
@@ -1928,8 +1998,231 @@ jQuery(document).ready(function($) {
         });
     }
     
+    // Helpers
+    function escapeHtml(s){
+        return (s||'').replace(/[&<>"]/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]); });
+    }
+    function formatDate(dateStr){
+        if (!dateStr) return '';
+        var d = new Date((dateStr+'').replace(' ', 'T'));
+        if (isNaN(d.getTime())) return dateStr;
+        var pad = function(n){ return n<10 ? ('0'+n) : n; };
+        return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+' '+pad(d.getHours())+':'+pad(d.getMinutes());
+    }
+
+    // Load certificates (list)
+    function loadCertificates() {
+        const year = $('#cert-year-filter').val();
+        $.ajax({
+            url: ajaxurl,
+            type: 'POST',
+            data: { action: 'iipm_certs_list', nonce: portal_nonce, year: year },
+            success: function(resp){
+                if (!resp.success) { $('#certificates-tbody').html('<tr><td colspan="7" style="text-align:center; padding: 24px; color:#dc2626;">Failed to load</td></tr>'); return; }
+                const items = resp.data.items || [];
+                if (items.length === 0) { $('#certificates-tbody').html('<tr><td colspan="7" style="text-align:center; padding:24px; color:#6b7280;">No certificates</td></tr>'); return; }
+                let rows = '';
+                items.forEach(it => {
+                    rows += `
+                        <tr>
+                            <td>${it.id}</td>
+                            <td>${it.avatar_url ? `<img src="${it.avatar_url}" alt="avatar" style="width:40px; height:40px; object-fit:cover; border-radius:6px;">` : ''}</td>
+                            <td>${escapeHtml(it.name || '')}</td>
+                            <td>${escapeHtml(it.year || '')}</td>
+                            <td>${escapeHtml(it.description || '')}</td>
+                            <td>${formatDate(it.created_at)}</td>
+                            <td>
+                                <button class="btn btn-secondary btn-small" data-edit-cert="${it.id}">Edit</button>
+                                <button class="btn btn-danger btn-small" data-del-cert="${it.id}">Delete</button>
+                            </td>
+                        </tr>`;
+                });
+                $('#certificates-tbody').html(rows);
+            },
+            error: function(){
+                $('#certificates-tbody').html('<tr><td colspan="7" style="text-align:center; padding: 24px; color:#dc2626;">Error</td></tr>');
+            }
+        });
+    }
+
+    // Create / Update
+    $('#certificate-form').on('submit', function(e){
+        e.preventDefault();
+        const form = new FormData(this);
+        form.append('action','iipm_certs_save');
+        form.append('nonce', portal_nonce);
+        $.ajax({
+            url: ajaxurl,
+            type: 'POST',
+            data: form,
+            contentType: false,
+            processData: false,
+            success: function(resp){
+                if (resp.success) {
+                    showAlert('Saved successfully','success');
+                    $('#certificate-form')[0].reset();
+                    $('#cert-id').val('');
+                    $('#cert-year').val(new Date().getFullYear());
+                    loadCertificates();
+                } else {
+                    showAlert(resp.data || 'Save failed','error');
+                }
+            },
+            error: function(){ showAlert('Network error','error'); }
+        });
+    });
+
+    // Reset
+    $('#reset-certificate').click(function(){
+        $('#certificate-form')[0].reset();
+        $('#cert-id').val('');
+        $('#cert-year').val(new Date().getFullYear());
+    });
+
+    // Edit prefill from row (opens modal)
+    $(document).on('click','[data-edit-cert]', function(){
+        const row = $(this).closest('tr');
+        const id = $(this).data('edit-cert');
+        const name = row.find('td').eq(2).text();
+        const year = row.find('td').eq(3).text();
+        const desc = row.find('td').eq(4).text();
+        const avatarSrc = row.find('td').eq(1).find('img').attr('src') || '';
+
+        $('#certificate-modal-title').text('Edit Certificate');
+        $('#cert-id').val(id);
+        $('#cert-name').val(name);
+        $('#cert-year').val(year);
+        $('#cert-description').val(desc);
+        $('#certificate-form').find('input[name="avatar_remove"]').val('0');
+
+        // Reset file input
+        const emptyDt = new DataTransfer();
+        if ($('#cert-avatar')[0]) { $('#cert-avatar')[0].files = emptyDt.files; }
+
+        if (avatarSrc) {
+            $('#cert-avatar-img').attr('src', avatarSrc);
+            $('#cert-avatar-name').text(avatarSrc.split('/').pop());
+            $('#cert-avatar-empty').hide();
+            $('#cert-avatar-preview').show();
+        } else {
+            $('#cert-avatar-img').attr('src','');
+            $('#cert-avatar-name').text('');
+            $('#cert-avatar-preview').hide();
+            $('#cert-avatar-empty').show();
+        }
+
+        $('#certificate-modal').show();
+    });
+
+    // Delete
+    $(document).on('click','[data-del-cert]', function(){
+        if (!confirm('Delete this certificate?')) return;
+        const id = $(this).data('del-cert');
+        $.ajax({
+            url: ajaxurl,
+            type: 'POST',
+            data: { action:'iipm_certs_delete', nonce: portal_nonce, id: id },
+            success: function(resp){
+                if (resp.success) { showAlert('Deleted','success'); loadCertificates(); }
+                else { showAlert(resp.data || 'Delete failed','error'); }
+            },
+            error: function(){ showAlert('Network error','error'); }
+        });
+    });
+
+    // Filters
+    $('#cert-year-filter').change(loadCertificates);
+    $('#refresh-certificates').click(loadCertificates);
+
+    // Open create modal
+    $('#create-certificate-btn').click(function(){
+        $('#certificate-modal-title').text('Create Certificate');
+        $('#certificate-form')[0].reset();
+        $('#cert-id').val('');
+        $('#cert-year').val(new Date().getFullYear());
+        $('#certificate-form').find('input[name="avatar_remove"]').val('0');
+        $('#cert-avatar-img').attr('src','');
+        $('#cert-avatar-name').text('');
+        $('#cert-avatar-preview').hide();
+        $('#cert-avatar-empty').show();
+        $('#certificate-modal').show();
+    });
+
+    // Close modal handlers
+    $('#cancel-certificate, .modal-close').click(function(){
+        $('#certificate-modal').hide();
+    });
+    $('#certificate-modal').on('click', function(e){
+        if (e.target === this) { $('#certificate-modal').hide(); }
+    });
+
+    // Avatar upload interactions (click, drag&drop, preview, remove)
+    $('#cert-avatar-dropzone').on('click', function(){ $('#cert-avatar').trigger('click'); });
+    $('#cert-avatar').on('change', function(){
+        const file = this.files && this.files[0];
+        if (!file) { $('#cert-avatar-preview').hide(); $('#cert-avatar-empty').show(); return; }
+        const url = URL.createObjectURL(file);
+        $('#cert-avatar-img').attr('src', url);
+        $('#cert-avatar-name').text(file.name);
+        $('#cert-avatar-empty').hide();
+        $('#cert-avatar-preview').show();
+    });
+    $('#cert-avatar-dropzone').on('dragover', function(e){ e.preventDefault(); $(this).css('background','#f3f4f6'); });
+    $('#cert-avatar-dropzone').on('dragleave', function(e){ e.preventDefault(); $(this).css('background','#fafafa'); });
+    $('#cert-avatar-dropzone').on('drop', function(e){
+        e.preventDefault(); $(this).css('background','#fafafa');
+        const files = e.originalEvent.dataTransfer.files;
+        if (files && files[0]) {
+            const dt = new DataTransfer(); dt.items.add(files[0]);
+            $('#cert-avatar')[0].files = dt.files; $('#cert-avatar').trigger('change');
+        }
+    });
+    $('#cert-avatar-remove').on('click', function(){
+        const dt = new DataTransfer(); $('#cert-avatar')[0].files = dt.files;
+        $('#cert-avatar-preview').hide(); $('#cert-avatar-empty').show();
+        $('#certificate-form').find('input[name="avatar_remove"]').val('1');
+    });
+
+    // After save success, close modal
+    const originalSaveHandler = $('#certificate-form').prop('onsubmit');
+    $('#certificate-form').off('submit');
+    $('#certificate-form').on('submit', function(e){
+        e.preventDefault();
+        const form = new FormData(this);
+        if (!form.has('avatar_remove')) { form.append('avatar_remove', '0'); }
+        form.append('action','iipm_certs_save');
+        form.append('nonce', portal_nonce);
+        $.ajax({
+            url: ajaxurl,
+            type: 'POST',
+            data: form,
+            contentType: false,
+            processData: false,
+            success: function(resp){
+                if (resp.success) {
+                    showAlert('Saved successfully','success');
+                    $('#certificate-modal').hide();
+                    loadCertificates();
+                } else {
+                    showAlert(resp.data || 'Save failed','error');
+                }
+            },
+            error: function(){ showAlert('Network error','error'); }
+        });
+    });
+    
+    // Update switch section to include certificates
+    const originalSwitchSection = switchSection;
+    switchSection = function(section) {
+        originalSwitchSection(section);
+        
+        if (section === 'certificates') {
+            loadCertificates();
+        }
+    };
 
     // Initialize
+    loadCertificates();
     loadSubmissions();
     updatePendingCount();
 });

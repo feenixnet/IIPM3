@@ -72,6 +72,14 @@ if ($is_user_assigned && isset($cpd_stats['is_logging_period_available'])) {
     $is_logging_period_active = $cpd_stats['is_logging_period_available'];
 }
 
+global $wpdb;
+$is_submitted = false;
+$submitted_rows = $wpdb->get_results("SELECT * FROM {$wpdb->prefix}test_iipm_submissions WHERE user_id = $current_user_id AND year = $current_year");
+error_log("sssss: " . "SELECT * FROM {$wpdb->prefix}test_iipm_submissions WHERE user_id = $id AND year = $current_year");
+if(count($submitted_rows) > 0) {
+    $is_submitted = true;
+}
+
 get_header(); 
 ?>
 
@@ -195,7 +203,7 @@ get_header();
                                 <span class="time-value" id="completed-minutes">0 minutes</span>
                             </div>
                             <div class="time-item">
-                                <span class="time-label">Remaining:</span>
+                                <span class="time-label">Remaining</span>
                                 <span class="time-value" id="remaining-minutes">330 minutes</span>
                             </div>
                         </div>
@@ -204,12 +212,14 @@ get_header();
                     <!-- <button class="btn btn-outline" id="submit-return-btn">Submit my return</button> -->
                     
                     <!-- CPD Assignment and Submission Buttons -->
-                    <div class="cpd-action-buttons" id="cpd-action-buttons" style="display: none;">
-                        <button class="btn btn-success" id="submit-cpd-btn">
-                            <span class="btn-icon"><i class="fas fa-check"></i></span>
-                            Submit CPD
-                        </button>
-                    </div>
+                    <?php if (!$is_submitted): ?>
+                        <div class="cpd-action-buttons" id="cpd-action-buttons" style="display: none;">
+                            <button class="btn btn-success" id="submit-cpd-btn">
+                                <span class="btn-icon"><i class="fas fa-check"></i></span>
+                                Submit CPD
+                            </button>
+                        </div>
+                    <?php endif; ?>
                     
                     <div class="cpd-dates-section">
                         <h4>Important CPD Dates</h4>
@@ -659,6 +669,7 @@ get_header();
     /* CPD Action Buttons */
     .cpd-action-buttons {
         margin-top: 20px;
+        margin-bottom: 20px;
         display: flex;
         gap: 12px;
         flex-wrap: wrap;
@@ -714,74 +725,7 @@ get_header();
         background: rgba(146, 64, 14, 0.1);
     }
 
-    /* Unassigned User Section */
-    .unassigned-user-section {
-        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-        border-radius: 16px;
-        padding: 50px;
-        text-align: center;
-        margin: 0;
-        border: 2px solid #e2e8f0;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-    }
-
-    .unassigned-content {
-        max-width: 100%;
-        margin: 0 auto;
-    }
-
-    .unassigned-icon {
-        font-size: 64px;
-        margin-bottom: 20px;
-    }
-
-    .unassigned-content h3 {
-        color: #1e293b;
-        font-size: 28px;
-        font-weight: 600;
-        margin: 0 0 16px 0;
-    }
-
-    .unassigned-description {
-        color: #64748b;
-        font-size: 16px;
-        line-height: 1.6;
-        margin: 0 0 30px 0;
-    }
-
-    .assign-btn-large {
-        padding: 16px 32px;
-        font-size: 18px;
-        font-weight: 600;
-        border-radius: 12px;
-        display: inline-flex;
-        align-items: center;
-        gap: 12px;
-        margin-bottom: 30px;
-        transition: all 0.3s ease;
-    }
-    
-    /* Disabled button styles */
-    .btn:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
-        pointer-events: none;
-        background-color: #9ca3af !important;
-        border-color: #9ca3af !important;
-        color: #ffffff !important;
-    }
-    
-    .btn:disabled:hover {
-        background-color: #9ca3af !important;
-        border-color: #9ca3af !important;
-        transform: none !important;
-        box-shadow: none !important;
-    }
-
-    .assign-btn-large:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(139, 90, 150, 0.3);
-    }
+    /* Unassigned User Section removed */
 
     .btn-icon {
         font-size: 20px;
@@ -1366,6 +1310,8 @@ get_header();
     // Define ajaxurl for AJAX calls
     var ajaxurl = '<?php echo admin_url('admin-ajax.php'); ?>';
     var isUserAssigned = <?php echo $is_user_assigned ? 'true' : 'false'; ?>;
+    var isTrainingCompleted = <?php echo $cpd_stats['completion_percentage'] >= 100 ? 'true' : 'false'; ?> == 'true' ? true : false;
+    var statData = null;
     
     document.addEventListener('DOMContentLoaded', function() {
         // Get DOM elements
@@ -1415,16 +1361,14 @@ get_header();
          */
         function setupCpdButtonListeners() {
             const assignBtn = document.getElementById('assign-to-cpd-btn');
-            const assignBtnLarge = document.getElementById('assign-to-cpd-btn-large');
+            
             const submitBtn = document.getElementById('submit-cpd-btn');
             
             if (assignBtn) {
                 assignBtn.addEventListener('click', assignToCpd);
             }
             
-            if (assignBtnLarge) {
-                assignBtnLarge.addEventListener('click', assignToCpd);
-            }
+            
             
             if (submitBtn) {
                 submitBtn.addEventListener('click', submitCpd);
@@ -1436,8 +1380,7 @@ get_header();
          */
         function assignToCpd() {
             const assignBtn = document.getElementById('assign-to-cpd-btn');
-            const assignBtnLarge = document.getElementById('assign-to-cpd-btn-large');
-            const activeBtn = assignBtn || assignBtnLarge;
+            const activeBtn = assignBtn;
             
             if (!activeBtn) return;
             
@@ -1510,7 +1453,9 @@ get_header();
             submitBtn.disabled = true;
             
             const formData = new FormData();
-            formData.append('action', 'iipm_submit_cpd');
+            formData.append('action', 'iipm_submission_save');
+            formData.append('year', new Date().getFullYear());
+            formData.append('details', JSON.stringify(statData));
             
             jQuery.ajax({
                 url: ajaxurl,
@@ -1528,9 +1473,11 @@ get_header();
                         alert('Your CPD submission was submitted successfully!');
                         
                         // Hide button after submission
-                        setTimeout(() => {
-                            submitBtn.style.display = 'none';
-                        }, 2000);
+                        // setTimeout(() => {
+                        //     submitBtn.style.display = 'none';
+                        // }, 2000);
+
+                        location.reload();
                     } else {
                         submitBtn.textContent = 'Error!';
                         submitBtn.style.background = '#ef4444';
@@ -1616,6 +1563,7 @@ get_header();
                         if(response.data.is_user_assigned) {
                             isUserAssigned = true;
                         }
+                        statData = response.data;
                         updateCpdProgress(response.data);
                     } else {
                         console.error('API returned error:', response.data);
@@ -1774,8 +1722,7 @@ get_header();
         function updateCpdActionButtons(data) {
             const cpdActionButtons = document.getElementById('cpd-action-buttons');
             const submitBtn = document.getElementById('submit-cpd-btn');
-            const unassignedSection = document.getElementById('unassigned-user-section');
-            const assignBtnLarge = document.getElementById('assign-to-cpd-btn-large');
+            
 
             const isLoggingPeriod = data.is_logging_period_available;
             const isSubmissionPeriod = data.is_submission_period_available;
@@ -1792,11 +1739,18 @@ get_header();
                 }
                 return;
             }
+
+            console.log('CPDACTIONBUTTONS', cpdActionButtons);
+            console.log('SUBMITBTN', submitBtn);
             
-            if (!cpdActionButtons || !submitBtn || !unassignedSection || !assignBtnLarge) return;
+            
+            if (!cpdActionButtons || !submitBtn) return;
+
+            console.log('isUserAssigned', isUserAssigned);
+            console.log('isSubmissionPeriod', isSubmissionPeriod);
             
             // User is assigned, show submit button if in submission period
-            if (isUserAssigned && isSubmissionPeriod) {
+            if (isUserAssigned && isSubmissionPeriod && !isTrainingCompleted) {
                 cpdActionButtons.style.display = 'flex';
                 submitBtn.style.display = 'block';
             }
