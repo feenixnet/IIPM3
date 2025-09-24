@@ -43,6 +43,8 @@ add_action('wp_ajax_iipm_get_available_certificates', 'iipm_get_available_certif
 add_action('wp_ajax_iipm_remove_certificate', 'iipm_remove_certificate');
 add_action('wp_ajax_iipm_get_user_submission_status', 'iipm_get_user_submission_status');
 add_action('wp_ajax_iipm_download_certificate', 'iipm_download_certificate');
+add_action('wp_ajax_iipm_download_certificate_direct', 'iipm_download_certificate_direct');
+add_action('wp_ajax_nopriv_iipm_download_certificate_direct', 'iipm_download_certificate_direct');
 
 /**
  * Get CPD submissions for admin with filtering and pagination
@@ -448,22 +450,19 @@ function iipm_get_user_submission_status() {
 }
 
 /**
- * Download certificate PDF
+ * Download certificate PDF - Direct URL method (like CSV export)
  */
-function iipm_download_certificate() {
+function iipm_download_certificate_direct() {
     if (!is_user_logged_in()) {
         wp_die('User not logged in');
     }
 
-    if (!wp_verify_nonce($_POST['nonce'] ?? '', 'iipm_portal_nonce')) {
-        wp_die('Invalid nonce');
-    }
-
-    $certificate_id = intval($_POST['certificate_id'] ?? 0);
-    $user_name = sanitize_text_field($_POST['user_name'] ?? '');
-    $user_email = sanitize_email($_POST['user_email'] ?? '');
-    $contact_address = sanitize_textarea_field($_POST['contact_address'] ?? '');
-    $submission_year = sanitize_text_field($_POST['submission_year'] ?? date('Y'));
+    // Get parameters from URL
+    $certificate_id = intval($_GET['certificate_id'] ?? 0);
+    $user_name = sanitize_text_field($_GET['user_name'] ?? '');
+    $user_email = sanitize_email($_GET['user_email'] ?? '');
+    $contact_address = sanitize_textarea_field($_GET['contact_address'] ?? '');
+    $submission_year = sanitize_text_field($_GET['submission_year'] ?? date('Y'));
 
     if ($certificate_id <= 0) {
         wp_die('Invalid certificate ID');
@@ -489,7 +488,7 @@ function iipm_download_certificate() {
     // Generate PDF content with avatar image
     $pdf_content = generate_certificate_pdf($certificate, $user_name, $user_email, $contact_address, $submission_year);
     
-    // Set headers for PDF download
+    // Set headers for PDF download (like CSV export)
     $filename = 'CPD_Certificate_' . $user_name . '_' . $submission_year . '.pdf';
     $filename = preg_replace('/[^A-Za-z0-9_\-\.]/', '_', $filename);
     
@@ -505,7 +504,10 @@ function iipm_download_certificate() {
     header('Pragma: public');
     header('Expires: 0');
     
-    echo $pdf_content;
+    // Use fopen/fwrite like CSV export instead of echo
+    $output = fopen('php://output', 'w');
+    fwrite($output, $pdf_content);
+    fclose($output);
     exit;
 }
 

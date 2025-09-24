@@ -2579,6 +2579,20 @@ function iipm_handle_send_help_message() {
 }
 add_action('wp_ajax_iipm_send_help_message', 'iipm_handle_send_help_message');
 
+// Add AJAX handler for getting fresh nonce
+add_action('wp_ajax_get_nonce', 'iipm_get_fresh_nonce');
+add_action('wp_ajax_nopriv_get_nonce', 'iipm_get_fresh_nonce');
+
+function iipm_get_fresh_nonce() {
+    $nonce_action = sanitize_text_field($_POST['nonce_action'] ?? '');
+    if (empty($nonce_action)) {
+        wp_send_json_error('Nonce action required');
+    }
+    
+    $nonce = wp_create_nonce($nonce_action);
+    wp_send_json_success(array('nonce' => $nonce));
+}
+
 // Add reCAPTCHA configuration - IMPORTANT: UPDATE THESE WITH YOUR ACTUAL KEYS
 // Get your keys from: https://www.google.com/recaptcha/admin/create
 // These are Google's test keys - replace with your real keys for production
@@ -4239,8 +4253,8 @@ function handle_cpd_record_update_with_notifications() {
 /**
  * Example AJAX handler for certificate download with notifications
  */
-add_action('wp_ajax_iipm_download_certificate', 'handle_certificate_download_with_notifications');
-add_action('wp_ajax_nopriv_iipm_download_certificate', 'handle_certificate_download_with_notifications');
+// add_action('wp_ajax_iipm_download_certificate', 'handle_certificate_download_with_notifications');
+// add_action('wp_ajax_nopriv_iipm_download_certificate', 'handle_certificate_download_with_notifications');
 
 function handle_certificate_download_with_notifications() {
     check_ajax_referer('iipm_cpd_nonce', 'nonce');

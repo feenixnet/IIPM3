@@ -2518,7 +2518,7 @@ get_header();
         }
         
         /**
-         * Download certificate PDF
+         * Download certificate PDF - Direct URL method (like CSV export)
          */
         window.downloadCertificate = function(certificateId, userName, userEmail, contactAddress, submissionYear) {
             // Show loading state
@@ -2527,36 +2527,27 @@ get_header();
             downloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating PDF...';
             downloadBtn.disabled = true;
             
-            // Create form data
-            const formData = new FormData();
-            formData.append('action', 'iipm_download_certificate');
-            formData.append('certificate_id', certificateId);
-            formData.append('user_name', userName);
-            formData.append('user_email', userEmail);
-            formData.append('contact_address', contactAddress);
-            formData.append('submission_year', submissionYear);
-            formData.append('nonce', '<?php echo wp_create_nonce('iipm_portal_nonce'); ?>');
+            // Create direct download URL (like CSV export)
+            const params = new URLSearchParams({
+                action: 'iipm_download_certificate_direct',
+                certificate_id: certificateId,
+                user_name: userName,
+                user_email: userEmail,
+                contact_address: contactAddress,
+                submission_year: submissionYear
+            });
             
-            // Create a temporary form to submit
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = ajaxurl;
-            form.style.display = 'none';
+            const downloadUrl = `${ajaxurl}?${params.toString()}`;
             
-            // Add form data as hidden inputs
-            for (let [key, value] of formData.entries()) {
-                const input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = key;
-                input.value = value;
-                form.appendChild(input);
-            }
+            // Create a temporary link and trigger download
+            const link = document.createElement('a');
+            link.href = downloadUrl;
+            link.style.display = 'none';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
             
-            document.body.appendChild(form);
-            form.submit();
-            document.body.removeChild(form);
-            
-            // Reset button after a delay
+            // Reset button state
             setTimeout(() => {
                 downloadBtn.innerHTML = originalText;
                 downloadBtn.disabled = false;
