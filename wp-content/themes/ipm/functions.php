@@ -2238,6 +2238,7 @@ function iipm_handle_update_profile() {
                 'ID' => $user_id,
                 'first_name' => $first_name,
                 'last_name' => $last_name,
+                'display_name' => $first_name . " " . $last_name,
                 'user_email' => $email
             ));
             $wpdb->update(

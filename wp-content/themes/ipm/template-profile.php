@@ -706,7 +706,7 @@ get_header();
                         <div class="settings-content">
                             <h2>Reset Password</h2>
                             
-                            <form class="password-reset-form" id="password-reset-form">
+                            <form class="password-reset-form" id="password-reset-form" action="javascript:void(0)">
                                 <div class="form-group">
                                     <label for="current-password">Current Password</label>
                                     <div class="password-input-container">
@@ -734,7 +734,7 @@ get_header();
                                     </div>
                                 </div>
                                 
-                                <button type="submit" class="change-password-btn">Change Password</button>
+                                <button type="button" class="change-password-btn" onclick="handlePasswordChange()">Change Password</button>
                             </form>
                             
                             <div class="password-reset-help">
@@ -3121,6 +3121,15 @@ function showSection(sectionName) {
     }
     
     console.log('Switched to section:', sectionName);
+    
+    // Initialize password reset form when settings section is shown
+    if (sectionName === 'settings' && !window.passwordResetForm) {
+        const form = document.getElementById('password-reset-form');
+        if (form) {
+            window.passwordResetForm = form;
+            console.log('Password reset form initialized for settings section');
+        }
+    }
 }
 
 // Show order details
@@ -3330,84 +3339,107 @@ function validatePassword(password) {
 
 // Initialize password reset form
 function initializePasswordResetForm() {
-    const form = document.getElementById('password-reset-form');
-    if (!form) return;
+    console.log('Initializing password reset form');
     
-    form.addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        const currentPassword = document.getElementById('current-password').value;
-        const newPassword = document.getElementById('new-password').value;
-        const confirmPassword = document.getElementById('confirm-password').value;
-        
-        // Client-side validation
-        if (!currentPassword || !newPassword || !confirmPassword) {
-            if (window.notifications) {
-                window.notifications.error('Missing Information', 'Please fill in all password fields.');
-            }
+    // Try to find the form, if not found, it will be initialized when settings section is shown
+    const form = document.getElementById('password-reset-form');
+    if (form) {
+        console.log('Password reset form found, storing reference');
+        window.passwordResetForm = form;
+    } else {
+        console.log('Password reset form not found yet, will initialize when settings section is shown');
+        window.passwordResetForm = null;
+    }
+}
+
+// Handle password change button click
+function handlePasswordChange() {
+    console.log('Password change button clicked');
+    
+    // Try to get form reference, initialize if needed
+    let form = window.passwordResetForm;
+    if (!form) {
+        form = document.getElementById('password-reset-form');
+        if (form) {
+            window.passwordResetForm = form;
+            console.log('Password reset form found and stored');
+        } else {
+            console.error('Password reset form not found!');
             return;
         }
-        
-        if (newPassword !== confirmPassword) {
-            if (window.notifications) {
-                window.notifications.error('Password Mismatch', 'New password and confirmation password do not match.');
-            }
-            return;
+    }
+    
+    const currentPassword = document.getElementById('current-password').value;
+    const newPassword = document.getElementById('new-password').value;
+    const confirmPassword = document.getElementById('confirm-password').value;
+    
+    // Client-side validation
+    if (!currentPassword || !newPassword || !confirmPassword) {
+        if (window.notifications) {
+            window.notifications.error('Missing Information', 'Please fill in all password fields.');
         }
+        return;
+    }
+    
+    if (newPassword !== confirmPassword) {
+        if (window.notifications) {
+            window.notifications.error('Password Mismatch', 'New password and confirmation password do not match.');
+        }
+        return;
+    }
+    
+    // Show processing state
+    const submitBtn = form.querySelector('.change-password-btn');
+    const originalText = submitBtn.textContent;
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Changing Password...';
+    
+    if (window.notifications) {
+        window.notifications.info('Updating Password', 'Please wait while we update your password...');
+    }
+    
+    // Prepare form data
+    const formData = new FormData();
+    formData.append('action', 'iipm_change_password');
+    formData.append('current_password', currentPassword);
+    formData.append('new_password', newPassword);
+    formData.append('confirm_password', confirmPassword);
+    formData.append('nonce', '<?php echo wp_create_nonce("iipm_change_password"); ?>');
+    
+    // Make AJAX call
+    fetch(ajaxurl, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        // Reset button state
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
         
-        // Show processing state
-        const submitBtn = form.querySelector('.change-password-btn');
-        const originalText = submitBtn.textContent;
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Changing Password...';
+        if (data.success) {
+            // Success - reset form and show notification
+            form.reset();
+            if (window.notifications) {
+                window.notifications.success('Password Changed', data.data.message);
+            }
+        } else {
+            // Error - show error message
+            if (window.notifications) {
+                window.notifications.error('Error', data.data.message);
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        
+        // Reset button state
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
         
         if (window.notifications) {
-            window.notifications.info('Updating Password', 'Please wait while we update your password...');
+            window.notifications.error('Error', 'Failed to change password. Please try again.');
         }
-        
-        // Prepare form data
-        const formData = new FormData();
-        formData.append('action', 'iipm_change_password');
-        formData.append('current_password', currentPassword);
-        formData.append('new_password', newPassword);
-        formData.append('confirm_password', confirmPassword);
-        formData.append('nonce', '<?php echo wp_create_nonce("iipm_change_password"); ?>');
-        
-        // Make AJAX call
-        fetch(ajaxurl, {
-            method: 'POST',
-            body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
-            // Reset button state
-            submitBtn.disabled = false;
-            submitBtn.textContent = originalText;
-            
-            if (data.success) {
-                // Success - reset form and show notification
-                form.reset();
-                if (window.notifications) {
-                    window.notifications.success('Password Changed', data.data.message);
-                }
-            } else {
-                // Error - show error message
-                if (window.notifications) {
-                    window.notifications.error('Error', data.data.message);
-                }
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            
-            // Reset button state
-            submitBtn.disabled = false;
-            submitBtn.textContent = originalText;
-            
-            if (window.notifications) {
-                window.notifications.error('Error', 'Failed to change password. Please try again.');
-            }
-        });
     });
 }
 
