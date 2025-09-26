@@ -41,8 +41,8 @@ if (!empty($cpd_types)) {
     }
 }
 
-$selected_year = isset($_GET['year']) ? intval($_GET['year']) : $cpd_year;
-$selected_report = isset($_GET['report']) ? sanitize_text_field($_GET['report']) : 'compliance';
+$selected_year = isset($_GET['cpd_year']) ? intval($_GET['cpd_year']) : $cpd_year;
+$selected_report = isset($_GET['cpd_report']) ? sanitize_text_field($_GET['cpd_report']) : 'compliance';
 
 // Get overall statistics
 $stats = iipm_get_cpd_compliance_stats($selected_year);
@@ -421,7 +421,7 @@ console.log('🎫 Nonce:', window.iipm_reports_ajax.nonce);
 document.addEventListener('DOMContentLoaded', function() {
     // Check if we have a report parameter in URL
     const urlParams = new URLSearchParams(window.location.search);
-    const reportType = urlParams.get('report');
+    const reportType = urlParams.get('cpd_report');
     
     if (reportType) {
         switch(reportType) {
@@ -464,11 +464,11 @@ document.addEventListener('DOMContentLoaded', function() {
 // Change year
 function changeYear(year) {
     const url = new URL(window.location);
-    url.searchParams.set('year', year);
+    url.searchParams.set('cpd_year', year);
     
     // If no report parameter, set compliance as default
-    if (!url.searchParams.has('report')) {
-        url.searchParams.set('report', 'compliance');
+    if (!url.searchParams.has('cpd_report')) {
+        url.searchParams.set('cpd_report', 'compliance');
     }
     
     window.location.href = url.toString();
@@ -1101,7 +1101,7 @@ function displayIndividualReport(reportData, memberName = null) {
             <div>
                 <h4 style="color: #374151; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #e5e7eb;">📋 Completed Courses (${reportData.all_courses.length} total)</h4>
                 <div style="overflow-x: auto;">
-                    <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                    <table style="width: 150%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
                         <thead style="background: #f8fafc;">
                             <tr>
                                 <th style="padding: 15px; text-align: left; color: #374151; font-weight: 600; border-bottom: 2px solid #e5e7eb;">Course Title</th>
@@ -1669,7 +1669,7 @@ function showComplianceReport() {
     
     // Update URL without page reload
     const url = new URL(window.location);
-    url.searchParams.set('report', 'compliance');
+    url.searchParams.set('cpd_report', 'compliance');
     window.history.pushState({}, '', url);
     
     // Scroll to the report area
@@ -1686,7 +1686,7 @@ function showCoursePopularity() {
     
     // Update URL without page reload
     const url = new URL(window.location);
-    url.searchParams.set('report', 'popularity');
+    url.searchParams.set('cpd_report', 'popularity');
     window.history.pushState({}, '', url);
     
     // Scroll to the report area
@@ -1703,7 +1703,7 @@ function showProviderAnalysis() {
     
     // Update URL without page reload
     const url = new URL(window.location);
-    url.searchParams.set('report', 'provider');
+    url.searchParams.set('cpd_report', 'provider');
     window.history.pushState({}, '', url);
     
     // Scroll to the report area

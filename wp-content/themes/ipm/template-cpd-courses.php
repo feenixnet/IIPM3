@@ -923,7 +923,7 @@ get_header();
                                 ${isCompleted ? '<span class="completed-badge">Completed</span>' : ''}
                                 ${isInLearningPath && !isCompleted ? '<span class="started-badge">In Progress</span>' : ''}
                             </div>
-                            <button class="${addButtonClass}" title="${addButtonTitle}" ${isDisabled ? 'disabled' : ''} data-course-id="${course.id}">
+                            <button class="${addButtonClass}" title="${addButtonTitle}" ${isDisabled ? 'disabled' : ''} data-course-id="${course.course_id}">
                                 <span class="plus-icon">${addButtonIcon}</span>
                             </button>
                         </div>
@@ -966,7 +966,8 @@ get_header();
                     console.log('Clicked course ID:', courseId);
                     
                     // Find the course by ID
-                    const course = courses.find(c => c.id == courseId);
+                    console.log(courses);
+                    const course = courses.find(c => c.course_id == courseId);
                     if (!course) {
                         console.error('Course not found for ID:', courseId);
                         return;
@@ -1036,7 +1037,7 @@ get_header();
             
             const formData = new FormData();
             formData.append('action', 'iipm_add_cpd_confirmation');
-            formData.append('course_id', course.id);
+            formData.append('course_id', course.course_id);
             formData.append('course_name', course.course_name);
             formData.append('course_category', course.course_category);
             formData.append('course_cpd_mins', course.course_cpd_mins);
@@ -1183,8 +1184,8 @@ get_header();
         function isCourseInLearningPath(course) {
             return coursesInLearningPath.some(learningPathCourse => {
                 // Check by course ID if available, otherwise by course name and provider
-                if (learningPathCourse.course_id && course.id) {
-                    return learningPathCourse.course_id == course.id;
+                if (learningPathCourse.course_id && course.course_id) {
+                    return learningPathCourse.course_id == course.course_id;
                 }
                 return learningPathCourse.course_name === course.course_name && 
                        learningPathCourse.crs_provider === course.crs_provider;
@@ -1196,8 +1197,8 @@ get_header();
          */
         function isCourseCompleted(course) {
             const learningPathCourse = coursesInLearningPath.find(lpCourse => {
-                if (lpCourse.course_id && course.id) {
-                    return lpCourse.course_id == course.id;
+                if (lpCourse.course_id && course.course_id) {
+                    return lpCourse.course_id == course.course_id;
                 }
                 return lpCourse.course_name === course.course_name && 
                        lpCourse.crs_provider === course.crs_provider;
