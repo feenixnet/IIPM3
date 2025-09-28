@@ -690,7 +690,7 @@ function updateComplianceTable(data, currentPage, type) {
     
     // Tab counts are loaded via initial AJAX call - no need to update dynamically here
     
-    if (members.length === 0) {
+        if (members.length === 0) {
         const message = type === 'compliant' ? 'No compliant members found' : 'No non-compliant members found';
         tableBody.innerHTML = `<tr><td colspan="5" style="padding: 20px; text-align: center; color: #6b7280;">${message}</td></tr>`;
         pagination.innerHTML = '';
@@ -721,10 +721,17 @@ function updateComplianceTable(data, currentPage, type) {
         // High risk badge only for non-compliant members (includes not assigned cases)
         const highRiskBadge = isHighRisk ? '<span style="background: #dc2626; color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; margin-left: 4px; white-space: nowrap; display: inline-block;">High Risk</span>' : '';
         
+        // Generate submission status icon - only show for approved submissions
+        let submissionIcon = '';
+        if (member.submission_status === 'approved') {
+            const tooltipText = `CPD submission has been approved. Reviewed on ${member.submission_reviewed_at ? new Date(member.submission_reviewed_at).toLocaleDateString() : 'Unknown date'}.`;
+            submissionIcon = `<span style="margin-left: 8px; font-size: 16px; cursor: help;" title="${tooltipText}">✅</span>`;
+        }
+        
         return `
             <tr>
                 <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">
-                    <strong>${member.name || 'Unknown User'}</strong><br>
+                    <strong>${member.name || 'Unknown User'}${submissionIcon}</strong><br>
                     <small style="color: #6b7280;">${member.email}</small>
                     ${highRiskBadge}
                 </td>
@@ -823,33 +830,42 @@ function updateMemberDetailsTable(data, currentPage) {
         return;
     }
     
-    tableBody.innerHTML = members.map(member => `
-        <tr>
-            <td style="padding: 15px; border-bottom: 1px solid #e5e7eb;">
-                <strong>${member.name || 'Unknown User'}</strong><br>
+    tableBody.innerHTML = members.map(member => {
+        // Generate submission status icon - only show for approved submissions
+        let submissionIcon = '';
+        if (member.submission_status === 'approved') {
+            const tooltipText = `CPD submission has been approved. Reviewed on ${member.submission_reviewed_at ? new Date(member.submission_reviewed_at).toLocaleDateString() : 'Unknown date'}.`;
+            submissionIcon = `<span style="margin-left: 8px; font-size: 16px; cursor: help;" title="${tooltipText}">✅</span>`;
+        }
+        
+        return `
+            <tr>
+                <td style="padding: 15px; border-bottom: 1px solid #e5e7eb;">
+                    <strong>${member.name || 'Unknown User'}${submissionIcon}</strong><br>
                     <small style="color: #6b7280;">${member.email}</small>
                 </td>
-            <td style="padding: 15px; text-align: center; border-bottom: 1px solid #e5e7eb;">${member.role || 'Member'}</td>
-            <td style="padding: 15px; text-align: center; border-bottom: 1px solid #e5e7eb;">${member.earned_points || 0}</td>
-            <td style="padding: 15px; text-align: center; border-bottom: 1px solid #e5e7eb;">${member.required_points || 0}</td>
-            <td style="padding: 15px; text-align: center; border-bottom: 1px solid #e5e7eb;">
-                <div style="background: #f3f4f6; border-radius: 10px; height: 8px; position: relative; margin-bottom: 5px;">
-                    <div style="background: ${member.progress_percentage >= 100 ? '#10b981' : member.progress_percentage >= 75 ? '#f59e0b' : '#ef4444'}; height: 100%; border-radius: 10px; width: ${Math.min(member.progress_percentage, 100)}%;"></div>
+                <td style="padding: 15px; text-align: center; border-bottom: 1px solid #e5e7eb;">${member.role || 'Member'}</td>
+                <td style="padding: 15px; text-align: center; border-bottom: 1px solid #e5e7eb;">${member.earned_points || 0}</td>
+                <td style="padding: 15px; text-align: center; border-bottom: 1px solid #e5e7eb;">${member.required_points || 0}</td>
+                <td style="padding: 15px; text-align: center; border-bottom: 1px solid #e5e7eb;">
+                    <div style="background: #f3f4f6; border-radius: 10px; height: 8px; position: relative; margin-bottom: 5px;">
+                        <div style="background: ${member.progress_percentage >= 100 ? '#10b981' : member.progress_percentage >= 75 ? '#f59e0b' : '#ef4444'}; height: 100%; border-radius: 10px; width: ${Math.min(member.progress_percentage, 100)}%;"></div>
                     </div>
-                <small style="color: #6b7280;">${member.progress_percentage || 0}%</small>
+                    <small style="color: #6b7280;">${member.progress_percentage || 0}%</small>
                 </td>
-            <td style="padding: 15px; text-align: center; border-bottom: 1px solid #e5e7eb;">
-                <span style="background: ${member.compliance_status === 'Yes' ? '#10b981' : '#ef4444'}; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold;">
-                    ${member.compliance_status || 'No'}
-                </span>
-            </td>
-            <td style="padding: 15px; text-align: center; border-bottom: 1px solid #e5e7eb;">
-                <button onclick="viewMemberReport(${member.user_id})" style="background: #667eea; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;">
-                    View Report
+                <td style="padding: 15px; text-align: center; border-bottom: 1px solid #e5e7eb;">
+                    <span style="background: ${member.compliance_status === 'Yes' ? '#10b981' : '#ef4444'}; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold;">
+                        ${member.compliance_status || 'No'}
+                    </span>
+                </td>
+                <td style="padding: 15px; text-align: center; border-bottom: 1px solid #e5e7eb;">
+                    <button onclick="viewMemberReport(${member.user_id})" style="background: #667eea; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                        View Report
                     </button>
                 </td>
-        </tr>
-    `).join('');
+            </tr>
+        `;
+    }).join('');
     
     // Add comprehensive pagination
     const totalPages = data.total_pages || 1;
@@ -1143,7 +1159,42 @@ function sendReminders(type) {
 
 // Send individual reminder (referenced in table buttons)
 function sendIndividualReminder(userId) {
-    alert('📧 Individual reminder functionality will be implemented in the next feature update.');
+    if (!confirm('Send CPD reminder email to this member?')) {
+        return;
+    }
+    
+    // Show loading state
+    const button = event.target;
+    const originalText = button.textContent;
+    button.textContent = '📧 Sending...';
+    button.disabled = true;
+    
+    fetch(window.iipm_reports_ajax.ajax_url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+            action: 'iipm_send_individual_reminder',
+            user_id: userId,
+            year: currentYear,
+            nonce: window.iipm_reports_ajax.nonce
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('✅ ' + data.data.message);
+        } else {
+            alert('❌ Error: ' + (data.data?.message || 'Failed to send reminder'));
+        }
+    })
+    .catch(error => {
+        console.error('Error sending reminder:', error);
+        alert('❌ Error sending reminder. Please try again.');
+    })
+    .finally(() => {
+        button.textContent = originalText;
+        button.disabled = false;
+    });
 }
 
 // Load categories data (referenced in tab switching)

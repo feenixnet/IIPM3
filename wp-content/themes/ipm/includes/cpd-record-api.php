@@ -10,6 +10,38 @@ if (!defined('ABSPATH')) {
 }
 
 /**
+ * Parse date from various formats (dd/mm/yyyy or Y-m-d H:i:s)
+ */
+function iipm_parse_cpd_date($date_string) {
+    if (empty($date_string)) {
+        return null;
+    }
+    
+    // If it's already in Y-m-d H:i:s format, use strtotime directly
+    if (preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/', $date_string)) {
+        return strtotime($date_string);
+    }
+    
+    // If it's in dd/mm/yyyy format, convert it
+    if (preg_match('/^\d{2}\/\d{2}\/\d{4}$/', $date_string)) {
+        $date_parts = explode('/', $date_string);
+        if (count($date_parts) === 3) {
+            // Convert dd/mm/yyyy to yyyy-mm-dd
+            $formatted_date = $date_parts[2] . '-' . $date_parts[1] . '-' . $date_parts[0];
+            return strtotime($formatted_date);
+        }
+    }
+    
+    // If it's in yyyy-mm-dd format, use strtotime
+    if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $date_string)) {
+        return strtotime($date_string);
+    }
+    
+    // Fallback to strtotime for other formats
+    return strtotime($date_string);
+}
+
+/**
  * Register AJAX actions for CPD records
  */
 add_action('wp_ajax_iipm_get_cpd_stats', 'iipm_ajax_get_cpd_stats');
@@ -197,10 +229,10 @@ function iipm_get_cpd_stats($user_id, $year) {
         
         // Collect dates for start/completion calculation
         if (!empty($course->dateOfCourse)) {
-            $dates[] = strtotime($course->dateOfCourse);
+            $dates[] = iipm_parse_cpd_date($course->dateOfCourse);
         }
         if (!empty($course->dateOfReturn)) {
-            $dates[] = strtotime($course->dateOfReturn);
+            $dates[] = iipm_parse_cpd_date($course->dateOfReturn);
         }
     }
     
@@ -778,10 +810,10 @@ function iipm_get_completed_cpd_stats($user_id, $year) {
         
         // Collect dates
         if (!empty($course->dateOfCourse)) {
-            $dates[] = strtotime($course->dateOfCourse);
+            $dates[] = iipm_parse_cpd_date($course->dateOfCourse);
         }
         if (!empty($course->dateOfReturn)) {
-            $dates[] = strtotime($course->dateOfReturn);
+            $dates[] = iipm_parse_cpd_date($course->dateOfReturn);
         }
     }
     
@@ -1000,7 +1032,7 @@ function iipm_get_uncompleted_cpd_stats($user_id, $year) {
         
         // Collect dates
         if (!empty($course->dateOfCourse)) {
-            $dates[] = strtotime($course->dateOfCourse);
+            $dates[] = iipm_parse_cpd_date($course->dateOfCourse);
         }
     }
     

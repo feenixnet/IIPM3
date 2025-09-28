@@ -29,6 +29,36 @@ function iipm_ensure_cpd_reporting_columns() {
 iipm_ensure_cpd_reporting_columns();
 
 /**
+ * Get CPD submissions for a specific year (helper function)
+ */
+function iipm_get_cpd_submissions_for_year($year = null) {
+    if (!$year) {
+        $year = date('Y');
+    }
+    
+    global $wpdb;
+    
+    // Get all submissions for the year
+    $submissions = $wpdb->get_results($wpdb->prepare("
+        SELECT user_id, status, created_at, reviewed_at
+        FROM {$wpdb->prefix}test_iipm_submissions 
+        WHERE year = %s
+    ", $year));
+    
+    // Create a lookup array by user_id
+    $submission_lookup = array();
+    foreach ($submissions as $submission) {
+        $submission_lookup[$submission->user_id] = array(
+            'status' => $submission->status,
+            'created_at' => $submission->created_at,
+            'reviewed_at' => $submission->reviewed_at
+        );
+    }
+    
+    return $submission_lookup;
+}
+
+/**
  * Get CPD compliance statistics - Returns only 4 summary values for stat cards
  */
 function iipm_get_cpd_compliance_stats($year = null) {
@@ -238,6 +268,9 @@ function iipm_get_detailed_compliance_data($year = null, $type = null, $page = 1
     
     global $wpdb;
     
+    // Get CPD submissions for the year
+    $submission_lookup = iipm_get_cpd_submissions_for_year($year);
+    
     // Get CPD types to determine required points
     $cpd_types = $wpdb->get_results("SELECT * FROM {$wpdb->prefix}cpd_types ORDER BY id ASC");
     $required_points = 8; // Default fallback
@@ -404,7 +437,10 @@ function iipm_get_detailed_compliance_data($year = null, $type = null, $page = 1
             'progress_percentage' => $progress_percentage,
             'days_left' => $days_left,
             'compliance_status' => $earned_points >= $adjusted_target ? 'Yes' : 'No', // Use adjusted target
-            'is_high_risk' => $is_high_risk // High risk calculated in backend
+            'is_high_risk' => $is_high_risk, // High risk calculated in backend
+            'submission_status' => isset($submission_lookup[$user_id]) ? $submission_lookup[$user_id]['status'] : null,
+            'submission_created_at' => isset($submission_lookup[$user_id]) ? $submission_lookup[$user_id]['created_at'] : null,
+            'submission_reviewed_at' => isset($submission_lookup[$user_id]) ? $submission_lookup[$user_id]['reviewed_at'] : null
         );
         
         $all_users[] = $member_info;
@@ -742,20 +778,34 @@ function iipm_handle_send_bulk_reminders() {
     $type = sanitize_text_field($_POST['type']);
     $year = intval($_POST['year'] ?? date('Y'));
     
-    $data = iipm_get_detailed_compliance_data($year);
+    // Get all members data (no pagination, get all members)
+    $data = iipm_get_detailed_compliance_data($year, '', 1, 999999);
+    $all_members = $data['members'];
+    
     $members_to_remind = array();
     
     switch ($type) {
         case 'non-compliant':
-            $members_to_remind = $data['non_compliant'];
+            // Filter non-compliant members (progress < 100%)
+            foreach ($all_members as $member) {
+                if ($member['progress_percentage'] < 100) {
+                    $members_to_remind[] = $member;
+                }
+            }
             $subject = 'URGENT: CPD Compliance Required';
             break;
         case 'at-risk':
-            $members_to_remind = $data['at_risk'];
+            // Filter at-risk members (progress >= 75% but < 100%)
+            foreach ($all_members as $member) {
+                if ($member['progress_percentage'] >= 75 && $member['progress_percentage'] < 100) {
+                    $members_to_remind[] = $member;
+                }
+            }
             $subject = 'CPD Progress Reminder';
             break;
         case 'all':
-            $members_to_remind = array_merge($data['non_compliant'], $data['at_risk']);
+            // Get all members
+            $members_to_remind = $all_members;
             $subject = 'CPD Progress Update';
             break;
         default:
@@ -784,9 +834,29 @@ function iipm_send_cpd_reminder_email($member, $subject, $year) {
     $to = $member['email'];
     $headers = array('Content-Type: text/html; charset=UTF-8');
     
-    $shortage_text = '';
-    if ($member['shortage'] > 0) {
-        $shortage_text = "You currently need <strong>{$member['shortage']} more CPD points</strong> to meet your annual requirement.";
+    // Determine if member is compliant (100% or more)
+    $is_compliant = $member['progress_percentage'] >= 100;
+    
+    // Different content based on compliance status
+    if ($is_compliant) {
+        $main_message = "
+        <p>Congratulations! You have successfully completed your CPD training for {$year}.</p>
+        <p><strong>Please submit your CPD status and get your certificate to finalize your compliance.</strong></p>
+        ";
+        
+        $action_text = "Submit CPD Status & Get Certificate";
+        $action_url = home_url('/member-portal/');
+        $button_color = "#10b981"; // Green for success
+    } else {
+        $shortage = $member['required_points'] - $member['earned_points'];
+        $main_message = "
+        <p><strong>Hurry up! Please pay attention to your CPD training.</strong></p>
+        <p>You currently need <strong>{$shortage} more CPD points</strong> to meet your annual requirement for {$year}.</p>
+        ";
+        
+        $action_text = "Log CPD Activities";
+        $action_url = home_url('/member-portal/');
+        $button_color = "#ef4444"; // Red for urgency
     }
     
     $message = "
@@ -797,7 +867,7 @@ function iipm_send_cpd_reminder_email($member, $subject, $year) {
             
             <p>Dear {$member['name']},</p>
             
-            <p>This is a reminder about your Continuing Professional Development (CPD) progress for {$year}.</p>
+            {$main_message}
             
             <div style='background: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;'>
                 <h3 style='margin-top: 0; color: #374151;'>Your CPD Progress:</h3>
@@ -806,14 +876,11 @@ function iipm_send_cpd_reminder_email($member, $subject, $year) {
                     <li><strong>Points Required:</strong> {$member['required_points']}</li>
                     <li><strong>Progress:</strong> {$member['progress_percentage']}%</li>
                 </ul>
-                {$shortage_text}
             </div>
             
-            <p>To log additional CPD activities, please visit your member portal:</p>
-            
             <div style='text-align: center; margin: 30px 0;'>
-                <a href='" . home_url('/cpd-portal/') . "' style='background: #667eea; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: bold;'>
-                    Log CPD Activities
+                <a href='{$action_url}' style='background: {$button_color}; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; display: inline-block; font-weight: bold;'>
+                    {$action_text}
                 </a>
             </div>
             
@@ -832,6 +899,53 @@ function iipm_send_cpd_reminder_email($member, $subject, $year) {
     ";
     
     return wp_mail($to, $subject, $message, $headers);
+}
+
+/**
+ * AJAX handler for sending individual CPD reminder
+ */
+function iipm_handle_send_individual_reminder() {
+    // Verify nonce
+    if (!wp_verify_nonce($_POST['nonce'], 'iipm_reports_nonce')) {
+        wp_send_json_error(array('message' => 'Security check failed'));
+    }
+    
+    if (!current_user_can('administrator')) {
+        wp_send_json_error(array('message' => 'Insufficient permissions'));
+    }
+    
+    $user_id = intval($_POST['user_id']);
+    $year = intval($_POST['year'] ?? date('Y'));
+    
+    // Get individual member report data
+    $report_data = iipm_get_individual_member_report($user_id, $year);
+    
+    if (!$report_data) {
+        wp_send_json_error(array('message' => 'Member not found or not active'));
+    }
+    
+    // Convert report data to member format for email function
+    $member = array(
+        'name' => $report_data['member']->display_name,
+        'email' => $report_data['member']->user_email,
+        'earned_points' => $report_data['total_earned'],
+        'required_points' => $report_data['required_points'],
+        'progress_percentage' => $report_data['progress_percentage'],
+        'shortage' => max(0, $report_data['required_points'] - $report_data['total_earned']),
+        'days_left' => 0 // Calculate days left if needed
+    );
+    
+    // Send the reminder email
+    $subject = 'CPD Progress Reminder';
+    $email_sent = iipm_send_cpd_reminder_email($member, $subject, $year);
+    
+    if ($email_sent) {
+        wp_send_json_success(array(
+            'message' => 'Reminder sent successfully to ' . $member['name']
+        ));
+    } else {
+        wp_send_json_error(array('message' => 'Failed to send reminder email'));
+    }
 }
 
 /**
@@ -1032,6 +1146,9 @@ function iipm_get_all_members_with_progress($year = null, $report_type = 'employ
     
     global $wpdb;
     
+    // Get CPD submissions for the year
+    $submission_lookup = iipm_get_cpd_submissions_for_year($year);
+    
     // Get CPD types to determine required points
     $cpd_types = $wpdb->get_results("SELECT * FROM {$wpdb->prefix}cpd_types ORDER BY id ASC");
     $required_points = 8; // Default fallback
@@ -1183,6 +1300,11 @@ function iipm_get_all_members_with_progress($year = null, $report_type = 'employ
         // Determine compliance status
         $user_data['compliance_status'] = $earned >= $adjusted_target ? 'Yes' : 'No';
         
+        // Add submission status
+        $user_data['submission_status'] = isset($submission_lookup[$user_id]) ? $submission_lookup[$user_id]['status'] : null;
+        $user_data['submission_created_at'] = isset($submission_lookup[$user_id]) ? $submission_lookup[$user_id]['created_at'] : null;
+        $user_data['submission_reviewed_at'] = isset($submission_lookup[$user_id]) ? $submission_lookup[$user_id]['reviewed_at'] : null;
+        
         $members[] = $user_data;
     }
     
@@ -1228,6 +1350,7 @@ function iipm_handle_get_all_members_for_reports() {
 add_action('wp_ajax_iipm_get_compliance_data', 'iipm_handle_get_compliance_data');
 add_action('wp_ajax_iipm_export_report', 'iipm_handle_export_report');
 add_action('wp_ajax_iipm_send_bulk_reminders', 'iipm_handle_send_bulk_reminders');
+add_action('wp_ajax_iipm_send_individual_reminder', 'iipm_handle_send_individual_reminder');
 add_action('wp_ajax_iipm_get_individual_report', 'iipm_handle_get_individual_report');
 add_action('wp_ajax_iipm_send_individual_report_email', 'iipm_handle_send_individual_report_email');
 add_action('wp_ajax_iipm_search_members', 'iipm_handle_search_members');
