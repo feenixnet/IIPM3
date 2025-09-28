@@ -781,17 +781,34 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                                     </a>
                                 <?php endif; ?>
                             <?php else: ?>
-                                <!-- Mobile login button only for non-logged in users -->
-                                <div class="header__auth-buttons">
-                                    <a href="<?php echo home_url('/login/'); ?>" class="login">
-                                        <svg width="16" height="16" viewBox="0 0 29 31" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                            <path fill-rule="evenodd" clip-rule="evenodd"
-                                                d="M14.5 12.4166C15.1074 12.4166 15.7088 12.297 16.2699 12.0646C16.831 11.8322 17.3409 11.4915 17.7704 11.062C18.1998 10.6325 18.5405 10.1227 18.7729 9.56156C19.0054 9.00043 19.125 8.39901 19.125 7.79165C19.125 7.18428 19.0054 6.58287 18.7729 6.02174C18.5405 5.4606 18.1998 4.95075 17.7704 4.52128C17.3409 4.09181 16.831 3.75113 16.2699 3.5187C15.7088 3.28628 15.1074 3.16665 14.5 3.16665C13.2734 3.16665 12.097 3.65392 11.2296 4.52128C10.3623 5.38863 9.875 6.56502 9.875 7.79165C9.875 9.01827 10.3623 10.1947 11.2296 11.062C12.097 11.9294 13.2734 12.4166 14.5 12.4166ZM14.5 15.5C16.5444 15.5 18.505 14.6879 19.9506 13.2423C21.3962 11.7967 22.2083 9.83602 22.2083 7.79165C22.2083 5.74727 21.3962 3.78662 19.9506 2.34103C18.505 0.895439 16.5444 0.083313 14.5 0.083313C12.4556 0.083313 10.495 0.895439 9.04939 2.34103C7.60379 3.78662 6.79167 5.74727 6.79167 7.79165C6.79167 9.83602 7.60379 11.7967 9.04939 13.2423C10.495 14.6879 12.4556 15.5 14.5 15.5Z"
-                                                fill="white" />
-                                        </svg>
-                                        Login
-                                    </a>
-                                </div>
+								<!-- Show only login button for non-logged in users -->
+								<div class="header__auth-buttons">
+									<a href="<?php echo home_url('/login/'); ?>" class="login" style="
+										display: inline-flex;
+										align-items: center;
+										gap: 8px;
+										padding: 8px 16px;
+										background: #4a4a4a;
+										color: white;
+										text-decoration: none;
+										border-radius: 8px;
+										border: 1px solid #6b6b6b;
+										font-weight: 500;
+										font-size: 14px;
+										transition: all 0.3s ease;
+									">
+										<div style="
+											width: 20px;
+											height: 20px;
+											display: flex;
+											align-items: center;
+											justify-content: center;
+										">
+											<i class="fa fa-sign-in"></i>
+										</div>
+										Login
+									</a>
+								</div>
                             <?php endif; ?>
                         </div>
                     </div>
