@@ -317,7 +317,7 @@ function iipm_calculate_prorata_cpd($user_id, $leave_start, $leave_end, $cpd_yea
     // Calculate pro-rata adjustment
     $adjustment = $member->cpd_points_required * $leave_percentage;
     
-    return round($adjustment, 2);
+    return iipm_round_to_nearest_half($adjustment);
 }
 
 /**

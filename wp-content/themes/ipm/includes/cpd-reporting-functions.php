@@ -204,16 +204,10 @@ function iipm_get_cpd_compliance_stats($year = null) {
         $earned = $total_hours;
         $total_cpd_points += $earned; // Add to total CPD points
         
-        // Calculate adjusted target for this user based on their leave requests
-        $user_leave_days = isset($user_leave_duration[$user_id]) ? $user_leave_duration[$user_id] : 0;
-        $total_days_in_year = 365;
-        if (date('L', mktime(0, 0, 0, 1, 1, $year))) {
-            $total_days_in_year = 366; // Leap year
-        }
-        $adjusted_target = (($total_days_in_year - $user_leave_days) / $total_days_in_year) * $required_points;
-        $adjusted_target = round($adjusted_target, 1);
+        // Calculate adjusted target for this user based on their leave requests using new formula
+        $adjusted_target = iipm_calculate_adjusted_target_points($user_id, $year);
         
-        error_log('🔍 Member ID: ' . $user_id . ' earned points: ' . $earned . ', original target: ' . $required_points . ', adjusted target: ' . $adjusted_target . ', leave days: ' . $user_leave_days . ', is assigned: ' . (in_array($user_id, $assigned_user_ids) ? 'Yes' : 'No'));
+        error_log('🔍 Member ID: ' . $user_id . ' earned points: ' . $earned . ', original target: ' . $required_points . ', adjusted target: ' . $adjusted_target . ', is assigned: ' . (in_array($user_id, $assigned_user_ids) ? 'Yes' : 'No'));
         
         $progress_percentage = $adjusted_target > 0 ? round(min(100, ($earned / $adjusted_target) * 100), 2) : 0;
         
@@ -393,14 +387,8 @@ function iipm_get_detailed_compliance_data($year = null, $type = null, $page = 1
         // Convert to earned_points (matching CPD record API logic)
         $earned_points = $total_hours;
         
-        // Calculate adjusted target for this user based on their leave requests
-        $user_leave_days = isset($user_leave_duration[$user_data['user_id']]) ? $user_leave_duration[$user_data['user_id']] : 0;
-        $total_days_in_year = 365;
-        if (date('L', mktime(0, 0, 0, 1, 1, $year))) {
-            $total_days_in_year = 366; // Leap year
-        }
-        $adjusted_target = (($total_days_in_year - $user_leave_days) / $total_days_in_year) * $required_points;
-        $adjusted_target = round($adjusted_target, 1);
+        // Calculate adjusted target for this user based on their leave requests using new formula
+        $adjusted_target = iipm_calculate_adjusted_target_points($user_data['user_id'], $year);
         
         $progress_percentage = $adjusted_target > 0 ? round(min(100, ($earned_points / $adjusted_target) * 100), 2) : 0;
         
@@ -1262,14 +1250,8 @@ function iipm_get_all_members_with_progress($year = null, $report_type = 'employ
         
         $earned = $total_hours;
         
-        // Calculate adjusted target for this user based on their leave requests
-        $user_leave_days = isset($user_leave_duration[$user_id]) ? $user_leave_duration[$user_id] : 0;
-        $total_days_in_year = 365;
-        if (date('L', mktime(0, 0, 0, 1, 1, $year))) {
-            $total_days_in_year = 366; // Leap year
-        }
-        $adjusted_target = (($total_days_in_year - $user_leave_days) / $total_days_in_year) * $required_points;
-        $adjusted_target = round($adjusted_target, 1);
+        // Calculate adjusted target for this user based on their leave requests using new formula
+        $adjusted_target = iipm_calculate_adjusted_target_points($user_id, $year);
         
         $user_data['earned_points'] = $earned;
         $user_data['required_points'] = $adjusted_target; // Use adjusted target

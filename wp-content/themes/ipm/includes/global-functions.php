@@ -138,11 +138,62 @@ if (!function_exists('iipm_calculate_user_leave_duration')) {
 }
 
 /**
+ * Get membership constant for CPD calculation
+ */
+if (!function_exists('iipm_get_membership_constant')) {
+    function iipm_get_membership_constant($user_id) {
+        global $wpdb;
+        
+        // Get user's membership level
+        $member = $wpdb->get_row($wpdb->prepare(
+            "SELECT membership_level FROM {$wpdb->prefix}test_iipm_members WHERE user_id = %d",
+            $user_id
+        ));
+        
+        if (!$member || !$member->membership_level) {
+            return 1.0; // Default constant for unknown memberships
+        }
+        
+        $membership_level = $member->membership_level;
+        
+        // If membership level is numeric, it's a membership ID from memberships table
+        if (is_numeric($membership_level)) {
+            $membership_info = $wpdb->get_row($wpdb->prepare(
+                "SELECT name FROM {$wpdb->prefix}memberships WHERE id = %d",
+                intval($membership_level)
+            ));
+            
+            $membership_name = $membership_info ? $membership_info->name : '';
+        } else {
+            $membership_name = $membership_level;
+        }
+        
+        // Return constant based on membership type
+        if (stripos($membership_name, 'Member') !== false && stripos($membership_name, 'QPT Trustee Member') === false) {
+            return 1.25; // Member
+        } elseif (stripos($membership_name, 'QPT Trustee Member') !== false) {
+            return 0.85; // QPT Trustee Member
+        } else {
+            return 1.0; // All other types
+        }
+    }
+}
+
+/**
+ * Round to nearest 0.5
+ */
+if (!function_exists('iipm_round_to_nearest_half')) {
+    function iipm_round_to_nearest_half($value) {
+        return round($value * 2) / 2;
+    }
+}
+
+/**
  * Calculate adjusted target points for a user based on leave requests
  * 
  * @param int $user_id User ID
  * @param int $year Year (default: current year)
- * @return int Adjusted target hours
+ * @return float Adjusted target hours
  */
 if (!function_exists('iipm_calculate_adjusted_target_points')) {
     function iipm_calculate_adjusted_target_points($user_id, $year = null) {
@@ -165,23 +216,25 @@ if (!function_exists('iipm_calculate_adjusted_target_points')) {
             $original_target = 8; // Default 8 hours
         }
         
-        // Calculate total days in the year
-        $total_days_in_year = 365;
-        if (date('L', mktime(0, 0, 0, 1, 1, $year))) {
-            $total_days_in_year = 366; // Leap year
-        }
-        
         // Get total leave duration for the user
         $leave_duration = iipm_calculate_user_leave_duration($user_id, $year);
         
-        // Calculate adjusted target using the formula:
-        // target_hours = ((total_days_in_year - leave_duration) / total_days_in_year) * original_target
-        $adjusted_target = (($total_days_in_year - $leave_duration) / $total_days_in_year) * $original_target;
-
-        error_log('IIPM: Adjusted target: ' . $adjusted_target . " " . $leave_duration);
+        // Get membership constant
+        $membership_constant = iipm_get_membership_constant($user_id);
         
-        // Round to 1 decimal place
-        return round($adjusted_target, 1);
+        // Calculate adjusted target using the NEW formula:
+        // adjusted_target = original_target - CONSTANT_OF_MEMBERSHIP * (leave_duration / 30)
+        $adjusted_target = $original_target - ($membership_constant * ($leave_duration / 30));
+        
+        // If adjusted_target is less than 2, show 2
+        if ($adjusted_target < 2) {
+            $adjusted_target = 2;
+        }
+
+        error_log('IIPM: Adjusted target calculation - Original: ' . $original_target . ', Leave days: ' . $leave_duration . ', Membership constant: ' . $membership_constant . ', Adjusted: ' . $adjusted_target);
+        
+        // Round to nearest 0.5
+        return iipm_round_to_nearest_half($adjusted_target);
     }
 }
 ?>

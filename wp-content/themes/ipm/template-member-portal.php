@@ -90,7 +90,7 @@ get_header();
             <div>
                 <h1 style="color: white; font-size: 2.5rem; margin-bottom: 10px;">Member Portal</h1>
                 <p style="color: rgba(255,255,255,0.9); font-size: 1.1rem;">
-                    Welcome to this CPD training course.
+                    Your CPD overview.
                 </p>
             </div>
         </div>

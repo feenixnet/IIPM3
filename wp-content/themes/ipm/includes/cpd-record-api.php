@@ -103,7 +103,7 @@ function iipm_get_cpd_stats($user_id, $year) {
         
         if ($primary_type) {
             $original_target = intval($primary_type->{'Total Hours/Points Required'});
-            // Calculate adjusted target based on leave requests (returns hours with 1 decimal place)
+            // Calculate adjusted target based on leave requests (returns hours rounded to nearest 0.5)
             $target_hours = iipm_calculate_adjusted_target_points($user_id, $year);
             $target_minutes = $target_hours * 60; // Convert hours to minutes for compatibility
             $cpd_dates = array(
@@ -754,7 +754,7 @@ function iipm_get_completed_cpd_stats($user_id, $year) {
         
         if ($primary_type) {
             $original_target = intval($primary_type->{'Total Hours/Points Required'});
-            // Calculate adjusted target based on leave requests (returns hours with 1 decimal place)
+            // Calculate adjusted target based on leave requests (returns hours rounded to nearest 0.5)
             $target_hours = iipm_calculate_adjusted_target_points($user_id, $year);
             $target_minutes = $target_hours * 60; // Convert hours to minutes for compatibility
         }
@@ -976,7 +976,7 @@ function iipm_get_uncompleted_cpd_stats($user_id, $year) {
         
         if ($primary_type) {
             $original_target = intval($primary_type->{'Total Hours/Points Required'});
-            // Calculate adjusted target based on leave requests (returns hours with 1 decimal place)
+            // Calculate adjusted target based on leave requests (returns hours rounded to nearest 0.5)
             $target_hours = iipm_calculate_adjusted_target_points($user_id, $year);
             $target_minutes = $target_hours * 60; // Convert hours to minutes for compatibility
         }
