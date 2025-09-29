@@ -152,8 +152,6 @@ get_header();
                                     <option value="">Select payment method</option>
                                     <option value="Direct Invoiced">Direct Invoiced</option>
                                     <option value="Employer Invoiced">Employer Invoiced</option>
-                                    <option value="Not Invoiced">Not Invoiced</option>
-                                    <option value="NA">NA</option>
                                 </select>
                             </div>
                             <div class="form-group">

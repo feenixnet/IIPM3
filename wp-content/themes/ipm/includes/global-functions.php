@@ -196,7 +196,7 @@ if (!function_exists('iipm_round_to_nearest_half')) {
  * @return float Adjusted target hours
  */
 if (!function_exists('iipm_calculate_adjusted_target_points')) {
-    function iipm_calculate_adjusted_target_points($user_id, $year = null) {
+    function iipm_calculate_adjusted_target_points($user_id, $year = null, $manual_duration = null) {
         global $wpdb;
         
         if (!$year) {
@@ -217,8 +217,13 @@ if (!function_exists('iipm_calculate_adjusted_target_points')) {
         }
         
         // Get total leave duration for the user
-        $leave_duration = iipm_calculate_user_leave_duration($user_id, $year);
-        
+        // If manual_duration is provided, use it instead of fetching from database
+        if ($manual_duration !== null) {
+            $leave_duration = $manual_duration;
+        } else {
+            $leave_duration = iipm_calculate_user_leave_duration($user_id, $year);
+        }
+
         // Get membership constant
         $membership_constant = iipm_get_membership_constant($user_id);
         
@@ -231,7 +236,8 @@ if (!function_exists('iipm_calculate_adjusted_target_points')) {
             $adjusted_target = 2;
         }
 
-        error_log('IIPM: Adjusted target calculation - Original: ' . $original_target . ', Leave days: ' . $leave_duration . ', Membership constant: ' . $membership_constant . ', Adjusted: ' . $adjusted_target);
+        $duration_source = ($manual_duration !== null) ? 'Manual (' . $manual_duration . ')' : 'Database (' . $leave_duration . ')';
+        error_log('IIPM: Adjusted target calculation - Original: ' . $original_target . ', Leave days: ' . $duration_source . ', Membership constant: ' . $membership_constant . ', Adjusted: ' . $adjusted_target);
         
         // Round to nearest 0.5
         return iipm_round_to_nearest_half($adjusted_target);

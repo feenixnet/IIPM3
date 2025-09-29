@@ -792,7 +792,6 @@ get_header();
             loadCategories();
             loadProviders();
             loadCoursesInLearningPath(); // Load all courses in learning path
-            loadCourses();
             
             // Set up event listeners
             setupEventListeners();
@@ -1071,9 +1070,6 @@ get_header();
                         
                         // Refresh the learning path courses list and reload courses to update the UI
                         loadCoursesInLearningPath();
-                        setTimeout(() => {
-                            loadCourses(); // Reload courses to update the UI with new status
-                        }, 500);
                         
                         // Optionally redirect back to member portal
                         setTimeout(() => {
@@ -1174,6 +1170,9 @@ get_header();
                 },
                 error: function(xhr, status, error) {
                     console.error('Error loading courses in learning path:', error);
+                },
+                complete: function() {
+                    loadCourses();
                 }
             });
         }

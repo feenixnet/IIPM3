@@ -146,7 +146,7 @@ get_header();
                                 </li>
                                 <li class="nav-item" data-section="settings">
                                     <a href="javascript:void(0)" onclick="showSection('settings')">
-                                        Settings
+                                        Password
                                     </a>
                                 </li>
                                 <li class="nav-item" data-section="help">
@@ -406,8 +406,6 @@ get_header();
                                             <option value="">Select payment method</option>
                                             <option value="Direct Invoiced" <?php selected($user_payment_method, 'Direct Invoiced'); ?>>Direct Invoiced</option>
                                             <option value="Employer Invoiced" <?php selected($user_payment_method, 'Employer Invoiced'); ?>>Employer Invoiced</option>
-                                            <option value="Not Invoiced" <?php selected($user_payment_method, 'Not Invoiced'); ?>>Not Invoiced</option>
-                                            <option value="NA" <?php selected($user_payment_method, 'NA'); ?>>NA</option>
                                         </select>
                                     </div>
                                     

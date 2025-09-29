@@ -5,6 +5,10 @@
  * @package IPM
  */
 
+// Include required functions
+include_once get_template_directory() . '/includes/global-functions.php';
+include_once get_template_directory() . '/includes/leave-request-functions.php';
+
 // Redirect if not logged in
 if (!is_user_logged_in()) {
     wp_redirect(home_url('/login/'));
@@ -70,6 +74,7 @@ foreach ($leave_requests as $request) {
                 </p>
             </div>
         </div>
+        
         <div class="leave-request-content">
             <!-- Submit Leave Request Section -->
             <div class="leave-request-submit-section">
@@ -80,9 +85,16 @@ foreach ($leave_requests as $request) {
                     </button>
                 </div>
                 
-                <div class="notice-card">
-                    <h3>Notice</h3>
-                    <p>If you request a leave from the course, a pro-rata adjustment will be applied based on the portion of the course completed up to the date of your request. This ensures fair and accurate allocation of course credit or fees.</p>
+                <div class="alert alert-warning" style="margin: 0px !important;">
+                    <div class="alert-icon">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.516-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/>
+                        </svg>
+                    </div>
+                    <div class="alert-content">
+                        <h3 style="margin-top: 0px !important;">Warning</h3>
+                        <p>If you request a leave from the course, a pro-rata adjustment will be applied based on the portion of the course completed up to the date of your request. This ensures fair and accurate allocation of course credit or fees.</p>
+                    </div>
                 </div>
             </div>
 
@@ -192,27 +204,40 @@ foreach ($leave_requests as $request) {
                         </div>
                     </div>
                 </div>
-                
-                <div class="form-section">
-                    <form id="leaveRequestForm" class="leave-request-form">
-                        <div class="form-group">
-                            <label for="date_of_leave">Date of Leave</label>
-                            <input type="text" id="date_of_leave" name="date_of_leave" readonly>
+
+                <div class="form-and-calculation-section">
+                    <!-- CPD Impact Display -->
+                    <div class="cpd-impact-section" id="cpdImpactSection" style="display: none;margin-bottom: 10px;">
+                        <div class="cpd-impact-card">
+                            <h4>📊 CPD Requirements Impact</h4>
+                            <div class="cpd-impact-content" id="cpdImpactContent">
+                                <!-- This will be populated by JavaScript -->
+                            </div>
                         </div>
-                        
-                        <div class="form-group">
-                            <label for="duration_of_leave">Duration of Leave</label>
-                            <input type="text" id="duration_of_leave" name="duration_of_leave" readonly>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="leave_note">Reason for Leave and make field compulsory (optional)</label>
-                            <textarea id="leave_note" name="leave_note" rows="3" placeholder="Enter reason for leave..."></textarea>
-                        </div>
-                        
-                        <button type="submit" class="btn-submit-leave">Submit Leave Request</button>
-                    </form>
+                    </div>
+                    
+                    <div class="form-section">
+                        <form id="leaveRequestForm" class="leave-request-form">
+                            <div class="form-group">
+                                <label for="date_of_leave">Start and end of Leave</label>
+                                <input type="text" id="date_of_leave" name="date_of_leave" readonly>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="duration_of_leave">Duration of Leave</label>
+                                <input type="text" id="duration_of_leave" name="duration_of_leave" readonly>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="leave_note">Reason for Leave <span class="required">*</span></label>
+                                <textarea id="leave_note" name="leave_note" rows="3" placeholder="Enter reason for leave..." required></textarea>
+                            </div>
+                            
+                            <button type="submit" class="btn-submit-leave">Submit Leave Request</button>
+                        </form>
+                    </div>
                 </div>
+                
             </div>
         </div>
     </div>
@@ -287,7 +312,7 @@ foreach ($leave_requests as $request) {
                     <span id="detail-dates"></span>
                 </div>
                 <div class="detail-item">
-                    <label>Reason for Leave and make field compulsory</label>
+                    <label>Reason for Leave</label>
                     <span id="detail-note"></span>
                 </div>
             </div>
@@ -338,7 +363,6 @@ foreach ($leave_requests as $request) {
     max-width: 1200px;
     margin: 0 auto;
     padding: 20px;
-    font-family: 'Gabarito', sans-serif;
 }
 
 .iipm-portal-header {
@@ -359,17 +383,154 @@ foreach ($leave_requests as $request) {
     margin-bottom: 20px;
 }
 
-.submit-card, .notice-card {
+.submit-card {
     background: white;
     border-radius: 12px;
     padding: 30px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
-.submit-card h2, .notice-card h3 {
+.submit-card h2 {
     color: #333;
     margin-bottom: 20px;
     font-weight: 600;
+}
+
+.alert {
+    background: white !important;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    display: flex !important;
+    align-items: flex-start;
+    gap: 15px;
+    margin-bottom: 20px;
+    visibility: visible !important;
+    opacity: 1 !important;
+    position: relative;
+    z-index: 10;
+}
+
+.alert-warning {
+    border-left: 4px solid #f59e0b !important;
+    background-color: #fffbeb !important;
+    border: 1px solid #fbbf24 !important;
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.top-warning-alert {
+    position: relative;
+    z-index: 999 !important;
+}
+
+.top-warning-alert .alert {
+    background: #fef3c7 !important;
+    border: 2px solid #f59e0b !important;
+    box-shadow: 0 8px 16px rgba(245, 158, 11, 0.3) !important;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { box-shadow: 0 8px 16px rgba(245, 158, 11, 0.3); }
+    50% { box-shadow: 0 8px 20px rgba(245, 158, 11, 0.5); }
+    100% { box-shadow: 0 8px 16px rgba(245, 158, 11, 0.3); }
+}
+
+.cpd-impact-section {
+    margin-bottom: 20px;
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.cpd-impact-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+.cpd-impact-card h4 {
+    margin: 0 0 15px 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.cpd-impact-content {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 15px;
+}
+
+.cpd-stat-item {
+    text-align: center;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 15px;
+    border-radius: 8px;
+    backdrop-filter: blur(10px);
+}
+
+.cpd-stat-value {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.cpd-stat-label {
+    font-size: 0.85rem;
+    opacity: 0.9;
+}
+
+.cpd-stat-item.positive {
+    background: rgba(34, 197, 94, 0.2);
+    border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.cpd-stat-item.negative {
+    background: rgba(239, 68, 68, 0.2);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.cpd-stat-item.primary {
+    background: rgba(74, 144, 226, 0.2);
+    border: 1px solid rgba(74, 144, 226, 0.3);
+}
+
+.cpd-stat-item.current {
+    background: rgba(255, 193, 7, 0.2);
+    border: 1px solid rgba(255, 193, 7, 0.3);
+}
+
+.alert-icon {
+    flex-shrink: 0;
+    margin-top: 5px;
+}
+
+.alert-warning .alert-icon svg {
+    color: #f59e0b;
+}
+
+.alert-content h3 {
+    color: #92400e;
+    margin-bottom: 10px;
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+.alert-content p {
+    color: #92400e;
+    line-height: 1.6;
+    margin: 0;
 }
 
 .leave-request-btn {
@@ -390,10 +551,9 @@ foreach ($leave_requests as $request) {
     transform: translateY(-2px);
 }
 
-.notice-card p {
-    color: #666;
-    line-height: 1.6;
-    margin: 0;
+.required {
+    color: #ef4444;
+    font-weight: bold;
 }
 
 .leave-requests-grid {
@@ -563,12 +723,20 @@ foreach ($leave_requests as $request) {
 }
 
 .form-layout {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 40px;
+    display: flex;
+}
+
+.calendar-section {
+    width: 50%;
+}
+
+.form-and-calculation-section {
+    width: calc(50% - 20px);
+    margin-left: 20px;
 }
 
 .calendar-section h3 {
+    margin-top: 0px;
     color: #333;
     margin-bottom: 20px;
     font-weight: 600;
@@ -1072,13 +1240,98 @@ foreach ($leave_requests as $request) {
 // Global AJAX configuration - Available immediately
 window.iipm_ajax = {
     ajax_url: '<?php echo admin_url('admin-ajax.php'); ?>',
-    nonce: '<?php echo wp_create_nonce('iipm_portal_nonce'); ?>'
+    nonce: '<?php echo wp_create_nonce('iipm_user_nonce'); ?>',
+    portal_nonce: '<?php echo wp_create_nonce('iipm_portal_nonce'); ?>'
 };
 
 // Calendar functionality
 let currentDate = new Date();
 let selectedStartDate = null;
 let selectedEndDate = null;
+let nonce = '<?php echo wp_create_nonce('iipm_portal_nonce'); ?>';
+
+// Function to fetch and display CPD hours impact
+function fetchAndDisplayCpdImpact() {
+    if (!selectedStartDate || !selectedEndDate) {
+        document.getElementById('cpdImpactSection').style.display = 'none';
+        return;
+    }
+    
+    // Show loading state
+    const cpdSection = document.getElementById('cpdImpactSection');
+    const cpdContent = document.getElementById('cpdImpactContent');
+    cpdSection.style.display = 'block';
+    cpdContent.innerHTML = '<div style="text-align: center; padding: 20px;"><span style="color: rgba(255,255,255,0.8);">Calculating CPD impact...</span></div>';
+    
+    // Get form data for CPD calculation
+    const startDate = document.getElementById('date_of_leave').value.split(' - ')[0];
+    const endDate = document.getElementById('date_of_leave').value.split(' - ')[1];
+    const duration = document.getElementById('duration_of_leave').value;
+    
+    // Calculate days from duration string (e.g., "17 days" -> 17)
+    const durationDays = duration ? parseInt(duration.replace(/[^0-9]/g, '')) : 0;
+    
+    // Prepare form data
+    const formData = new FormData();
+    formData.append('action', 'iipm_get_adjusted_cpd_hours');
+    formData.append('nonce', nonce);
+    formData.append('year', new Date().getFullYear());
+    formData.append('manual_duration', durationDays);
+    
+    // Fetch CPD data
+    fetch(window.iipm_ajax.ajax_url, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('CPD AJAX Response:', data);
+        if (data.success) {
+            displayCpdImpact(data.data);
+        } else {
+            console.error('CPD AJAX Error:', data.data);
+            cpdContent.innerHTML = `<div style="text-align: center; padding: 20px;"><span style="color: rgba(255,255,255,0.8);">Error: ${data.data}</span></div>`;
+        }
+    })
+    .catch(error => {
+        console.error('Error fetching CPD impact:', error);
+        cpdContent.innerHTML = '<div style="text-align: center; padding: 20px;"><span style="color: rgba(255,255,255,0.8);">Network Error</span></div>';
+    });
+}
+
+// Function to display CPD impact data
+function displayCpdImpact(data) {
+    const cpdContent = document.getElementById('cpdImpactContent');
+    
+    const duration = Math.ceil((selectedEndDate - selectedStartDate) / (1000 * 60 * 60 * 24)) + 1;
+    
+    cpdContent.innerHTML = `
+        <div class="cpd-stat-item primary">
+            <span class="cpd-stat-value">${data.original_hours}</span>
+            <span class="cpd-stat-label">Original Target</span>
+        </div>
+        <div class="cpd-stat-item current">
+            <span class="cpd-stat-value">${data.current_hours}</span>
+            <span class="cpd-stat-label">Current Target</span>
+        </div>
+        <div class="cpd-stat-item ${data.difference > 0 ? 'negative' : 'positive'}">
+            <span class="cpd-stat-value">${data.adjusted_hours}</span>
+            <span class="cpd-stat-label">After New Leave</span>
+        </div>
+        <div class="cpd-stat-item ${data.difference > 0 ? 'negative' : 'positive'}">
+            <span class="cpd-stat-value">${data.difference > 0 ? '-' : '+'}${Math.abs(data.difference).toFixed(1)}</span>
+            <span class="cpd-stat-label">Change from Current</span>
+        </div>
+        <div class="cpd-stat-item ${data.percentage_reduction > 0 ? 'negative' : ''}">
+            <span class="cpd-stat-value">${duration} day${duration > 1 ? 's' : ''}</span>
+            <span class="cpd-stat-label">Leave Duration</span>
+        </div>
+        <div class="cpd-stat-item ${data.percentage_reduction > 0 ? 'negative' : ''}">
+            <span class="cpd-stat-value">${data.percentage_reduction}%</span>
+            <span class="cpd-stat-label">Reduction from Current</span>
+        </div>
+    `;
+}
 let isSelectingRange = false;
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -1185,6 +1438,9 @@ function updateFormFields() {
         
         document.getElementById('date_of_leave').value = `${startStr} - ${endStr}`;
         document.getElementById('duration_of_leave').value = `${duration} days`;
+        
+        // Fetch and display CPD impact
+        fetchAndDisplayCpdImpact();
     }
 }
 
@@ -1211,6 +1467,7 @@ function openLeaveRequestForm() {
 
 function closeLeaveRequestForm() {
     document.getElementById('leaveRequestModal').style.display = 'none';
+    document.getElementById('cpdImpactSection').style.display = 'none';
 }
 
 function closeSuccessModal() {
@@ -1231,12 +1488,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
-            const note = document.getElementById('leave_note').value;
+            // Validate required field
+            const note = document.getElementById('leave_note').value.trim();
+            if (!note) {
+                alert('Please provide a reason for your leave request.');
+                document.getElementById('leave_note').focus();
+                return;
+            }
+            
             const duration = Math.ceil((selectedEndDate - selectedStartDate) / (1000 * 60 * 60 * 24)) + 1;
             
             const formData = new FormData();
             formData.append('action', 'iipm_submit_leave_request');
-            formData.append('nonce', window.iipm_ajax.nonce);
+            formData.append('nonce', nonce);
             formData.append('leave_title', `Leave Request for ${duration} days`);
             formData.append('leave_reason', 'personal');
             formData.append('leave_start_date', selectedStartDate.toISOString().split('T')[0]);
@@ -1304,7 +1568,7 @@ function confirmCancelRequest() {
     
     const formData = new FormData();
     formData.append('action', 'iipm_cancel_leave_request');
-    formData.append('nonce', window.iipm_ajax.nonce);
+    formData.append('nonce', nonce);
     formData.append('request_id', pendingCancelRequestId);
     
     // Get the request data for success message

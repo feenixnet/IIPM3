@@ -55,7 +55,7 @@ class IIPM_Navigation_Manager {
             $navigation = array(
                 'Member Portal' => home_url('/member-portal/'),
                 'CPD Record' => home_url('/cpd-record/'),
-                'External Courses' => home_url('/external-courses/'),
+                'Courses' => home_url('/cpd-courses/'),
                 'CPD Reports' => home_url('/cpd-reports/'),
                 'Leave Requests' => home_url('/leave-request/'),
                 'My Profile' => home_url('/profile/'),
@@ -68,10 +68,9 @@ class IIPM_Navigation_Manager {
             $navigation = array(
                 'Member Portal' => home_url('/member-portal/'),
                 'CPD Record' => home_url('/cpd-record/'),
-                'External Courses' => home_url('/external-courses/'),
+                'Courses' => home_url('/cpd-courses/'),
                 'Leave Requests' => home_url('/leave-request/'),
                 'My Profile' => home_url('/profile/'),
-                'File Dashboard' => home_url('/file-dashboard/'),
                 'Logout' => wp_logout_url(home_url())
             );
         }
@@ -234,7 +233,7 @@ class IIPM_Navigation_Manager {
                 'Member Portal' => array(
                     'CPD Portal' => array(
                         'Browse Courses',
-                        'External Courses',
+                        'Courses',
                         'My Learning',
                         'Progress Tracking',
                         'Certificates'

@@ -462,4 +462,61 @@ function iipm_get_effective_cpd_requirement($user_id) {
     
     return max(0, $member->cpd_points_required - $member->cpd_prorata_adjustment);
 }
+
+/**
+ * AJAX handler to get adjusted CPD hours for user
+ */
+add_action('wp_ajax_iipm_get_adjusted_cpd_hours', 'iipm_ajax_get_adjusted_cpd_hours');
+add_action('wp_ajax_nopriv_iipm_get_adjusted_cpd_hours', 'iipm_ajax_get_adjusted_cpd_hours');
+
+function iipm_ajax_get_adjusted_cpd_hours() {
+    // Debug: Log the request
+    error_log('CPD AJAX Request - Nonce: ' . ($_POST['nonce'] ?? 'missing'));
+    error_log('CPD AJAX Request - Year: ' . ($_POST['year'] ?? 'missing'));
+    
+    $user_id = get_current_user_id();
+    if (!$user_id) {
+        wp_send_json_error('User not logged in');
+        return;
+    }
+    
+    $year = intval($_POST['year'] ?? date('Y'));
+    $manual_duration = intval($_POST['manual_duration'] ?? 0);
+
+    // Get current target (already affected by existing leave requests)
+    $current_target = iipm_calculate_adjusted_target_points($user_id, $year);
+    
+    // Calculate adjusted hours based on manual duration
+    if ($manual_duration > 0) {
+        // Get existing leave duration from database
+        $existing_leave_days = iipm_calculate_user_leave_duration($user_id, $year);
+        
+        // Calculate adjusted hours with existing + manual duration
+        $total_leave_days = $existing_leave_days + $manual_duration;
+        $adjusted_hours = iipm_calculate_adjusted_target_points($user_id, $year, $total_leave_days);
+    } else {
+        // If no manual duration, return current hours (no change)
+        $adjusted_hours = $current_target;
+    }
+    
+    // Get the raw original target from database for reference
+    global $wpdb;
+    $cpd_types_table = $wpdb->prefix . 'cpd_types';
+    $original_target = $wpdb->get_var($wpdb->prepare(
+        "SELECT `Total Hours/Points Required` FROM {$cpd_types_table} WHERE YEAR(`Start of logging date`) = %d LIMIT 1",
+        $year
+    ));
+
+    if (!$original_target) {
+        $original_target = 8; // Default fallback
+    }
+
+    wp_send_json_success(array(
+        'original_hours' => floatval($original_target),
+        'current_hours' => floatval($current_target),
+        'adjusted_hours' => floatval($adjusted_hours),
+        'difference' => floatval($current_target - $adjusted_hours),
+        'percentage_reduction' => $current_target > 0 ? round((($current_target - $adjusted_hours) / $current_target) * 100, 1) : 0
+    ));
+}
 ?>
