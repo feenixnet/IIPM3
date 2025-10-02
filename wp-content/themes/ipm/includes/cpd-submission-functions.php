@@ -446,6 +446,39 @@ function iipm_get_user_submission_status() {
         );
     }
 
+    // Get completed courses for the user in the submission year
+    $cpd_records_table = $wpdb->prefix . 'test_iipm_cpd_records';
+    $courses_table = $wpdb->prefix . 'test_iipm_courses';
+    $categories_table = $wpdb->prefix . 'test_iipm_cpd_categories';
+
+    $completed_courses = $wpdb->get_results($wpdb->prepare(
+        "SELECT c.course_name, c.course_cpd_mins, c.crs_provider, cat.name as course_category
+         FROM $cpd_records_table r
+         LEFT JOIN $courses_table c ON r.course_id = c.id
+         LEFT JOIN $categories_table cat ON c.course_category = cat.id
+         WHERE r.user_id = %d AND r.cpd_year = %s AND r.status = 'approved'
+         ORDER BY r.created_at DESC",
+        $user_id,
+        $year
+    ));
+
+    $result['completed_courses'] = $completed_courses;
+
+    // Get recent training data with start/end dates
+    $recent_training = $wpdb->get_results($wpdb->prepare(
+        "SELECT c.course_name, c.course_cpd_mins, c.crs_provider, cat.name as course_category,
+                r.start_date, r.end_date, r.created_at
+         FROM $cpd_records_table r
+         LEFT JOIN $courses_table c ON r.course_id = c.id
+         LEFT JOIN $categories_table cat ON c.course_category = cat.id
+         WHERE r.user_id = %d AND r.cpd_year = %s AND r.status = 'approved'
+         ORDER BY r.created_at DESC",
+        $user_id,
+        $year
+    ));
+
+    $result['recent_training'] = $recent_training;
+
     wp_send_json_success($result);
 }
 

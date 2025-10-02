@@ -135,10 +135,16 @@ get_header();
                 <div class="submission-details" id="submission-details">
                     <div class="loading-spinner"></div>
                 </div>
+                
+                <!-- Training Table Container for Submitted Users -->
+                <div class="training-table-section" id="training-table-section">
+                    <!-- Training table will be rendered here -->
+                </div>
             </div>
         </div>
         <?php endif; ?>
         
+        <?php if (!$is_submitted): ?>
         <div class="portal-layout">
             <?php if ($is_user_assigned): ?>
             <!-- Left Side - My CPD Course (for assigned users) -->
@@ -245,7 +251,7 @@ get_header();
                         <div class="cpd-action-buttons" id="cpd-action-buttons" style="display: none;">
                             <button class="btn btn-success" id="submit-cpd-btn">
                                 <span class="btn-icon"><i class="fas fa-check"></i></span>
-                                Submit CPD
+                                Submit <?php echo $current_year; ?> CPD return
                             </button>
                         </div>
                     <?php endif; ?>
@@ -339,6 +345,7 @@ get_header();
             </div>
             <?php endif; ?>
         </div>
+        <?php endif; ?>
     </div>
 </div>
 
@@ -1035,6 +1042,10 @@ get_header();
         margin-top: 20px;
     }
 
+    .training-table-section {
+        margin-top: 20px;
+    }
+
     .status-info {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -1091,6 +1102,236 @@ get_header();
     .status-badge.rejected {
         background: #fee2e2;
         color: #991b1b;
+    }
+
+    .completed-courses-section {
+        background: white;
+        border-radius: 12px;
+        padding: 24px;
+        margin: 20px 0;
+        border: 1px solid #e5e7eb;
+    }
+
+    .courses-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 20px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .courses-icon {
+        width: 40px;
+        height: 40px;
+        background: linear-gradient(135deg, #8b5a96 0%, #6b4c93 100%);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 18px;
+    }
+
+    .courses-title {
+        color: #1f2937;
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin: 0;
+    }
+
+    .courses-list {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .course-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 16px;
+        background: #f8fafc;
+        border-radius: 8px;
+        border: 1px solid #e2e8f0;
+    }
+
+    .course-info {
+        flex: 1;
+    }
+
+    .course-name {
+        color: #1f2937;
+        font-size: 1rem;
+        font-weight: 600;
+        margin: 0 0 8px 0;
+    }
+
+    .course-details {
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+    }
+
+    .course-category,
+    .course-duration,
+    .course-provider {
+        color: #6b7280;
+        font-size: 0.875rem;
+        background: white;
+        padding: 4px 8px;
+        border-radius: 4px;
+        border: 1px solid #e5e7eb;
+    }
+
+    .course-status {
+        color: #10b981;
+        font-size: 20px;
+    }
+
+    .recent-training-section {
+        background: white;
+        border-radius: 12px;
+        padding: 24px;
+        margin: 20px 0;
+        border: 1px solid #e5e7eb;
+    }
+
+    .training-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 20px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .training-icon {
+        width: 40px;
+        height: 40px;
+        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 18px;
+    }
+
+    .training-title-submitted {
+        color: #1f2937;
+        font-size: 20px;
+        font-weight: 600;
+        margin: 0 0 0 10px;
+    }
+
+    .training-summary {
+        display: flex;
+        gap: 24px;
+        margin-bottom: 20px;
+        padding: 16px;
+        background: #f8fafc;
+        border-radius: 8px;
+    }
+
+    .summary-item {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .summary-label {
+        color: #6b7280;
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+
+    .summary-value {
+        color: #1f2937;
+        font-size: 1.125rem;
+        font-weight: 700;
+    }
+
+    .training-table-container {
+        overflow-x: auto;
+        border-radius: 8px;
+        border: 1px solid #e5e7eb;
+    }
+
+    .training-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+    }
+
+    .training-table th {
+        background: #f8fafc;
+        padding: 12px 16px;
+        text-align: left;
+        font-weight: 600;
+        color: #374151;
+        border-bottom: 1px solid #e5e7eb;
+        font-size: 0.875rem;
+    }
+
+    .training-table td {
+        padding: 12px 16px;
+        border-bottom: 1px solid #f3f4f6;
+        color: #6b7280;
+        font-size: 0.875rem;
+        text-align: left;
+    }
+
+    .training-table tbody tr:hover {
+        background: #f8fafc;
+    }
+
+    .training-table tbody tr:last-child td {
+        border-bottom: none;
+    }
+
+    .course-name-cell {
+        font-weight: 600;
+        color: #1f2937;
+        max-width: 200px;
+    }
+
+    .category-cell {
+        color: #6366f1;
+        font-weight: 500;
+    }
+
+    .date-cell {
+        color: #6b7280;
+        white-space: nowrap;
+    }
+
+    .duration-cell {
+        font-weight: 600;
+        color: #059669;
+    }
+
+    .status-cell {
+        text-align: center;
+    }
+
+    .status-badge {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    .status-badge.completed {
+        background: #d1fae5;
+        color: #065f46;
+    }
+
+    .status-badge.pending {
+        background: #fef3c7;
+        color: #92400e;
     }
 
     .certificate-section {
@@ -1270,13 +1511,13 @@ get_header();
         box-shadow: 0 2px 8px rgba(139, 90, 150, 0.1);
     }
 
-    .training-header {
+    .training-header-submitted {
         display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
+        justify-content: left !important;
         margin-bottom: 12px;
     }
 
+    
     .training-title {
         font-size: 14px;
         font-weight: 600;
@@ -1570,6 +1811,25 @@ get_header();
         .training-options {
             grid-template-columns: 1fr;
         }
+        
+        .training-summary {
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .training-table-container {
+            font-size: 0.75rem;
+        }
+
+        .training-table th,
+        .training-table td {
+            padding: 8px 4px;
+        }
+
+        .course-name-cell {
+            max-width: 120px;
+            word-wrap: break-word;
+        }
     }
 </style>
 
@@ -1613,9 +1873,9 @@ get_header();
             // Load initial data
             loadCompletedCpdStats();
             
-            // Load training data only for assigned users
+            // Always load training data for assigned users
             if (isUserAssigned) {
-            loadRecentlyLoggedTraining();
+                loadRecentlyLoggedTraining();
             }
             
             // Set up event listeners
@@ -2225,6 +2485,111 @@ get_header();
          * Update training display
          */
         function updateTrainingDisplay(training) {
+            // Check if user has submitted - if so, render as table under certificate section
+            <?php if ($is_submitted): ?>
+                renderTrainingAsTable(training);
+                return;
+            <?php endif; ?>
+            
+            // For non-submitted users, render in portal
+            renderTrainingInPortal(training);
+        }
+        
+        /**
+         * Render training data as table under certificate section (for submitted users)
+         */
+        function renderTrainingAsTable(training) {
+            const trainingTableSection = document.getElementById('training-table-section');
+            if (!trainingTableSection) {
+                console.log('Training table section element not found');
+                return;
+            }
+            
+            if (!training || training.length === 0) {
+                trainingTableSection.innerHTML = '<p style="text-align: center; color: #6b7280; padding: 20px;">No training data available.</p>';
+                return;
+            }
+            
+            // Calculate total duration
+            let totalDuration = 0;
+            training.forEach(item => {
+                // Extract duration from hrsAndCategory string
+                const durationMatch = item.hrsAndCategory.match(/(\d+)/);
+                if (durationMatch) {
+                    totalDuration += parseInt(durationMatch[1]);
+                }
+            });
+            
+            // Create training table HTML
+            const trainingTableHtml = `
+                <div class="recent-training-section">
+                    <div class="training-header training-header-submitted">
+                        <div class="training-icon">
+                            <i class="fas fa-book-open"></i>
+                        </div>
+                        <h3 class="training-title-submitted">Recently Logged Training</h3>
+                    </div>
+                    <div class="training-summary">
+                        <div class="summary-item">
+                            <span class="summary-label">Total Courses:</span>
+                            <span class="summary-value">${training.length}</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Total Duration:</span>
+                            <span class="summary-value">${totalDuration} minutes</span>
+                        </div>
+                    </div>
+                    <div class="training-table-container">
+                        <table class="training-table">
+                            <thead>
+                                <tr>
+                                    <th>Course Name</th>
+                                    <th>Category</th>
+                                    <th>Course Date</th>
+                                    <th>Duration</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${training.map(item => {
+                                    const isCompleted = item.dateOfReturn !== null;
+                                    const category = item.hrsAndCategory.split(': ')[1] || 'N/A';
+                                    const duration = item.hrsAndCategory.split(': ')[0] || 'N/A';
+                                    
+                                    return `
+                                        <tr>
+                                            <td class="course-name-cell">${item.courseName}</td>
+                                            <td class="category-cell">${category}</td>
+                                            <td class="date-cell">${formatDate(item.dateOfCourse)}</td>
+                                            <td class="duration-cell">${duration}</td>
+                                            <td class="status-cell">
+                                                <span class="status-badge ${isCompleted ? 'completed' : 'pending'}">
+                                                    ${isCompleted ? 'Completed' : 'Pending'}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    `;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+            
+            // Render the training table in the dedicated container
+            trainingTableSection.innerHTML = trainingTableHtml;
+        }
+        
+        /**
+         * Render training data in portal (for non-submitted users)
+         */
+        function renderTrainingInPortal(training) {
+            // Check if trainingContent element exists (it might not exist if user has submitted)
+            if (!trainingContent) {
+                console.log('Training content element not found - user may have submitted CPD');
+                return;
+            }
+            
             if (!training || training.length === 0) {
                 trainingContent.innerHTML = `
                     <div class="no-training-message">
@@ -2284,7 +2649,10 @@ get_header();
             });
             html += '</div>';
             
-            trainingContent.innerHTML = html;
+            // Double check that trainingContent exists before setting innerHTML
+            if (trainingContent) {
+                trainingContent.innerHTML = html;
+            }
         }
         
         /**
@@ -2462,6 +2830,43 @@ get_header();
                 </div>
             `;
             
+            // Add completed courses section
+            if (data.completed_courses && data.completed_courses.length > 0) {
+                html += `
+                    <div class="completed-courses-section">
+                        <div class="courses-header">
+                            <div class="courses-icon">
+                                <i class="fas fa-graduation-cap"></i>
+                            </div>
+                            <h3 class="courses-title">Completed Courses</h3>
+                        </div>
+                        <div class="courses-list">
+                `;
+                
+                data.completed_courses.forEach(course => {
+                    html += `
+                        <div class="course-item">
+                            <div class="course-info">
+                                <h4 class="course-name">${course.course_name}</h4>
+                                <div class="course-details">
+                                    <span class="course-category">${course.course_category}</span>
+                                    <span class="course-duration">${course.course_cpd_mins} minutes</span>
+                                    <span class="course-provider">${course.crs_provider}</span>
+                                </div>
+                            </div>
+                            <div class="course-status">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                html += `
+                        </div>
+                    </div>
+                `;
+            }
+            
             // Add certificate section if certificate exists
             if (certificate) {
                 html += `
@@ -2494,6 +2899,68 @@ get_header();
                         <p class="certificate-info">
                             Your certificate will be available once your submission is approved by an administrator.
                         </p>
+                    </div>
+                `;
+            }
+            
+            // Add recent training section after certificate
+            if (data.recent_training && data.recent_training.length > 0) {
+                let totalDuration = 0;
+                data.recent_training.forEach(training => {
+                    totalDuration += parseInt(training.course_cpd_mins) || 0;
+                });
+                
+                html += `
+                    <div class="recent-training-section">
+                        <div class="training-header">
+                            <div class="training-icon">
+                                <i class="fas fa-book-open"></i>
+                            </div>
+                            <h3 class="training-title">Recently Logged Training</h3>
+                        </div>
+                        <div class="training-summary">
+                            <div class="summary-item">
+                                <span class="summary-label">Total Courses:</span>
+                                <span class="summary-value">${data.recent_training.length}</span>
+                            </div>
+                            <div class="summary-item">
+                                <span class="summary-label">Total Duration:</span>
+                                <span class="summary-value">${totalDuration} minutes</span>
+                            </div>
+                        </div>
+                        <div class="training-table-container">
+                            <table class="training-table">
+                                <thead>
+                                    <tr>
+                                        <th>Course Name</th>
+                                        <th>Category</th>
+                                        <th>Start Date</th>
+                                        <th>End Date</th>
+                                        <th>Duration</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                `;
+                
+                data.recent_training.forEach(training => {
+                    const startDate = training.start_date ? new Date(training.start_date).toLocaleDateString() : 'N/A';
+                    const endDate = training.end_date ? new Date(training.end_date).toLocaleDateString() : 'N/A';
+                    
+                    html += `
+                        <tr>
+                            <td class="course-name-cell">${training.course_name}</td>
+                            <td class="category-cell">${training.course_category || 'N/A'}</td>
+                            <td class="date-cell">${startDate}</td>
+                            <td class="date-cell">${endDate}</td>
+                            <td class="duration-cell">${training.course_cpd_mins} min</td>
+                        </tr>
+                    `;
+                });
+                
+                html += `
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 `;
             }
@@ -2642,7 +3109,7 @@ get_header();
             // For now, show a success message
             alert('Course added successfully!');
             
-            // Reload training data
+            // Always reload training data
             loadRecentlyLoggedTraining();
             loadCompletedCpdStats();
         }

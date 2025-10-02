@@ -142,6 +142,14 @@ function iipm_get_users() {
             $membership_display = 'Admin';
         }
         
+        // Check CPD submission status for current year
+        $current_year = date('Y');
+        $cpd_submitted = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$wpdb->prefix}test_iipm_submissions WHERE user_id = %d AND year = %s",
+            $user->ID,
+            $current_year
+        )) > 0;
+        
         $processed_users[] = array(
             'ID' => $user->ID,
             'display_name' => $user->display_name,
@@ -152,7 +160,8 @@ function iipm_get_users() {
             'role_display' => $membership_display,
             'membership_id' => $user->membership_id,
             'membership_name' => $user->membership_name,
-            'roles' => $user_roles
+            'roles' => $user_roles,
+            'cpd_submitted' => $cpd_submitted
         );
     }
     

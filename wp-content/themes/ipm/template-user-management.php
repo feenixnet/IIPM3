@@ -133,22 +133,23 @@ if (!function_exists('add_success_notification')) {
 
                     <!-- Users Table -->
                     <div class="users-table-container" style="overflow-x: auto; border: 1px solid #e5e7eb; border-radius: 12px;">
-                        <table id="users-table" style="width: 100%; border-collapse: collapse;">
+                        <table id="users-table" class="users-table-sticky" style="width: 150%; border-collapse: collapse;">
                             <thead style="background: #f8fafc;">
                                 <tr>
-                                    <th style="padding: 16px; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Name</th>
-                                    <th style="padding: 16px; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Email</th>
+                                    <th class="sticky-col sticky-name" style="padding: 16px; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Name</th>
+                                    <th class="sticky-col sticky-email" style="padding: 16px; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Email</th>
                                     <th style="padding: 16px; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Membership Level</th>
                                     <th style="padding: 16px; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Status</th>
                                     <th style="padding: 16px; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Organization</th>
                                     <th style="padding: 16px; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Last Login</th>
+                                    <th style="padding: 16px; text-align: center; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">CPD Status</th>
                                     <th style="padding: 16px; text-align: center; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="users-table-body">
                                 <!-- Users will be loaded here via AJAX -->
                                 <tr>
-                                    <td colspan="7" style="padding: 40px; text-align: center; color: #6b7280;">
+                                    <td colspan="8" style="padding: 40px; text-align: center; color: #6b7280;">
                                         <div class="loading-spinner" style="display: inline-block; width: 20px; height: 20px; border: 2px solid #e5e7eb; border-top: 2px solid #667eea; border-radius: 50%; animation: spin 1s linear infinite;"></div>
                                         <span style="margin-left: 10px;">Loading users...</span>
                                     </td>
@@ -199,16 +200,23 @@ if (!function_exists('add_success_notification')) {
                                 <!-- Site admin - can select organization -->
                                 <div class="form-group organisation-field" style="display:none;">
                                     <label for="organisation_id">Organization</label>
-                                    <select name="organisation_id" id="organisation_id">
-                                        <option value="">Select Organization</option>
-                                        <?php
-                                        global $wpdb;
-                                        $organisations = $wpdb->get_results("SELECT id, name FROM {$wpdb->prefix}test_iipm_organisations WHERE is_active = 1 ORDER BY name");
-                                        foreach ($organisations as $org) {
-                                            echo "<option value='{$org->id}'>" . esc_html($org->name) . "</option>";
-                                        }
-                                        ?>
-                                    </select>
+                                    <div class="custom-select-container">
+                                        <div class="custom-select" id="organisation-select">
+                                            <div class="select-trigger">
+                                                <span class="select-placeholder">Select Organization</span>
+                                                <i class="fas fa-chevron-down"></i>
+                                            </div>
+                                            <div class="select-dropdown">
+                                                <div class="select-search">
+                                                    <input type="text" id="organisation-search" placeholder="Search organizations...">
+                                                </div>
+                                                <div class="select-options" id="organisation-options">
+                                                    <!-- Options will be loaded here -->
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <input type="hidden" name="organisation_id" id="organisation_id">
                                 </div>
                             <?php endif; ?>
                             
@@ -640,6 +648,79 @@ if (!function_exists('add_success_notification')) {
     color: #6b7280;
     padding: 40px !important;
 }
+
+/* Sticky Table Styles */
+.users-table-container {
+    position: relative;
+    max-width: 100%;
+    overflow-x: auto;
+}
+
+.users-table-sticky {
+    min-width: 1200px; /* Ensure table has minimum width for scrolling */
+}
+
+.sticky-col {
+    position: sticky;
+    background: #f8fafc;
+    z-index: 10;
+    border-right: 2px solid #e5e7eb;
+}
+
+.sticky-name {
+    left: 0;
+    min-width: 200px;
+    max-width: 200px;
+}
+
+.sticky-email {
+    left: 200px; /* Position after name column */
+    min-width: 250px;
+    max-width: 250px;
+}
+
+/* Body cells sticky styling */
+tbody .sticky-col {
+    background: white;
+    border-right: 2px solid #e5e7eb;
+}
+
+/* Hover effects for sticky columns */
+tbody tr:hover .sticky-col {
+    background: #f8fafc;
+}
+
+/* Ensure proper z-index for headers */
+thead .sticky-col {
+    z-index: 11;
+    background: #f8fafc;
+}
+
+/* Shadow effect for sticky columns */
+.sticky-col::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: -2px;
+    width: 2px;
+    height: 100%;
+    background: linear-gradient(to right, rgba(0,0,0,0.1), transparent);
+    pointer-events: none;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .sticky-name {
+        min-width: 150px;
+        max-width: 150px;
+    }
+    
+    .sticky-email {
+        left: 150px;
+        min-width: 200px;
+        max-width: 200px;
+    }
+}
 </style>
 
 <script>
@@ -654,6 +735,9 @@ jQuery(document).ready(function($) {
     loadMembershipLevels();
     loadUsers();
     fetchOrganizations();
+    
+    // Initialize custom organization select
+    initializeOrganizationSelect();
 
     // Load membership levels from database
     function loadMembershipLevels() {
@@ -755,7 +839,7 @@ jQuery(document).ready(function($) {
     function loadUsers() {
         $('#users-table-body').html(`
             <tr>
-                <td colspan="7" style="padding: 40px; text-align: center; color: #6b7280;">
+                <td colspan="8" style="padding: 40px; text-align: center; color: #6b7280;">
                     <div class="loading-spinner" style="display: inline-block; width: 20px; height: 20px; border: 2px solid #e5e7eb; border-top: 2px solid #667eea; border-radius: 50%; animation: spin 1s linear infinite;"></div>
                     <span style="margin-left: 10px;">Loading users...</span>
                 </td>
@@ -808,7 +892,7 @@ jQuery(document).ready(function($) {
         if (users.length === 0) {
             $('#users-table-body').html(`
                 <tr>
-                    <td colspan="7" style="padding: 40px; text-align: center; color: #6b7280;">
+                    <td colspan="8" style="padding: 40px; text-align: center; color: #6b7280;">
                         No users found.
                     </td>
                 </tr>
@@ -818,12 +902,17 @@ jQuery(document).ready(function($) {
 
         let html = '';
         users.forEach(function(user) {
+            // Determine CPD status icon
+            const cpdStatusIcon = user.cpd_submitted ? 
+                '<i class="fas fa-check" style="color: #10b981; font-size: 16px;" title="CPD Submitted"></i>' : 
+                '<i class="fas fa-times" style="color: #ef4444; font-size: 16px;" title="CPD Not Submitted"></i>';
+            
             html += `
                 <tr class="user-row" style="border-bottom: 1px solid #e5e7eb;">
-                    <td style="padding: 16px;">
+                    <td class="sticky-col sticky-name" style="padding: 16px;">
                         <div style="font-weight: 500; color: #374151;">${user.display_name}</div>
                     </td>
-                    <td style="padding: 16px; color: #6b7280;">${user.user_email}</td>
+                    <td class="sticky-col sticky-email" style="padding: 16px; color: #6b7280;">${user.user_email}</td>
                     <td style="padding: 16px;">
                         <span class="role-badge">${user.role_display}</span>
                     </td>
@@ -832,6 +921,9 @@ jQuery(document).ready(function($) {
                     </td>
                     <td style="padding: 16px; color: #6b7280;">${user.organisation_name || 'N/A'}</td>
                     <td style="padding: 16px; color: #6b7280;">${user.last_login || 'Never'}</td>
+                    <td style="padding: 16px; text-align: center;">
+                        ${cpdStatusIcon}
+                    </td>
                     <td style="padding: 16px; text-align: center;width: 150px;">
                         <button class="action-btn edit-btn" onclick="editUser(${user.ID})">Edit</button>
                         <button class="action-btn delete-btn" onclick="deleteUser(${user.ID}, '${user.display_name}')">Delete</button>
@@ -930,6 +1022,76 @@ jQuery(document).ready(function($) {
         
         organizations.forEach(function(org) {
             select.append(`<option value="${org.id}">${org.name}</option>`);
+        });
+    }
+
+    // Initialize custom organization select for invitations
+    function initializeOrganizationSelect() {
+        // Custom select functionality
+        $('.select-trigger').on('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            $(this).toggleClass('active');
+            $('.select-dropdown').toggleClass('show');
+            
+            // Populate options when dropdown is opened
+            if ($(this).hasClass('active') && organizations.length > 0) {
+                populateOrganizationOptions(organizations);
+            }
+        });
+        
+        // Organization search functionality
+        $('#organisation-search').on('input', function() {
+            const searchTerm = $(this).val().toLowerCase();
+            const filteredOrgs = organizations.filter(org => 
+                org.name.toLowerCase().includes(searchTerm)
+            );
+            populateOrganizationOptions(filteredOrgs);
+        });
+        
+        // Organization selection
+        $(document).on('click', '.select-option', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            const orgId = $(this).data('org-id');
+            const orgName = $(this).find('.option-name').text();
+            
+            // Update select display
+            $('.select-trigger .select-placeholder').text(orgName);
+            $('.select-trigger').addClass('selected');
+            $('.select-dropdown').removeClass('show');
+            $('.select-trigger').removeClass('active');
+            
+            // Update hidden input
+            $('#organisation_id').val(orgId);
+        });
+        
+        // Close dropdown when clicking outside
+        $(document).on('click', function(e) {
+            if (!$(e.target).closest('.custom-select').length) {
+                $('.select-dropdown').removeClass('show');
+                $('.select-trigger').removeClass('active');
+            }
+        });
+    }
+
+    // Populate organization options in custom select
+    function populateOrganizationOptions(orgs) {
+        const $options = $('#organisation-options');
+        $options.empty();
+        
+        if (!orgs || orgs.length === 0) {
+            $options.html('<div class="select-option">No organizations found</div>');
+            return;
+        }
+        
+        orgs.forEach(function(org) {
+            const option = $(`
+                <div class="select-option" data-org-id="${org.id}">
+                    <div class="option-name">${org.name}</div>
+                </div>
+            `);
+            $options.append(option);
         });
     }
 
