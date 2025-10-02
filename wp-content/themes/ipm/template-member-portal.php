@@ -247,12 +247,17 @@ get_header();
                     <!-- <button class="btn btn-outline" id="submit-return-btn">Submit my return</button> -->
                     
                     <!-- CPD Assignment and Submission Buttons -->
-                    <?php if (!$is_submitted && floatval($cpd_stats["completion_percentage"]) >= 100): ?>
+                    <?php if (!$is_submitted): ?>
                         <div class="cpd-action-buttons" id="cpd-action-buttons" style="display: none;">
                             <button class="btn btn-success" id="submit-cpd-btn">
                                 <span class="btn-icon"><i class="fas fa-check"></i></span>
                                 Submit <?php echo $current_year; ?> CPD return
                             </button>
+                        </div>
+                        
+                        <!-- Validation Message Area -->
+                        <div class="cpd-validation-message" id="cpd-validation-message" style="display: none;">
+                            <!-- Validation messages will be shown here -->
                         </div>
                     <?php endif; ?>
                     
@@ -706,6 +711,7 @@ get_header();
         color: #1f2937;
         font-weight: 600;
         font-size: 13px;
+        text-align: center;
     }
 
     .time-info .time-label {
@@ -1831,6 +1837,69 @@ get_header();
             word-wrap: break-word;
         }
     }
+
+    /* Validation Message Styles */
+    .cpd-validation-message {
+        margin-top: 15px;
+    }
+
+    .validation-alert {
+        display: flex;
+        align-items: flex-start;
+        background: #fef3cd;
+        border: 1px solid #fbbf24;
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 20px;
+    }
+
+    .validation-icon {
+        color: #d97706;
+        font-size: 20px;
+        margin-right: 12px;
+        margin-top: 2px;
+        flex-shrink: 0;
+    }
+
+    .validation-content {
+        flex: 1;
+    }
+
+    .validation-content h4 {
+        color: #92400e;
+        font-size: 16px;
+        font-weight: 600;
+        margin: 0 0 8px 0;
+    }
+
+    .validation-content p {
+        color: #92400e;
+        font-size: 14px;
+        margin: 0 0 8px 0;
+    }
+
+    .validation-content ul {
+        color: #92400e;
+        font-size: 14px;
+        margin: 0;
+        padding-left: 20px;
+    }
+
+    .validation-content li {
+        margin-bottom: 4px;
+    }
+
+    @media (max-width: 768px) {
+        .validation-alert {
+            flex-direction: column;
+            text-align: center;
+        }
+        
+        .validation-icon {
+            margin-right: 0;
+            margin-bottom: 8px;
+        }
+    }
 </style>
 
 <script>
@@ -2238,14 +2307,7 @@ get_header();
             
             const targetElement = document.getElementById('target-minutes');
             if (targetElement) {
-                const targetHours = Math.floor(targetMinutes / 60);
-                const targetMins = targetMinutes % 60;
-                
-                if (targetHours > 0) {
-                    targetElement.textContent = `${targetHours}h ${targetMins}m`;
-                } else {
-                    targetElement.textContent = `${targetMins} minutes`;
-                }
+                targetElement.textContent = formatMinutesToHours(targetMinutes);
             }
         }
         
@@ -2282,14 +2344,136 @@ get_header();
             console.log('isUserAssigned', isUserAssigned);
             console.log('isSubmissionPeriod', isSubmissionPeriod);
             
-            // User is assigned, show submit button if in submission period
-            if (isUserAssigned && isSubmissionPeriod && !isTrainingCompleted) {
+            // Check if user meets all submission requirements
+            const meetsSubmissionRequirements = checkSubmissionRequirements(data);
+            
+            // User is assigned, show submit button if in submission period AND meets all requirements
+            if (isUserAssigned && isSubmissionPeriod && !isTrainingCompleted && meetsSubmissionRequirements) {
                 cpdActionButtons.style.display = 'flex';
                 submitBtn.style.display = 'block';
+                hideValidationMessage();
+            } else {
+                // Hide submit button if requirements not met
+                if (cpdActionButtons) {
+                    cpdActionButtons.style.display = 'none';
+                }
+                
+                // Show validation message if user is assigned and in submission period but doesn't meet requirements
+                if (isUserAssigned && isSubmissionPeriod && !isTrainingCompleted) {
+                    showValidationMessage(data);
+                }
             }
             
             // Check if user has completed all CPD requirements and show success alert
             checkAndShowSuccessAlert(data);
+        }
+        
+        /**
+         * Check if user meets all submission requirements
+         * Both time progress >= 100% AND completion in all required categories
+         */
+        function checkSubmissionRequirements(data) {
+            // Check 1: Time progress must be >= 100%
+            const timeProgress = parseFloat(data.completion_percentage || 0);
+            const hasMinimumTimeProgress = timeProgress >= 100;
+            
+            // Check 2: Must have completed training in all required categories
+            const hasCompletedAllCategories = checkAllCategoriesCompleted(data);
+            
+            console.log('Submission Requirements Check:');
+            console.log('- Time Progress:', timeProgress + '%', hasMinimumTimeProgress ? '✓' : '✗');
+            console.log('- All Categories Completed:', hasCompletedAllCategories ? '✓' : '✗');
+            console.log('- Overall Requirements Met:', hasMinimumTimeProgress && hasCompletedAllCategories ? '✓' : '✗');
+            
+            return hasMinimumTimeProgress && hasCompletedAllCategories;
+        }
+        
+        /**
+         * Check if user has completed training in all required categories
+         */
+        function checkAllCategoriesCompleted(data) {
+            if (!data.courses_summary || data.courses_summary.length === 0) {
+                console.log('No courses summary data available');
+                return false;
+            }
+            
+            // Check each category to ensure it has at least some completed training
+            for (let category of data.courses_summary) {
+                if (category.required > 0 && category.count === 0) {
+                    console.log(`Category "${category.name}" has no completed training (required: ${category.required})`);
+                    return false;
+                }
+            }
+            
+            console.log('All required categories have completed training');
+            return true;
+        }
+        
+        /**
+         * Show validation message explaining why submit button is not available
+         */
+        function showValidationMessage(data) {
+            const validationMessage = document.getElementById('cpd-validation-message');
+            if (!validationMessage) return;
+            
+            const timeProgress = parseFloat(data.completion_percentage || 0);
+            const hasMinimumTimeProgress = timeProgress >= 100;
+            const hasCompletedAllCategories = checkAllCategoriesCompleted(data);
+            
+            let messages = [];
+            
+            if (!hasMinimumTimeProgress) {
+                messages.push(`Complete at least 100% of required training time (currently ${timeProgress.toFixed(1)}%)`);
+            }
+            
+            if (!hasCompletedAllCategories) {
+                // Find missing categories
+                const missingCategories = [];
+                if (data.courses_summary) {
+                    console.log(data.courses_summary);
+                    data.courses_summary.forEach(category => {
+                        if (category.required > 0 && category.count === 0) {
+                            missingCategories.push(category.category);
+                        }
+                    });
+                }
+
+                console.log(missingCategories);
+                
+                if (missingCategories.length > 0) {
+                    messages.push(`Complete training in all required categories. Missing: <b>${missingCategories.join(', ')}</b>`);
+                } else {
+                    messages.push(`Complete training in all required categories`);
+                }
+            }
+            
+            if (messages.length > 0) {
+                validationMessage.innerHTML = `
+                    <div class="validation-alert">
+                        <div class="validation-icon">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <div class="validation-content">
+                            <h4>Requirements Not Met</h4>
+                            <p>To submit your CPD return, you must:</p>
+                            <ul>
+                                ${messages.map(msg => `<li>${msg}</li>`).join('')}
+                            </ul>
+                        </div>
+                    </div>
+                `;
+                validationMessage.style.display = 'block';
+            }
+        }
+        
+        /**
+         * Hide validation message
+         */
+        function hideValidationMessage() {
+            const validationMessage = document.getElementById('cpd-validation-message');
+            if (validationMessage) {
+                validationMessage.style.display = 'none';
+            }
         }
         
         /**
@@ -2418,28 +2602,14 @@ get_header();
             // Update completed minutes
             const completedElement = document.getElementById('completed-minutes');
             if (completedElement) {
-                const completedHours = Math.floor(completedMinutes / 60);
-                const completedMins = completedMinutes % 60;
-                
-                if (completedHours > 0) {
-                    completedElement.textContent = `${completedHours}h ${completedMins}m`;
-                } else {
-                    completedElement.textContent = `${completedMins} minutes`;
-                }
+                completedElement.textContent = formatMinutesToHours(completedMinutes);
             }
             
             // Update remaining minutes
             const remainingElement = document.getElementById('remaining-minutes');
             if (remainingElement) {
                 const remainingMinutes = Math.max(0, targetMinutes - completedMinutes);
-                const remainingHours = Math.floor(remainingMinutes / 60);
-                const remainingMins = remainingMinutes % 60;
-                
-                if (remainingHours > 0) {
-                    remainingElement.textContent = `${remainingHours}h ${remainingMins}m`;
-                } else {
-                    remainingElement.textContent = `${remainingMins} minutes`;
-                }
+                remainingElement.textContent = formatMinutesToHours(remainingMinutes);
             }
         }
         
@@ -2454,6 +2624,52 @@ get_header();
                 month: 'long', 
                 day: 'numeric' 
             });
+        }
+        
+        /**
+         * Format hours to display format with decimal equivalent
+         * Example: 6.5 hours -> "6hr 30min (6.5)"
+         */
+        function formatDuration(hours) {
+            if (!hours || hours === 0) return '0hr (0.0)';
+            
+            const totalHours = parseFloat(hours);
+            const wholeHours = Math.floor(totalHours);
+            const remainingMinutes = Math.round((totalHours - wholeHours) * 60);
+            const decimalHours = totalHours.toFixed(1);
+            
+            if (wholeHours > 0) {
+                if (remainingMinutes > 0) {
+                    return `${wholeHours}hr ${remainingMinutes}min (${decimalHours})`;
+                } else {
+                    return `${wholeHours}hr (${decimalHours})`;
+                }
+            } else {
+                return `${remainingMinutes}min (${decimalHours})`;
+            }
+        }
+        
+        /**
+         * Format minutes to display format with decimal equivalent
+         * Example: 390 minutes -> "6hr 30min (6.5)"
+         */
+        function formatMinutesToHours(minutes) {
+            if (!minutes || minutes === 0) return '0hr (0.0)';
+            
+            const totalMinutes = parseInt(minutes);
+            const hours = Math.floor(totalMinutes / 60);
+            const mins = totalMinutes % 60;
+            const decimalHours = (totalMinutes / 60).toFixed(1);
+            
+            if (hours > 0) {
+                if (mins > 0) {
+                    return `${hours}hr ${mins}min (${decimalHours})`;
+                } else {
+                    return `${hours}hr (${decimalHours})`;
+                }
+            } else {
+                return `${mins}min (${decimalHours})`;
+            }
         }
         
         /**
@@ -2510,13 +2726,13 @@ get_header();
                 return;
             }
             
-            // Calculate total duration
+            // Calculate total duration (in hours)
             let totalDuration = 0;
             training.forEach(item => {
-                // Extract duration from hrsAndCategory string
-                const durationMatch = item.hrsAndCategory.match(/(\d+)/);
+                // Extract duration from hrsAndCategory string (assuming it's in hours)
+                const durationMatch = item.hrsAndCategory.match(/(\d+(?:\.\d+)?)/);
                 if (durationMatch) {
-                    totalDuration += parseInt(durationMatch[1]);
+                    totalDuration += parseFloat(durationMatch[1]);
                 }
             });
             
@@ -2536,7 +2752,7 @@ get_header();
                         </div>
                         <div class="summary-item">
                             <span class="summary-label">Total Duration:</span>
-                            <span class="summary-value">${totalDuration} minutes</span>
+                            <span class="summary-value">${formatDuration(totalDuration)}</span>
                         </div>
                     </div>
                     <div class="training-table-container">
@@ -2554,14 +2770,17 @@ get_header();
                                 ${training.map(item => {
                                     const isCompleted = item.dateOfReturn !== null;
                                     const category = item.hrsAndCategory.split(': ')[1] || 'N/A';
-                                    const duration = item.hrsAndCategory.split(': ')[0] || 'N/A';
+                                    const durationRaw = item.hrsAndCategory.split(': ')[0] || 'N/A';
+                                    // Extract hours from duration string and format it
+                                    const durationMatch = durationRaw.match(/(\d+(?:\.\d+)?)/);
+                                    const durationFormatted = durationMatch ? formatDuration(parseFloat(durationMatch[1])) : durationRaw;
                                     
                                     return `
                                         <tr>
                                             <td class="course-name-cell">${item.courseName}</td>
                                             <td class="category-cell">${category}</td>
                                             <td class="date-cell">${formatDate(item.dateOfCourse)}</td>
-                                            <td class="duration-cell">${duration}</td>
+                                            <td class="duration-cell">${durationFormatted}</td>
                                             <td class="status-cell">
                                                 <span class="status-badge ${isCompleted ? 'completed' : 'pending'}">
                                                     ${isCompleted ? 'Completed' : 'Pending'}
@@ -2632,7 +2851,11 @@ get_header();
                             </div>
                             <div class="meta-item">
                                 <span class="meta-label">Duration:</span>
-                                <span class="meta-value">${item.hrsAndCategory.split(': ')[0] || 'N/A'}</span>
+                                <span class="meta-value">${(() => {
+                                    const durationRaw = item.hrsAndCategory.split(': ')[0] || 'N/A';
+                                    const durationMatch = durationRaw.match(/(\d+(?:\.\d+)?)/);
+                                    return durationMatch ? formatDuration(parseFloat(durationMatch[1])) : durationRaw;
+                                })()}</span>
                             </div>
                             <div class="meta-item">
                                 <span class="meta-label">Provider:</span>
@@ -2850,7 +3073,7 @@ get_header();
                                 <h4 class="course-name">${course.course_name}</h4>
                                 <div class="course-details">
                                     <span class="course-category">${course.course_category}</span>
-                                    <span class="course-duration">${course.course_cpd_mins} minutes</span>
+                                    <span class="course-duration">${formatDuration(course.course_cpd_mins)}</span>
                                     <span class="course-provider">${course.crs_provider}</span>
                                 </div>
                             </div>
@@ -2907,7 +3130,7 @@ get_header();
             if (data.recent_training && data.recent_training.length > 0) {
                 let totalDuration = 0;
                 data.recent_training.forEach(training => {
-                    totalDuration += parseInt(training.course_cpd_mins) || 0;
+                    totalDuration += parseFloat(training.course_cpd_mins) || 0;
                 });
                 
                 html += `
@@ -2925,7 +3148,7 @@ get_header();
                             </div>
                             <div class="summary-item">
                                 <span class="summary-label">Total Duration:</span>
-                                <span class="summary-value">${totalDuration} minutes</span>
+                                <span class="summary-value">${formatDuration(totalDuration)}</span>
                             </div>
                         </div>
                         <div class="training-table-container">
@@ -2952,7 +3175,7 @@ get_header();
                             <td class="category-cell">${training.course_category || 'N/A'}</td>
                             <td class="date-cell">${startDate}</td>
                             <td class="date-cell">${endDate}</td>
-                            <td class="duration-cell">${training.course_cpd_mins} min</td>
+                            <td class="duration-cell">${formatDuration(training.course_cpd_mins)}</td>
                         </tr>
                     `;
                 });
@@ -3075,7 +3298,7 @@ get_header();
                     </div>
                     <div class="course-detail-item">
                         <span class="detail-label">Duration:</span>
-                        <span class="detail-value">${courseData.course_cpd_mins} minutes</span>
+                        <span class="detail-value">${formatDuration(courseData.course_cpd_mins)}</span>
                     </div>
                     <div class="course-detail-item">
                         <span class="detail-label">Provider:</span>
