@@ -26,7 +26,7 @@ class IIPM_Navigation_Manager {
                 'User Management' => home_url('/user-management/'),
                 'Organization Management' => home_url('/organisation-management/'),
                 
-                'Bulk Import' => array('url' => home_url('/bulk-import/')),
+                'Bulk Member Import' => array('url' => home_url('/bulk-import/')),
                 'CPD Reports' => home_url('/cpd-reports/'),
                 'CPD Administration' => home_url('/cpd-admin/'),
                 'Course Management' => home_url('/course-management/'),
@@ -41,7 +41,7 @@ class IIPM_Navigation_Manager {
                 'Dashboard' => home_url('/dashboard/'),
                 'Employee Management' => home_url('/user-management/'),
                 
-                'Bulk Import' => home_url('/bulk-import/'),
+                'Bulk Member Import' => home_url('/bulk-import/'),
                 'CPD Reports' => home_url('/cpd-reports/'),
                 'Leave Management' => home_url('/leave-admin/'),
                 'My Leave Requests' => home_url('/leave-request/'),
@@ -197,7 +197,7 @@ class IIPM_Navigation_Manager {
                 'Dashboard' => array(
                     'User Management' => array(
                         'All Users',
-                        'Bulk Import',
+                        'Bulk Member Import',
                         'Admin Invitations',
                         'Organization Management'
                     ),
@@ -216,7 +216,7 @@ class IIPM_Navigation_Manager {
                 'Dashboard' => array(
                     'Employee Management' => array(
                         'All Employees',
-                        'Bulk Import',
+                        'Bulk Member Import',
                         'Employee Invitations'
                     ),
                     'CPD Oversight' => array(

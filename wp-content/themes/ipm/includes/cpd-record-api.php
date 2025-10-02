@@ -9,6 +9,10 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+// Certificate AJAX handlers - use existing functions
+add_action('wp_ajax_iipm_get_certificate_data', 'iipm_ajax_get_certificate_data');
+add_action('wp_ajax_iipm_check_certificate_availability', 'iipm_ajax_check_certificate_availability');
+
 /**
  * Parse date from various formats (dd/mm/yyyy or Y-m-d H:i:s)
  */
@@ -1372,3 +1376,101 @@ function iipm_get_recently_logged_training($user_id, $year) {
 // Function iipm_get_individual_report() is already defined in cpd-reporting-functions.php
 
 // Functions iipm_export_report() and iipm_send_bulk_reminders() are already defined in cpd-reporting-functions.php
+
+/**
+ * AJAX handler to get certificate data for a specific year
+ * Uses existing certificate system from cpd-submission-functions.php
+ */
+function iipm_ajax_get_certificate_data() {
+    // Verify nonce
+    if (!wp_verify_nonce($_POST['nonce'], 'iipm_certificate_nonce')) {
+        wp_send_json_error('Security check failed');
+        return;
+    }
+
+    $user_id = get_current_user_id();
+    if (!$user_id) {
+        wp_send_json_error('User not logged in');
+        return;
+    }
+
+    $year = intval($_POST['year'] ?? date('Y'));
+
+    // Get user data
+    $user = get_userdata($user_id);
+    global $wpdb;
+    $profile = $wpdb->get_row($wpdb->prepare(
+        "SELECT * FROM {$wpdb->prefix}test_iipm_member_profiles WHERE user_id = %d",
+        $user_id
+    ));
+    
+    // Use existing function to get submission with certificate info
+    $submissions_table = $wpdb->prefix . 'test_iipm_submissions';
+    $certificates_table = $wpdb->prefix . 'test_iipm_certifications';
+    
+    $submission = $wpdb->get_row($wpdb->prepare(
+        "SELECT s.*, c.name as certificate_name, c.year as certificate_year, c.description as certificate_description, c.avatar_url
+         FROM $submissions_table s
+         LEFT JOIN $certificates_table c ON s.certificate_id = c.id
+         WHERE s.user_id = %d AND s.year = %s AND s.status = 'approved'
+         ORDER BY s.created_at DESC
+         LIMIT 1",
+        $user_id,
+        $year
+    ));
+
+    if ($submission && $submission->certificate_id) {
+        wp_send_json_success(array(
+            'certificate' => array(
+                'id' => $submission->certificate_id,
+                'name' => $submission->certificate_name,
+                'description' => $submission->certificate_description,
+                'avatar_url' => $submission->avatar_url,
+                'rewarded_date' => $submission->submitted_at ?? date('Y-m-d')
+            ),
+            'user' => array(
+                'name' => $user->first_name . ' ' . $user->last_name,
+                'email' => $user->user_email,
+                'contact_address' => $profile->contact_address ?? ''
+            ),
+            'year' => $year
+        ));
+    } else {
+        wp_send_json_error('No certificate found for this year');
+    }
+}
+
+/**
+ * AJAX handler to check if certificate is available for a specific year
+ * Uses existing certificate system from cpd-submission-functions.php
+ */
+function iipm_ajax_check_certificate_availability() {
+    // Verify nonce
+    if (!wp_verify_nonce($_POST['nonce'], 'iipm_certificate_nonce')) {
+        wp_send_json_error('Security check failed');
+        return;
+    }
+
+    $user_id = get_current_user_id();
+    if (!$user_id) {
+        wp_send_json_error('User not logged in');
+        return;
+    }
+
+    $year = intval($_POST['year'] ?? date('Y'));
+
+    // Check if user has approved submission with certificate for this year
+    global $wpdb;
+    $submissions_table = $wpdb->prefix . 'test_iipm_submissions';
+    
+    $submission = $wpdb->get_var($wpdb->prepare(
+        "SELECT COUNT(*) FROM $submissions_table 
+         WHERE user_id = %d AND year = %s AND status = 'approved' AND certificate_id IS NOT NULL",
+        $user_id,
+        $year
+    ));
+
+    wp_send_json_success(array(
+        'has_certificate' => intval($submission) > 0
+    ));
+}

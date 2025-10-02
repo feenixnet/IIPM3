@@ -151,10 +151,8 @@ $stats = iipm_get_cpd_compliance_stats($selected_year);
             </div>
         </div>
 
-        <!-- Report Type Selection -->
-        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 40px;" id="report-cards-container">
+        <!-- <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 40px;" id="report-cards-container">
             
-            <!-- Compliance Report -->
             <div class="report-card" id="compliance-card" style="background: white; border-radius: 15px; padding: 25px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.1); border: 2px solid transparent; transition: all 0.3s ease;">
                 <h3 style="color: #374151; margin-bottom: 15px;">Compliance Report</h3>
                 <p style="color: #6b7280; margin-bottom: 20px;">View member CPD compliance status</p>
@@ -164,7 +162,6 @@ $stats = iipm_get_cpd_compliance_stats($selected_year);
                 </button>
             </div>
             
-            <!-- Course Popularity -->
             <div class="report-card" id="popularity-card" style="background: white; border-radius: 15px; padding: 25px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.1); border: 2px solid transparent; transition: all 0.3s ease;">
                 <h3 style="color: #374151; margin-bottom: 15px;">Course Popularity</h3>
                 <p style="color: #6b7280; margin-bottom: 20px;">Most popular CPD courses</p>
@@ -174,7 +171,6 @@ $stats = iipm_get_cpd_compliance_stats($selected_year);
                 </button>
             </div>
             
-            <!-- Provider Analysis -->
             <div class="report-card" id="provider-card" style="background: white; border-radius: 15px; padding: 25px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.1); border: 2px solid transparent; transition: all 0.3s ease;">
                 <h3 style="color: #374151; margin-bottom: 15px;">Provider Analysis</h3>
                 <p style="color: #6b7280; margin-bottom: 20px;">CPD points by provider</p>
@@ -183,7 +179,7 @@ $stats = iipm_get_cpd_compliance_stats($selected_year);
                     Generate Report
                 </button>
             </div>
-        </div>
+        </div> -->
 
         <!-- Main Content Area -->
         <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 30px;">
@@ -349,10 +345,10 @@ $stats = iipm_get_cpd_compliance_stats($selected_year);
                             👥 Export All Members
                         </button>
                         
-                        <button onclick="exportReport('categories')" 
+                        <!-- <button onclick="exportReport('categories')" 
                                 style="background: #f59e0b; color: white; padding: 12px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">
                             📈 Export Category Stats
-                        </button>
+                        </button> -->
                     </div>
                 </div>
 
@@ -381,7 +377,7 @@ $stats = iipm_get_cpd_compliance_stats($selected_year);
                 </div>
 
                 <!-- Quick Stats -->
-                <div style="background: white; border-radius: 15px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.1);">
+                <!-- <div style="background: white; border-radius: 15px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.1);">
                     <h3 style="color: #374151; margin-bottom: 20px;">⚡ Quick Stats</h3>
                     
                     <div style="display: flex; flex-direction: column; gap: 15px;">
@@ -395,7 +391,7 @@ $stats = iipm_get_cpd_compliance_stats($selected_year);
                             <span style="color: #059669; font-weight: bold;"><?php echo number_format($stats['total_cpd_logged']); ?></span>
                         </div>
                     </div>
-                </div>
+                </div> -->
             </div>
         </div>
     </div>

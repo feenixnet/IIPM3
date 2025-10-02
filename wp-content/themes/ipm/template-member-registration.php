@@ -50,7 +50,7 @@ get_header();
                         <?php endif; ?>
                         
                         <!-- Add hidden input for member type -->
-                        <input type="hidden" name="member_type" value="<?php $is_organisation = $invitation->organisation_id ? 'organisation' : 'individual'; echo $is_organisation; ?>">
+                        <input type="hidden" name="member_type" value="<?php $is_organisation = $invitation->organisation_id ? 'organization' : 'individual'; echo $is_organisation; ?>">
                         
                         <!-- Personal Information Section -->
                         <div class="form-section">
@@ -230,13 +230,13 @@ get_header();
                         
                         <!-- Organisation Section (conditional) -->
                         <div class="form-section organisation-section" style="display:none;">
-                            <h3>Organisation Information</h3>
+                            <h3>Organization Information</h3>
                             <div class="form-group">
-                                <label for="organisation_name">Organisation</label>
+                                <label for="organisation_name">Organization</label>
                                 <input type="text" name="organisation_name" id="organisation_name" value="Loading..." readonly style="background-color: #f8f9fa; cursor: not-allowed;">
                                 <input type="hidden" name="organisation_id" id="organisation_id" value="<?php echo ($invitation && $invitation->organisation_id) ? esc_attr($invitation->organisation_id) : ''; ?>">
                             </div>
-                            <small>Organisation information is pre-filled from your invitation</small>
+                            <small>Organization information is pre-filled from your invitation</small>
                         </div>
                         
                         <!-- Privacy & Consent Section -->
@@ -989,7 +989,6 @@ jQuery(document).ready(function($){
     
     // Fetch organisation name if invitation has organisation_id
     var invitationOrgId = <?php echo ($invitation && $invitation->organisation_id) ? $invitation->organisation_id : 'null'; ?>;
-    console.log("WWWWWWWWWWWWWW", invitationOrgId);
     if (invitationOrgId) {
         $.ajax({
             url: (typeof iipm_ajax !== 'undefined' ? iipm_ajax.ajax_url : '<?php echo admin_url('admin-ajax.php'); ?>'),
@@ -1004,10 +1003,10 @@ jQuery(document).ready(function($){
             if (resp && resp.success && resp.data && resp.data.name) {
                 $('#organisation_name').val(resp.data.name);
             } else {
-                $('#organisation_name').val('Organisation not found');
+                $('#organisation_name').val('Organization not found');
             }
         }).fail(function(){
-            $('#organisation_name').val('Error loading organisation');
+            $('#organisation_name').val('Error loading organization');
         });
     }
     

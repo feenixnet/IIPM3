@@ -677,6 +677,10 @@ function iipm_get_all_courses_management_paginated($page = 1, $per_page = 10, $c
         $courses = $wpdb->get_results($wpdb->prepare($courses_query, $per_page, $offset));
     }
     
+    // Calculate start and end for pagination display
+    $start = $offset + 1;
+    $end = min($offset + $per_page, $total_courses);
+    
     return array(
         'courses' => $courses ?: array(),
         'total' => intval($total_courses),
@@ -687,7 +691,9 @@ function iipm_get_all_courses_management_paginated($page = 1, $per_page = 10, $c
             'page' => $page,
             'per_page' => $per_page,
             'total' => intval($total_courses),
-            'total_pages' => ceil($total_courses / $per_page)
+            'total_pages' => ceil($total_courses / $per_page),
+            'start' => $start,
+            'end' => $end
         )
     );
 }

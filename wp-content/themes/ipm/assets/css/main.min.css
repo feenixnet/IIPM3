@@ -3894,3 +3894,13 @@ ul {
 .header__menu ul li a {
   white-space: nowrap;
 }
+
+/* Checkbox Form Group Styles */
+.form-group-checkbox {
+  margin-bottom: 0px !important;
+}
+
+.form-group-checkbox label {
+  padding-left: 0px !important;
+  margin-bottom: 0px !important;
+}

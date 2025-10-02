@@ -2790,7 +2790,7 @@ function iipm_get_user_menu_items($user_id = null) {
 			'roles' => array('iipm_corporate_admin', 'iipm_admin', 'administrator')
 		),
 		array(
-			'title' => 'Bulk Import',
+			'title' => 'Bulk Member Import',
 			'url' => home_url('/bulk-import/'),
 			'icon' => 'upload',
 			'roles' => array('iipm_corporate_admin', 'iipm_admin', 'administrator')
@@ -2986,7 +2986,7 @@ function iipm_add_portal_pages() {
         'member-registration' => 'Member Registration',
         'user-management' => 'User Management',
         'organisation-management' => 'Organisation Management',
-        'bulk-import' => 'Bulk Import',
+        'bulk-import' => 'Bulk Member Import',
         'admin-invitations' => 'Admin Invitations',
         'cpd-courses' => 'CPD Courses',
         'cpd-record' => 'CPD Record',
@@ -5704,6 +5704,181 @@ function iipm_handle_add_course() {
     }
 }
 add_action('wp_ajax_iipm_add_course', 'iipm_handle_add_course');
+
+// AJAX handler for bulk importing courses
+function iipm_handle_bulk_import_courses() {
+    // Verify nonce
+    if (!wp_verify_nonce($_POST['nonce'], 'iipm_portal_nonce')) {
+        wp_send_json_error('Security check failed');
+        return;
+    }
+    
+    // Check permissions
+    if (!current_user_can('administrator')) {
+        wp_send_json_error('Insufficient permissions');
+        return;
+    }
+    
+    global $wpdb;
+    
+    $course_name = sanitize_text_field($_POST['course_name']);
+    $course_code = sanitize_text_field($_POST['course_code']);
+    $course_category = sanitize_text_field($_POST['course_category']);
+    $course_provider = sanitize_text_field($_POST['course_provider']);
+    $course_duration = intval($_POST['course_duration']);
+    
+    // Validate required fields
+    if (empty($course_name) || empty($course_category) || empty($course_provider) || empty($course_duration)) {
+        wp_send_json_error('Required fields are missing');
+        return;
+    }
+    
+    // Validate duration is a positive number
+    if ($course_duration <= 0) {
+        wp_send_json_error('Duration must be a positive number');
+        return;
+    }
+    
+    $table_name = $wpdb->prefix . 'coursesbyadminbku';
+    
+    // Check if course already exists (by name and category combination)
+    $existing_course = $wpdb->get_row($wpdb->prepare(
+        "SELECT id FROM {$table_name} WHERE course_name = %s AND course_category = %s",
+        $course_name, $course_category
+    ));
+    
+    if ($existing_course) {
+        wp_send_json_error('Course with this name and category already exists');
+        return;
+    }
+    
+    $result = $wpdb->insert(
+        $table_name,
+        array(
+            'course_name' => $course_name,
+            'LIA_Code' => $course_code,
+            'course_category' => $course_category,
+            'crs_provider' => $course_provider,
+            'course_cpd_mins' => $course_duration,
+            'user_id' => get_current_user_id(),
+            'course_id' => rand(100000, 999999),
+            'course_date' => date('d-m-Y'),
+            'course_enteredBy' => get_current_user_id(),
+            'is_by_admin' => 1,
+            'status' => 'active',
+            'TimeStamp' => current_time('mysql')
+        )
+    );
+    
+    if ($result !== false) {
+        wp_send_json_success(array('message' => 'Course imported successfully'));
+    } else {
+        wp_send_json_error('Failed to import course');
+    }
+}
+add_action('wp_ajax_iipm_bulk_import_courses', 'iipm_handle_bulk_import_courses');
+
+// AJAX handler for getting courses for selection (duplication)
+function iipm_handle_get_courses_for_selection() {
+    // Verify nonce
+    if (!wp_verify_nonce($_POST['nonce'], 'iipm_portal_nonce')) {
+        wp_send_json_error('Security check failed');
+        return;
+    }
+    
+    // Check permissions
+    if (!current_user_can('administrator')) {
+        wp_send_json_error('Insufficient permissions');
+        return;
+    }
+    
+    global $wpdb;
+    
+    $page = intval($_POST['page']) ?: 1;
+    $per_page = intval($_POST['per_page']) ?: 10;
+    $search = sanitize_text_field($_POST['search']);
+    
+    $table_name = $wpdb->prefix . 'coursesbyadminbku';
+    
+    // Calculate offset
+    $offset = ($page - 1) * $per_page;
+    
+    // Build WHERE clause
+    $where_conditions = array("is_by_admin = 1");
+    $where_values = array();
+    
+    if (!empty($search)) {
+        $where_conditions[] = "course_name LIKE %s";
+        $where_values[] = '%' . $wpdb->esc_like($search) . '%';
+    }
+    
+    $where_clause = 'WHERE ' . implode(' AND ', $where_conditions);
+    
+    // Get total count
+    $count_query = "SELECT COUNT(*) FROM {$table_name} {$where_clause}";
+    if (!empty($where_values)) {
+        $total_courses = $wpdb->get_var($wpdb->prepare($count_query, $where_values));
+    } else {
+        $total_courses = $wpdb->get_var($count_query);
+    }
+    
+    // Get courses
+    $query = "SELECT id, course_name, course_category FROM {$table_name} {$where_clause} ORDER BY course_name ASC LIMIT %d OFFSET %d";
+    $query_values = array_merge($where_values, array($per_page, $offset));
+    
+    $courses = $wpdb->get_results($wpdb->prepare($query, $query_values));
+    
+    // Calculate pagination
+    $total_pages = ceil($total_courses / $per_page);
+    $start = $offset + 1;
+    $end = min($offset + $per_page, $total_courses);
+    
+    wp_send_json_success(array(
+        'courses' => $courses,
+        'pagination' => array(
+            'current_page' => $page,
+            'total_pages' => $total_pages,
+            'total' => $total_courses,
+            'start' => $start,
+            'end' => $end
+        )
+    ));
+}
+add_action('wp_ajax_iipm_get_courses_for_selection', 'iipm_handle_get_courses_for_selection');
+
+// AJAX handler for getting course data for duplication
+function iipm_handle_get_course_for_duplication() {
+    // Verify nonce
+    if (!wp_verify_nonce($_POST['nonce'], 'iipm_portal_nonce')) {
+        wp_send_json_error('Security check failed');
+        return;
+    }
+    
+    // Check permissions
+    if (!current_user_can('administrator')) {
+        wp_send_json_error('Insufficient permissions');
+        return;
+    }
+    
+    global $wpdb;
+    
+    $course_id = intval($_POST['course_id']);
+    
+    $table_name = $wpdb->prefix . 'coursesbyadminbku';
+    
+    $course = $wpdb->get_row($wpdb->prepare(
+        "SELECT * FROM {$table_name} WHERE id = %d AND is_by_admin = 1",
+        $course_id
+    ));
+    
+    if (!$course) {
+        wp_send_json_error('Course not found');
+        return;
+    }
+    
+    wp_send_json_success($course);
+}
+add_action('wp_ajax_iipm_get_course_for_duplication', 'iipm_handle_get_course_for_duplication');
 
 // AJAX handler for updating course
 function iipm_handle_update_course_v1() {

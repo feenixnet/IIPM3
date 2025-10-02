@@ -88,7 +88,7 @@ get_header();
                    class="tab-button <?php echo $active_tab === 'bulk-import' ? 'active' : ''; ?>" 
                    style="padding: 12px 24px; background: <?php echo $active_tab === 'bulk-import' ? '#f8a135' : '#6b4c93'; ?>; color: white; border-radius: 8px; text-decoration: none; font-weight: 500; transition: all 0.3s ease;">
                     <span style="margin-right: 8px;"><i class="fas fa-upload"></i></span>
-                    Bulk Import
+                    Bulk Member Import
                 </a>
                 <a href="?employer_id=<?php echo $employer_id; ?>&tab=export" 
                    class="tab-button <?php echo $active_tab === 'export' ? 'active' : ''; ?>" 

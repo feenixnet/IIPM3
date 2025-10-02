@@ -278,15 +278,15 @@
                         <!-- Admin-only menu items -->
                         <?php if (current_user_can('administrator')): ?>
                             <a href="<?php echo home_url('/admin-invitations/'); ?>">Admin Invitations</a>
-                            <a href="<?php echo home_url('/bulk-import/'); ?>">Bulk Import</a>
-                            <a href="<?php echo home_url('/organisation-management/'); ?>">Organisation Management</a>
+                            <a href="<?php echo home_url('/bulk-import/'); ?>">Bulk Member Import</a>
+                            <a href="<?php echo home_url('/organisation-management/'); ?>">Organization Management</a>
                             <a href="<?php echo home_url('/user-management/'); ?>">User Management</a>
                         <?php endif; ?>
                         
                         <!-- Corporate Admin menu items -->
                         <?php if (current_user_can('manage_organisation_members') || in_array('iipm_corporate_admin', wp_get_current_user()->roles)): ?>
                             <a href="<?php echo home_url('/admin-invitations/'); ?>">Admin Invitations</a>
-                            <a href="<?php echo home_url('/bulk-import/'); ?>">Bulk Import</a>
+                            <a href="<?php echo home_url('/bulk-import/'); ?>">Bulk Member Import</a>
                             <a href="<?php echo home_url('/user-management/'); ?>">User Management</a>
                         <?php endif; ?>
                         

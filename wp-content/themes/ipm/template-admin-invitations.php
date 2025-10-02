@@ -46,7 +46,7 @@ get_header();
                 </h1>
                 <p class="hero-subtitle">
                     <?php if ($is_org_admin && !$is_site_admin): ?>
-                        Manage member invitations for your organisation
+                        Manage member invitations for your organization
                     <?php else: ?>
                         Manage member invitations and registrations
                     <?php endif; ?>
@@ -54,7 +54,7 @@ get_header();
                 <div class="admin-nav">
                     <a href="<?php echo home_url('/dashboard/'); ?>" class="btn btn-outline">Dashboard</a>
                     <?php if ($is_org_admin && !$is_site_admin): ?>
-                        <a href="<?php echo home_url('/bulk-import/'); ?>" class="btn btn-outline">Bulk Import</a>
+                        <a href="<?php echo home_url('/bulk-import/'); ?>" class="btn btn-outline">Bulk Member Import</a>
                     <?php endif; ?>
                     <a href="<?php echo wp_logout_url(home_url()); ?>" class="btn btn-outline">Logout</a>
                 </div>
@@ -78,7 +78,7 @@ get_header();
                         <label for="type">Invitation Type *</label>
                         <select name="type" id="type" required>
                             <option value="individual">Individual Member</option>
-                            <option value="bulk">Organisation Member</option>
+                            <option value="bulk">Organization Member</option>
                         </select>
                     </div>
                     
@@ -86,20 +86,20 @@ get_header();
                         <!-- Corporate admin - auto-set organisation -->
                         <input type="hidden" name="organisation_id" value="<?php echo $user_organisation->id; ?>">
                         <div class="form-group">
-                            <label>Organisation</label>
+                            <label>Organization</label>
                             <div class="readonly-field">
                                 <span class="organisation-badge">
                                     🏢 <?php echo esc_html($user_organisation->name); ?>
                                 </span>
-                                <small class="field-note">Invitations will be sent for your organisation</small>
+                                <small class="field-note">Invitations will be sent for your organization</small>
                             </div>
                         </div>
                     <?php else: ?>
                         <!-- Site admin - can select organisation -->
                         <div class="form-group organisation-field" style="display:none;">
-                            <label for="organisation_id">Organisation</label>
+                            <label for="organisation_id">Organization</label>
                             <select name="organisation_id" id="organisation_id">
-                                <option value="">Select Organisation</option>
+                                <option value="">Select Organization</option>
                                 <?php
                                 global $wpdb;
                                 $organisations = $wpdb->get_results("SELECT id, name FROM {$wpdb->prefix}test_iipm_organisations WHERE is_active = 1 ORDER BY name");
@@ -132,7 +132,7 @@ get_header();
                                 <th>Email</th>
                                 <th>Type</th>
                                 <?php if ($is_site_admin): ?>
-                                    <th>Organisation</th>
+                                    <th>Organization</th>
                                 <?php endif; ?>
                                 <th>Status</th>
                                 <th>Sent Date</th>
