@@ -1206,6 +1206,7 @@ get_header();
     .training-header {
         display: flex;
         align-items: center;
+        justify-content: space-between;
         gap: 12px;
         margin-bottom: 20px;
         padding-bottom: 16px;
@@ -1561,13 +1562,31 @@ get_header();
         cursor: default;
     }
 
-    .delete-btn {
-        background: #ef4444;
+    .added-btn {
+        background: #10b981;
         color: white;
+        cursor: default;
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-size: 14px;
+    }
+
+    .added-btn i {
+        font-size: 16px;
+    }
+
+    .delete-btn {
+        color:rgb(255, 65, 65);
+        border: none;
+        background: transparent;
+    }
+
+    .delete-btn i {
+        font-size: 16px;
     }
 
     .delete-btn:hover {
-        background: #dc2626;
+        color: rgb(223, 16, 16);
     }
 
     .training-meta {
@@ -2761,7 +2780,7 @@ get_header();
                                 <tr>
                                     <th>Course Name</th>
                                     <th>Category</th>
-                                    <th>Course Date</th>
+                                    <th>Completed Date</th>
                                     <th>Duration</th>
                                     <th>Status</th>
                                 </tr>
@@ -2779,7 +2798,7 @@ get_header();
                                         <tr>
                                             <td class="course-name-cell">${item.courseName}</td>
                                             <td class="category-cell">${category}</td>
-                                            <td class="date-cell">${formatDate(item.dateOfCourse)}</td>
+                                            <td class="date-cell">${formatDate(item.dateOfReturn || item.dateOfCourse)}</td>
                                             <td class="duration-cell">${durationFormatted}</td>
                                             <td class="status-cell">
                                                 <span class="status-badge ${isCompleted ? 'completed' : 'pending'}">
@@ -2829,18 +2848,15 @@ get_header();
             
             let html = '<div class="training-grid">';
             training.forEach(item => {
-                const isCompleted = item.dateOfReturn !== null;
-                const actionButton = isCompleted ? 
-                    '<button class="action-btn completed-btn">Completed</button>' :
-                    '<button class="action-btn complete-btn" onclick="completeCourse(' + item.id + ')">Complete</button>';
+                // All logged courses are automatically completed
+                const isCompleted = true; // Always true since logging auto-completes courses
                 
                 html += `
                     <div class="training-item">
                         <div class="training-header">
                             <h4 class="training-title">${item.courseName.charAt(0).toUpperCase() + item.courseName.slice(1)}</h4>
                             <div class="training-actions">
-                                ${actionButton}
-                                <button class="action-btn delete-btn" onclick="deleteCourse(${item.id})">Delete</button>
+                                <button class="action-btn delete-btn" onclick="deleteCourse(${item.id})" title="Remove"><i class="fas fa-trash-alt"></i></button>
                             </div>
                         </div>
                         
@@ -2864,8 +2880,7 @@ get_header();
                         </div>
                         
                         <div class="training-date">
-                            Started: ${new Date(item.dateOfCourse).toLocaleDateString()}
-                            ${isCompleted ? '<br>Completed: ' + new Date(item.dateOfReturn).toLocaleDateString() : ''}
+                            ${new Date(item.dateOfReturn || item.dateOfCourse).toLocaleDateString()}
                         </div>
                     </div>
                 `;
@@ -3350,72 +3365,8 @@ get_header();
     }
     
     // Global functions for course actions
-    function completeCourse(courseId) {
-        if (confirm('Mark this course as completed?')) {
-            // Find the complete button and show loading state
-            const completeBtn = event.target;
-            const originalText = completeBtn.textContent;
-            completeBtn.textContent = 'Completing...';
-            completeBtn.disabled = true;
-            completeBtn.style.background = '#6b7280';
-            
-            const formData = new FormData();
-            formData.append('action', 'iipm_complete_cpd_course');
-            formData.append('confirmation_id', courseId);
-            
-            jQuery.ajax({
-                url: ajaxurl,
-                type: 'POST',
-                data: formData,
-                processData: false,
-                contentType: false,
-                success: function(response) {
-                    if (response.success) {
-                        // Show success state
-                        completeBtn.textContent = 'Completed!';
-                        completeBtn.style.background = '#10b981';
-                        completeBtn.style.color = 'white';
-                        
-                        // Reload data after a short delay to show the success state
-                        setTimeout(() => {
-                        location.reload();
-                        }, 1500);
-                    } else {
-                        // Show error state
-                        completeBtn.textContent = 'Error!';
-                        completeBtn.style.background = '#ef4444';
-                        completeBtn.style.color = 'white';
-                        
-                        // Revert after 3 seconds
-                        setTimeout(() => {
-                            completeBtn.textContent = originalText;
-                            completeBtn.style.background = '';
-                            completeBtn.style.color = '';
-                            completeBtn.disabled = false;
-                        }, 3000);
-                        
-                        alert('Error: ' + response.data);
-                    }
-                },
-                error: function(xhr, status, error) {
-                    // Show error state
-                    completeBtn.textContent = 'Error!';
-                    completeBtn.style.background = '#ef4444';
-                    completeBtn.style.color = 'white';
-                    
-                    // Revert after 3 seconds
-                    setTimeout(() => {
-                        completeBtn.textContent = originalText;
-                        completeBtn.style.background = '';
-                        completeBtn.style.color = '';
-                        completeBtn.disabled = false;
-                    }, 3000);
-                    
-                    alert('Error completing course: ' + error);
-                }
-            });
-        }
-    }
+    // completeCourse function removed - courses are now automatically completed when logged
+    // function completeCourse(courseId) { ... } - No longer needed
     
     function deleteCourse(courseId) {
         if (confirm('Are you sure you want to delete this course?')) {

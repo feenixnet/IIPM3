@@ -1358,6 +1358,36 @@ function iipm_ajax_log_cpd_course() {
         return;
     }
     
+    // ALSO insert into fullcpd_confirmations table for portal display (automatically completed)
+    $confirmation_table = $wpdb->prefix . 'fullcpd_confirmations';
+    $hours = round($course->cpd_points / 60, 1); // Convert points to hours
+    $category_name = $wpdb->get_var($wpdb->prepare(
+        "SELECT name FROM {$wpdb->prefix}test_iipm_cpd_categories WHERE id = %d",
+        $course->category_id
+    ));
+    $hrs_and_category = $hours . 'hrs: ' . ($category_name ?: 'CPD');
+    
+    $confirmation_result = $wpdb->insert(
+        $confirmation_table,
+        array(
+            'user_id' => $user_id,
+            'courseName' => $course->title,
+            'courseType' => 'CPD',
+            'hrsAndCategory' => $hrs_and_category,
+            'dateOfCourse' => $completion_date,
+            'dateOfReturn' => $completion_date, // Automatically set as completed
+            'year' => $cpd_year,
+            'crs_provider' => $course->provider,
+            'course_id' => $course_id
+        ),
+        array('%d', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%d')
+    );
+    
+    if ($confirmation_result === false) {
+        // Log error but don't fail the whole operation since the main record was saved
+        error_log('Failed to insert into fullcpd_confirmations table for user: ' . $user_id . ', course: ' . $course_id);
+    }
+    
     // Update member's total CPD points
     iipm_update_member_cpd_points($user_id);
     
@@ -1373,7 +1403,7 @@ function iipm_ajax_log_cpd_course() {
     iipm_send_cpd_course_confirmation_email($user_id, $entry_id, $course);
     
     wp_send_json_success(array(
-        'message' => 'CPD course logged successfully',
+        'message' => 'CPD course logged and completed successfully',
         'points' => $course->cpd_points
     ));
 }

@@ -1100,7 +1100,7 @@ function iipm_add_cpd_confirmation($user_id, $course_id, $course_name, $course_c
             'courseType' => 'CPD',
             'hrsAndCategory' => $hrs_and_category,
             'dateOfCourse' => current_time('mysql'),
-            'dateOfReturn' => null,
+            'dateOfReturn' => current_time('mysql'),
             'year' => date('Y'),
             'crs_provider' => $crs_provider,
             'course_id' => $course_id
