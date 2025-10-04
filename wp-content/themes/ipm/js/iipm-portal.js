@@ -376,12 +376,14 @@ jQuery(document).ready(($) => {
     }
   });
 
-  // Password strength indicator
-  $('input[name="password"]').on("input", function () {
-    var password = $(this).val();
-    var strength = calculatePasswordStrength(password);
-    updatePasswordStrengthIndicator(strength);
-  });
+  // Password strength indicator (exclude login form)
+  $('input[name="password"]')
+    .not('.login-form input[name="password"]')
+    .on("input", function () {
+      var password = $(this).val();
+      var strength = calculatePasswordStrength(password);
+      // updatePasswordStrengthIndicator(strength);
+    });
 
   // Helper functions
   function showAlert(message, type) {
@@ -419,9 +421,9 @@ jQuery(document).ready(($) => {
   function updatePasswordStrengthIndicator(strength) {
     var indicator = $(".password-strength");
     if (!indicator.length) {
-      $('input[name="password"]').after(
-        '<div class="password-strength"></div>'
-      );
+      $('input[name="password"]')
+        .not('.login-form input[name="password"]')
+        .after('<div class="password-strength"></div>');
       indicator = $(".password-strength");
     }
 

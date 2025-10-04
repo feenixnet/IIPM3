@@ -67,9 +67,20 @@ get_header();
                 <div class="login-content__right" style="z-index:10;position: relative;top: -184px;">
                     <div class="title-md text-purple" style="font-size:50px">Log in</div>
                     
-                    <?php if (isset($login_error)): ?>
-                        <div class="login-error">
-                            <p><?php echo esc_html($login_error); ?></p>
+                    <?php 
+                    // Check for login failure from URL parameter
+                    $login_failed = isset($_GET['login']) && $_GET['login'] === 'failed';
+                    $error_message = '';
+                    
+                    if ($login_failed) {
+                        $error_message = 'Invalid email or password. Please try again.';
+                    } elseif (isset($login_error)) {
+                        $error_message = $login_error;
+                    }
+                    
+                    if ($error_message): ?>
+                        <div class="login-error" style="background-color: #fee; border: 1px solid #fcc; color: #c33; padding: 10px; margin: 15px 0; border-radius: 4px; font-size: 14px;">
+                            <p><?php echo esc_html($error_message); ?></p>
                         </div>
                     <?php endif; ?>
                     

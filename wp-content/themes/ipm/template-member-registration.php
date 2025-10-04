@@ -21,6 +21,8 @@ if (is_user_logged_in()) {
     exit;
 }
 
+// Organizations data will be fetched via AJAX when needed
+
 get_header();
 ?>
 
@@ -49,8 +51,8 @@ get_header();
                             <input type="hidden" name="token" value="<?php echo esc_attr($token); ?>">
                         <?php endif; ?>
                         
-                        <!-- Add hidden input for member type -->
-                        <input type="hidden" name="member_type" value="<?php $is_organisation = $invitation->organisation_id ? 'organization' : 'individual'; echo $is_organisation; ?>">
+                        <!-- Add hidden input for member type - will be updated dynamically -->
+                        <input type="hidden" name="member_type" id="member_type" value="<?php echo $invitation ? 'individual' : 'individual'; ?>">
                         
                         <!-- Personal Information Section -->
                         <div class="form-section">
@@ -121,6 +123,12 @@ get_header();
                                 </div>
                             
                             <div class="form-group">
+                                <label for="correspondence_email">Correspondence Email *</label>
+                                <input type="email" name="correspondence_email" id="correspondence_email" required>
+                                <small>This email will be used for official correspondence</small>
+                            </div>
+                            
+                            <div class="form-group">
                                 <label for="address">Full Address *</label>
                                 <textarea name="address" id="address" rows="3" placeholder="Street Address, Town, County, Eircode" required></textarea>
                                 <small>Required for invoicing purposes</small>
@@ -149,10 +157,38 @@ get_header();
                             <div class="form-group">
                                 <label for="payment_method">Payment Method</label>
                                 <select name="payment_method" id="payment_method">
-                                    <option value="">Select payment method</option>
-                                    <option value="Direct Invoiced">Direct Invoiced</option>
-                                    <option value="Employer Invoiced">Employer Invoiced</option>
+                                    <?php if ($invitation): ?>
+                                        <!-- Individual invitation - only Direct Invoiced available -->
+                                        <option value="Direct Invoiced" selected>Direct Invoiced</option>
+                                    <?php else: ?>
+                                        <!-- Non-invitation - both options available -->
+                                        <option value="">Select payment method</option>
+                                        <option value="Direct Invoiced">Direct Invoiced</option>
+                                        <option value="Employer Invoiced">Employer Invoiced</option>
+                                    <?php endif; ?>
                                 </select>
+                            </div>
+                            
+                            <div class="form-group" id="employer-selection-group" style="display: none;">
+                                <label for="employer_id">Employer *</label>
+                                <div class="custom-select-container">
+                                    <div class="custom-select" id="employer-select">
+                                        <div class="select-trigger">
+                                            <span class="select-placeholder">Select Employer</span>
+                                            <i class="fas fa-chevron-down"></i>
+                                        </div>
+                                        <div class="select-dropdown">
+                                            <div class="select-search">
+                                                <input type="text" id="employer-search" placeholder="Search employers...">
+                                            </div>
+                                            <div class="select-options" id="employer-options">
+                                                <!-- Options will be loaded here -->
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <input type="hidden" name="employer_id" id="employer_id">
+                                <input type="hidden" name="organisation_id" id="organisation_id">
                             </div>
                             <div class="form-group">
                                 <label for="city_or_town">City or Town</label>
@@ -172,29 +208,6 @@ get_header();
                             </div>
                         </div>
 
-                        <div class="form-section">
-                            <h3>Additional Information</h3>
-                            <!-- <div class="form-row">
-                                <div class="form-group">
-                                    <label for="eircode_p">Personal Eircode</label>
-                                    <input type="text" name="eircode_p" id="eircode_p">
-                                </div>
-                            </div>
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="eircode_w">Work Eircode</label>
-                                    <input type="text" name="eircode_w" id="eircode_w">
-                                </div>
-                            </div> -->
-                            <div class="form-group">
-                                <label for="correspondence_email">Correspondence Email</label>
-                                <input type="email" name="correspondence_email" id="correspondence_email">
-                            </div>
-                            <div class="form-group">
-                                <label for="user_notes">User Notes</label>
-                                <textarea name="user_notes" id="user_notes" rows="3" placeholder="Additional notes about the user"></textarea>
-                            </div>
-                        </div>
                         
                         <div class="form-section">
                             <h3>Personal Information (optional)</h3>
@@ -228,16 +241,6 @@ get_header();
                             </div>
                         </div>
                         
-                        <!-- Organisation Section (conditional) -->
-                        <div class="form-section organisation-section" style="display:none;">
-                            <h3>Organization Information</h3>
-                            <div class="form-group">
-                                <label for="organisation_name">Organization</label>
-                                <input type="text" name="organisation_name" id="organisation_name" value="Loading..." readonly style="background-color: #f8f9fa; cursor: not-allowed;">
-                                <input type="hidden" name="organisation_id" id="organisation_id" value="<?php echo ($invitation && $invitation->organisation_id) ? esc_attr($invitation->organisation_id) : ''; ?>">
-                            </div>
-                            <small>Organization information is pre-filled from your invitation</small>
-                        </div>
                         
                         <!-- Privacy & Consent Section -->
                         <div class="form-section">
@@ -429,10 +432,15 @@ get_header();
     </div>
 
 <script>
+// Organizations data will be fetched via AJAX when needed
+var organizationsData = []; // Will be populated via AJAX call
+var employerSelectInitialized = false; // Flag to prevent multiple initializations
+
 // Enhanced debugging and form handling
 console.log("=== IIPM Registration Debug ===");
 console.log("jQuery available:", typeof jQuery !== 'undefined');
 console.log("iipm_ajax available:", typeof iimp_ajax !== 'undefined');
+console.log("Organizations will be loaded via AJAX when needed");
 
 // Store user ID for local verification
 let registeredUserId = null;
@@ -602,8 +610,18 @@ jQuery(document).ready(function($) {
             'email': 'Email Address',
             'password': 'Password',
             'address': 'Address',
-            'membership_id': 'Professional Designation'
+            'membership_id': 'Professional Designation',
+            'correspondence_email': 'Correspondence Email'
         };
+        
+        // Add address fields as required if Employer Invoiced is selected
+        var paymentMethod = $form.find('select[name="payment_method"]').val();
+        if (paymentMethod === 'Employer Invoiced') {
+            requiredFields['address_line_1'] = 'Address Line 1';
+            requiredFields['address_line_2'] = 'Address Line 2';
+            requiredFields['address_line_3'] = 'Address Line 3';
+            requiredFields['employer_id'] = 'Employer';
+        }
         
         // Validate login_name length if provided
         var loginName = $form.find('input[name="login_name"]').val();
@@ -626,6 +644,13 @@ jQuery(document).ready(function($) {
         if (email && !isValidEmail(email)) {
             errors.push('Please enter a valid email address');
             $form.find('input[name="email"]').addClass('error');
+        }
+        
+        // Validate correspondence email format
+        var correspondenceEmail = $form.find('input[name="correspondence_email"]').val();
+        if (correspondenceEmail && !isValidEmail(correspondenceEmail)) {
+            errors.push('Please enter a valid correspondence email address');
+            $form.find('input[name="correspondence_email"]').addClass('error');
         }
         
         // Validate password complexity
@@ -694,20 +719,25 @@ jQuery(document).ready(function($) {
         var formData = new FormData(this);
         formData.append('action', 'iipm_register_member');
 
-        // If employer is not selected, do not send employer fields
-        var employerIdVal = ($('#employer_select').val() || '').trim();
-        if (!employerIdVal) {
+        // Handle employer and organisation fields based on payment method
+        var paymentMethod = $form.find('select[name="payment_method"]').val();
+        if (paymentMethod === 'Employer Invoiced') {
+            // Ensure employer_id and organisation_id are set
+            var employerIdVal = $('#employer_id').val();
+            var organisationIdVal = $('#organisation_id').val();
+            if (employerIdVal) {
+                formData.set('employer_id', employerIdVal);
+                formData.set('organisation_id', organisationIdVal);
+                formData.set('address_line_1', $('#address_line_1').val());
+                formData.set('address_line_2', $('#address_line_2').val());
+                formData.set('address_line_3', $('#address_line_3').val());
+            }
+        } else {
+            // Remove employer fields if not Employer Invoiced
             formData.delete('employer_id');
-            formData.delete('employer_name');
+            formData.delete('organisation_id');
         }
         
-        // Organisation fields are always sent if they exist (from invitation)
-        var organisationId = $('#organisation_id').val();
-        var organisationName = $('#organisation_name').val();
-        if (organisationId && organisationName) {
-            formData.set('organisation_id', organisationId);
-            formData.set('organisation_name', organisationName);
-        }
         
         // Show loading state
         $submitBtn.addClass('loading');
@@ -867,13 +897,6 @@ jQuery(document).ready(function($) {
         });
     });
     
-    // Initial setup for organization invitations
-    var hasOrgInvitation = <?php echo ($invitation && $invitation->organisation_id) ? 'true' : 'false'; ?>;
-    if (hasOrgInvitation) {
-        $('.organisation-section').show();
-    } else {
-        $('.organisation-section').hide();
-    }
     
     // Real-time validation
     $('input[type="email"]').blur(function() {
@@ -950,6 +973,31 @@ jQuery(document).ready(function($) {
     }
 });
 
+// Initialize form based on invitation type
+jQuery(document).ready(function($){
+    console.log("Document ready - initializing form");
+    
+    // Initialize payment method based on invitation type
+    var isInviteMode = <?php echo $invitation ? 'true' : 'false'; ?>;
+    if (isInviteMode) {
+        // For individual invitations, set Direct Invoiced as default and ensure member_type is individual
+        $('#payment_method').val('Direct Invoiced');
+        $('#member_type').val('individual');
+        
+        // Ensure address fields are enabled for individual invitations
+        $('#address_line_1').prop('disabled', false).removeClass('disabled-field').prop('required', false);
+        $('#address_line_2').prop('disabled', false).removeClass('disabled-field').prop('required', false);
+        $('#address_line_3').prop('disabled', false).removeClass('disabled-field').prop('required', false);
+        
+        console.log("Individual invitation mode - Direct Invoiced set as default");
+    }
+    
+    // Initialize employer select if needed
+    if ($('#payment_method').val() === 'Employer Invoiced') {
+        loadEmployers();
+    }
+});
+
 // Populate employer select with all employers (single request) and handle selection
 jQuery(document).ready(function($){
     // var $sel = $('#employer_select');
@@ -987,66 +1035,48 @@ jQuery(document).ready(function($){
     //     }
     // });
     
-    // Fetch organisation name if invitation has organisation_id
-    var invitationOrgId = <?php echo ($invitation && $invitation->organisation_id) ? $invitation->organisation_id : 'null'; ?>;
-    if (invitationOrgId) {
-        $.ajax({
-            url: (typeof iipm_ajax !== 'undefined' ? iipm_ajax.ajax_url : '<?php echo admin_url('admin-ajax.php'); ?>'),
-            type: 'POST',
-            dataType: 'json',
-            data: {
-                action: 'iipm_get_organisation_name',
-                organisation_id: invitationOrgId,
-                nonce: (typeof iipm_ajax !== 'undefined' ? iipm_ajax.nonce : '<?php echo wp_create_nonce('iipm_portal_nonce'); ?>')
-            }
-        }).done(function(resp){
-            if (resp && resp.success && resp.data && resp.data.name) {
-                $('#organisation_name').val(resp.data.name);
-            } else {
-                $('#organisation_name').val('Organization not found');
-            }
-        }).fail(function(){
-            $('#organisation_name').val('Error loading organization');
-        });
-    }
     
     // Handle payment method change
     $('#payment_method').on('change', function(){
         var selectedMethod = $(this).val();
         
         if (selectedMethod === 'Employer Invoiced') {
-            // Get organisation address if available
-            var organisationId = $('#organisation_id').val();
-            if (organisationId) {
-                $.ajax({
-                    url: (typeof iipm_ajax !== 'undefined' ? iipm_ajax.ajax_url : '<?php echo admin_url('admin-ajax.php'); ?>'),
-                    type: 'POST',
-                    dataType: 'json',
-                    data: {
-                        action: 'iipm_get_organisation_name',
-                        organisation_id: organisationId,
-                        nonce: (typeof iipm_ajax !== 'undefined' ? iipm_ajax.nonce : '<?php echo wp_create_nonce('iipm_portal_nonce'); ?>')
-                    }
-                }).done(function(resp){
-                    if (resp && resp.success && resp.data) {
-                        // Populate address fields with organization address_line3
-                        if (resp.data.address_line3 && resp.data.address_line3.trim() !== '' && resp.data.address_line3.toLowerCase() !== 'please enter') {
-                            $('#address_line_1').val(resp.data.address_line3);
-                            $('#address_line_2').val(resp.data.address_line2 || '');
-                            $('#address_line_3').val(resp.data.address_line1 || '');
-                        } else {
-                            // If address_line3 is not available, use address_line1
-                            if (resp.data.address_line1 && resp.data.address_line1.trim() !== '' && resp.data.address_line1.toLowerCase() !== 'please enter') {
-                                $('#address_line_1').val(resp.data.address_line1);
-                                $('#address_line_2').val(resp.data.address_line2 || '');
-                                $('#address_line_3').val(resp.data.address_line3 || '');
-                            }
-                        }
-                    }
-                }).fail(function(){
-                    console.log('Error loading organization address');
-                });
+            $('#employer-selection-group').show();
+            loadEmployers();
+            
+            // Set member_type to organisation for non-invite mode
+            var isInviteMode = <?php echo $invitation ? 'true' : 'false'; ?>;
+            if (!isInviteMode) {
+                $('#member_type').val('organisation');
             }
+            
+            // Disable address inputs when Employer Invoiced is selected
+            $('#address_line_1').prop('disabled', true).addClass('disabled-field').prop('required', true);
+            $('#address_line_2').prop('disabled', true).addClass('disabled-field').prop('required', true);
+            $('#address_line_3').prop('disabled', true).addClass('disabled-field').prop('required', true);
+        } else {
+            $('#employer-selection-group').hide();
+            $('#employer_id').val('');
+            $('#organisation_id').val('');
+            $('#employer-select .select-trigger .select-placeholder').text('Select Employer');
+            
+            // Set member_type to individual for non-invite mode
+            var isInviteMode = <?php echo $invitation ? 'true' : 'false'; ?>;
+            if (!isInviteMode) {
+                $('#member_type').val('individual');
+            }
+            
+            // Enable address inputs for other payment methods
+            $('#address_line_1').prop('disabled', false).removeClass('disabled-field').prop('required', false);
+            $('#address_line_2').prop('disabled', false).removeClass('disabled-field').prop('required', false);
+            $('#address_line_3').prop('disabled', false).removeClass('disabled-field').prop('required', false);
+        }
+        
+        if (selectedMethod === 'Employer Invoiced') {
+            // Clear address fields when not Employer Invoiced
+            $('#address_line_1').val('');
+            $('#address_line_2').val('');
+            $('#address_line_3').val('');
         } else {
             // Clear address fields when not Employer Invoiced
             $('#address_line_1').val('');
@@ -1054,6 +1084,113 @@ jQuery(document).ready(function($){
             $('#address_line_3').val('');
         }
     });
+    
+    // Load employers for dropdown
+    function loadEmployers() {
+        $.ajax({
+            url: (typeof iipm_ajax !== 'undefined' ? iipm_ajax.ajax_url : '<?php echo admin_url('admin-ajax.php'); ?>'),
+            type: 'POST',
+            dataType: 'json',
+            data: {
+                action: 'iipm_get_organizations_data',
+                nonce: (typeof iipm_ajax !== 'undefined' ? iipm_ajax.nonce : '<?php echo wp_create_nonce('iipm_portal_nonce'); ?>')
+            }
+        }).done(function(resp) {
+            if (resp.data && resp.data.length > 0) {
+                organizationsData = resp.data; // Store the data globally
+                var html = '';
+                resp.data.forEach(function(org) {
+                    html += '<div class="select-option" data-value="' + org.id + '" data-text="' + org.name + '">' + org.name + '</div>';
+                });
+                $('#employer-options').html(html);
+                
+                // Only initialize if not already initialized
+                if (!employerSelectInitialized) {
+                    initializeEmployerSelect();
+                    employerSelectInitialized = true;
+                }
+            } else {
+                $('#employer-options').html('<div class="select-option disabled">No employers found</div>');
+            }
+        }).fail(function() {
+            $('#employer-options').html('<div class="select-option disabled">Error loading employers</div>');
+        });
+    }
+    
+    // Initialize employer custom select functionality
+    function initializeEmployerSelect() {
+        var $select = $('#employer-select');
+        var $trigger = $select.find('.select-trigger');
+        var $dropdown = $select.find('.select-dropdown');
+        var $options = $select.find('.select-options');
+        var $search = $select.find('#employer-search');
+        var $hidden = $('#employer_id');
+        
+        // Remove any existing event listeners to prevent duplicates
+        $trigger.off('click.employerSelect');
+        $(document).off('click.employerSelect');
+        $options.off('click.employerSelect');
+        $search.off('input.employerSelect');
+        
+        // Toggle dropdown
+        $trigger.on('click.employerSelect', function(e) {
+            e.stopPropagation();
+            console.log("Hello, I am called!");
+            $dropdown.toggleClass('active');
+            if ($dropdown.hasClass('active')) {
+                $search.focus();
+            }
+        });
+        
+        // Close dropdown when clicking outside
+        $(document).on('click.employerSelect', function() {
+            $dropdown.removeClass('active');
+        });
+        
+        // Handle option selection
+        $options.on('click.employerSelect', '.select-option:not(.disabled)', function() {
+            var value = $(this).data('value');
+            var text = $(this).data('text');
+            
+            $hidden.val(value);
+            $('#organisation_id').val(value); // Set organisation_id to selected employer
+            $trigger.find('.select-placeholder').text(text);
+            $dropdown.removeClass('active');
+            
+            // Populate address fields with selected organization's address
+            populateAddressFromOrganization(value);
+        });
+        
+        // Handle search
+        $search.on('input.employerSelect', function() {
+            var searchTerm = $(this).val().toLowerCase();
+            $options.find('.select-option').each(function() {
+                var text = $(this).data('text').toLowerCase();
+                if (text.includes(searchTerm)) {
+                    $(this).show();
+                } else {
+                    $(this).hide();
+                }
+            });
+        });
+    }
+    
+    // Populate address fields from selected organization
+    function populateAddressFromOrganization(organizationId) {
+        if (organizationsData && organizationsData.length > 0) {
+            var selectedOrg = organizationsData.find(function(org) {
+                return org.id == organizationId;
+            });
+            
+            if (selectedOrg) {
+                // Populate address fields with organization's address
+                $('#address_line_1').val(selectedOrg.address_line1 || '');
+                $('#address_line_2').val(selectedOrg.address_line2 || '');
+                $('#address_line_3').val(selectedOrg.address_line3 || '');
+                $('#city_or_town').val(selectedOrg.city_or_town || '');
+            }
+        }
+    }
     
     // Membership Selection Modal Functionality
     var selectedMembership = null;
@@ -1084,7 +1221,12 @@ jQuery(document).ready(function($){
     // Render membership list in modal
     function renderMembershipList() {
         var html = '';
-        membershipData.forEach(function(membership, index) {
+        var allowedDesignations = ['MIIPM', 'AIIPM', 'FIIPM', 'QPT IIPM'];
+        var filteredMemberships = membershipData.filter(function(membership) {
+            return allowedDesignations.includes(membership.designation);
+        });
+        
+        filteredMemberships.forEach(function(membership, index) {
             var isSelected = index === 0 ? 'selected' : ''; // First item selected by default
             if (isSelected) {
                 selectedMembership = membership;
@@ -1157,6 +1299,109 @@ jQuery(document).ready(function($){
 </script>
 
 <style>
+/* Custom Select Styles */
+.custom-select-container {
+    position: relative;
+    width: 100%;
+}
+
+.custom-select {
+    position: relative;
+    width: 100%;
+}
+
+.select-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    background: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.select-trigger:hover {
+    border-color: #8b5a96;
+}
+
+.select-trigger .select-placeholder {
+    color: #6b7280;
+    font-size: 14px;
+}
+
+.select-trigger i {
+    color: #6b7280;
+    transition: transform 0.3s ease;
+}
+
+.select-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    max-height: 400px;
+    display: none;
+}
+
+.select-dropdown.active {
+    display: block;
+}
+
+.select-search {
+    padding: 8px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.select-search input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.select-options {
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+.select-option {
+    padding: 12px 16px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    font-size: 14px;
+    color: #374151;
+}
+
+.select-option:hover {
+    background-color: #f3f4f6;
+}
+
+.select-option.disabled {
+    color: #9ca3af;
+    cursor: not-allowed;
+}
+
+/* Disabled field styles */
+.disabled-field {
+    background-color: #f9fafb !important;
+    color: #6b7280 !important;
+    cursor: not-allowed !important;
+    opacity: 0.6;
+}
+
+.disabled-field:focus {
+    border-color: #d1d5db !important;
+    box-shadow: none !important;
+}
+
 /* Enhanced Success Message Styles */
 .enhanced-success-message {
     background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);

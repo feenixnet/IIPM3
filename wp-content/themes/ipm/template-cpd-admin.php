@@ -2818,9 +2818,6 @@ jQuery(document).ready(function($) {
     });
     
     
-    
-    
-    
     // Utility functions
     function showAlert(message, type) {
         const alertClass = type === 'success' ? 'alert-success' : 'alert-error';

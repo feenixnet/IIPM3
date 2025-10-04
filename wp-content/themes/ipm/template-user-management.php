@@ -181,11 +181,10 @@ if (!function_exists('add_success_notification')) {
                                 <input type="email" name="email" id="email" required>
                             </div>
                             
-                            <div class="form-group">
+                            <div class="form-group" style="display:none;">
                                 <label for="type">Invitation Type *</label>
                                 <select name="type" id="type" required>
                                     <option value="individual">Individual Member</option>
-                                    <option value="bulk">Organization Member</option>
                                 </select>
                             </div>
                             

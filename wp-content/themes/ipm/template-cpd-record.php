@@ -61,7 +61,7 @@ get_header();
                                 <div class="progress-fill" id="progress-fill"></div>
                             </div>
                             <div class="progress-text">
-                                <span id="current-minutes">0</span> / <span id="target-minutes">330</span> minutes
+                                <span id="current-hours">0</span> / <span id="target-hours">5.5</span> hours
                             </div>
                         </div>
                         
@@ -75,12 +75,12 @@ get_header();
                                 <div class="stat-value" id="completion-date">-</div>
                             </div>
                             <div class="stat-item">
-                                <div class="stat-label">Total CPD Minutes</div>
-                                <div class="stat-value" id="total-cpd-minutes">0</div>
+                                <div class="stat-label">CPD Requirement</div>
+                                <div class="stat-value" id="cpd-requirement">0</div>
                             </div>
                             <div class="stat-item">
-                                <div class="stat-label">Total Hours</div>
-                                <div class="stat-value" id="total-hours">0</div>
+                                <div class="stat-label">CPD hours logged</div>
+                                <div class="stat-value" id="cpd-hours-logged">0</div>
                             </div>
                         </div>
                     </div>
@@ -103,6 +103,21 @@ get_header();
                         <div class="summary-total">
                             <div class="total-label">Total</div>
                             <div class="total-value" id="summary-total">0 hours</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Course List Section -->
+            <div class="course-list-section">
+                <div class="course-list-card">
+                    <h3>Course List</h3>
+                    <div class="course-list-content" id="course-list-content">
+                        <div class="loading-message">
+                            <div class="loading-spinner">
+                                <div class="spinner"></div>
+                                <p>Loading courses...</p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -414,6 +429,81 @@ get_header();
         text-align: center;
     }
 
+    /* Course List Styles */
+    .course-list-section {
+        margin-top: 30px;
+    }
+
+    .course-list-card {
+        background: white;
+        border-radius: 12px;
+        padding: 24px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .course-list-card h3 {
+        margin: 0 0 20px 0;
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: #1f2937;
+    }
+
+    .course-list-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 16px;
+    }
+
+    .course-list-table th,
+    .course-list-table td {
+        padding: 12px;
+        text-align: left;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .course-list-table th {
+        background: #f9fafb;
+        font-weight: 600;
+        color: #374151;
+        font-size: 14px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .course-list-table td {
+        color: #1f2937;
+        font-size: 14px;
+    }
+
+    .course-list-table tr:hover {
+        background: #f9fafb;
+    }
+
+    .course-name {
+        font-weight: 500;
+        color: #1f2937;
+    }
+
+    .course-category {
+        color: #6b7280;
+        font-size: 13px;
+    }
+
+    .course-hours {
+        font-weight: 600;
+        color: #8b5a96;
+    }
+
+    .course-date {
+        color: #6b7280;
+        font-size: 13px;
+    }
+
+    .course-provider {
+        color: #374151;
+        font-size: 13px;
+    }
+
     /* Certificate Modal Styles */
     .modal {
         position: fixed;
@@ -560,14 +650,15 @@ get_header();
         const yearSelect = document.getElementById('year-select');
         const progressPercentage = document.getElementById('progress-percentage');
         const progressFill = document.getElementById('progress-fill');
-        const currentMinutes = document.getElementById('current-minutes');
-        const targetMinutes = document.getElementById('target-minutes');
+        const currentHours = document.getElementById('current-hours');
+        const targetHours = document.getElementById('target-hours');
         const startDate = document.getElementById('start-date');
         const completionDate = document.getElementById('completion-date');
-        const totalCpdMinutes = document.getElementById('total-cpd-minutes');
-        const totalHours = document.getElementById('total-hours');
+        const cpdRequirement = document.getElementById('cpd-requirement');
+        const cpdHoursLogged = document.getElementById('cpd-hours-logged');
         const summaryContent = document.getElementById('summary-content');
         const summaryTotal = document.getElementById('summary-total');
+        const courseListContent = document.getElementById('course-list-content');
         
         // Initialize the page
         initializePage();
@@ -614,6 +705,15 @@ get_header();
                 </div>
             `;
             
+            courseListContent.innerHTML = `
+                <div class="loading-message">
+                    <div class="loading-spinner">
+                        <div class="spinner"></div>
+                        <p>Loading courses...</p>
+                    </div>
+                </div>
+            `;
+            
             // Create FormData
             const formData = new FormData();
             formData.append('action', 'iipm_get_cpd_stats');
@@ -630,13 +730,16 @@ get_header();
                     if (response.success) {
                         updateStats(response.data);
                         updateSummary(response.data);
+                        updateCourseList(response.data);
                     } else {
                         summaryContent.innerHTML = '<div class="no-data-message">Error loading stats: ' + (response.data || 'Unknown error') + '</div>';
+                        courseListContent.innerHTML = '<div class="no-data-message">Error loading courses: ' + (response.data || 'Unknown error') + '</div>';
                     }
                 },
                 error: function(xhr, status, error) {
                     console.error('Error loading CPD stats:', error);
                     summaryContent.innerHTML = '<div class="no-data-message">Error loading stats. Please try again.</div>';
+                    courseListContent.innerHTML = '<div class="no-data-message">Error loading courses. Please try again.</div>';
                 }
             });
         }
@@ -645,17 +748,21 @@ get_header();
          * Update stats display
          */
         function updateStats(data) {
+            // Convert minutes to hours (rounded to 0.5)
+            const currentHoursValue = Math.round((data.total_cpd_minutes / 60) * 2) / 2;
+            const targetHoursValue = Math.round((data.target_minutes / 60) * 2) / 2;
+            
             // Update progress
             if (progressPercentage) progressPercentage.textContent = data.completion_percentage + '%';
             if (progressFill) progressFill.style.width = data.completion_percentage + '%';
-            if (currentMinutes) currentMinutes.textContent = data.total_cpd_minutes;
-            if (targetMinutes) targetMinutes.textContent = data.target_minutes;
+            if (currentHours) currentHours.textContent = currentHoursValue;
+            if (targetHours) targetHours.textContent = targetHoursValue;
             
             // Update other stats
             if (startDate) startDate.textContent = data.start_date ? formatDate(data.start_date) : '-';
             if (completionDate) completionDate.textContent = data.completion_date ? formatDate(data.completion_date) : '-';
-            if (totalCpdMinutes) totalCpdMinutes.textContent = data.total_cpd_minutes;
-            if (totalHours) totalHours.textContent = data.total_hours.toFixed(1);
+            if (cpdRequirement) cpdRequirement.textContent = targetHoursValue + ' hours';
+            if (cpdHoursLogged) cpdHoursLogged.textContent = currentHoursValue + ' hours';
         }
         
         /**
@@ -694,6 +801,57 @@ get_header();
             if (summaryTotal) {
                 summaryTotal.textContent = data.total_hours.toFixed(1) + ' hours';
             }
+        }
+        
+        /**
+         * Update course list display
+         */
+        function updateCourseList(data) {
+            if (!data.courses_summary || data.courses_summary.length === 0) {
+                courseListContent.innerHTML = '<div class="no-data-message">No courses logged for this year.</div>';
+                return;
+            }
+            
+            let html = `
+                <table class="course-list-table">
+                    <thead>
+                        <tr>
+                            <th>Course Name</th>
+                            <th>Category</th>
+                            <th>Hours</th>
+                            <th>Return Date</th>
+                            <th>Provider</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            // Extract courses from courses_summary array
+            data.courses_summary.forEach(categoryData => {
+                if (categoryData.courses && categoryData.courses.length > 0) {
+                    categoryData.courses.forEach(course => {
+                        // Format return date
+                        const returnDate = course.dateOfReturn ? formatDate(course.dateOfReturn) : '-';
+                        
+                        html += `
+                            <tr>
+                                <td class="course-name">${course.courseName || 'N/A'}</td>
+                                <td class="course-category">${categoryData.category || 'N/A'}</td>
+                                <td class="course-hours">${course.hours || 0} hours</td>
+                                <td class="course-date">${returnDate}</td>
+                                <td class="course-provider">${course.crs_provider || 'N/A'}</td>
+                            </tr>
+                        `;
+                    });
+                }
+            });
+            
+            html += `
+                    </tbody>
+                </table>
+            `;
+            
+            courseListContent.innerHTML = html;
         }
         
         /**

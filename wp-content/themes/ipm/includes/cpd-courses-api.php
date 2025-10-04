@@ -4,9 +4,37 @@
  * Handles all course-related API operations
  */
 
-// Prevent direct access
-if (!defined('ABSPATH')) {
-    exit;
+/**
+ * AJAX callback for getting course data for duplication/editing
+ */
+function iipm_ajax_get_course_for_duplication() {
+    // Check if user is admin
+    if (!current_user_can('administrator')) {
+        wp_send_json_error('Unauthorized access');
+        return;
+    }
+    
+    $course_id = intval($_POST['course_id']);
+    
+    if (empty($course_id)) {
+        wp_send_json_error('Course ID is required');
+        return;
+    }
+    
+    $course = iipm_get_course_by_id_from_coursebyadminbku($course_id);
+    
+    if (!$course) {
+        wp_send_json_error('Course not found');
+        return;
+    }
+    
+    // Convert minutes to hours for frontend display
+    if (isset($course->course_cpd_mins)) {
+        $hours = $course->course_cpd_mins / 60;
+        $course->course_cpd_mins = round($hours * 2) / 2;
+    }
+    
+    wp_send_json_success($course);
 }
 
 /**
@@ -41,7 +69,7 @@ add_action('wp_ajax_iipm_delete_user_course', 'iipm_ajax_delete_user_course');
 add_action('wp_ajax_iipm_get_pending_courses', 'iipm_ajax_get_pending_courses');
 add_action('wp_ajax_iipm_approve_course', 'iipm_ajax_approve_course');
 add_action('wp_ajax_iipm_reject_course', 'iipm_ajax_reject_course');
-add_action('wp_ajax_iipm_get_user_courses_admin', 'iipm_ajax_get_user_courses_admin');
+add_action('wp_ajax_iipm_get_course_for_duplication', 'iipm_ajax_get_course_for_duplication');
 
 /**
  * AJAX callback for getting courses
@@ -247,7 +275,7 @@ function iipm_get_course_providers() {
 function iipm_get_course_by_id_from_coursebyadminbku($course_id) {
     global $wpdb;
     
-    $table_name = 'coursesbyadminbku';
+    $table_name = $wpdb->prefix . 'coursesbyadminbku';
     
     $course = $wpdb->get_row($wpdb->prepare(
         "SELECT * FROM {$table_name} WHERE id = %d",
@@ -342,20 +370,21 @@ function iipm_format_course_date($date_string) {
 }
 
 /**
- * Convert minutes to hours and minutes
+ * Convert minutes to hours (rounded to nearest 0.5)
  */
 function iipm_format_cpd_duration($minutes) {
     if (empty($minutes)) {
-        return '0h 0m';
+        return '0 hours';
     }
     
-    $hours = floor($minutes / 60);
-    $mins = $minutes % 60;
+    // Convert minutes to hours and round to nearest 0.5
+    $hours = $minutes / 60;
+    $rounded_hours = round($hours * 2) / 2;
     
-    if ($hours > 0) {
-        return $hours . 'h ' . $mins . 'm';
+    if ($rounded_hours == 1) {
+        return '1 hour';
     } else {
-        return $mins . 'm';
+        return $rounded_hours . ' hours';
     }
 }
 
@@ -456,6 +485,18 @@ function iipm_ajax_get_all_courses_paginated() {
     ]));
     
     $result = iipm_get_all_courses_management_paginated($page, $per_page, $category_filter, $provider_filter, $search_term);
+    
+    // Convert minutes to hours for frontend display
+    if (!empty($result['courses'])) {
+        foreach ($result['courses'] as &$course) {
+            if (isset($course->course_cpd_mins)) {
+                // Convert minutes to hours and round to nearest 0.5
+                $hours = $course->course_cpd_mins / 60;
+                $course->course_cpd_mins = round($hours * 2) / 2;
+            }
+        }
+    }
+    
     wp_send_json_success($result);
 }
 
@@ -502,7 +543,7 @@ function iipm_ajax_add_course() {
         'LIA_Code' => sanitize_text_field($_POST['course_code']),
         'category_id' => intval($_POST['course_category']),
         'provider' => sanitize_text_field($_POST['course_provider']),
-        'duration' => floatval($_POST['course_cpd_mins']),
+        'duration' => round(floatval($_POST['course_cpd_mins']) * 60),
         'status' => sanitize_text_field($_POST['course_status']),
         'user_id' => get_current_user_id(),
         'course_id' => rand(100000, 999999),
@@ -548,7 +589,7 @@ function iipm_ajax_update_course() {
         'LIA_Code' => sanitize_text_field($_POST['course_code']),
         'category_id' => intval($_POST['course_category']),
         'provider' => sanitize_text_field($_POST['course_provider']),
-        'duration' => floatval($_POST['course_cpd_mins'])
+        'duration' => round(floatval($_POST['course_cpd_mins']) * 60)
     );
     
     // Validate required fields
@@ -756,7 +797,7 @@ function iipm_update_course_management($course_id, $course_data) {
     
     $update_data = array(
         'course_name' => $course_data['course_name'],
-        'LIA_Code' => $course_data['course_code'],
+        'LIA_Code' => $course_data['LIA_Code'],
         'course_category' => $category_name,
         'crs_provider' => $course_data['provider'],
         'course_cpd_mins' => $course_data['duration'],
@@ -899,7 +940,7 @@ function iipm_ajax_add_user_course() {
         'LIA_Code' => sanitize_text_field($_POST['course_code']),
         'course_category' => sanitize_text_field($_POST['course_category']),
         'crs_provider' => sanitize_text_field($_POST['course_provider']),
-        'course_cpd_mins' => intval($_POST['course_duration']),
+        'course_cpd_mins' => round(floatval($_POST['course_duration']) * 60),
         'user_id' => $user_id,
         'is_by_admin' => intval($_POST['is_by_admin'] ?? 0),
         'status' => sanitize_text_field($_POST['status'] ?? 'pending'),
@@ -953,7 +994,7 @@ function iipm_ajax_update_user_course() {
     $new_lia_code = sanitize_text_field($_POST['course_code']);
     $new_category = sanitize_text_field($_POST['course_category']);
     $new_provider = sanitize_text_field($_POST['course_provider']);
-    $new_cpd_mins = intval($_POST['course_duration']);
+    $new_cpd_mins = round(floatval($_POST['course_cpd_mins']) * 60);
     
     // Check if any values have changed
     $has_changes = (

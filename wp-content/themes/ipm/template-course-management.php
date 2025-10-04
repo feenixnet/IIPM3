@@ -118,7 +118,7 @@ if (!function_exists('add_success_notification')) {
                             <th>Code</th>
                             <th>Category</th>
                             <th>Provider</th>
-                            <th>Duration (CPD mins)</th>
+                            <th>Duration (Hours)</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -218,8 +218,8 @@ if (!function_exists('add_success_notification')) {
                 </div>
                 
                 <div class="form-group">
-                    <label for="course-duration">Duration (CPD mins) *</label>
-                    <input type="number" id="course-duration" name="course_cpd_mins" class="form-control" min="1" step="1" required>
+                    <label for="course-duration">Duration (Hours) *</label>
+                    <input type="number" id="course-duration" name="course_cpd_mins" class="form-control" min="0.5" step="0.5" required>
                 </div>
             </form>
         </div>
@@ -1987,7 +1987,7 @@ jQuery(document).ready(function($) {
                             <span><strong>Code:</strong> ${course.LIA_Code || 'N/A'}</span>
                             <span><strong>Category:</strong> ${categoryName}</span>
                             <span><strong>Provider:</strong> ${course.crs_provider}</span>
-                            <span><strong>Duration:</strong> ${course.course_cpd_mins} mins</span>
+                            <span><strong>Duration:</strong> ${course.course_cpd_mins} hours</span>
                         </div>
                     </div>
                     <div class="course-actions">
@@ -2080,6 +2080,7 @@ jQuery(document).ready(function($) {
             // Hide duplicate option for editing
             $('#duplicate-course').closest('.form-group').hide();
             $('#course-selection-group').hide();
+            $('#course-id').val(currentCourseId);
             resetDuplicateForm();
             loadCourseData(courseId);
         } else {
@@ -2420,7 +2421,7 @@ jQuery(document).ready(function($) {
                     course_code: values[1],
                     course_category: values[2],
                     course_provider: values[3],
-                    course_duration: parseInt(values[4])
+                    course_duration: parseFloat(values[4])
                 });
             }
         }
@@ -2439,7 +2440,7 @@ jQuery(document).ready(function($) {
     function displayCSVPreview() {
         const previewTable = $('#preview-table');
         let tableHTML = '<table><thead><tr>';
-        tableHTML += '<th>Course Name</th><th>Course Code</th><th>Category</th><th>Provider</th><th>Duration</th>';
+        tableHTML += '<th>Course Name</th><th>Course Code</th><th>Category</th><th>Provider</th><th>Duration (Hours)</th>';
         tableHTML += '</tr></thead><tbody>';
         
         // Show first 5 rows as preview

@@ -2472,9 +2472,6 @@ get_header();
             if (messages.length > 0) {
                 validationMessage.innerHTML = `
                     <div class="validation-alert">
-                        <div class="validation-icon">
-                            <i class="fas fa-exclamation-triangle"></i>
-                        </div>
                         <div class="validation-content">
                             <h4>Requirements Not Met</h4>
                             <p>To submit your CPD return, you must:</p>

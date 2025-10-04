@@ -1613,6 +1613,8 @@ function iipm_process_member_registration($data, $token = null) {
         global $wpdb;
         
         $invitation = null;
+
+        
         if ($token) {
             $invitation = iipm_validate_invitation_token($token);
             if (!$invitation) {
@@ -6881,3 +6883,29 @@ function iipm_admin_update_user_details() {
     }
 }
 add_action('wp_ajax_iipm_admin_update_user_details', 'iipm_admin_update_user_details');
+
+/**
+ * Get organizations data for registration and other purposes
+ */
+function iipm_get_organizations_data() {
+    global $wpdb;
+    
+    try {
+        $organizations = $wpdb->get_results("
+            SELECT * FROM {$wpdb->prefix}test_iipm_organisations 
+            WHERE is_active = 1
+            ORDER BY name ASC
+        ");
+        
+        if ($wpdb->last_error) {
+            wp_send_json_error('Error fetching organizations: ' . $wpdb->last_error);
+        }
+        
+        wp_send_json_success($organizations);
+        
+    } catch (Exception $e) {
+        wp_send_json_error('Exception in iipm_get_organizations_data: ' . $e->getMessage());
+    }
+}
+add_action('wp_ajax_iipm_get_organizations_data', 'iipm_get_organizations_data');
+add_action('wp_ajax_nopriv_iipm_get_organizations_data', 'iipm_get_organizations_data');
