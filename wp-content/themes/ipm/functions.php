@@ -3520,6 +3520,208 @@ function iipm_get_membership_data() {
 add_action('wp_ajax_iipm_get_membership_data', 'iipm_get_membership_data');
 add_action('wp_ajax_nopriv_iipm_get_membership_data', 'iipm_get_membership_data');
 
+// AJAX handler for getting membership management data
+add_action('wp_ajax_iipm_get_membership_overview_data', 'iipm_ajax_get_membership_overview_data');
+function iipm_ajax_get_membership_overview_data() {
+    // Verify nonce
+    if (!wp_verify_nonce($_POST['nonce'], 'iipm_user_management_nonce')) {
+        wp_die('Security check failed');
+    }
+    
+    // Check permissions
+    if (!current_user_can('administrator') && !current_user_can('manage_organisation_members')) {
+        wp_die('Insufficient permissions');
+    }
+    
+    global $wpdb;
+    
+    // Get membership statistics
+    $total_memberships = $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}memberships");
+    $active_members = $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}test_iipm_members WHERE membership_status = 'active'");
+    
+    // Calculate total revenue (sum of all membership fees)
+    $total_revenue = $wpdb->get_var("SELECT SUM(fee) FROM {$wpdb->prefix}memberships");
+    
+    // Get all memberships with member counts
+    $memberships = $wpdb->get_results("
+        SELECT 
+            m.id,
+            m.name,
+            m.designation,
+            m.fee,
+            m.cpd_requirement,
+            COUNT(mem.id) as member_count
+        FROM {$wpdb->prefix}memberships m
+        LEFT JOIN {$wpdb->prefix}test_iipm_members mem ON m.id = mem.membership_level
+        GROUP BY m.id, m.name, m.designation, m.fee, m.cpd_requirement
+        ORDER BY m.name ASC
+    ");
+    
+    wp_send_json_success(array(
+        'stats' => array(
+            'total_memberships' => $total_memberships,
+            'active_members' => $active_members,
+            'total_revenue' => $total_revenue ?: 0
+        ),
+        'memberships' => $memberships
+    ));
+}
+
+// AJAX handler for getting single membership
+add_action('wp_ajax_iipm_get_single_membership', 'iipm_ajax_get_single_membership');
+function iipm_ajax_get_single_membership() {
+    // Verify nonce
+    if (!wp_verify_nonce($_POST['nonce'], 'iipm_user_management_nonce')) {
+        wp_die('Security check failed');
+    }
+    
+    // Check permissions
+    if (!current_user_can('administrator') && !current_user_can('manage_organisation_members')) {
+        wp_die('Insufficient permissions');
+    }
+    
+    $membership_id = intval($_POST['membership_id']);
+    
+    global $wpdb;
+    $membership = $wpdb->get_row($wpdb->prepare(
+        "SELECT * FROM {$wpdb->prefix}memberships WHERE id = %d",
+        $membership_id
+    ));
+    
+    if ($membership) {
+        wp_send_json_success($membership);
+    } else {
+        wp_send_json_error('Membership not found');
+    }
+}
+
+// AJAX handler for creating membership
+add_action('wp_ajax_iipm_create_membership', 'iipm_ajax_create_membership');
+function iipm_ajax_create_membership() {
+    // Verify nonce
+    if (!wp_verify_nonce($_POST['nonce'], 'iipm_user_management_nonce')) {
+        wp_die('Security check failed');
+    }
+    
+    // Check permissions
+    if (!current_user_can('administrator') && !current_user_can('manage_organisation_members')) {
+        wp_die('Insufficient permissions');
+    }
+    
+    $name = sanitize_text_field($_POST['name']);
+    $designation = sanitize_text_field($_POST['designation']);
+    $fee = floatval($_POST['fee']);
+    $cpd_requirement = sanitize_text_field($_POST['cpd_requirement']);
+    
+    // Validate required fields
+    if (empty($name) || empty($designation) || $fee < 0) {
+        wp_send_json_error('Name, designation, and fee are required');
+    }
+    
+    global $wpdb;
+    $result = $wpdb->insert(
+        $wpdb->prefix . 'memberships',
+        array(
+            'name' => $name,
+            'designation' => $designation,
+            'fee' => $fee,
+            'cpd_requirement' => $cpd_requirement
+        ),
+        array('%s', '%s', '%f', '%s')
+    );
+    
+    if ($result) {
+        wp_send_json_success('Membership created successfully');
+    } else {
+        wp_send_json_error('Failed to create membership');
+    }
+}
+
+// AJAX handler for updating membership
+add_action('wp_ajax_iipm_update_membership', 'iipm_ajax_update_membership');
+function iipm_ajax_update_membership() {
+    // Verify nonce
+    if (!wp_verify_nonce($_POST['nonce'], 'iipm_user_management_nonce')) {
+        wp_die('Security check failed');
+    }
+    
+    // Check permissions
+    if (!current_user_can('administrator') && !current_user_can('manage_organisation_members')) {
+        wp_die('Insufficient permissions');
+    }
+    
+    $membership_id = intval($_POST['membership_id']);
+    $name = sanitize_text_field($_POST['name']);
+    $designation = sanitize_text_field($_POST['designation']);
+    $fee = floatval($_POST['fee']);
+    $cpd_requirement = sanitize_text_field($_POST['cpd_requirement']);
+    
+    // Validate required fields
+    if (empty($name) || empty($designation) || $fee < 0) {
+        wp_send_json_error('Name, designation, and fee are required');
+    }
+    
+    global $wpdb;
+    $result = $wpdb->update(
+        $wpdb->prefix . 'memberships',
+        array(
+            'name' => $name,
+            'designation' => $designation,
+            'fee' => $fee,
+            'cpd_requirement' => $cpd_requirement
+        ),
+        array('id' => $membership_id),
+        array('%s', '%s', '%f', '%s'),
+        array('%d')
+    );
+    
+    if ($result !== false) {
+        wp_send_json_success('Membership updated successfully');
+    } else {
+        wp_send_json_error('Failed to update membership');
+    }
+}
+
+// AJAX handler for deleting membership
+add_action('wp_ajax_iipm_delete_membership', 'iipm_ajax_delete_membership');
+function iipm_ajax_delete_membership() {
+    // Verify nonce
+    if (!wp_verify_nonce($_POST['nonce'], 'iipm_user_management_nonce')) {
+        wp_die('Security check failed');
+    }
+    
+    // Check permissions
+    if (!current_user_can('administrator') && !current_user_can('manage_organisation_members')) {
+        wp_die('Insufficient permissions');
+    }
+    
+    $membership_id = intval($_POST['membership_id']);
+    
+    global $wpdb;
+    
+    // Check if any members are using this membership level
+    $member_count = $wpdb->get_var($wpdb->prepare(
+        "SELECT COUNT(*) FROM {$wpdb->prefix}test_iipm_members WHERE membership_level = %d",
+        $membership_id
+    ));
+    
+    if ($member_count > 0) {
+        wp_send_json_error('Cannot delete membership level that is currently assigned to ' . $member_count . ' member(s)');
+    }
+    
+    $result = $wpdb->delete(
+        $wpdb->prefix . 'memberships',
+        array('id' => $membership_id),
+        array('%d')
+    );
+    
+    if ($result) {
+        wp_send_json_success('Membership deleted successfully');
+    } else {
+        wp_send_json_error('Failed to delete membership');
+    }
+}
+
 /**
  * Bulk Import AJAX Handler
  */

@@ -72,6 +72,11 @@ if (!function_exists('add_success_notification')) {
                     <span style="margin-right: 8px;"><i class="fas fa-envelope"></i></span>
                     Invite new users
                 </a>
+                <a href="?tab=membership" class="tab-button <?php echo $active_tab === 'membership' ? 'active' : ''; ?>"
+                   style="padding: 12px 24px; background: <?php echo $active_tab === 'membership' ? '#f8a135' : '#6b4c93'; ?>; color: white; border-radius: 8px; text-decoration: none; font-weight: 500; transition: all 0.3s ease;">
+                    <span style="margin-right: 8px;"><i class="fas fa-id-card"></i></span>
+                    Membership
+                </a>
             </div>
         </div>
 
@@ -163,7 +168,7 @@ if (!function_exists('add_success_notification')) {
                         <!-- Pagination will be loaded here -->
                     </div>
                 </div>
-            <?php else: ?>
+            <?php elseif ($active_tab === 'invitations'): ?>
                 <!-- Invitations Content -->
                 <div class="invitations-content">
                     <div class="invitation-form-container">
@@ -252,6 +257,92 @@ if (!function_exists('add_success_notification')) {
                                     </tr>
                                 </tbody>
                             </table>
+                        </div>
+                    </div>
+                </div>
+            <?php elseif ($active_tab === 'membership'): ?>
+                <!-- Membership Management Content -->
+                <div class="membership-content">
+                    <div class="membership-overview">
+                        <div style="text-align: center; margin-bottom: 40px;">
+                            <h2 style="font-size: 2.5rem; font-weight: 700; margin: 0 0 15px 0; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">Membership Overview</h2>
+                            <p style="margin: 0; font-size: 16px; font-weight: 400; max-width: 600px; margin: 0 auto;">
+                                Manage membership levels, view comprehensive statistics, and configure membership settings with ease.
+                            </p>
+                        </div>
+                        
+                        <!-- Membership Statistics Cards -->
+                        <div class="membership-stats" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 25px; margin-bottom: 40px;">
+                            <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 25px; border-radius: 16px; box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3); position: relative; overflow: hidden;">
+                                <div style="position: absolute; top: -20px; right: -20px; width: 80px; height: 80px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
+                                <div style="display: flex; align-items: center; justify-content: space-between; position: relative; z-index: 2;">
+                                    <div>
+                                        <h3 style="color: white; margin: 0; font-size: 2.5rem; font-weight: 800; text-shadow: 0 2px 4px rgba(0,0,0,0.2);" id="total-memberships">-</h3>
+                                        <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 14px; font-weight: 500;">Total Membership Levels</p>
+                                    </div>
+                                    <div style="background: rgba(255,255,255,0.2); padding: 18px; border-radius: 50%; backdrop-filter: blur(10px);">
+                                        <i class="fas fa-id-card" style="color: white; font-size: 28px;"></i>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="stat-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); padding: 25px; border-radius: 16px; box-shadow: 0 8px 32px rgba(240, 147, 251, 0.3); position: relative; overflow: hidden;">
+                                <div style="position: absolute; top: -20px; right: -20px; width: 80px; height: 80px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
+                                <div style="display: flex; align-items: center; justify-content: space-between; position: relative; z-index: 2;">
+                                    <div>
+                                        <h3 style="color: white; margin: 0; font-size: 2.5rem; font-weight: 800; text-shadow: 0 2px 4px rgba(0,0,0,0.2);" id="active-members">-</h3>
+                                        <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 14px; font-weight: 500;">Active Members</p>
+                                    </div>
+                                    <div style="background: rgba(255,255,255,0.2); padding: 18px; border-radius: 50%; backdrop-filter: blur(10px);">
+                                        <i class="fas fa-users" style="color: white; font-size: 28px;"></i>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="stat-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); padding: 25px; border-radius: 16px; box-shadow: 0 8px 32px rgba(79, 172, 254, 0.3); position: relative; overflow: hidden;">
+                                <div style="position: absolute; top: -20px; right: -20px; width: 80px; height: 80px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
+                                <div style="display: flex; align-items: center; justify-content: space-between; position: relative; z-index: 2;">
+                                    <div>
+                                        <h3 style="color: white; margin: 0; font-size: 2.5rem; font-weight: 800; text-shadow: 0 2px 4px rgba(0,0,0,0.2);" id="total-revenue">-</h3>
+                                        <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 14px; font-weight: 500;">Total Revenue</p>
+                                    </div>
+                                    <div style="background: rgba(255,255,255,0.2); padding: 18px; border-radius: 50%; backdrop-filter: blur(10px);">
+                                        <i class="fas fa-pound-sign" style="color: white; font-size: 28px;"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Membership Levels Table -->
+                        <div class="membership-levels-section">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; padding: 20px; background: rgba(255,255,255,0.05); border-radius: 12px; backdrop-filter: blur(10px);">
+                                <h3 style="margin: 0; color: white; font-size: 1.5rem; font-weight: 600;">Membership Levels</h3>
+                                <button id="add-membership-btn" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3); transition: all 0.3s ease;">
+                                    <i class="fas fa-plus" style="margin-right: 8px;"></i>
+                                    Add Membership Level
+                                </button>
+                            </div>
+                            <div class="table-container">
+                                <table class="membership-table" style="width: 100%; border-collapse: collapse; background: rgba(255,255,255,0.98); border-radius: 16px; overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,0.1);">
+                                    <thead>
+                                        <tr style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                                            <th style="padding: 18px 20px; text-align: left; font-weight: 600; color: white; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">Name</th>
+                                            <th style="padding: 18px 20px; text-align: left; font-weight: 600; color: white; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">Designation</th>
+                                            <th style="padding: 18px 20px; text-align: left; font-weight: 600; color: white; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">Fee</th>
+                                            <th style="padding: 18px 20px; text-align: left; font-weight: 600; color: white; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">CPD Requirements</th>
+                                            <th style="padding: 18px 20px; text-align: left; font-weight: 600; color: white; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="membership-table-body">
+                                        <tr>
+                                            <td colspan="5" style="text-align: center; padding: 40px 20px;">
+                                                <div class="loading-spinner" style="display: inline-block; width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #667eea; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                                                <p style="margin: 15px 0 0 0; color: #6b7280; font-size: 14px;">Loading membership levels...</p>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -356,6 +447,57 @@ if (!function_exists('add_success_notification')) {
     </div>
 </div>
 
+<!-- Membership Modal -->
+<div id="membership-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+    <div style="display: flex; align-items: center; justify-content: center; width: 100%; height: 100%;">
+        <div class="modal-content" style="background: white; border-radius: 12px; padding: 30px; width: 90%; max-width: 500px;">
+        <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h3 id="membership-modal-title" style="margin: 0; color: #374151;">Add Membership Level</h3>
+            <button id="close-membership-modal" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #6b7280;">&times;</button>
+        </div>
+        
+        <form id="membership-form">
+            <input type="hidden" id="membership-id" name="membership_id">
+            
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 5px; font-weight: 500; color: #374151;">Name *</label>
+                <input type="text" id="membership-name" name="name" required 
+                       style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px;">
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 5px; font-weight: 500; color: #374151;">Designation *</label>
+                <input type="text" id="membership-designation" name="designation" required 
+                       style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px;">
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 5px; font-weight: 500; color: #374151;">Fee (£) *</label>
+                <input type="number" id="membership-fee" name="fee" step="0.01" min="0" required 
+                       style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px;">
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 5px; font-weight: 500; color: #374151;">CPD Requirements</label>
+                <input type="text" id="membership-cpd-requirement" name="cpd_requirement" 
+                       style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px;">
+            </div>
+            
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button type="button" id="cancel-membership" 
+                        style="padding: 10px 20px; background: #6b7280; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                    Cancel
+                </button>
+                <button type="submit" 
+                        style="padding: 10px 20px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                    Save Membership
+                </button>
+            </div>
+        </form>
+    </div>
+    </div>
+</div>
+
 <!-- Delete Confirmation Modal -->
 <div id="delete-user-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
     <div class="modal-content" style="background: white; border-radius: 12px; padding: 30px; width: 90%; max-width: 400px;">
@@ -384,6 +526,26 @@ if (!function_exists('add_success_notification')) {
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+    transition: all 0.3s ease;
+}
+
+.btn-edit-membership:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4) !important;
+}
+
+.btn-delete-membership:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4) !important;
+}
+
+#add-membership-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4) !important;
 }
 
 .user-row:hover {
@@ -1302,10 +1464,231 @@ jQuery(document).ready(function($) {
         });
     }
 
+    // ===== MEMBERSHIP OVERVIEW FUNCTIONS =====
+    
+    /**
+     * Load membership overview data and statistics
+     */
+    function loadMembershipOverviewData() {
+        $.ajax({
+            url: '<?php echo admin_url('admin-ajax.php'); ?>',
+            type: 'POST',
+            data: {
+                action: 'iipm_get_membership_overview_data',
+                nonce: '<?php echo wp_create_nonce('iipm_user_management_nonce'); ?>'
+            },
+            success: function(response) {
+                if (response.success) {
+                    updateMembershipOverviewStats(response.data.stats);
+                    displayMembershipOverviewLevels(response.data.memberships);
+                } else {
+                    $('#membership-table-body').html('<tr><td colspan="5" class="error">Error loading membership data</td></tr>');
+                }
+            },
+            error: function() {
+                $('#membership-table-body').html('<tr><td colspan="5" class="error">Failed to load membership data</td></tr>');
+            }
+        });
+    }
+    
+    /**
+     * Update membership overview statistics cards
+     */
+    function updateMembershipOverviewStats(stats) {
+        $('#total-memberships').text(stats.total_memberships || '0');
+        $('#active-members').text(stats.active_members || '0');
+        $('#total-revenue').text('£' + (stats.total_revenue || '0'));
+    }
+    
+    /**
+     * Display membership levels in overview table
+     */
+    function displayMembershipOverviewLevels(memberships) {
+        let html = '';
+        if (memberships && memberships.length > 0) {
+            memberships.forEach(function(membership, index) {
+                const rowClass = index % 2 === 0 ? 'style="background: #ffffff;"' : 'style="background: #f8fafc;"';
+                html += `
+                    <tr ${rowClass}>
+                        <td style="padding: 18px 20px; border-bottom: 1px solid #e5e7eb; font-weight: 500; color: #374151;">${membership.name || 'N/A'}</td>
+                        <td style="padding: 18px 20px; border-bottom: 1px solid #e5e7eb; color: #6b7280;">${membership.designation || 'N/A'}</td>
+                        <td style="padding: 18px 20px; border-bottom: 1px solid #e5e7eb; color: #059669; font-weight: 600;">£${membership.fee || '0'}</td>
+                        <td style="padding: 18px 20px; border-bottom: 1px solid #e5e7eb; color: #6b7280;">${membership.cpd_requirement || 'N/A'}</td>
+                        <td style="padding: 18px 20px; border-bottom: 1px solid #e5e7eb;">
+                            <button class="btn-edit-membership" data-id="${membership.id}" style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; margin-right: 8px; font-size: 12px; font-weight: 500; box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3); transition: all 0.3s ease;">
+                                <i class="fas fa-edit" style="margin-right: 4px;"></i>
+                                Edit
+                            </button>
+                            <button class="btn-delete-membership" data-id="${membership.id}" data-name="${membership.name}" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 500; box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3); transition: all 0.3s ease;">
+                                <i class="fas fa-trash" style="margin-right: 4px;"></i>
+                                Delete
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+        } else {
+            html = '<tr><td colspan="5" style="text-align: center; padding: 40px 20px; color: #6b7280; font-size: 16px;">No membership levels found</td></tr>';
+        }
+        $('#membership-table-body').html(html);
+    }
+    
+    // ===== MEMBERSHIP CRUD FUNCTIONS =====
+    
+    /**
+     * Open membership modal for add/edit
+     */
+    function openMembershipModal(membershipId = null) {
+        const modal = $('#membership-modal');
+        const title = $('#membership-modal-title');
+        const form = $('#membership-form')[0];
+        
+        if (membershipId) {
+            title.text('Edit Membership Level');
+            loadMembershipForEdit(membershipId);
+        } else {
+            title.text('Add Membership Level');
+            form.reset();
+            $('#membership-id').val('');
+        }
+        
+        modal.css('display', 'flex');
+    }
+    
+    /**
+     * Load membership data for editing
+     */
+    function loadMembershipForEdit(membershipId) {
+        $.ajax({
+            url: '<?php echo admin_url('admin-ajax.php'); ?>',
+            type: 'POST',
+            data: {
+                action: 'iipm_get_single_membership',
+                nonce: '<?php echo wp_create_nonce('iipm_user_management_nonce'); ?>',
+                membership_id: membershipId
+            },
+            success: function(response) {
+                if (response.success) {
+                    const membership = response.data;
+                    console.log('Membership data:', membership); // Debug log
+                    $('#membership-id').val(membership.id);
+                    $('#membership-name').val(membership.name || '');
+                    $('#membership-designation').val(membership.designation || '');
+                    $('#membership-fee').val(membership.fee || '');
+                    $('#membership-cpd-requirement').val(membership.cpd_requirement || '');
+                } else {
+                    alert('Error loading membership data: ' + response.data);
+                }
+            },
+            error: function() {
+                alert('Failed to load membership data');
+            }
+        });
+    }
+    
+    /**
+     * Close membership modal
+     */
+    function closeMembershipModal() {
+        $('#membership-modal').css('display', 'none');
+    }
+    
+    /**
+     * Delete membership
+     */
+    function deleteMembership(membershipId, membershipName) {
+        if (!confirm(`Are you sure you want to delete "${membershipName}"? This action cannot be undone.`)) {
+            return;
+        }
+        
+        $.ajax({
+            url: '<?php echo admin_url('admin-ajax.php'); ?>',
+            type: 'POST',
+            data: {
+                action: 'iipm_delete_membership',
+                nonce: '<?php echo wp_create_nonce('iipm_user_management_nonce'); ?>',
+                membership_id: membershipId
+            },
+            success: function(response) {
+                if (response.success) {
+                    alert('Membership deleted successfully');
+                    loadMembershipOverviewData(); // Reload the data
+                } else {
+                    alert('Error deleting membership: ' + response.data);
+                }
+            },
+            error: function() {
+                alert('Failed to delete membership');
+            }
+        });
+    }
+
     // Load invitations on page load if we're on the invitations tab
     if ($('.invitations-content').length) {
         loadInvitations();
     }
+    
+    // Load membership data on page load if we're on the membership tab
+    if ($('.membership-content').length) {
+        loadMembershipOverviewData();
+    }
+    
+    // ===== MEMBERSHIP EVENT HANDLERS =====
+    
+    // Handle Add Membership button
+    $(document).on('click', '#add-membership-btn', function() {
+        openMembershipModal();
+    });
+    
+    // Handle Edit Membership button
+    $(document).on('click', '.btn-edit-membership', function() {
+        const membershipId = $(this).data('id');
+        openMembershipModal(membershipId);
+    });
+    
+    // Handle Delete Membership button
+    $(document).on('click', '.btn-delete-membership', function() {
+        const membershipId = $(this).data('id');
+        const membershipName = $(this).data('name');
+        deleteMembership(membershipId, membershipName);
+    });
+    
+    // Handle Close Membership Modal
+    $(document).on('click', '#close-membership-modal, #cancel-membership', function() {
+        closeMembershipModal();
+    });
+    
+    // Handle Membership Form Submission
+    $(document).on('submit', '#membership-form', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        const membershipId = $('#membership-id').val();
+        const action = membershipId ? 'iipm_update_membership' : 'iipm_create_membership';
+        
+        formData.append('action', action);
+        formData.append('nonce', '<?php echo wp_create_nonce('iipm_user_management_nonce'); ?>');
+        
+        $.ajax({
+            url: '<?php echo admin_url('admin-ajax.php'); ?>',
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                if (response.success) {
+                    alert(membershipId ? 'Membership updated successfully' : 'Membership created successfully');
+                    closeMembershipModal();
+                    loadMembershipOverviewData(); // Reload the data
+                } else {
+                    alert('Error: ' + response.data);
+                }
+            },
+            error: function() {
+                alert('Failed to save membership');
+            }
+        });
+    });
 
     // Handle invitation form submission
     $('#send-invitation-form').submit(function(e) {
