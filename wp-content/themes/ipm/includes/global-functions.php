@@ -114,14 +114,27 @@ if (!function_exists('iipm_calculate_user_leave_duration')) {
         $table_name = $wpdb->prefix . 'test_iipm_leave_requests';
         
         // Get all approved leave requests for the user in the specified year
+        // Handle varchar dd-mm-yyyy format
         $leave_requests = $wpdb->get_results($wpdb->prepare(
             "SELECT duration_days, status 
              FROM {$table_name} 
              WHERE user_id = %d 
-             AND YEAR(leave_start_date) = %d 
+             AND YEAR(STR_TO_DATE(leave_start_date, '%d-%m-%Y')) = %d 
              AND status = 'approved'",
             $user_id, $year
         ));
+        
+        // Fallback if STR_TO_DATE fails (dates might be in different format)
+        if (empty($leave_requests)) {
+            $leave_requests = $wpdb->get_results($wpdb->prepare(
+                "SELECT duration_days, status 
+                 FROM {$table_name} 
+                 WHERE user_id = %d 
+                 AND leave_start_date LIKE %s 
+                 AND status = 'approved'",
+                $user_id, "%-{$year}"
+            ));
+        }
 
         error_log('IIPM: Leave requests: ' . print_r($leave_requests, true));
         

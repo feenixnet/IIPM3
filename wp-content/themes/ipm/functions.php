@@ -429,9 +429,56 @@ add_action('init', 'custom_post_type_events');
 
 function add_query_vars_filter($vars) {
     $vars[] = "event_id";
+    $vars[] = "user_details_id";
+    $vars[] = "user_details_page";
     return $vars;
 }
 add_filter('query_vars', 'add_query_vars_filter');
+
+/**
+ * Add rewrite rules for custom pages
+ */
+function add_custom_rewrite_rules() {
+    add_rewrite_rule('^user-details/?$', 'index.php?page_id=0&user_details_page=1', 'top');
+}
+add_action('init', 'add_custom_rewrite_rules');
+
+/**
+ * Handle user details page routing
+ */
+function handle_user_details_page() {
+    global $wp_query;
+    
+    if (isset($wp_query->query_vars['user_details_page']) && $wp_query->query_vars['user_details_page'] == 1) {
+        $user_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
+        
+        if ($user_id > 0) {
+            // Load the user details template
+            $template_path = get_template_directory() . '/template-user-details.php';
+            if (file_exists($template_path)) {
+                include($template_path);
+                exit;
+            }
+        } else {
+            // If no user ID provided, redirect to user management
+            wp_redirect(home_url('/user-management/'));
+            exit;
+        }
+    }
+}
+add_action('template_redirect', 'handle_user_details_page', 5);
+
+/**
+ * Flush rewrite rules when needed
+ */
+function flush_rewrite_rules_for_user_details() {
+    if (get_option('user_details_rewrite_rules_flushed') !== '1') {
+        add_custom_rewrite_rules();
+        flush_rewrite_rules();
+        update_option('user_details_rewrite_rules_flushed', '1');
+    }
+}
+add_action('init', 'flush_rewrite_rules_for_user_details');
 
 function custom_post_type_downloads() {
     $labels = array(
@@ -741,7 +788,7 @@ function iipm_create_enhanced_tables() {
 }
 
 // Hook to create tables on theme activation
-add_action('after_switch_theme', 'iipm_create_enhanced_tables');
+// add_action('after_switch_theme', 'iipm_create_enhanced_tables');
 
 /**
  * IIPM Enhanced User Roles - UPDATED FOR MILESTONE 2 + LEAVE REQUESTS
@@ -1956,25 +2003,38 @@ function iipm_handle_submit_leave_request() {
     $leave_start_date = sanitize_text_field($_POST['leave_start_date'] ?? '');
     $leave_end_date = sanitize_text_field($_POST['leave_end_date'] ?? '');
     $leave_description = sanitize_textarea_field($_POST['leave_description'] ?? '');
+    $hours_deduct = floatval($_POST['hours_deduct'] ?? 0);
     
     if (empty($leave_title) || empty($leave_reason) || empty($leave_start_date) || empty($leave_end_date)) {
         wp_send_json_error('All required fields must be filled');
         return;
     }
     
-    if (strtotime($leave_start_date) >= strtotime($leave_end_date)) {
+    // Convert dates to dd-mm-yyyy format for storage
+    $leave_start_date_formatted = iipm_convert_date_to_display_format($leave_start_date);
+    $leave_end_date_formatted = iipm_convert_date_to_display_format($leave_end_date);
+    
+    // Validate dates using converted format
+    $start_db = iipm_convert_date_to_db_format($leave_start_date_formatted);
+    $end_db = iipm_convert_date_to_db_format($leave_end_date_formatted);
+    
+    if (empty($start_db) || empty($end_db)) {
+        wp_send_json_error('Invalid date format');
+        return;
+    }
+    
+    if (strtotime($start_db) >= strtotime($end_db)) {
         wp_send_json_error('End date must be after start date');
         return;
     }
     
-    if (strtotime($leave_start_date) < strtotime('today')) {
+    if (strtotime($start_db) < strtotime('today')) {
         wp_send_json_error('Start date cannot be in the past');
         return;
     }
     
-    $start = new DateTime($leave_start_date);
-    $end = new DateTime($leave_end_date);
-    $duration_days = $end->diff($start)->days + 1;
+    // Calculate duration using helper function
+    $duration_days = iipm_calculate_duration_days($leave_start_date_formatted, $leave_end_date_formatted);
     
     global $wpdb;
     
@@ -1984,13 +2044,14 @@ function iipm_handle_submit_leave_request() {
             'user_id' => $user_id,
             'title' => $leave_title,
             'reason' => $leave_reason,
-            'leave_start_date' => $leave_start_date,
-            'leave_end_date' => $leave_end_date,
+            'leave_start_date' => $leave_start_date_formatted,
+            'leave_end_date' => $leave_end_date_formatted,
             'duration_days' => $duration_days,
             'description' => $leave_description,
-            'status' => 'pending'
+            'status' => 'pending',
+            'hours_deduct' => $hours_deduct
         ),
-        array('%d', '%s', '%s', '%s', '%s', '%d', '%s', '%s')
+        array('%d', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%f')
     );
     
     if ($result !== false) {
@@ -2109,6 +2170,42 @@ function iipm_handle_cancel_leave_request() {
     }
 }
 add_action('wp_ajax_iipm_cancel_leave_request', 'iipm_handle_cancel_leave_request');
+
+/**
+ * AJAX handler for getting user leave requests for a specific year
+ */
+function iipm_ajax_get_user_leave_requests_for_year() {
+    // Verify nonce
+    if (!wp_verify_nonce($_POST['nonce'], 'iipm_portal_nonce')) {
+        wp_send_json_error('Invalid nonce');
+        return;
+    }
+    
+    // Check user permissions
+    if (!current_user_can('manage_options')) {
+        wp_send_json_error('Insufficient permissions');
+        return;
+    }
+    
+    $user_id = intval($_POST['user_id'] ?? 0);
+    $year = intval($_POST['year'] ?? date('Y'));
+    
+    if (!$user_id) {
+        wp_send_json_error('User ID is required');
+        return;
+    }
+    
+    // Get leave requests for the user and year
+    $leave_requests = iipm_get_user_leave_requests_for_year($user_id, $year);
+    
+    wp_send_json_success(array(
+        'leave_requests' => $leave_requests,
+        'year' => $year,
+        'user_id' => $user_id
+    ));
+}
+add_action('wp_ajax_iipm_get_user_leave_requests_for_year', 'iipm_ajax_get_user_leave_requests_for_year');
+add_action('wp_ajax_nopriv_iipm_get_user_leave_requests_for_year', 'iipm_ajax_get_user_leave_requests_for_year');
 
 /**
  * AJAX handler for creating sample persistent notifications
@@ -2662,7 +2759,8 @@ function iipm_protect_portal_pages() {
         is_page_template('template-cpd-courses.php') ||
         is_page_template('template-leave-request.php') ||
         is_page_template('template-leave-admin.php') ||
-        is_page_template('template-course-management.php')) {
+        is_page_template('template-course-management.php') ||
+        is_page_template('template-user-details.php')) {
         
         if (!is_user_logged_in()) {
             wp_redirect(home_url('/login/'));
@@ -3198,7 +3296,7 @@ add_action('admin_init', 'iipm_check_version');
 function iipm_run_updates($from_version, $to_version) {
 	error_log("IIPM: Updating from version $from_version to $to_version");
 	
-	iipm_create_enhanced_tables();
+	// iipm_create_enhanced_tables();
 	
 	if (version_compare($from_version, '1.1.0', '<')) {
 		error_log('IIPM: Running 1.1.0 updates');
@@ -3257,7 +3355,7 @@ register_deactivation_hook(__FILE__, 'iipm_deactivation_cleanup');
  * IIPM Final Initialization
  */
 function iipm_final_init() {
-    iipm_create_enhanced_tables();
+    // iipm_create_enhanced_tables();
     
     // Call CPD table creation from the includes file
     if (function_exists('iipm_create_cpd_tables')) {
@@ -5391,6 +5489,262 @@ function iipm_handle_delete_user() {
 }
 add_action('wp_ajax_iipm_delete_user', 'iipm_handle_delete_user');
 
+/**
+ * Get comprehensive user details for admin management
+ */
+function iipm_get_user_details_for_admin() {
+    // Verify nonce and permissions
+    if (!wp_verify_nonce($_POST['nonce'], 'iipm_user_management_nonce')) {
+        wp_die('Security check failed');
+    }
+    
+    $user_id = intval($_POST['user_id']);
+    $current_user = wp_get_current_user();
+    $is_site_admin = current_user_can('administrator');
+    $is_org_admin = in_array('iipm_corporate_admin', $current_user->roles) || current_user_can('manage_organisation_members');
+    
+    if (!$is_site_admin && !$is_org_admin) {
+        wp_send_json_error('Access denied');
+        return;
+    }
+    
+    if ($user_id <= 0) {
+        wp_send_json_error('Invalid user ID');
+        return;
+    }
+    
+    global $wpdb;
+    
+    // Get user basic info from wp_users
+    $user = get_user_by('ID', $user_id);
+    if (!$user) {
+        wp_send_json_error('User not found');
+        return;
+    }
+    
+    // Get member data from wp_test_iipm_members
+    $member_data = $wpdb->get_row($wpdb->prepare(
+        "SELECT * FROM {$wpdb->prefix}test_iipm_members WHERE user_id = %d",
+        $user_id
+    ));
+    
+    // Get profile data from wp_test_iipm_member_profiles  
+    $profile_data = $wpdb->get_row($wpdb->prepare(
+        "SELECT * FROM {$wpdb->prefix}test_iipm_member_profiles WHERE user_id = %d",
+        $user_id
+    ));
+    
+    // Get membership details if membership_level exists
+    $membership_data = null;
+    if ($member_data && $member_data->membership_level) {
+        $membership_data = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$wpdb->prefix}test_iipm_memberships WHERE id = %d",
+            $member_data->membership_level
+        ));
+    }
+    
+    // Get all memberships for dropdown
+    $all_memberships = $wpdb->get_results("SELECT * FROM {$wpdb->prefix}test_iipm_memberships ORDER BY name ASC");
+    
+    // Get organization details if employer_id exists
+    $organization_data = null;
+    if ($profile_data && $profile_data->employer_id) {
+        $organization_data = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$wpdb->prefix}test_iipm_organisations WHERE id = %d",
+            $profile_data->employer_id
+        ));
+    }
+    
+    // Get all organizations for dropdown
+    $all_organizations = $wpdb->get_results("SELECT * FROM {$wpdb->prefix}test_iipm_organisations ORDER BY name ASC");
+    
+    // Get last login
+    $last_login = get_user_meta($user_id, 'last_login_date', true);
+    if ($last_login) {
+        $last_login = date('Y-m-d H:i:s', strtotime($last_login));
+    } else {
+        $last_login = 'Never';
+    }
+    
+    // Get membership status
+    $membership_status = get_user_meta($user_id, 'membership_status', true);
+    
+    // Check CPD submission status
+    $cpd_submitted = get_user_meta($user_id, 'cpd_submitted', true);
+    
+    // Determine role display
+    $role_display = 'Member';
+    if (in_array('administrator', $user->roles)) {
+        $role_display = 'Site Admin';
+    } elseif (in_array('iipm_corporate_admin', $user->roles)) {
+        $role_display = 'Organization Admin';
+    } elseif (in_array('editor', $user->roles)) {
+        $role_display = 'Editor';
+    }
+    
+    // Compile comprehensive user data
+    $user_details = array(
+        // Basic User Info (wp_users)
+        'user_id' => $user_id,
+        'user_login' => $user->user_login,
+        'user_email' => $user->user_email,
+        'role_display' => $role_display,
+        'membership_status' => $membership_status ?: 'active',
+        'last_login' => $last_login,
+        'cpd_submitted' => (bool) $cpd_submitted,
+        
+        // Member Data (wp_test_iipm_members)
+        'member_type' => $member_data ? $member_data->member_type : '',
+        'membership_level_id' => $member_data ? $member_data->membership_level : '',
+        'membership_level_name' => $membership_data ? $membership_data->name : '',
+        
+        // Profile Data (wp_test_iipm_member_profiles)
+        'user_phone' => $profile_data ? $profile_data->user_phone : '',
+        'email_address' => $profile_data ? $profile_data->email_address : '',
+        'user_mobile' => $profile_data ? $profile_data->user_mobile : '',
+        'city_or_town' => $profile_data ? $profile_data->city_or_town : '',
+        'first_name' => $profile_data ? $profile_data->first_name : '',
+        'sur_name' => $profile_data ? $profile_data->sur_name : '',
+        'user_payment_method' => $profile_data ? $profile_data->user_payment_method : '',
+        'Address_1' => $profile_data ? $profile_data->Address_1 : '',
+        'Address_2' => $profile_data ? $profile_data->Address_2 : '',
+        'Address_3' => $profile_data ? $profile_data->Address_3 : '',
+        
+        // Personal Information (_pers fields)
+        'email_address_pers' => $profile_data ? $profile_data->email_address_pers : '',
+        'user_phone_pers' => $profile_data ? $profile_data->user_phone_pers : '',
+        'user_mobile_pers' => $profile_data ? $profile_data->user_mobile_pers : '',
+        'Address_1_pers' => $profile_data ? $profile_data->Address_1_pers : '',
+        'Address_2_pers' => $profile_data ? $profile_data->Address_2_pers : '',
+        'Address_3_pers' => $profile_data ? $profile_data->Address_3_pers : '',
+        'correspondence_email' => $profile_data ? $profile_data->correspondence_email : '',
+        
+        // Employer Information
+        'employer_id' => $profile_data ? $profile_data->employer_id : '',
+        'employer_name' => $organization_data ? $organization_data->name : '',
+        
+        // Dropdown Data
+        'all_memberships' => $all_memberships,
+        'all_organizations' => $all_organizations
+    );
+    
+    wp_send_json_success($user_details);
+}
+add_action('wp_ajax_iipm_get_user_details_for_admin', 'iipm_get_user_details_for_admin');
+
+// AJAX handler for updating user details
+function iipm_handle_update_user_details() {
+    // Verify nonce and permissions
+    if (!wp_verify_nonce($_POST['nonce'], 'iipm_user_management_nonce')) {
+        wp_send_json_error('Security check failed');
+        return;
+    }
+    
+    $current_user = wp_get_current_user();
+    $is_site_admin = current_user_can('administrator');
+    $is_org_admin = in_array('iipm_corporate_admin', $current_user->roles) || current_user_can('manage_organisation_members');
+    
+    if (!$is_site_admin && !$is_org_admin) {
+        wp_send_json_error('Access denied');
+        return;
+    }
+    
+    global $wpdb;
+    $user_id = intval($_POST['user_id']);
+    
+    // Validate user exists
+    $user = get_user_by('ID', $user_id);
+    if (!$user) {
+        wp_send_json_error('User not found');
+        return;
+    }
+    
+    try {
+        // Update wp_users table
+        if (isset($_POST['user_email']) && !empty($_POST['user_email'])) {
+            $user_email = sanitize_email($_POST['user_email']);
+            
+            // Check if email is already used by another user
+            $existing_user = get_user_by('email', $user_email);
+            if ($existing_user && $existing_user->ID != $user_id) {
+                wp_send_json_error('Email address is already in use');
+                return;
+            }
+            
+            wp_update_user(array(
+                'ID' => $user_id,
+                'user_email' => $user_email
+            ));
+        }
+        
+        // Update wp_test_iipm_members table
+        $member_data = array(
+            'member_type' => sanitize_text_field($_POST['member_type'] ?? ''),
+            'membership_level' => intval($_POST['membership_level_id'] ?? 0)
+        );
+        
+        $existing_member = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$wpdb->prefix}test_iipm_members WHERE user_id = %d",
+            $user_id
+        ));
+        
+        if ($existing_member) {
+            $wpdb->update(
+                "{$wpdb->prefix}test_iipm_members",
+                $member_data,
+                array('user_id' => $user_id)
+            );
+        } else {
+            $member_data['user_id'] = $user_id;
+            $wpdb->insert("{$wpdb->prefix}test_iipm_members", $member_data);
+        }
+        
+        // Update wp_test_iipm_member_profiles table
+        $profile_data = array(
+            'user_phone' => sanitize_text_field($_POST['user_phone'] ?? ''),
+            'email_address' => sanitize_email($_POST['email_address'] ?? ''),
+            'user_mobile' => sanitize_text_field($_POST['user_mobile'] ?? ''),
+            'city_or_town' => sanitize_text_field($_POST['city_or_town'] ?? ''),
+            'first_name' => sanitize_text_field($_POST['first_name'] ?? ''),
+            'sur_name' => sanitize_text_field($_POST['sur_name'] ?? ''),
+            'user_payment_method' => sanitize_text_field($_POST['user_payment_method'] ?? ''),
+            'Address_1' => sanitize_text_field($_POST['Address_1'] ?? ''),
+            'Address_2' => sanitize_text_field($_POST['Address_2'] ?? ''),
+            'Address_3' => sanitize_text_field($_POST['Address_3'] ?? ''),
+            'email_address_pers' => sanitize_email($_POST['email_address_pers'] ?? ''),
+            'user_phone_pers' => sanitize_text_field($_POST['user_phone_pers'] ?? ''),
+            'user_mobile_pers' => sanitize_text_field($_POST['user_mobile_pers'] ?? ''),
+            'Address_1_pers' => sanitize_text_field($_POST['Address_1_pers'] ?? ''),
+            'Address_2_pers' => sanitize_text_field($_POST['Address_2_pers'] ?? ''),
+            'Address_3_pers' => sanitize_text_field($_POST['Address_3_pers'] ?? ''),
+            'correspondence_email' => sanitize_email($_POST['correspondence_email'] ?? ''),
+            'employer_id' => intval($_POST['employer_id'] ?? 0)
+        );
+        
+        $existing_profile = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$wpdb->prefix}test_iipm_member_profiles WHERE user_id = %d",
+            $user_id
+        ));
+        
+        if ($existing_profile) {
+            $wpdb->update(
+                "{$wpdb->prefix}test_iipm_member_profiles",
+                $profile_data,
+                array('user_id' => $user_id)
+            );
+        } else {
+            $profile_data['user_id'] = $user_id;
+            $wpdb->insert("{$wpdb->prefix}test_iipm_member_profiles", $profile_data);
+        }
+        
+        wp_send_json_success('User details updated successfully');
+        
+    } catch (Exception $e) {
+        wp_send_json_error('Failed to update user details: ' . $e->getMessage());
+    }
+}
+add_action('wp_ajax_iipm_update_user_details', 'iipm_handle_update_user_details');
+
 // AJAX handler for saving organisation (add/edit)
 function iipm_handle_save_organisation() {
     // Verify nonce
@@ -5984,7 +6338,344 @@ add_action('wp_ajax_iipm_delete_course_v1', 'iipm_handle_delete_course_v1');
 require_once get_template_directory() . '/includes/cpd-certificate-functions.php';
 require_once get_template_directory() . '/includes/cpd-submission-functions.php';
 
+// Include qualification handlers
+require_once get_template_directory() . '/includes/qualification-handlers.php';
+
 // Include TCPDF library for PDF generation
 if (!class_exists('TCPDF')) {
     require_once get_template_directory() . '/includes/tcpdf/tcpdf.php';
 }
+
+/**
+ * AJAX handler for getting comprehensive user details for admin
+ */
+function iipm_admin_get_user_details() {
+    // Verify nonce and permissions
+    if (!wp_verify_nonce($_POST['nonce'], 'iipm_user_management_nonce')) {
+        wp_send_json_error('Security check failed');
+        return;
+    }
+    
+    $current_user = wp_get_current_user();
+    $is_site_admin = current_user_can('administrator');
+    $is_org_admin = in_array('iipm_corporate_admin', $current_user->roles) || current_user_can('manage_organisation_members');
+    
+    if (!$is_site_admin && !$is_org_admin) {
+        wp_send_json_error('Access denied');
+        return;
+    }
+    
+    $user_id = intval($_POST['user_id']);
+    if (!$user_id) {
+        wp_send_json_error('Invalid user ID');
+        return;
+    }
+    
+    global $wpdb;
+    
+    // Get user basic info from wp_users
+    $user_data = $wpdb->get_row($wpdb->prepare(
+        "SELECT user_login, user_email FROM {$wpdb->users} WHERE ID = %d",
+        $user_id
+    ));
+    
+    if (!$user_data) {
+        wp_send_json_error('User not found');
+        return;
+    }
+    
+    // Get member data from wp_test_iipm_members
+    $member_data = $wpdb->get_row($wpdb->prepare(
+        "SELECT member_type, membership_level, membership_status FROM {$wpdb->prefix}test_iipm_members WHERE user_id = %d",
+        $user_id
+    ));
+
+
+    
+    // Get profile data from wp_test_iipm_member_profiles
+    $profile_data = $wpdb->get_row($wpdb->prepare(
+        "SELECT user_phone, email_address, user_mobile, city_or_town, first_name, sur_name, 
+                user_payment_method, Address_1, Address_2, Address_3,
+                email_address_pers, user_phone_pers, user_mobile_pers, 
+                Address_1_pers, Address_2_pers, Address_3_pers, correspondence_email,
+                employer_id FROM {$wpdb->prefix}test_iipm_member_profiles WHERE user_id = %d",
+        $user_id
+    ));
+    
+    // Get organization address if user has employer
+    $organization_data = null;
+    if ($profile_data && $profile_data->employer_id) {
+        $organization_data = $wpdb->get_row($wpdb->prepare(
+            "SELECT name, address_line1, address_line2, address_line3 FROM {$wpdb->prefix}test_iipm_organisations WHERE id = %d",
+            $profile_data->employer_id
+        ));
+    }
+    
+    // Get all membership levels for select options
+    $memberships = $wpdb->get_results("SELECT * FROM {$wpdb->prefix}memberships ORDER BY name");
+    
+    // Get all organizations for select options
+    $organizations = $wpdb->get_results("SELECT id, name FROM {$wpdb->prefix}test_iipm_organisations ORDER BY name");
+    
+    // Build response
+    $user_details = array(
+        'basic_info' => array(
+            'user_id' => $user_id,
+            'user_login' => $user_data->user_login,
+            'user_email' => $user_data->user_email
+        ),
+        'member_info' => array(
+            'member_type' => $member_data ? $member_data->member_type : '',
+            'membership_level' => $member_data ? $member_data->membership_level : '',
+            'membership_status' => $member_data ? $member_data->membership_status : ''
+        ),
+        'profile_info' => array(
+            'user_phone' => $profile_data ? $profile_data->user_phone : '',
+            'email_address' => $profile_data ? $profile_data->email_address : '',
+            'user_mobile' => $profile_data ? $profile_data->user_mobile : '',
+            'city_or_town' => $profile_data ? $profile_data->city_or_town : '',
+            'first_name' => $profile_data ? $profile_data->first_name : '',
+            'sur_name' => $profile_data ? $profile_data->sur_name : '',
+            'user_payment_method' => $profile_data ? $profile_data->user_payment_method : '',
+            'Address_1' => $profile_data ? $profile_data->Address_1 : '',
+            'Address_2' => $profile_data ? $profile_data->Address_2 : '',
+            'Address_3' => $profile_data ? $profile_data->Address_3 : '',
+            'email_address_pers' => $profile_data ? $profile_data->email_address_pers : '',
+            'user_phone_pers' => $profile_data ? $profile_data->user_phone_pers : '',
+            'user_mobile_pers' => $profile_data ? $profile_data->user_mobile_pers : '',
+            'Address_1_pers' => $profile_data ? $profile_data->Address_1_pers : '',
+            'Address_2_pers' => $profile_data ? $profile_data->Address_2_pers : '',
+            'Address_3_pers' => $profile_data ? $profile_data->Address_3_pers : '',
+            'correspondence_email' => $profile_data ? $profile_data->correspondence_email : '',
+            'employer_id' => $profile_data ? $profile_data->employer_id : ''
+        ),
+        'organization_info' => $organization_data ? array(
+            'name' => $organization_data->name,
+            'address_line1' => $organization_data->address_line1,
+            'address_line2' => $organization_data->address_line2,
+            'address_line3' => $organization_data->address_line3
+        ) : null,
+        'options' => array(
+            'memberships' => $memberships,
+            'organizations' => $organizations
+        )
+    );
+    
+    wp_send_json_success($user_details);
+}
+add_action('wp_ajax_iipm_admin_get_user_details', 'iipm_admin_get_user_details');
+
+/**
+ * AJAX handler for updating comprehensive user details by admin
+ */
+function iipm_admin_update_user_details() {
+    // Verify nonce and permissions
+    if (!wp_verify_nonce($_POST['nonce'], 'iipm_user_management_nonce')) {
+        wp_send_json_error('Security check failed');
+        return;
+    }
+    
+    $current_user = wp_get_current_user();
+    $is_site_admin = current_user_can('administrator');
+    $is_org_admin = in_array('iipm_corporate_admin', $current_user->roles) || current_user_can('manage_organisation_members');
+    
+    if (!$is_site_admin && !$is_org_admin) {
+        wp_send_json_error('Access denied');
+        return;
+    }
+    
+    $user_id = intval($_POST['user_id']);
+    if (!$user_id) {
+        wp_send_json_error('Invalid user ID');
+        return;
+    }
+    
+    global $wpdb;
+    
+    // Validation function for required fields
+    function validate_user_details($data) {
+        $errors = array();
+        
+        // Required fields validation
+        $required_fields = array(
+            'first_name' => 'First Name',
+            'sur_name' => 'Surname', 
+            'user_email' => 'Email',
+            'member_type' => 'Member Type',
+            'membership_level_id' => 'Membership Level',
+            'membership_status' => 'Membership Status',
+            'user_phone' => 'Phone',
+            'user_payment_method' => 'Payment Method'
+        );
+        
+        // Check required fields
+        foreach ($required_fields as $field => $label) {
+            if (!isset($data[$field]) || empty($data[$field]) || $data[$field] === '') {
+                $errors[] = $label . ' is required';
+            }
+        }
+        
+        // Email validation
+        if (isset($data['user_email']) && !empty($data['user_email'])) {
+            if (!is_email($data['user_email'])) {
+                $errors[] = 'Email address is not valid';
+            }
+        }
+        
+        // At least one address required
+        $addresses = array('Address_1', 'Address_2', 'Address_3');
+        $has_address = false;
+        foreach ($addresses as $addr) {
+            if (isset($data[$addr]) && !empty($data[$addr])) {
+                $has_address = true;
+                break;
+            }
+        }
+        if (!$has_address) {
+            $errors[] = 'At least one address (Address 1, 2, or 3) is required';
+        }
+        
+        // Employer ID required for organisation members
+        if (isset($data['member_type']) && $data['member_type'] === 'organisation') {
+            if (!isset($data['employer_id']) || empty($data['employer_id']) || $data['employer_id'] === '0') {
+                $errors[] = 'Employer/Organization is required for organisation members';
+            }
+        }
+        
+        return $errors;
+    }
+    
+    // Validate the submitted data
+    $validation_errors = validate_user_details($_POST);
+    if (!empty($validation_errors)) {
+        wp_send_json_error('Validation failed: ' . implode(', ', $validation_errors));
+        return;
+    }
+    
+    try {
+        // Update wp_users table
+        if (isset($_POST['user_email'])) {
+            $wpdb->update(
+                $wpdb->users,
+                array('user_email' => sanitize_email($_POST['user_email']), 'display_name' => sanitize_text_field($_POST['first_name']) . " " . sanitize_text_field($_POST['sur_name'])),
+                array('ID' => $user_id),
+                array('%s'),
+                array('%d')
+            );
+        }
+        
+        // Update wp_test_iipm_members table
+        $member_data = array();
+        $membership_level_changed = false;
+        
+        if (isset($_POST['member_type'])) {
+            $member_data['member_type'] = sanitize_text_field($_POST['member_type']);
+        }
+        if (isset($_POST['membership_level_id'])) {
+            $old_membership_level = $wpdb->get_var($wpdb->prepare(
+                "SELECT membership_level FROM {$wpdb->prefix}test_iipm_members WHERE user_id = %d",
+                $user_id
+            ));
+            $new_membership_level = intval($_POST['membership_level_id']);
+            
+            if ($old_membership_level != $new_membership_level) {
+                $membership_level_changed = true;
+            }
+            
+            $member_data['membership_level'] = $new_membership_level;
+        }
+        if (isset($_POST['membership_status'])) {
+            $member_data['membership_status'] = sanitize_text_field($_POST['membership_status']);
+        }
+        
+        if (!empty($member_data)) {
+            $existing_member = $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM {$wpdb->prefix}test_iipm_members WHERE user_id = %d",
+                $user_id
+            ));
+            
+            if ($existing_member) {
+                $member_data['updated_at'] = current_time('mysql');
+                $wpdb->update(
+                    $wpdb->prefix . 'test_iipm_members',
+                    $member_data,
+                    array('user_id' => $user_id),
+                    array('%s', '%d', '%s'),
+                    array('%d')
+                );
+            } else {
+                $member_data['user_id'] = $user_id;
+                $member_data['created_at'] = current_time('mysql');
+                $member_data['updated_at'] = current_time('mysql');
+                $wpdb->insert($wpdb->prefix . 'test_iipm_members', $member_data);
+            }
+        }
+        
+        // Get new designation if membership level changed
+        $new_designation = null;
+        if ($membership_level_changed && isset($_POST['membership_level_id'])) {
+            $membership_info = $wpdb->get_row($wpdb->prepare(
+                "SELECT designation, name FROM {$wpdb->prefix}memberships WHERE id = %d",
+                intval($_POST['membership_level_id'])
+            ));
+            
+            if ($membership_info) {
+                $new_designation = $membership_info->designation;
+                error_log("IIPM: Membership level changed to {$membership_info->name}, designation: {$new_designation}");
+            }
+        }
+        
+        // Update wp_test_iipm_member_profiles table
+        $profile_data = array();
+        $profile_fields = array(
+            'user_phone', 'email_address', 'user_mobile', 'city_or_town', 'first_name', 'sur_name',
+            'user_payment_method', 'Address_1', 'Address_2', 'Address_3',
+            'email_address_pers', 'user_phone_pers', 'user_mobile_pers',
+            'Address_1_pers', 'Address_2_pers', 'Address_3_pers', 'correspondence_email'
+        );
+        
+        foreach ($profile_fields as $field) {
+            if (isset($_POST[$field])) {
+                $profile_data[$field] = sanitize_text_field($_POST[$field]);
+            }
+            $profile_data['email_address'] = sanitize_email($_POST['user_email']);
+            $profile_data['user_fullName'] = sanitize_text_field($_POST['first_name']) . " " . sanitize_text_field($_POST['sur_name']);
+            $profile_data['employer_id'] = $member_data['member_type'] == "individual" ? 0 : intval($_POST['employer_id']);
+        }
+        
+        // Add designation if membership level changed
+        if ($membership_level_changed && $new_designation !== null) {
+            $profile_data['user_designation'] = $new_designation;
+        }
+        
+        if (!empty($profile_data)) {
+            $existing_profile = $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM {$wpdb->prefix}test_iipm_member_profiles WHERE user_id = %d",
+                $user_id
+            ));
+            
+            if ($existing_profile) {
+                $profile_data['updated_at'] = current_time('mysql');
+                $result = $wpdb->update(
+                    $wpdb->prefix . 'test_iipm_member_profiles',
+                    $profile_data,
+                    array('user_id' => $user_id),
+                    array_fill(0, count($profile_data), '%s'),
+                    array('%d')
+                );
+                error_log(print_r($result, true));
+            } else {
+                $profile_data['user_id'] = $user_id;
+                $profile_data['created_at'] = current_time('mysql');
+                $profile_data['updated_at'] = current_time('mysql');
+                $wpdb->insert($wpdb->prefix . 'test_iipm_member_profiles', $profile_data);
+            }
+        }
+        
+        wp_send_json_success('User details updated successfully');
+        
+    } catch (Exception $e) {
+        wp_send_json_error('Failed to update user details: ' . $e->getMessage());
+    }
+}
+add_action('wp_ajax_iipm_admin_update_user_details', 'iipm_admin_update_user_details');

@@ -115,7 +115,7 @@ foreach ($leave_requests as $request) {
                                     </div>
                                     <h4><?php echo esc_html($request->title); ?></h4>
                                     <div class="request-details">
-                                        <p><strong>Leave Date:</strong> <?php echo date('m/d/Y', strtotime($request->leave_start_date)); ?> - <?php echo date('m/d/Y', strtotime($request->leave_end_date)); ?></p>
+                                        <p><strong>Leave Date:</strong> <?php echo iipm_format_date_for_display($request->leave_start_date, 'm/d/Y'); ?> - <?php echo iipm_format_date_for_display($request->leave_end_date, 'm/d/Y'); ?></p>
                                         <p><strong>Leave Duration:</strong> <?php echo $request->duration_days; ?> days</p>
                                     </div>
                                 </div>
@@ -143,7 +143,7 @@ foreach ($leave_requests as $request) {
                                     </div>
                                     <h4><?php echo esc_html($request->title); ?></h4>
                                     <div class="request-details">
-                                        <p><strong>Leave Date:</strong> <?php echo date('m/d/Y', strtotime($request->leave_start_date)); ?> - <?php echo date('m/d/Y', strtotime($request->leave_end_date)); ?></p>
+                                        <p><strong>Leave Date:</strong> <?php echo iipm_format_date_for_display($request->leave_start_date, 'm/d/Y'); ?> - <?php echo iipm_format_date_for_display($request->leave_end_date, 'm/d/Y'); ?></p>
                                         <p><strong>Leave Duration:</strong> <?php echo $request->duration_days; ?> days</p>
                                     </div>
                                 </div>
@@ -1299,11 +1299,17 @@ function fetchAndDisplayCpdImpact() {
     });
 }
 
+// Global variable to store deducted hours
+let deductedHoursFromCPD = 0;
+
 // Function to display CPD impact data
 function displayCpdImpact(data) {
     const cpdContent = document.getElementById('cpdImpactContent');
     
     const duration = Math.ceil((selectedEndDate - selectedStartDate) / (1000 * 60 * 60 * 24)) + 1;
+    
+    // Store the deducted hours for form submission
+    deductedHoursFromCPD = Math.abs(data.difference);
     
     cpdContent.innerHTML = `
         <div class="cpd-stat-item primary">
@@ -1445,8 +1451,8 @@ function updateFormFields() {
 }
 
 function formatDate(date) {
-    return String(date.getDate()).padStart(2, '0') + '/' + 
-           String(date.getMonth() + 1).padStart(2, '0') + '/' + 
+    return String(date.getDate()).padStart(2, '0') + '-' + 
+           String(date.getMonth() + 1).padStart(2, '0') + '-' + 
            date.getFullYear();
 }
 
@@ -1498,14 +1504,18 @@ document.addEventListener('DOMContentLoaded', function() {
             
             const duration = Math.ceil((selectedEndDate - selectedStartDate) / (1000 * 60 * 60 * 24)) + 1;
             
+            // Use the deducted hours calculated from CPD impact
+            const deductedHours = deductedHoursFromCPD || 0;
+            
             const formData = new FormData();
             formData.append('action', 'iipm_submit_leave_request');
             formData.append('nonce', nonce);
             formData.append('leave_title', `Leave Request for ${duration} days`);
             formData.append('leave_reason', 'personal');
-            formData.append('leave_start_date', selectedStartDate.toISOString().split('T')[0]);
-            formData.append('leave_end_date', selectedEndDate.toISOString().split('T')[0]);
+            formData.append('leave_start_date', formatDate(selectedStartDate));
+            formData.append('leave_end_date', formatDate(selectedEndDate));
             formData.append('leave_description', note);
+            formData.append('hours_deduct', deductedHours);
             
             // Disable submit button
             const submitBtn = this.querySelector('button[type="submit"]');
@@ -1548,7 +1558,7 @@ function cancelLeaveRequestFromDetail() {
     pendingCancelRequestId = currentRequestDetail.id;
     
     // Update the confirmation text with actual dates
-    const dateRange = formatDateRange(currentRequestDetail.leave_start_date, currentRequestDetail.leave_end_date);
+    const dateRange = formatDateRangeFromStrings(currentRequestDetail.leave_start_date, currentRequestDetail.leave_end_date);
     document.getElementById('cancelConfirmationText').textContent = 
         `Confirm the cancellation of your leave request from ${dateRange}. Leave request will be deleted immediately.`;
     
@@ -1573,7 +1583,7 @@ function confirmCancelRequest() {
     
     // Get the request data for success message
     const requestData = getRequestData(pendingCancelRequestId);
-    const dateRange = formatDateRange(requestData.leave_start_date, requestData.leave_end_date);
+    const dateRange = formatDateRangeFromStrings(requestData.leave_start_date, requestData.leave_end_date);
     
     fetch(window.iipm_ajax.ajax_url, {
         method: 'POST',
@@ -1649,7 +1659,7 @@ function openLeaveRequestDetail(requestId) {
     // Update modal content
     document.getElementById('detail-submitted').textContent = formatDateTime(requestData.created_at);
     document.getElementById('detail-duration').textContent = requestData.duration_days + ' days';
-    document.getElementById('detail-dates').textContent = formatDateRange(requestData.leave_start_date, requestData.leave_end_date);
+    document.getElementById('detail-dates').textContent = formatDateRangeFromStrings(requestData.leave_start_date, requestData.leave_end_date);
     document.getElementById('detail-note').textContent = requestData.description || 'No additional notes';
     
     // Update progress steps
@@ -1736,17 +1746,38 @@ function updateProgressSteps(status) {
 
 function formatDateTime(dateString) {
     const date = new Date(dateString);
-    return date.toLocaleDateString() + ', ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + (date.getHours() >= 12 ? 'PM' : 'AM');
+    return date.toLocaleDateString() + ', ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+}
+
+function formatDateRangeFromStrings(startDateStr, endDateStr) {
+    // Handle dd-mm-yyyy format strings
+    if (!startDateStr || !endDateStr) {
+        return 'Invalid dates';
+    }
+    
+    // Convert dd-mm-yyyy to readable format
+    const formatDateString = (dateStr) => {
+        const parts = dateStr.split('-');
+        if (parts.length === 3) {
+            const day = parts[0].padStart(2, '0');
+            const month = parts[1].padStart(2, '0');
+            const year = parts[2];
+            return `${day}-${month}-${year}`;
+        }
+        return dateStr;
+    };
+    
+    return formatDateString(startDateStr) + ' - ' + formatDateString(endDateStr);
 }
 
 function formatDateRange(startDate, endDate) {
     const start = new Date(startDate);
     const end = new Date(endDate);
-    return String(start.getDate()).padStart(2, '0') + '/' + 
-           String(start.getMonth() + 1).padStart(2, '0') + '/' + 
+    return String(start.getDate()).padStart(2, '0') + '-' + 
+           String(start.getMonth() + 1).padStart(2, '0') + '-' + 
            start.getFullYear() + ' - ' +
-           String(end.getDate()).padStart(2, '0') + '/' + 
-           String(end.getMonth() + 1).padStart(2, '0') + '/' + 
+           String(end.getDate()).padStart(2, '0') + '-' + 
+           String(end.getMonth() + 1).padStart(2, '0') + '-' + 
            end.getFullYear();
 }
 

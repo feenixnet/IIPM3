@@ -56,7 +56,7 @@ add_action('wp_ajax_nopriv_iipm_get_cpd_stats', 'iipm_ajax_get_cpd_stats');
  */
 function iipm_ajax_get_cpd_stats() {
     $year = intval($_POST['year'] ?? date('Y'));
-    $user_id = get_current_user_id();
+    $user_id = $_POST['user_id'] ?? get_current_user_id();
     
     if (!$user_id) {
         wp_send_json_error('User not logged in');
@@ -85,6 +85,8 @@ function iipm_get_cpd_stats($user_id, $year) {
     );
     
     $completed_courses = $wpdb->get_results($query);
+
+    error_log('IIPM: Completed courses: ' . print_r($completed_courses, true));
 
     // Get CPD types to get target minutes, dates, and user assignments
     $cpd_types = iipm_get_cpd_types();
@@ -254,8 +256,10 @@ function iipm_get_cpd_stats($user_id, $year) {
     // Calculate completion percentage
     $completion_percentage = $target_minutes > 0 ? min(100, round(($total_minutes / $target_minutes) * 100, 1)) : 0;
     
-    // Prepare courses summary with completion status
+    // Prepare courses summary with completion status and full course data
     $courses_summary = array();
+    $all_courses_data = array(); // Store all individual course data
+    
     foreach ($category_data as $category_name => $data) {
         $courses_summary[] = array(
             'category' => $category_name,
@@ -265,9 +269,18 @@ function iipm_get_cpd_stats($user_id, $year) {
             'credits' => $data['total_hours'], // 1 hour = 1 credit
             'required' => $data['required'],
             'completed' => $data['completed'],
-            'status' => $data['status']
+            'status' => $data['status'],
+            'courses' => $data['courses'] // Include full course data
         );
+        
+        // Add individual courses to all courses data
+        foreach ($data['courses'] as $course) {
+            $all_courses_data[] = $course;
+        }
     }
+    
+    // Get submission data with certificate information
+    $submission_data = iipm_get_user_submission_data($user_id, $year);
     
     return array(
         'total_cpd_minutes' => $total_minutes,
@@ -276,11 +289,13 @@ function iipm_get_cpd_stats($user_id, $year) {
         'start_date' => $start_date,
         'completion_date' => $completion_date,
         'courses_summary' => $courses_summary,
+        'all_courses' => $all_courses_data, // Full course data with course_id
         'total_hours' => $total_hours,
         'cpd_dates' => $cpd_dates,
         'is_logging_period_available' => $is_logging_period_available,
         'is_submission_period_available' => $is_submission_period_available,
-        'is_user_assigned' => $is_user_assigned
+        'is_user_assigned' => $is_user_assigned,
+        'submission_data' => $submission_data // Include submission data with certificate info
     );
 }
 
@@ -1473,4 +1488,50 @@ function iipm_ajax_check_certificate_availability() {
     wp_send_json_success(array(
         'has_certificate' => intval($submission) > 0
     ));
+}
+
+/**
+ * Get user submission data with certificate information
+ */
+function iipm_get_user_submission_data($user_id, $year) {
+    global $wpdb;
+    
+    // Get submission data from submissions table
+    $submissions_table = $wpdb->prefix . 'test_iipm_submissions';
+    $submission = $wpdb->get_row($wpdb->prepare(
+        "SELECT * FROM {$submissions_table} 
+         WHERE user_id = %d AND year = %d",
+        $user_id,
+        $year
+    ));
+    
+    if (!$submission) {
+        return array(
+            'submitted' => false,
+            'submission_date' => null,
+            'certificate_available' => false,
+            'certificate_id' => null,
+            'certificate_data' => null
+        );
+    }
+    
+    // Get certificate data if certificate_id exists
+    $certificate_data = null;
+    if (!empty($submission->certificate_id)) {
+        $certificates_table = $wpdb->prefix . 'test_iipm_certifications';
+        $certificate_data = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$certificates_table} 
+             WHERE id = %d",
+            $submission->certificate_id
+        ));
+    }
+    
+    return array(
+        'submitted' => true,
+        'submission_date' => $submission->created_at,
+        'certificate_available' => !empty($submission->certificate_id),
+        'certificate_id' => $submission->certificate_id,
+        'certificate_data' => $certificate_data,
+        'submission_status' => $submission->status ?? 'pending'
+    );
 }

@@ -11,6 +11,109 @@ if (!defined('ABSPATH')) {
 }
 
 /**
+ * Convert date from dd-mm-yyyy format to Y-m-d format
+ */
+function iipm_convert_date_to_db_format($date_string) {
+    if (empty($date_string)) {
+        return '';
+    }
+    
+    // If already in Y-m-d format, return as is
+    if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $date_string)) {
+        return $date_string;
+    }
+    
+    // Convert from dd-mm-yyyy to Y-m-d
+    if (preg_match('/^(\d{2})-(\d{2})-(\d{4})$/', $date_string, $matches)) {
+        return $matches[3] . '-' . $matches[2] . '-' . $matches[1];
+    }
+    
+    // Try to parse with strtotime as fallback
+    $timestamp = strtotime($date_string);
+    if ($timestamp !== false) {
+        return date('Y-m-d', $timestamp);
+    }
+    
+    return $date_string; // Return original if conversion fails
+}
+
+/**
+ * Convert date from Y-m-d format to dd-mm-yyyy format
+ */
+function iipm_convert_date_to_display_format($date_string) {
+    if (empty($date_string)) {
+        return '';
+    }
+    
+    // If already in dd-mm-yyyy format, return as is
+    if (preg_match('/^\d{2}-\d{2}-\d{4}$/', $date_string)) {
+        return $date_string;
+    }
+    
+    // Convert from Y-m-d to dd-mm-yyyy
+    if (preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $date_string, $matches)) {
+        return $matches[3] . '-' . $matches[2] . '-' . $matches[1];
+    }
+    
+    // Try to parse with strtotime as fallback
+    $timestamp = strtotime($date_string);
+    if ($timestamp !== false) {
+        return date('d-m-Y', $timestamp);
+    }
+    
+    return $date_string; // Return original if conversion fails
+}
+
+/**
+ * Calculate duration between two dates in dd-mm-yyyy format
+ */
+function iipm_calculate_duration_days($start_date, $end_date) {
+    if (empty($start_date) || empty($end_date)) {
+        return 0;
+    }
+    
+    // Convert to Y-m-d format for calculation
+    $start_db = iipm_convert_date_to_db_format($start_date);
+    $end_db = iipm_convert_date_to_db_format($end_date);
+    
+    if (empty($start_db) || empty($end_db)) {
+        return 0;
+    }
+    
+    $start = new DateTime($start_db);
+    $end = new DateTime($end_db);
+    
+    if ($end < $start) {
+        return 0;
+    }
+    
+    return $end->diff($start)->days + 1;
+}
+
+/**
+ * Format date for display in various formats
+ */
+function iipm_format_date_for_display($date_string, $format = 'M j, Y') {
+    if (empty($date_string)) {
+        return '';
+    }
+    
+    // Convert to Y-m-d format first
+    $db_date = iipm_convert_date_to_db_format($date_string);
+    
+    if (empty($db_date)) {
+        return $date_string;
+    }
+    
+    $timestamp = strtotime($db_date);
+    if ($timestamp === false) {
+        return $date_string;
+    }
+    
+    return date($format, $timestamp);
+}
+
+/**
  * Get leave requests for a specific user
  */
 function iipm_get_user_leave_requests($user_id, $limit = 20, $status = null) {
@@ -32,6 +135,39 @@ function iipm_get_user_leave_requests($user_id, $limit = 20, $status = null) {
     $params[] = $limit;
     
     return $wpdb->get_results($wpdb->prepare($sql, $params));
+}
+
+/**
+ * Get leave requests for a specific user in a selected year
+ * Handles dates in dd-mm-yyyy varchar format
+ */
+function iipm_get_user_leave_requests_for_year($user_id, $year) {
+    global $wpdb;
+    
+    $table_name = $wpdb->prefix . 'test_iipm_leave_requests';
+    
+    // Since dates are stored as varchar in dd-mm-yyyy format, we need to extract year
+    // Using STR_TO_DATE to convert dd-mm-yyyy to proper date format for year comparison
+    $sql = "SELECT * FROM {$table_name} 
+            WHERE user_id = %d 
+            AND YEAR(STR_TO_DATE(leave_start_date, '%d-%m-%Y')) = %d
+            ORDER BY STR_TO_DATE(leave_start_date, '%d-%m-%Y') DESC";
+    
+    $results = $wpdb->get_results($wpdb->prepare($sql, $user_id, $year));
+    
+    // If the above query fails (dates might be in different format), try alternative approach
+    if (empty($results)) {
+        // Try with LIKE pattern matching for year
+        $sql_alt = "SELECT * FROM {$table_name} 
+                    WHERE user_id = %d 
+                    AND leave_start_date LIKE %s
+                    ORDER BY leave_start_date DESC";
+        
+        $year_pattern = "%-{$year}";
+        $results = $wpdb->get_results($wpdb->prepare($sql_alt, $user_id, $year_pattern));
+    }
+    
+    return $results;
 }
 
 /**
@@ -200,7 +336,7 @@ function iipm_get_user_leave_stats($user_id, $year = null) {
             SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) as cancelled_requests,
             SUM(CASE WHEN status = 'approved' THEN duration_days ELSE 0 END) as total_approved_days
         FROM {$wpdb->prefix}test_iipm_leave_requests 
-        WHERE user_id = %d AND YEAR(leave_start_date) = %d",
+        WHERE user_id = %d AND YEAR(STR_TO_DATE(leave_start_date, '%d-%m-%Y')) = %d",
         $user_id,
         $year
     ));

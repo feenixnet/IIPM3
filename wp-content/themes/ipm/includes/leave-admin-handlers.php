@@ -25,21 +25,23 @@ function iipm_create_leave_request_tables() {
         user_id bigint(20) NOT NULL,
         title varchar(255) NOT NULL,
         reason enum('annual', 'sick', 'personal', 'maternity', 'paternity', 'bereavement', 'other') NOT NULL,
-        leave_start_date date NOT NULL,
-        leave_end_date date NOT NULL,
+        leave_start_date varchar(20) NOT NULL,
+        leave_end_date varchar(20) NOT NULL,
         duration_days int(11) NOT NULL,
         description text NULL,
         status enum('pending', 'approved', 'rejected', 'cancelled') NOT NULL DEFAULT 'pending',
         approved_by bigint(20) NULL,
         approved_at timestamp NULL,
         rejection_reason text NULL,
+        hours_deduct decimal(5,2) DEFAULT 0.00 COMMENT 'Hours deducted from CPD requirements due to leave',
         created_at timestamp DEFAULT CURRENT_TIMESTAMP,
         updated_at timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         PRIMARY KEY (id),
         KEY user_id (user_id),
         KEY status (status),
         KEY leave_start_date (leave_start_date),
-        KEY approved_by (approved_by)
+        KEY approved_by (approved_by),
+        KEY hours_deduct (hours_deduct)
     ) $charset_collate;";
     
     require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
@@ -220,7 +222,7 @@ Your leave request has been APPROVED.
 Request Details:
 - Title: {$request->title}
 - Reason: " . ucfirst($request->reason) . "
-- Leave Period: " . date('F j, Y', strtotime($request->leave_start_date)) . " to " . date('F j, Y', strtotime($request->leave_end_date)) . "
+- Leave Period: " . iipm_format_date_for_display($request->leave_start_date, 'F j, Y') . " to " . iipm_format_date_for_display($request->leave_end_date, 'F j, Y') . "
 - Duration: {$request->duration_days} days
 
 Your leave has been officially approved and will be processed accordingly.
@@ -255,7 +257,7 @@ Unfortunately, your leave request has been REJECTED.
 Request Details:
 - Title: {$request->title}
 - Reason: " . ucfirst($request->reason) . "
-- Leave Period: " . date('F j, Y', strtotime($request->leave_start_date)) . " to " . date('F j, Y', strtotime($request->leave_end_date)) . "
+- Leave Period: " . iipm_format_date_for_display($request->leave_start_date, 'F j, Y') . " to " . iipm_format_date_for_display($request->leave_end_date, 'F j, Y') . "
 - Duration: {$request->duration_days} days
 
 Reason for Rejection:
@@ -331,7 +333,7 @@ function iipm_get_user_leave_balance($user_id, $leave_type = 'annual') {
          WHERE user_id = %d 
          AND status = 'approved' 
          AND reason = %s
-         AND YEAR(leave_start_date) = %d",
+         AND YEAR(STR_TO_DATE(leave_start_date, '%d-%m-%Y')) = %d",
         $user_id,
         $leave_type,
         $current_year

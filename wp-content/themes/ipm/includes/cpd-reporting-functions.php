@@ -116,7 +116,7 @@ function iipm_get_cpd_compliance_stats($year = null) {
     $all_leave_requests = $wpdb->get_results($wpdb->prepare("
         SELECT user_id, duration_days, status
         FROM {$leave_requests_table} 
-        WHERE YEAR(leave_start_date) = %d AND status = 'approved'
+        WHERE YEAR(STR_TO_DATE(leave_start_date, '%d-%m-%Y')) = %d AND status = 'approved'
     ", $year));
     
     // Group leave requests by user
@@ -290,7 +290,7 @@ function iipm_get_detailed_compliance_data($year = null, $type = null, $page = 1
     $all_leave_requests = $wpdb->get_results($wpdb->prepare("
         SELECT user_id, duration_days, status
         FROM {$leave_requests_table} 
-        WHERE YEAR(leave_start_date) = %d AND status = 'approved'
+        WHERE YEAR(STR_TO_DATE(leave_start_date, '%d-%m-%Y')) = %d AND status = 'approved'
     ", $year));
     
     // Group leave requests by user
@@ -1162,7 +1162,7 @@ function iipm_get_all_members_with_progress($year = null, $report_type = 'employ
     $all_leave_requests = $wpdb->get_results($wpdb->prepare("
         SELECT user_id, duration_days, status
         FROM {$leave_requests_table} 
-        WHERE YEAR(leave_start_date) = %d AND status = 'approved'
+        WHERE YEAR(STR_TO_DATE(leave_start_date, '%d-%m-%Y')) = %d AND status = 'approved'
     ", $year));
     
     // Group leave requests by user

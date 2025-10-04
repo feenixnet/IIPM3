@@ -1097,40 +1097,8 @@ jQuery(document).ready(function($) {
 
     // Edit user function (global)
     window.editUser = function(userId) {
-        $.ajax({
-            url: '<?php echo admin_url('admin-ajax.php'); ?>',
-            type: 'POST',
-            data: {
-                action: 'iipm_get_user_details',
-                nonce: '<?php echo wp_create_nonce('iipm_user_management_nonce'); ?>',
-                user_id: userId
-            },
-            success: function(response) {
-                if (response.success) {
-                    const user = response.data;
-                    console.log(user);
-                    $('#edit-user-id').val(user.ID);
-                    $('#edit-first-name').val(user.first_name);
-                    $('#edit-last-name').val(user.last_name);
-                    $('#edit-email').val(user.user_email);
-                    // Set membership level - use membership_id if available, otherwise fallback to membership name
-                    const membershipValue = user.membership_level;
-                    $('#edit-membership').val(membershipValue);
-                    $('#edit-status').val(user.membership_status);
-                    
-                    // Set employer
-                    $('#edit-employer').val(user.employer_id || '');
-                    
-                    // Set last login
-                    const lastLogin = user.last_login || 'Never';
-                    $('#edit-last-login').text(lastLogin);
-                    
-                    $('#edit-user-modal').css('display', 'flex');
-                } else {
-                    alert('Error loading user details: ' + response.data);
-                }
-            }
-        });
+        // Redirect to user details page
+        window.location.href = '<?php echo home_url('/user-details'); ?>?id=' + userId;
     };
 
     // Delete user function (global)

@@ -118,10 +118,10 @@ foreach ($leave_requests as $request) {
                                             <strong>Duration:</strong> <?php echo $request->duration_days; ?> days
                                         </div>
                                         <div class="detail-item">
-                                            <strong>Start Date:</strong> <?php echo date('M j, Y', strtotime($request->leave_start_date)); ?>
+                                            <strong>Start Date:</strong> <?php echo iipm_format_date_for_display($request->leave_start_date, 'M j, Y'); ?>
                                         </div>
                                         <div class="detail-item">
-                                            <strong>End Date:</strong> <?php echo date('M j, Y', strtotime($request->leave_end_date)); ?>
+                                            <strong>End Date:</strong> <?php echo iipm_format_date_for_display($request->leave_end_date, 'M j, Y'); ?>
                                         </div>
                                     </div>
                                     <?php if ($request->description): ?>
