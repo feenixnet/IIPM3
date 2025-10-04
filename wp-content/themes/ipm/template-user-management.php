@@ -49,13 +49,6 @@ if (!function_exists('add_success_notification')) {
         <div class="page-header" style="text-align: center; margin-bottom: 40px;">
             <div>
                 <h1 style="color: white; font-size: 2.5rem; margin-bottom: 10px;">User Management</h1>
-                <p style="color: rgba(255,255,255,0.9); font-size: 1.1rem;">
-                    <?php if ($is_site_admin): ?>
-                        Manage all users and invitations in the system
-                    <?php else: ?>
-                        Manage users and invitations in your organization
-                    <?php endif; ?>
-                </p>
             </div>
         </div>
 
@@ -70,12 +63,12 @@ if (!function_exists('add_success_notification')) {
                 <a href="?tab=invitations" class="tab-button <?php echo $active_tab === 'invitations' ? 'active' : ''; ?>"
                    style="padding: 12px 24px; background: <?php echo $active_tab === 'invitations' ? '#f8a135' : '#6b4c93'; ?>; color: white; border-radius: 8px; text-decoration: none; font-weight: 500; transition: all 0.3s ease;">
                     <span style="margin-right: 8px;"><i class="fas fa-envelope"></i></span>
-                    Invite new users
+                    Add user
                 </a>
                 <a href="?tab=membership" class="tab-button <?php echo $active_tab === 'membership' ? 'active' : ''; ?>"
                    style="padding: 12px 24px; background: <?php echo $active_tab === 'membership' ? '#f8a135' : '#6b4c93'; ?>; color: white; border-radius: 8px; text-decoration: none; font-weight: 500; transition: all 0.3s ease;">
                     <span style="margin-right: 8px;"><i class="fas fa-id-card"></i></span>
-                    Membership
+                    Membership Levels
                 </a>
             </div>
         </div>
@@ -88,14 +81,14 @@ if (!function_exists('add_success_notification')) {
                     <!-- Action Buttons -->
                     <div style="display: flex; justify-content: flex-end; gap: 20px; margin-bottom: 30px;">
                         <?php if ($is_site_admin): ?>
-                        <button id="sync-login-data" style="display: inline-flex; align-items: center; padding: 12px 24px; background: #10B981; color: white; border: none; border-radius: 8px; font-weight: 500; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                        <!-- <button id="sync-login-data" style="display: inline-flex; align-items: center; padding: 12px 24px; background: #10B981; color: white; border: none; border-radius: 8px; font-weight: 500; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
                             <span style="margin-right: 8px;"><i class="fas fa-sync-alt"></i></span>
                             Sync Login Data
-                        </button>
+                        </button> -->
                         <?php endif; ?>
                         <a href="<?php echo home_url('/bulk-import/'); ?>" style="display: inline-flex; align-items: center; padding: 12px 24px; background: #8B5CF6; color: white; border-radius: 8px; text-decoration: none; font-weight: 500; transition: all 0.3s ease; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
                             <span style="margin-right: 8px;"><i class="fas fa-upload"></i></span>
-                            Bulk Member Upload
+                            Bulk User Upload
                         </a>
                     </div>
 
@@ -1086,7 +1079,7 @@ jQuery(document).ready(function($) {
                         ${cpdStatusIcon}
                     </td>
                     <td style="padding: 16px; text-align: center;width: 150px;">
-                        <button class="action-btn edit-btn" onclick="editUser(${user.ID})">Edit</button>
+                        <button class="action-btn edit-btn" onclick="editUser(${user.ID})">View</button>
                         <button class="action-btn delete-btn" onclick="deleteUser(${user.ID}, '${user.display_name}')">Delete</button>
                     </td>
                 </tr>

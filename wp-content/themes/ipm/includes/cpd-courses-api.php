@@ -291,7 +291,7 @@ function iipm_get_course_by_id_from_coursebyadminbku($course_id) {
 function iipm_search_courses_from_coursebyadminbku($keyword, $limit = 20) {
     global $wpdb;
     
-    $table_name = 'coursesbyadminbku';
+    $table_name = $wpdb->prefix . 'coursesbyadminbku';
     
     $courses = $wpdb->get_results($wpdb->prepare(
         "SELECT * FROM {$table_name} 
@@ -317,7 +317,7 @@ function iipm_search_courses_from_coursebyadminbku($keyword, $limit = 20) {
 function iipm_get_courses_by_category_from_coursebyadminbku($category, $limit = 20) {
     global $wpdb;
     
-    $table_name = 'coursesbyadminbku';
+    $table_name = $wpdb->prefix . 'coursesbyadminbku';
     
     $courses = $wpdb->get_results($wpdb->prepare(
         "SELECT * FROM {$table_name} 
@@ -337,7 +337,7 @@ function iipm_get_courses_by_category_from_coursebyadminbku($category, $limit = 
 function iipm_get_recent_courses_from_coursebyadminbku($limit = 10) {
     global $wpdb;
     
-    $table_name = 'coursesbyadminbku';
+    $table_name = $wpdb->prefix . 'coursesbyadminbku';
     
     $courses = $wpdb->get_results(
         "SELECT * FROM {$table_name} 
