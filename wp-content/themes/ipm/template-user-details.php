@@ -1067,7 +1067,7 @@ jQuery(document).ready(function($) {
             success: function(response) {
                 if (response.success) {
                     displayCPDData(response.data);
-                } else {
+        } else {
                     showCPDError('Failed to load CPD data for ' + year);
                 }
             },

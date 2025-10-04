@@ -216,17 +216,26 @@ if (!function_exists('iipm_calculate_adjusted_target_points')) {
             $year = date('Y');
         }
         
-        // Get the original target hours from CPD types table
-        // Find CPD type by matching year with Start of logging date
-        $cpd_types_table = $wpdb->prefix . 'cpd_types';
-        $original_target = $wpdb->get_var($wpdb->prepare(
-            "SELECT `Total Hours/Points Required` FROM {$cpd_types_table} WHERE YEAR(`Start of logging date`) = %d LIMIT 1",
-            $year
+        // Get the original target hours from user's membership level
+        $membership_level = $wpdb->get_var($wpdb->prepare(
+            "SELECT membership_level FROM {$wpdb->prefix}test_iipm_members WHERE user_id = %d",
+            $user_id
         ));
         
-        if (!$original_target) {
-            // Fallback to default target if not found
+        if (!$membership_level) {
+            // Fallback to default target if user not found
             $original_target = 8; // Default 8 hours
+        } else {
+            // Get CPD requirement from memberships table
+            $original_target = $wpdb->get_var($wpdb->prepare(
+                "SELECT cpd_requirement FROM {$wpdb->prefix}memberships WHERE id = %d",
+                $membership_level
+            ));
+            
+            if (!$original_target) {
+                // Fallback to default target if membership not found
+                $original_target = 8; // Default 8 hours
+            }
         }
         
         // Get total leave duration for the user

@@ -88,9 +88,29 @@ function iipm_get_cpd_stats($user_id, $year) {
 
     error_log('IIPM: Completed courses: ' . print_r($completed_courses, true));
 
-    // Get CPD types to get target minutes, dates, and user assignments
+    // Get target points from user's membership level (not from CPD types)
+    $membership_level = $wpdb->get_var($wpdb->prepare(
+        "SELECT membership_level FROM {$wpdb->prefix}test_iipm_members WHERE user_id = %d",
+        $user_id
+    ));
+    
+    $original_target = 8; // Default fallback
+    if ($membership_level) {
+        $original_target = $wpdb->get_var($wpdb->prepare(
+            "SELECT cpd_requirement FROM {$wpdb->prefix}memberships WHERE id = %d",
+            $membership_level
+        ));
+        if (!$original_target) {
+            $original_target = 8; // Default fallback
+        }
+    }
+    
+    // Calculate adjusted target based on leave requests (returns hours rounded to nearest 0.5)
+    $target_hours = iipm_calculate_adjusted_target_points($user_id, $year);
+    $target_minutes = $target_hours * 60; // Convert hours to minutes for compatibility
+    
+    // Get CPD types to get dates and user assignments (but not target points)
     $cpd_types = iipm_get_cpd_types();
-    $target_minutes = 330; // Default fallback
     $cpd_dates = array();
     $is_logging_period_available = false;
     $is_submission_period_available = false;
@@ -108,10 +128,6 @@ function iipm_get_cpd_stats($user_id, $year) {
         }
         
         if ($primary_type) {
-            $original_target = intval($primary_type->{'Total Hours/Points Required'});
-            // Calculate adjusted target based on leave requests (returns hours rounded to nearest 0.5)
-            $target_hours = iipm_calculate_adjusted_target_points($user_id, $year);
-            $target_minutes = $target_hours * 60; // Convert hours to minutes for compatibility
             $cpd_dates = array(
                 'start_logging' => $primary_type->{'Start of logging date'},
                 'end_logging' => $primary_type->{'End of logging date'},
@@ -670,9 +686,28 @@ function iipm_get_completed_cpd_stats($user_id, $year) {
     $completed_courses = $wpdb->get_results($query);
     
     if (empty($completed_courses)) {
-        // Get CPD types to get target minutes, dates, and user assignments
+        // Get target points from user's membership level (not from CPD types)
+        $membership_level = $wpdb->get_var($wpdb->prepare(
+            "SELECT membership_level FROM {$wpdb->prefix}test_iipm_members WHERE user_id = %d",
+            $user_id
+        ));
+        
+        $original_target = 8; // Default fallback
+        if ($membership_level) {
+            $original_target = $wpdb->get_var($wpdb->prepare(
+                "SELECT cpd_requirement FROM {$wpdb->prefix}memberships WHERE id = %d",
+                $membership_level
+            ));
+            if (!$original_target) {
+                $original_target = 8; // Default fallback
+            }
+        }
+        
+        // Calculate adjusted target based on leave requests (returns hours)
+        $target_minutes = iipm_calculate_adjusted_target_points($user_id, $year) * 60; // Convert hours to minutes for compatibility
+        
+        // Get CPD types to get dates and user assignments (but not target points)
         $cpd_types = iipm_get_cpd_types();
-        $target_minutes = 330; // Default fallback
         $cpd_dates = array();
         $is_logging_period_available = false;
         $is_submission_period_available = false;
@@ -690,9 +725,6 @@ function iipm_get_completed_cpd_stats($user_id, $year) {
             }
             
             if ($primary_type) {
-                $original_target = intval($primary_type->{'Total Hours/Points Required'});
-                // Calculate adjusted target based on leave requests (returns hours)
-                $target_minutes = iipm_calculate_adjusted_target_points($user_id, $year) * 60; // Convert hours to minutes for compatibility
                 $cpd_dates = array(
                     'start_logging' => $primary_type->{'Start of logging date'},
                     'end_logging' => $primary_type->{'End of logging date'},
@@ -978,28 +1010,26 @@ function iipm_get_uncompleted_cpd_stats($user_id, $year) {
         );
     }
     
-    // Get CPD types to get target minutes
-    $cpd_types = iipm_get_cpd_types();
-    $target_minutes = 0;
+    // Get target points from user's membership level (not from CPD types)
+    $membership_level = $wpdb->get_var($wpdb->prepare(
+        "SELECT membership_level FROM {$wpdb->prefix}test_iipm_members WHERE user_id = %d",
+        $user_id
+    ));
     
-    if (!empty($cpd_types)) {
-        // Find CPD type by matching year with Start of logging date
-        $primary_type = null;
-        foreach ($cpd_types as $type) {
-            $start_logging_year = date('Y', strtotime($type->{'Start of logging date'}));
-            if ($start_logging_year == $year) {
-                $primary_type = $type;
-                break;
-            }
-        }
-        
-        if ($primary_type) {
-            $original_target = intval($primary_type->{'Total Hours/Points Required'});
-            // Calculate adjusted target based on leave requests (returns hours rounded to nearest 0.5)
-            $target_hours = iipm_calculate_adjusted_target_points($user_id, $year);
-            $target_minutes = $target_hours * 60; // Convert hours to minutes for compatibility
+    $original_target = 8; // Default fallback
+    if ($membership_level) {
+        $original_target = $wpdb->get_var($wpdb->prepare(
+            "SELECT cpd_requirement FROM {$wpdb->prefix}memberships WHERE id = %d",
+            $membership_level
+        ));
+        if (!$original_target) {
+            $original_target = 8; // Default fallback
         }
     }
+    
+    // Calculate adjusted target based on leave requests (returns hours rounded to nearest 0.5)
+    $target_hours = iipm_calculate_adjusted_target_points($user_id, $year);
+    $target_minutes = $target_hours * 60; // Convert hours to minutes for compatibility
     
     // Get all available categories
     $categories = iipm_get_course_categories();

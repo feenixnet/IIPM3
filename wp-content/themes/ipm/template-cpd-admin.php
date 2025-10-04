@@ -55,15 +55,6 @@ get_header();
             <div class="submission-filters">
                 <div class="filters-row">
                     <div class="filter-group">
-                        <select id="submission-status">
-                            <option value="">All Status</option>
-                            <option value="pending" selected>Pending Review</option>
-                            <option value="approved">Approved</option>
-                            <option value="rejected">Rejected</option>
-                        </select>
-                    </div>
-                    
-                    <div class="filter-group">
                         <select id="submission-year">
                             <option value="">All Years</option>
                             <?php 
@@ -362,7 +353,7 @@ get_header();
 
 .filters-row {
     display: grid;
-    grid-template-columns: 1fr 1fr 2fr auto;
+    grid-template-columns: 1fr 2fr auto;
     gap: 16px;
     align-items: end;
 }
@@ -2297,7 +2288,6 @@ jQuery(document).ready(function($) {
     let currentSubmissions = []; // Store current submissions data
     
     function loadSubmissions(page = 1) {
-        const status = $('#submission-status').val() || '';
         const year = $('#submission-year').val() || '';
         const userSearch = $('#user-search').val() || '';
         
@@ -2310,7 +2300,6 @@ jQuery(document).ready(function($) {
                 action: 'iipm_get_admin_submissions',
                 page: page,
                 per_page: 10,
-                status: status,
                 year: year,
                 user_search: userSearch,
                 nonce: portal_nonce
@@ -2320,7 +2309,6 @@ jQuery(document).ready(function($) {
                     currentSubmissions = response.data.submissions; // Store submissions data
                     renderSubmissions(response.data.submissions);
                     updatePagination(response.data.pagination);
-                    updatePendingCount();
                 } else {
                     $('#submissions-content').html('<p>Error loading submissions: ' + response.data + '</p>');
                 }
@@ -2343,7 +2331,6 @@ jQuery(document).ready(function($) {
                             <th>ID</th>
                             <th>User</th>
                             <th>Year</th>
-                            <th>Status</th>
                             <th>Certificate</th>
                             <th>Actions</th>
                         </tr>
@@ -2352,7 +2339,6 @@ jQuery(document).ready(function($) {
             `;
             
             submissions.forEach(function(submission) {
-                const statusClass = `status-${submission.status}`;
                 const userName = submission.display_name || submission.user_login || 'Unknown User';
                 
                 // Certificate display logic
@@ -2365,21 +2351,15 @@ jQuery(document).ready(function($) {
                                 ${submission.certificate_name}
                             </span>
                             <small style="color: #6b7280;">(${submission.certificate_year})</small>
-                            <button class="btn btn-outline btn-small" onclick="removeCertificate(${submission.id}, '${userName}')" style="font-size: 0.7rem; padding: 2px 6px; margin-left: 4px;">
-                                <i class="fas fa-times" style="margin-right: 2px;"></i>
-                                Remove
-                            </button>
                         </div>
                     `;
-                } else if (submission.status === 'approved') {
+                } else {
                     certificateDisplay = `
                         <button class="btn btn-outline btn-small" onclick="showCertificateAssignment(${submission.id}, '${userName}')" style="font-size: 0.75rem; padding: 4px 8px;">
                             <i class="fas fa-plus" style="margin-right: 4px;"></i>
                             Set Certificate
                         </button>
                     `;
-                } else {
-                    certificateDisplay = '<span style="color: #9ca3af;">-</span>';
                 }
 
                 html += `
@@ -2393,9 +2373,6 @@ jQuery(document).ready(function($) {
                         </td>
                         <td>${submission.year}</td>
                         <td>
-                            <span class="status-badge ${statusClass}">${submission.status}</span>
-                        </td>
-                        <td>
                             ${certificateDisplay}
                         </td>
                         <td>
@@ -2403,22 +2380,6 @@ jQuery(document).ready(function($) {
                                 <button class="btn btn-outline btn-small" onclick="viewSubmissionDetails(${submission.id})">
                                     Details
                                 </button>
-                                ${submission.status === 'pending' ? `
-                                    <button class="btn btn-success btn-small" onclick="showApproveRejectModal(${submission.id}, 'approve', '${userName}', '${submission.year}')">
-                                        Approve
-                                    </button>
-                                    <button class="btn btn-danger btn-small" onclick="showApproveRejectModal(${submission.id}, 'reject', '${userName}', '${submission.year}')">
-                                        Reject
-                                    </button>
-                                ` : submission.status === 'approved' ? `
-                                    <button class="btn btn-danger btn-small" onclick="showApproveRejectModal(${submission.id}, 'reject', '${userName}', '${submission.year}')">
-                                        Reject
-                                    </button>
-                                ` : submission.status === 'rejected' ? `
-                                    <button class="btn btn-success btn-small" onclick="showApproveRejectModal(${submission.id}, 'approve', '${userName}', '${submission.year}')">
-                                        Approve
-                                    </button>
-                                ` : ''}
                             </div>
                         </td>
                     </tr>
@@ -2475,24 +2436,6 @@ jQuery(document).ready(function($) {
     
     
     
-    // Update pending count badge
-    function updatePendingCount() {
-        $.ajax({
-            url: ajaxurl,
-            type: 'POST',
-            data: {
-                action: 'iipm_get_admin_submissions',
-                status: 'pending',
-                per_page: 1,
-                nonce: portal_nonce
-            },
-            success: function(response) {
-                if (response.success) {
-                    $('#pending-count').text(response.data.pagination.total_items);
-                }
-            }
-        });
-    }
     
     // View submission details
     window.viewSubmissionDetails = function(submissionId) {
@@ -2737,40 +2680,6 @@ jQuery(document).ready(function($) {
         $('#submission-details-content').html(html);
     }
     
-    // Show approve/reject confirmation dialog
-    window.showApproveRejectModal = function(submissionId, action, userName, year) {
-        const confirmMessage = action === 'approve' 
-            ? `Do you really want to approve ${userName}'s submission?`
-            : `Do you really want to reject ${userName}'s submission?`;
-        
-        const confirmResult = confirm(confirmMessage);
-        
-        if (confirmResult) {
-            // User confirmed, proceed with the action
-            $.ajax({
-                url: iipm_ajax.ajax_url,
-                type: 'POST',
-                data: {
-                    action: 'iipm_update_submission_status',
-                    submission_id: submissionId,
-                    status: action === 'approve' ? 'approved' : 'rejected',
-                    admin_notes: '',
-                    nonce: portal_nonce
-                },
-                success: function(response) {
-                    if (response.success) {
-                        showAlert(response.data.message, 'success');
-                        loadSubmissions(currentPage);
-                    } else {
-                        showAlert('Error: ' + response.data, 'error');
-                    }
-                },
-                error: function() {
-                    showAlert('An error occurred. Please try again.', 'error');
-                }
-            });
-        }
-    };
     
     // Review submission modal
     window.reviewSubmissionModal = function(entryId) {
@@ -2869,7 +2778,7 @@ jQuery(document).ready(function($) {
     }
     
     // Filter change handlers
-    $('#submission-status, #submission-year').change(function() {
+    $('#submission-year').change(function() {
         currentPage = 1;
         loadSubmissions(1);
     });
@@ -2884,7 +2793,6 @@ jQuery(document).ready(function($) {
     
     // Clear filters
     $('#clear-filters').click(function() {
-        $('#submission-status').val('');
         $('#submission-year').val('');
         $('#user-search').val('');
         currentPage = 1;
@@ -3315,7 +3223,6 @@ jQuery(document).ready(function($) {
     // Initialize
     loadCertificates();
     loadSubmissions();
-    updatePendingCount();
 });
 
 // Mobile menu functionality for CPD Admin Portal

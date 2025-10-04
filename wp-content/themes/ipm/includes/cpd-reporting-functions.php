@@ -68,9 +68,8 @@ function iipm_get_cpd_compliance_stats($year = null) {
     
     global $wpdb;
     
-    // Get CPD types to determine required points and assigned users
+    // Get CPD types to determine assigned users (but not required points)
     $cpd_types = $wpdb->get_results("SELECT * FROM {$wpdb->prefix}cpd_types ORDER BY id ASC");
-    $required_points = 8; // Default fallback
     $assigned_user_ids = array(); // Store assigned user IDs
     
     if (!empty($cpd_types)) {
@@ -85,8 +84,6 @@ function iipm_get_cpd_compliance_stats($year = null) {
         }
         
         if ($primary_type) {
-            $required_points = intval($primary_type->{'Total Hours/Points Required'});
-            
             // Get assigned user IDs from the primary CPD type
             if (!empty($primary_type->{'User Ids Assigned'})) {
                 $assigned_string = $primary_type->{'User Ids Assigned'};
@@ -207,7 +204,24 @@ function iipm_get_cpd_compliance_stats($year = null) {
         // Calculate adjusted target for this user based on their leave requests using new formula
         $adjusted_target = iipm_calculate_adjusted_target_points($user_id, $year);
         
-        error_log('🔍 Member ID: ' . $user_id . ' earned points: ' . $earned . ', original target: ' . $required_points . ', adjusted target: ' . $adjusted_target . ', is assigned: ' . (in_array($user_id, $assigned_user_ids) ? 'Yes' : 'No'));
+        // Get original target from user's membership level for logging
+        $membership_level = $wpdb->get_var($wpdb->prepare(
+            "SELECT membership_level FROM {$wpdb->prefix}test_iipm_members WHERE user_id = %d",
+            $user_id
+        ));
+        
+        $original_target = 8; // Default fallback
+        if ($membership_level) {
+            $original_target = $wpdb->get_var($wpdb->prepare(
+                "SELECT cpd_requirement FROM {$wpdb->prefix}memberships WHERE id = %d",
+                $membership_level
+            ));
+            if (!$original_target) {
+                $original_target = 8; // Default fallback
+            }
+        }
+        
+        error_log('🔍 Member ID: ' . $user_id . ' earned points: ' . $earned . ', original target: ' . $original_target . ', adjusted target: ' . $adjusted_target . ', is assigned: ' . (in_array($user_id, $assigned_user_ids) ? 'Yes' : 'No'));
         
         $progress_percentage = $adjusted_target > 0 ? round(min(100, ($earned / $adjusted_target) * 100), 2) : 0;
         
@@ -265,25 +279,8 @@ function iipm_get_detailed_compliance_data($year = null, $type = null, $page = 1
     // Get CPD submissions for the year
     $submission_lookup = iipm_get_cpd_submissions_for_year($year);
     
-    // Get CPD types to determine required points
-    $cpd_types = $wpdb->get_results("SELECT * FROM {$wpdb->prefix}cpd_types ORDER BY id ASC");
-    $required_points = 8; // Default fallback
-    
-    if (!empty($cpd_types)) {
-        // Find CPD type by matching year with Start of logging date
-        $primary_type = null;
-        foreach ($cpd_types as $type_item) {
-            $start_logging_year = date('Y', strtotime($type_item->{'Start of logging date'}));
-            if ($start_logging_year == $year) {
-                $primary_type = $type_item;
-                break;
-            }
-        }
-        
-        if ($primary_type) {
-            $required_points = intval($primary_type->{'Total Hours/Points Required'});
-        }
-    }
+    // Note: Required points are now calculated per user based on their membership level
+    // No global required_points needed anymore
     
     // Get all leave requests for the year once for efficiency
     $leave_requests_table = $wpdb->prefix . 'test_iipm_leave_requests';
@@ -411,6 +408,23 @@ function iipm_get_detailed_compliance_data($year = null, $type = null, $page = 1
                        (!$user_data['employer_id'] || $user_data['employer_id'] === '0') ||
                        ($earned_points === 0);
         
+        // Get original target from user's membership level
+        $membership_level = $wpdb->get_var($wpdb->prepare(
+            "SELECT membership_level FROM {$wpdb->prefix}test_iipm_members WHERE user_id = %d",
+            $user_data['user_id']
+        ));
+        
+        $original_target = 8; // Default fallback
+        if ($membership_level) {
+            $original_target = $wpdb->get_var($wpdb->prepare(
+                "SELECT cpd_requirement FROM {$wpdb->prefix}memberships WHERE id = %d",
+                $membership_level
+            ));
+            if (!$original_target) {
+                $original_target = 8; // Default fallback
+            }
+        }
+        
         $member_info = array(
             'user_id' => $user_id,
             'name' => $user_data['name'],
@@ -420,7 +434,7 @@ function iipm_get_detailed_compliance_data($year = null, $type = null, $page = 1
             'employer_id' => $user_data['employer_id'],
             'earned_points' => $earned_points,
             'required_points' => $adjusted_target, // Use adjusted target
-            'original_target' => $required_points, // Keep original for reference
+            'original_target' => $original_target, // Get original target from membership
             'shortage' => max(0, $adjusted_target - $earned_points), // Use adjusted target for shortage
             'progress_percentage' => $progress_percentage,
             'days_left' => $days_left,
@@ -1137,25 +1151,8 @@ function iipm_get_all_members_with_progress($year = null, $report_type = 'employ
     // Get CPD submissions for the year
     $submission_lookup = iipm_get_cpd_submissions_for_year($year);
     
-    // Get CPD types to determine required points
-    $cpd_types = $wpdb->get_results("SELECT * FROM {$wpdb->prefix}cpd_types ORDER BY id ASC");
-    $required_points = 8; // Default fallback
-    
-    if (!empty($cpd_types)) {
-        // Find CPD type by matching year with Start of logging date
-        $primary_type = null;
-        foreach ($cpd_types as $type) {
-            $start_logging_year = date('Y', strtotime($type->{'Start of logging date'}));
-            if ($start_logging_year == $year) {
-                $primary_type = $type;
-                break;
-            }
-        }
-        
-        if ($primary_type) {
-            $required_points = intval($primary_type->{'Total Hours/Points Required'});
-        }
-    }
+    // Note: Required points are now calculated per user based on their membership level
+    // No global required_points needed anymore
     
     // Get all leave requests for the year once for efficiency
     $leave_requests_table = $wpdb->prefix . 'test_iipm_leave_requests';
@@ -1253,9 +1250,26 @@ function iipm_get_all_members_with_progress($year = null, $report_type = 'employ
         // Calculate adjusted target for this user based on their leave requests using new formula
         $adjusted_target = iipm_calculate_adjusted_target_points($user_id, $year);
         
+        // Get original target from user's membership level
+        $membership_level = $wpdb->get_var($wpdb->prepare(
+            "SELECT membership_level FROM {$wpdb->prefix}test_iipm_members WHERE user_id = %d",
+            $user_id
+        ));
+        
+        $original_target = 8; // Default fallback
+        if ($membership_level) {
+            $original_target = $wpdb->get_var($wpdb->prepare(
+                "SELECT cpd_requirement FROM {$wpdb->prefix}memberships WHERE id = %d",
+                $membership_level
+            ));
+            if (!$original_target) {
+                $original_target = 8; // Default fallback
+            }
+        }
+        
         $user_data['earned_points'] = $earned;
         $user_data['required_points'] = $adjusted_target; // Use adjusted target
-        $user_data['original_target'] = $required_points; // Keep original for reference
+        $user_data['original_target'] = $original_target; // Get original target from membership
         
         // Calculate progress percentage
         if ($adjusted_target > 0) {

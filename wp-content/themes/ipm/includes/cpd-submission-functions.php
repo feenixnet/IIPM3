@@ -8,16 +8,30 @@ add_action('wp_ajax_iipm_submission_save', 'iipm_submission_save');
 function iipm_submission_save() {
     global $wpdb; 
     $table = $wpdb->prefix . 'test_iipm_submissions';
+    $certificates_table = $wpdb->prefix . 'test_iipm_certifications';
     $id = isset($_POST['id']) ? intval($_POST['id']) : 0;
     $uid = get_current_user_id();
     $year = sanitize_text_field($_POST['year'] ?? date('Y'));
     $details = sanitize_text_field($_POST['details'] ?? '{}');
     
+    // Find certificate for the submission year
+    $certificate_id = 0;
+    $certificate = $wpdb->get_row($wpdb->prepare(
+        "SELECT id FROM $certificates_table WHERE year = %s LIMIT 1",
+        $year
+    ));
+    
+    if ($certificate) {
+        $certificate_id = $certificate->id;
+    }
+    
     $data = array(
         'user_id' => $uid,
         'year' => $year,
         'details' => $details,
-        'status' => 'pending'
+        'certificate_id' => $certificate_id, // Auto-assign certificate
+        'reviewed_by' => 0, // System auto-approval
+        'reviewed_at' => current_time('mysql')
     );
 
     if($id > 0) {
@@ -27,7 +41,7 @@ function iipm_submission_save() {
         if ($result !== false) { $id = intval($wpdb->insert_id); }
     }
 
-    error_log($result);
+    error_log("WHAHAHAHAHA", $result);
 
     if ($result === false) { wp_send_json_error('Database error saving submission'); }
 
@@ -59,7 +73,6 @@ function iipm_get_admin_submissions() {
     
     $page = isset($_POST['page']) ? intval($_POST['page']) : 1;
     $per_page = isset($_POST['per_page']) ? intval($_POST['per_page']) : 10;
-    $status = isset($_POST['status']) ? sanitize_text_field($_POST['status']) : 'pending';
     $year = isset($_POST['year']) ? sanitize_text_field($_POST['year']) : '';
     $user_search = isset($_POST['user_search']) ? sanitize_text_field($_POST['user_search']) : '';
     
@@ -68,11 +81,6 @@ function iipm_get_admin_submissions() {
     // Build WHERE clause
     $where_conditions = array();
     $where_params = array();
-    
-    if (!empty($status)) {
-        $where_conditions[] = "s.status = %s";
-        $where_params[] = $status;
-    }
     
     if (!empty($year)) {
         $where_conditions[] = "s.year = %s";
@@ -157,7 +165,7 @@ function iipm_get_admin_submissions() {
 }
 
 /**
- * Update submission status (approve/reject)
+ * Update submission admin notes (submissions are now auto-approved)
  */
 function iipm_update_submission_status() {
     // Check admin permissions
@@ -168,47 +176,27 @@ function iipm_update_submission_status() {
     global $wpdb;
     
     $submission_id = isset($_POST['submission_id']) ? intval($_POST['submission_id']) : 0;
-    $status = isset($_POST['status']) ? sanitize_text_field($_POST['status']) : '';
     $admin_notes = isset($_POST['admin_notes']) ? sanitize_textarea_field($_POST['admin_notes']) : '';
-    
-    if (!in_array($status, array('approved', 'rejected'))) {
-        wp_send_json_error('Invalid parameters');
-    }
     
     $table = $wpdb->prefix . 'test_iipm_submissions';
     
+    // Only allow updating admin notes, submissions are auto-approved
     $update_data = array(
-        'status' => $status,
         'admin_notes' => $admin_notes,
         'reviewed_by' => get_current_user_id(),
         'reviewed_at' => current_time('mysql')
     );
     
-    $format = array('%s', '%s', '%d', '%s');
-    
-    // If rejecting an approved submission, also set certificate_id to null
-    if ($status === 'rejected') {
-        $current_submission = $wpdb->get_row($wpdb->prepare(
-            "SELECT status, certificate_id FROM $table WHERE id = %d",
-            $submission_id
-        ));
-        
-        if ($current_submission && $current_submission->status === 'approved' && $current_submission->certificate_id) {
-            $update_data['certificate_id'] = null;
-            $format[] = '%s';
-        }
-    }
-    
     $result = $wpdb->update(
         $table,
         $update_data,
         array('id' => $submission_id),
-        $format,
+        array('%s', '%d', '%s'),
         array('%d')
     );
     
     if ($result === false) {
-        wp_send_json_error('Failed to update submission status');
+        wp_send_json_error('Failed to update submission notes');
     }
     
     // Get updated submission
@@ -222,7 +210,7 @@ function iipm_update_submission_status() {
     
     wp_send_json_success(array(
         'submission' => $submission,
-        'message' => 'Submission status updated successfully'
+        'message' => 'Submission notes updated successfully'
     ));
 }
 
@@ -288,14 +276,14 @@ function iipm_assign_certificate() {
     $submissions_table = $wpdb->prefix . 'test_iipm_submissions';
     $certificates_table = $wpdb->prefix . 'test_iipm_certifications';
 
-    // Check if submission exists and is approved
+    // Check if submission exists (submissions are now auto-approved)
     $submission = $wpdb->get_row($wpdb->prepare(
-        "SELECT * FROM $submissions_table WHERE id = %d AND status = 'approved'",
+        "SELECT * FROM $submissions_table WHERE id = %d",
         $submission_id
     ));
 
     if (!$submission) {
-        wp_send_json_error('Submission not found or not approved');
+        wp_send_json_error('Submission not found');
     }
 
     // Check if certificate exists
@@ -791,7 +779,6 @@ function iipm_create_submissions_table() {
         user_id bigint(20) NOT NULL,
         year varchar(4) NOT NULL,
         details longtext NOT NULL,
-        status enum('pending', 'approved', 'rejected') DEFAULT 'pending',
         admin_notes text NULL,
         reviewed_by bigint(20) NULL,
         reviewed_at timestamp NULL,

@@ -96,13 +96,15 @@ get_header();
         </div>
         <!-- Success Alert for Completed CPD -->
         <?php if ($is_user_assigned && !empty($cpd_stats['courses_summary'])): 
-            $total_completed = 0;
-            $total_required = 0;
+            $has_minimum_time = $cpd_stats['completion_percentage'] >= 100;
+            $has_all_categories = true;
             foreach ($cpd_stats['courses_summary'] as $category) {
-                $total_completed += $category['count'];
-                $total_required += $category['required'];
+                if ($category['required'] > 0 && $category['total_hours'] < 1) {
+                    $has_all_categories = false;
+                    break;
+                }
             }
-            $is_fully_completed = ($total_completed >= $total_required && $cpd_stats['completion_percentage'] >= 100);
+            $is_fully_completed = ($has_minimum_time && $has_all_categories);
         ?>
             <?php if ($is_fully_completed): ?>
             <div class="cpd-success-alert" id="cpd-success-alert">
@@ -2409,6 +2411,7 @@ get_header();
         
         /**
          * Check if user has completed training in all required categories
+         * Each category must have at least 1 hour of training
          */
         function checkAllCategoriesCompleted(data) {
             if (!data.courses_summary || data.courses_summary.length === 0) {
@@ -2416,15 +2419,15 @@ get_header();
                 return false;
             }
             
-            // Check each category to ensure it has at least some completed training
+            // Check each category to ensure it has at least 1 hour of completed training
             for (let category of data.courses_summary) {
-                if (category.required > 0 && category.count === 0) {
-                    console.log(`Category "${category.name}" has no completed training (required: ${category.required})`);
+                if (category.required > 0 && category.total_hours < 1) {
+                    console.log(`Category "${category.category}" has insufficient training hours (${category.total_hours} hours, required: at least 1 hour)`);
                     return false;
                 }
             }
             
-            console.log('All required categories have completed training');
+            console.log('All required categories have at least 1 hour of training');
             return true;
         }
         
@@ -2446,23 +2449,23 @@ get_header();
             }
             
             if (!hasCompletedAllCategories) {
-                // Find missing categories
-                const missingCategories = [];
+                // Find categories with insufficient hours (less than 1 hour)
+                const insufficientCategories = [];
                 if (data.courses_summary) {
                     console.log(data.courses_summary);
                     data.courses_summary.forEach(category => {
-                        if (category.required > 0 && category.count === 0) {
-                            missingCategories.push(category.category);
+                        if (category.required > 0 && category.total_hours < 1) {
+                            insufficientCategories.push(`${category.category} (${category.total_hours} hours)`);
                         }
                     });
                 }
 
-                console.log(missingCategories);
+                console.log(insufficientCategories);
                 
-                if (missingCategories.length > 0) {
-                    messages.push(`Complete training in all required categories. Missing: <b>${missingCategories.join(', ')}</b>`);
+                if (insufficientCategories.length > 0) {
+                    messages.push(`Complete at least 1 hour of training in all required categories. Insufficient: <b>${insufficientCategories.join(', ')}</b>`);
                 } else {
-                    messages.push(`Complete training in all required categories`);
+                    messages.push(`Complete at least 1 hour of training in all required categories`);
                 }
             }
             
