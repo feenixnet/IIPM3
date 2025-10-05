@@ -426,6 +426,9 @@ get_header();
         padding: 20px;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         transition: transform 0.2s, box-shadow 0.2s;
+        display: flex;
+        flex-direction: column;
+        height: 100%;
     }
 
     .course-card:hover {
@@ -455,9 +458,20 @@ get_header();
 
     .course-header {
         display: flex;
-        justify-content: space-between;
+        justify-content: flex-start;
         align-items: flex-start;
         margin-bottom: 16px;
+    }
+
+    .course-content {
+        flex: 1;
+        margin-bottom: 16px;
+    }
+
+    .course-footer {
+        margin-top: auto;
+        padding-top: 16px;
+        border-top: 1px solid #e5e7eb;
     }
 
     .course-badges {
@@ -499,8 +513,7 @@ get_header();
         letter-spacing: 0.5px;
     }
 
-    .favorite-btn,
-    .add-course-btn {
+    .favorite-btn {
         background: none;
         border: none;
         cursor: pointer;
@@ -509,19 +522,80 @@ get_header();
         transition: background 0.2s;
     }
 
-    .favorite-btn:hover,
-    .add-course-btn:hover {
+    .favorite-btn:hover {
         background: #f3f4f6;
+    }
+
+    .add-course-btn {
+        width: 100%;
+        background: linear-gradient(135deg, #8b5a96 0%, #6b4c93 100%);
+        color: white;
+        border: none;
+        padding: 12px 16px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        box-shadow: 0 2px 4px rgba(139, 90, 150, 0.2);
+    }
+
+    .add-course-btn:hover:not(:disabled) {
+        background: linear-gradient(135deg, #6b4c93 0%, #5a3d7a 100%);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(139, 90, 150, 0.3);
+    }
+
+    .add-course-btn:active:not(:disabled) {
+        transform: translateY(0);
+        box-shadow: 0 2px 4px rgba(139, 90, 150, 0.2);
     }
 
     .add-course-btn.disabled {
-        opacity: 0.5;
+        background: #9ca3af;
+        color: white;
         cursor: not-allowed;
-        background: #f3f4f6;
+        opacity: 0.7;
+        transform: none;
+        box-shadow: 0 2px 4px rgba(156, 163, 175, 0.2);
     }
 
     .add-course-btn.disabled:hover {
-        background: #f3f4f6;
+        background: #9ca3af;
+        transform: none;
+        box-shadow: 0 2px 4px rgba(156, 163, 175, 0.2);
+    }
+
+    .add-course-btn i {
+        font-size: 12px;
+    }
+
+    .add-course-btn.loading {
+        background: #6b7280;
+        cursor: not-allowed;
+    }
+
+    .add-course-btn.success {
+        background: #10b981;
+        cursor: not-allowed;
+    }
+
+    .add-course-btn.error {
+        background: #ef4444;
+        cursor: not-allowed;
+    }
+
+    .add-course-btn.loading:hover,
+    .add-course-btn.success:hover,
+    .add-course-btn.error:hover {
+        transform: none;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     }
     
     /* Logging Period Banner */
@@ -706,7 +780,7 @@ get_header();
 
     .loading-spinner p {
         margin: 0;
-        color: #6b7280;
+        color: white;
         font-size: 16px;
     }
 
@@ -730,7 +804,7 @@ get_header();
 
     .pagination-ellipsis {
         padding: 8px 12px;
-        color: #6b7280;
+        color: white;
         font-size: 14px;
         user-select: none;
     }
@@ -919,12 +993,9 @@ get_header();
                         <div class="course-header">
                             <div class="course-badges">
                                 <span class="category-badge">${course.course_category || 'N/A'}</span>
-                                ${isCompleted ? '<span class="completed-badge">Completed</span>' : ''}
+                                ${isCompleted ? '<span class="completed-badge">Added</span>' : ''}
                                 ${isInLearningPath && !isCompleted ? '<span class="started-badge">In Progress</span>' : ''}
                             </div>
-                            <button class="${addButtonClass}" title="${addButtonTitle}" ${isDisabled ? 'disabled' : ''} data-course-id="${course.course_id}">
-                                <span class="plus-icon">${addButtonIcon}</span>
-                            </button>
                         </div>
 
                         <div class="course-content">
@@ -949,6 +1020,12 @@ get_header();
                                     <span class="meta-value">${course.course_enteredBy || 'N/A'}</span>
                                 </div>
                             </div>
+                        </div>
+
+                        <div class="course-footer">
+                            <button class="${addButtonClass}" title="${addButtonTitle}" ${isDisabled ? 'disabled' : ''} data-course-id="${course.course_id}">
+                                ${addButtonIcon} ${isInLearningPath ? (isCompleted ? 'Added' : 'In Progress') : 'Add to my CPD'}
+                            </button>
                         </div>
                     </div>
                 `;
@@ -1022,14 +1099,16 @@ get_header();
             const addBtn = event.target.closest('.add-course-btn');
             if (addBtn) {
                 const originalContent = addBtn.innerHTML;
-                addBtn.innerHTML = '<span class="loading-icon"><i class="fas fa-spinner fa-spin"></i></span>';
+                addBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding...';
                 addBtn.disabled = true;
+                addBtn.classList.add('loading');
                 
                 // Revert after 2 seconds if there's an error
                 setTimeout(() => {
-                    if (addBtn.disabled) {
+                    if (addBtn.disabled && addBtn.classList.contains('loading')) {
                         addBtn.innerHTML = originalContent;
                         addBtn.disabled = false;
+                        addBtn.classList.remove('loading');
                     }
                 }, 2000);
             }
@@ -1052,17 +1131,16 @@ get_header();
                     if (response.success) {
                         // Show success state
                         if (addBtn) {
-                            addBtn.innerHTML = '<span class="success-icon"><i class="fas fa-check"></i></span>';
-                            addBtn.style.background = '#10b981';
-                            addBtn.style.color = 'white';
+                            addBtn.innerHTML = '<i class="fas fa-check"></i> Added';
+                            addBtn.classList.remove('loading');
+                            addBtn.classList.add('success');
+                            addBtn.disabled = true;
                             
-                            // Revert after 3 seconds
+                            // Update button to show it's been added permanently
                             setTimeout(() => {
-                                addBtn.innerHTML = originalContent;
-                                addBtn.style.background = '';
-                                addBtn.style.color = '';
-                                addBtn.disabled = false;
-                            }, 3000);
+                                addBtn.innerHTML = '<i class="fas fa-check"></i> Added';
+                                addBtn.classList.add('disabled');
+                            }, 2000);
                         }
                         
                         // Show success message
@@ -1081,15 +1159,14 @@ get_header();
                     } else {
                         // Show error state
                         if (addBtn) {
-                            addBtn.innerHTML = '<span class="error-icon"><i class="fas fa-times"></i></span>';
-                            addBtn.style.background = '#ef4444';
-                            addBtn.style.color = 'white';
+                            addBtn.innerHTML = '<i class="fas fa-times"></i> Error';
+                            addBtn.classList.remove('loading');
+                            addBtn.classList.add('error');
                             
                             // Revert after 3 seconds
                             setTimeout(() => {
                                 addBtn.innerHTML = originalContent;
-                                addBtn.style.background = '';
-                                addBtn.style.color = '';
+                                addBtn.classList.remove('error');
                                 addBtn.disabled = false;
                             }, 3000);
                         }
@@ -1102,15 +1179,14 @@ get_header();
                     
                     // Show error state
                     if (addBtn) {
-                        addBtn.innerHTML = '<span class="error-icon">❌</span>';
-                        addBtn.style.background = '#ef4444';
-                        addBtn.style.color = 'white';
+                        addBtn.innerHTML = '<i class="fas fa-times"></i> Error';
+                        addBtn.classList.remove('loading');
+                        addBtn.classList.add('error');
                         
                         // Revert after 3 seconds
                         setTimeout(() => {
                             addBtn.innerHTML = originalContent;
-                            addBtn.style.background = '';
-                            addBtn.style.color = '';
+                            addBtn.classList.remove('error');
                             addBtn.disabled = false;
                         }, 3000);
                     }
