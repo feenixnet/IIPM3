@@ -533,10 +533,16 @@ function iipm_ajax_get_providers() {
  */
 function iipm_ajax_add_course() {
     // Check if user is admin
+    global $wpdb;
     if (!current_user_can('administrator')) {
         wp_send_json_error('Unauthorized access');
         return;
     }
+
+    $username = $wpdb->get_var($wpdb->prepare(
+        "SELECT user_login FROM {$wpdb->prefix}users WHERE ID = %d",
+        get_current_user_id()
+    ));
     
     $course_data = array(
         'course_name' => sanitize_text_field($_POST['course_name']),
@@ -548,7 +554,7 @@ function iipm_ajax_add_course() {
         'user_id' => get_current_user_id(),
         'course_id' => rand(100000, 999999),
         'course_date' => date('d-m-Y'),
-        'course_enteredBy' => get_current_user_id()
+        'course_enteredBy' => $username
     );
     
     // Validate required fields

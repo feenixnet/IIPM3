@@ -2329,7 +2329,7 @@ jQuery(document).ready(function($) {
                     <thead>
                         <tr>
                             <th>ID</th>
-                            <th>User</th>
+                            <th>Member</th>
                             <th>Year</th>
                             <th>Certificate</th>
                             <th>Actions</th>
@@ -2502,7 +2502,7 @@ jQuery(document).ready(function($) {
                             <div class="detail-value">${submission.id}</div>
                         </div>
                         <div class="detail-item">
-                            <div class="detail-label">User</div>
+                            <div class="detail-label">Member</div>
                             <div class="detail-value">${userName}</div>
                         </div>
                         <div class="detail-item">
@@ -2603,7 +2603,7 @@ jQuery(document).ready(function($) {
                              </div>
                          </div>
                          <div class="detail-item">
-                             <div class="detail-label">User Assigned</div>
+                             <div class="detail-label">Member Assigned</div>
                              <div class="detail-value">
                                  <span class="status-icon ${details.is_user_assigned ? 'status-success' : 'status-error'}">
                                      ${details.is_user_assigned ? '✓' : '✗'}

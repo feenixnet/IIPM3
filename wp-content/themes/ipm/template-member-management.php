@@ -1,8 +1,8 @@
 <?php
 /**
- * Template Name: User Management
+ * Template Name: Member Management
  * 
- * User Management page for Site Admins and Organization Admins
+ * Member Management page for Site Admins and Organization Admins
  */
 
  // Storm worked here...111
@@ -48,7 +48,7 @@ if (!function_exists('add_success_notification')) {
         <!-- Page Header -->
         <div class="page-header" style="text-align: center; margin-bottom: 40px;">
             <div>
-                <h1 style="color: white; font-size: 2.5rem; margin-bottom: 10px;">User Management</h1>
+                <h1 style="color: white; font-size: 2.5rem; margin-bottom: 10px;">Member Management</h1>
             </div>
         </div>
 
@@ -58,12 +58,12 @@ if (!function_exists('add_success_notification')) {
                 <a href="?tab=users" class="tab-button <?php echo $active_tab === 'users' ? 'active' : ''; ?>" 
                    style="padding: 12px 24px; background: <?php echo $active_tab === 'users' ? '#f8a135' : '#6b4c93'; ?>; color: white; border-radius: 8px; text-decoration: none; font-weight: 500; transition: all 0.3s ease;">
                     <span style="margin-right: 8px;"><i class="fas fa-users"></i></span>
-                    Users
+                    Members
                 </a>
                 <a href="?tab=invitations" class="tab-button <?php echo $active_tab === 'invitations' ? 'active' : ''; ?>"
                    style="padding: 12px 24px; background: <?php echo $active_tab === 'invitations' ? '#f8a135' : '#6b4c93'; ?>; color: white; border-radius: 8px; text-decoration: none; font-weight: 500; transition: all 0.3s ease;">
                     <span style="margin-right: 8px;"><i class="fas fa-envelope"></i></span>
-                    Add user
+                    Add Member
                 </a>
                 <a href="?tab=membership" class="tab-button <?php echo $active_tab === 'membership' ? 'active' : ''; ?>"
                    style="padding: 12px 24px; background: <?php echo $active_tab === 'membership' ? '#f8a135' : '#6b4c93'; ?>; color: white; border-radius: 8px; text-decoration: none; font-weight: 500; transition: all 0.3s ease;">
@@ -88,14 +88,14 @@ if (!function_exists('add_success_notification')) {
                         <?php endif; ?>
                         <a href="<?php echo home_url('/bulk-import/'); ?>" style="display: inline-flex; align-items: center; padding: 12px 24px; background: #8B5CF6; color: white; border-radius: 8px; text-decoration: none; font-weight: 500; transition: all 0.3s ease; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
                             <span style="margin-right: 8px;"><i class="fas fa-upload"></i></span>
-                            Bulk User Upload
+                            Bulk Member Upload
                         </a>
                     </div>
 
                     <!-- Search and Filter Section -->
                     <div class="search-filter-section" style="margin-bottom: 30px; display: flex; gap: 20px; align-items: center; flex-wrap: wrap;">
                         <div class="search-box" style="flex: 1; min-width: 250px;">
-                            <input type="text" id="user-search" placeholder="Search users by name or email..." 
+                            <input type="text" id="user-search" placeholder="Search members by name or email..." 
                                    style="width: 100%; padding: 12px 16px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 14px;">
                         </div>
                         <div class="user-count-display" style="padding: 12px 16px; background: #f8fafc; border: 2px solid #e5e7eb; border-radius: 8px; font-weight: 500; color: #374151; min-width: 120px; text-align: center;">
@@ -149,7 +149,7 @@ if (!function_exists('add_success_notification')) {
                                 <tr>
                                     <td colspan="8" style="padding: 40px; text-align: center; color: #6b7280;">
                                         <div class="loading-spinner" style="display: inline-block; width: 20px; height: 20px; border: 2px solid #e5e7eb; border-top: 2px solid #667eea; border-radius: 50%; animation: spin 1s linear infinite;"></div>
-                                        <span style="margin-left: 10px;">Loading users...</span>
+                                        <span style="margin-left: 10px;">Loading members...</span>
                                     </td>
                                 </tr>
                             </tbody>
@@ -347,7 +347,7 @@ if (!function_exists('add_success_notification')) {
 <div id="edit-user-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
     <div class="modal-content" style="background: white; border-radius: 12px; padding: 30px; width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto;">
         <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <h3 style="margin: 0; color: #374151;">Edit User</h3>
+            <h3 style="margin: 0; color: #374151;">Edit Member</h3>
             <button id="close-edit-modal" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #6b7280;">&times;</button>
         </div>
         
@@ -494,7 +494,7 @@ if (!function_exists('add_success_notification')) {
 <div id="delete-user-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
     <div class="modal-content" style="background: white; border-radius: 12px; padding: 30px; width: 90%; max-width: 400px;">
         <div class="modal-header" style="text-align: center; margin-bottom: 20px;">
-            <h3 style="margin: 0; color: #dc2626;">Delete User</h3>
+            <h3 style="margin: 0; color: #dc2626;">Delete Member</h3>
         </div>
         
         <p style="text-align: center; margin-bottom: 20px; color: #374151;">
@@ -508,7 +508,7 @@ if (!function_exists('add_success_notification')) {
             </button>
             <button id="confirm-delete" 
                     style="padding: 10px 20px; background: #dc2626; color: white; border: none; border-radius: 6px; cursor: pointer;">
-                Delete User
+                Delete Member
             </button>
         </div>
     </div>
@@ -995,7 +995,7 @@ jQuery(document).ready(function($) {
             <tr>
                 <td colspan="8" style="padding: 40px; text-align: center; color: #6b7280;">
                     <div class="loading-spinner" style="display: inline-block; width: 20px; height: 20px; border: 2px solid #e5e7eb; border-top: 2px solid #667eea; border-radius: 50%; animation: spin 1s linear infinite;"></div>
-                    <span style="margin-left: 10px;">Loading users...</span>
+                    <span style="margin-left: 10px;">Loading members...</span>
                 </td>
             </tr>
         `);
@@ -1098,11 +1098,11 @@ jQuery(document).ready(function($) {
         
         let countText;
         if (totalUsers === 0) {
-            countText = 'No users found';
+            countText = 'No members found';
         } else if (totalUsers <= perPage) {
-            countText = `${totalUsers} user${totalUsers === 1 ? '' : 's'}`;
+            countText = `${totalUsers} member${totalUsers === 1 ? '' : 's'}`;
         } else {
-            countText = `${startUser}-${endUser} of ${totalUsers} users`;
+            countText = `${startUser}-${endUser} of ${totalUsers} members`;
         }
         
         $('#user-count-text').text(countText);
@@ -1252,7 +1252,7 @@ jQuery(document).ready(function($) {
     // Edit user function (global)
     window.editUser = function(userId) {
         // Redirect to user details page
-        window.location.href = '<?php echo home_url('/user-details'); ?>?id=' + userId;
+        window.location.href = '<?php echo home_url('/member-details'); ?>?id=' + userId;
     };
 
     // Delete user function (global)
@@ -1341,12 +1341,12 @@ jQuery(document).ready(function($) {
                     loadUsers();
                     // Show success notification
                     if (window.notifications) {
-                        notifications.success('User Deleted', 'User has been deleted successfully.');
+                        notifications.success('Member Deleted', 'Member has been deleted successfully.');
                     }
                 } else {
                     // Show error notification
                     if (window.notifications) {
-                        notifications.error('Delete Failed', 'Error deleting user: ' + response.data);
+                        notifications.error('Delete Failed', 'Error deleting member: ' + response.data);
                     }
                 }
                 userToDelete = null;
@@ -1354,7 +1354,7 @@ jQuery(document).ready(function($) {
             error: function() {
                 // Show error notification
                 if (window.notifications) {
-                    notifications.error('Delete Failed', 'Error deleting user. Please try again.');
+                    notifications.error('Delete Failed', 'Error deleting member. Please try again.');
                 }
                 userToDelete = null;
             }

@@ -113,12 +113,12 @@ get_header();
                         <div class="form-section">
                             <h3>Contact Information</h3>
                             <div class="form-group">
-                                <label for="user_phone">User Phone</label>
+                                <label for="user_phone">Member Phone</label>
                                 <input type="tel" name="user_phone" id="user_phone">
                             </div>
 
                             <div class="form-group">
-                                    <label for="user_mobile">User Mobile</label>
+                                    <label for="user_mobile">Member Mobile</label>
                                     <input type="tel" name="user_mobile" id="user_mobile">
                                 </div>
                             
@@ -140,7 +140,7 @@ get_header();
                             <h3>Professional Information</h3>
                             
                             <div class="form-group">
-                                <label for="membership_selection">User Designation *</label>
+                                <label for="membership_selection">Member Designation *</label>
                                 <input type="text" name="membership_selection" id="membership_selection" 
                                        placeholder="Click to select your designation" readonly required>
                                 <input type="hidden" name="membership_id" id="membership_id">

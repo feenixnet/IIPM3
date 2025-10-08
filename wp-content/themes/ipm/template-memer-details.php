@@ -24,7 +24,7 @@ if (!$is_site_admin && !$is_org_admin) {
 $user_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 
 if (!$user_id) {
-    wp_redirect(home_url('/user-management/'));
+    wp_redirect(home_url('/member-management/'));
     exit;
 }
 
@@ -42,7 +42,7 @@ if (!function_exists('add_success_notification')) {
         <!-- Page Header -->
         <div class="page-header" style="text-align: center; margin-bottom: 40px;">
             <div>
-                <h1 id="page-title" style="color: white; font-size: 2.5rem; margin-bottom: 10px;">Loading User Details...</h1>
+                <h1 id="page-title" style="color: white; font-size: 2.5rem; margin-bottom: 10px;">Loading Member Details...</h1>
                 <p style="color: rgba(255,255,255,0.9); font-size: 1.1rem;">
                     View and edit comprehensive user information
                 </p>
@@ -51,9 +51,9 @@ if (!function_exists('add_success_notification')) {
 
         <!-- Back Button -->
         <div style="margin-bottom: 30px;">
-            <a href="<?php echo home_url('/user-management/'); ?>" style="display: inline-flex; align-items: center; padding: 12px 24px; background: #6b4c93; color: white; border-radius: 8px; text-decoration: none; font-weight: 500; transition: all 0.3s ease;">
+            <a href="<?php echo home_url('/member-management/'); ?>" style="display: inline-flex; align-items: center; padding: 12px 24px; background: #6b4c93; color: white; border-radius: 8px; text-decoration: none; font-weight: 500; transition: all 0.3s ease;">
                 <span style="margin-right: 8px;"><i class="fas fa-arrow-left"></i></span>
-                Back to User Management
+                Back to Members
             </a>
         </div>
 
@@ -61,7 +61,7 @@ if (!function_exists('add_success_notification')) {
         <div class="user-details-card" style="background: white; border-radius: 12px; padding: 40px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
             <div id="loading-message" style="text-align: center; padding: 40px; color: #6b7280;">
                 <div class="loading-spinner" style="display: inline-block; width: 24px; height: 24px; border: 3px solid #e5e7eb; border-top: 3px solid #667eea; border-radius: 50%; animation: spin 1s linear infinite;"></div>
-                <span style="margin-left: 10px;">Loading user details...</span>
+                <span style="margin-left: 10px;">Loading member details...</span>
             </div>
             
             <!-- Tab Navigation -->
@@ -87,7 +87,7 @@ if (!function_exists('add_success_notification')) {
                 <!-- Section 1: User Information -->
                 <div class="info-section" data-section="user-info">
                     <div class="section-header">
-                        <h3><i class="fas fa-user"></i> User Information</h3>
+                        <h3><i class="fas fa-user"></i> Member Information</h3>
                         <button type="button" class="edit-toggle-btn">Edit</button>
                     </div>
                     <div class="section-content">
@@ -142,6 +142,27 @@ if (!function_exists('add_success_notification')) {
                                     <option value="paused">Paused</option>
                                     <option value="deceased">Deceased</option>
                                 </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Reset Password:</label>
+                                <div class="password-reset-container">
+                                    <input type="password" name="new_password" id="new_password_edit" disabled 
+                                           placeholder="Leave empty to keep current password" 
+                                           style="width: 100%; padding: 12px 16px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 14px;">
+                                    <div class="password-strength-indicator" style="margin-top: 8px; display: none;">
+                                        <div class="strength-bar" style="height: 4px; background: #e5e7eb; border-radius: 2px; overflow: hidden;">
+                                            <div class="strength-fill" style="height: 100%; width: 0%; transition: all 0.3s ease;"></div>
+                                        </div>
+                                        <div class="strength-text" style="font-size: 12px; margin-top: 4px; color: #6b7280;"></div>
+                                    </div>
+                                    <div class="password-requirements" style="margin-top: 8px; font-size: 12px; color: #6b7280;">
+                                        <div class="requirement" data-requirement="length">• At least 8 characters</div>
+                                        <div class="requirement" data-requirement="uppercase">• One uppercase letter</div>
+                                        <div class="requirement" data-requirement="lowercase">• One lowercase letter</div>
+                                        <div class="requirement" data-requirement="number">• One number</div>
+                                        <div class="requirement" data-requirement="special">• One special character</div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -436,7 +457,7 @@ if (!function_exists('add_success_notification')) {
             
             <div id="error-message" style="display: none; text-align: center; padding: 40px; color: #dc2626;">
                 <i class="fas fa-exclamation-triangle" style="font-size: 2rem; margin-bottom: 15px;"></i>
-                <p>Error loading user details. Please try again.</p>
+                <p>Error loading member details. Please try again.</p>
             </div>
         </div>
     </div>
@@ -1749,6 +1770,71 @@ jQuery(document).ready(function($) {
         });
     });
     
+    // Password strength validation
+    function validatePasswordStrength(password) {
+        const requirements = {
+            length: password.length >= 8,
+            uppercase: /[A-Z]/.test(password),
+            lowercase: /[a-z]/.test(password),
+            number: /\d/.test(password),
+            special: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)
+        };
+        
+        const score = Object.values(requirements).filter(Boolean).length;
+        const strength = score < 3 ? 'weak' : score < 4 ? 'medium' : 'strong';
+        
+        return { requirements, score, strength };
+    }
+    
+    function updatePasswordStrengthIndicator(password) {
+        const indicator = $('.password-strength-indicator');
+        const fill = $('.strength-fill');
+        const text = $('.strength-text');
+        const requirements = $('.password-requirements .requirement');
+        
+        if (password.length === 0) {
+            indicator.hide();
+            requirements.removeClass('met');
+            return;
+        }
+        
+        indicator.show();
+        const validation = validatePasswordStrength(password);
+        
+        // Update strength bar
+        const percentage = (validation.score / 5) * 100;
+        fill.css('width', percentage + '%');
+        
+        // Update strength bar color
+        if (validation.strength === 'weak') {
+            fill.css('background-color', '#ef4444');
+            text.text('Weak password').css('color', '#ef4444');
+        } else if (validation.strength === 'medium') {
+            fill.css('background-color', '#f59e0b');
+            text.text('Medium password').css('color', '#f59e0b');
+        } else {
+            fill.css('background-color', '#10b981');
+            text.text('Strong password').css('color', '#10b981');
+        }
+        
+        // Update requirements
+        requirements.each(function() {
+            const requirement = $(this).data('requirement');
+            if (validation.requirements[requirement]) {
+                $(this).addClass('met').css('color', '#10b981');
+            } else {
+                $(this).removeClass('met').css('color', '#6b7280');
+            }
+        });
+        
+        return validation.strength === 'strong';
+    }
+    
+    // Password input event handler
+    $('#new_password_edit').on('input', function() {
+        const password = $(this).val();
+        updatePasswordStrengthIndicator(password);
+    });
     
     // Form submission
     $('#user-details-form').on('submit', function(e) {
@@ -1759,6 +1845,20 @@ jQuery(document).ready(function($) {
             nonce: '<?php echo wp_create_nonce('iipm_user_management_nonce'); ?>',
             user_id: userId
         };
+        
+        // Validate password if provided
+        const passwordField = $('#new_password_edit');
+        const password = passwordField.val();
+        
+        if (password && password.trim() !== '') {
+            const isStrongPassword = updatePasswordStrengthIndicator(password);
+            if (!isStrongPassword) {
+                if (window.notifications) {
+                    notifications.error('Password Validation Failed', 'Password must meet all strength requirements.');
+                }
+                return;
+            }
+        }
         
         // Collect all form data
         $(this).find('input, select').each(function() {
@@ -1779,7 +1879,15 @@ jQuery(document).ready(function($) {
                 if (response.success) {
                     // Show success notification
                     if (window.notifications) {
-                        notifications.success('User Updated', 'User details updated successfully.');
+                        const passwordField = $('#new_password_edit');
+                        const password = passwordField.val();
+                        let message = 'Member details updated successfully.';
+                        if (password && password.trim() !== '') {
+                            message += ' Password has been reset.';
+                            passwordField.val(''); // Clear password field
+                            updatePasswordStrengthIndicator(''); // Hide strength indicator
+                        }
+                        notifications.success('Member Updated', message);
                     }
                     cancelEditAll();
                     // Reload user details
@@ -1804,5 +1912,69 @@ jQuery(document).ready(function($) {
     });
 });
 </script>
+
+<style>
+/* Password Strength Indicator Styles */
+.password-reset-container {
+    position: relative;
+}
+
+.password-strength-indicator {
+    margin-top: 8px;
+}
+
+.strength-bar {
+    height: 4px;
+    background: #e5e7eb;
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 4px;
+}
+
+.strength-fill {
+    height: 100%;
+    width: 0%;
+    transition: all 0.3s ease;
+    border-radius: 2px;
+}
+
+.strength-text {
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.password-requirements {
+    margin-top: 8px;
+    font-size: 12px;
+}
+
+.password-requirements .requirement {
+    margin: 2px 0;
+    transition: color 0.3s ease;
+}
+
+.password-requirements .requirement.met {
+    color: #10b981 !important;
+}
+
+.password-requirements .requirement.met::before {
+    content: "✓ ";
+    color: #10b981;
+    font-weight: bold;
+}
+
+/* Form field styling for password */
+#new_password_edit:focus {
+    border-color: #8b5a96;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(139, 90, 150, 0.1);
+}
+
+#new_password_edit:disabled {
+    background-color: #f9fafb;
+    color: #6b7280;
+    cursor: not-allowed;
+}
+</style>
 
 <?php get_footer(); ?>

@@ -439,7 +439,7 @@ add_filter('query_vars', 'add_query_vars_filter');
  * Add rewrite rules for custom pages
  */
 function add_custom_rewrite_rules() {
-    add_rewrite_rule('^user-details/?$', 'index.php?page_id=0&user_details_page=1', 'top');
+    add_rewrite_rule('^member-details/?$', 'index.php?page_id=0&user_details_page=1', 'top');
 }
 add_action('init', 'add_custom_rewrite_rules');
 
@@ -454,14 +454,14 @@ function handle_user_details_page() {
         
         if ($user_id > 0) {
             // Load the user details template
-            $template_path = get_template_directory() . '/template-user-details.php';
+            $template_path = get_template_directory() . '/template-member-details.php';
             if (file_exists($template_path)) {
                 include($template_path);
                 exit;
             }
         } else {
             // If no user ID provided, redirect to user management
-            wp_redirect(home_url('/user-management/'));
+            wp_redirect(home_url('/member-management/'));
             exit;
         }
     }
@@ -558,7 +558,7 @@ $iipm_includes = array(
     get_template_directory() . '/includes/database-updates.php',
     get_template_directory() . '/includes/organisation-management-handlers.php',
     get_template_directory() . '/includes/direct-admin-assignment.php',
-    get_template_directory() . '/includes/user-management-handlers.php',
+    get_template_directory() . '/includes/member-management-handlers.php',
     get_template_directory() . '/includes/cpd-database-setup.php',
     get_template_directory() . '/includes/cpd-management-handlers.php',
     get_template_directory() . '/includes/cpd-reporting-functions.php',
@@ -2754,7 +2754,7 @@ add_action('wp_enqueue_scripts', 'iipm_enqueue_portal_scripts');
 function iipm_protect_portal_pages() {
     if (is_page_template('template-member-portal.php') || 
         is_page_template('template-dashboard.php') ||
-        is_page_template('template-user-management.php') ||
+        is_page_template('template-member-management.php') ||
         is_page_template('template-organisation-management.php') ||
         is_page_template('template-bulk-import.php') ||
         is_page_template('template-admin-invitations.php') ||
@@ -2762,7 +2762,7 @@ function iipm_protect_portal_pages() {
         is_page_template('template-leave-request.php') ||
         is_page_template('template-leave-admin.php') ||
         is_page_template('template-course-management.php') ||
-        is_page_template('template-user-details.php')) {
+        is_page_template('template-member-details.php')) {
         
         if (!is_user_logged_in()) {
             wp_redirect(home_url('/login/'));
@@ -2878,8 +2878,8 @@ function iipm_get_user_menu_items($user_id = null) {
 			'roles' => array('iipm_admin', 'administrator')
 		),
 		array(
-			'title' => 'User Management',
-			'url' => home_url('/user-management/'),
+			'title' => 'Member management',
+			'url' => home_url('/member-management/'),
 			'icon' => 'users',
 			'roles' => array('iipm_admin', 'administrator')
 		),
@@ -3084,7 +3084,7 @@ function iipm_add_portal_pages() {
         'dashboard' => 'Dashboard',
         'login' => 'Login',
         'member-registration' => 'Member Registration',
-        'user-management' => 'User Management',
+        'member-management' => 'Member Management',
         'organisation-management' => 'Organisation Management',
         'bulk-import' => 'Bulk Member Import',
         'admin-invitations' => 'Admin Invitations',
@@ -6757,6 +6757,37 @@ function iipm_admin_update_user_details() {
     }
     
     try {
+        // Handle password reset if provided
+        if (isset($_POST['new_password']) && !empty($_POST['new_password'])) {
+            $new_password = sanitize_text_field($_POST['new_password']);
+            
+            // Validate password strength on server side
+            $password_errors = array();
+            if (strlen($new_password) < 8) {
+                $password_errors[] = 'Password must be at least 8 characters long';
+            }
+            if (!preg_match('/[A-Z]/', $new_password)) {
+                $password_errors[] = 'Password must contain at least one uppercase letter';
+            }
+            if (!preg_match('/[a-z]/', $new_password)) {
+                $password_errors[] = 'Password must contain at least one lowercase letter';
+            }
+            if (!preg_match('/\d/', $new_password)) {
+                $password_errors[] = 'Password must contain at least one number';
+            }
+            if (!preg_match('/[!@#$%^&*()_+\-=\[\]{};\':"\\|,.<>\/?]/', $new_password)) {
+                $password_errors[] = 'Password must contain at least one special character';
+            }
+            
+            if (!empty($password_errors)) {
+                wp_send_json_error('Password validation failed: ' . implode(', ', $password_errors));
+                return;
+            }
+            
+            // Update password
+            wp_set_password($new_password, $user_id);
+        }
+        
         // Update wp_users table
         if (isset($_POST['user_email'])) {
             $wpdb->update(

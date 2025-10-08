@@ -23,7 +23,7 @@ class IIPM_Navigation_Manager {
             $navigation = array(
                 'Dashboard' => home_url('/dashboard/'),
                 'Admin Management' => home_url('/super-admin/'),
-                'User Management' => home_url('/user-management/'),
+                'Member Management' => home_url('/member-management/'),
                 'Organization Management' => home_url('/organisation-management/'),
                 
                 'Bulk Member Import' => array('url' => home_url('/bulk-import/')),
@@ -39,7 +39,7 @@ class IIPM_Navigation_Manager {
         elseif (in_array('iipm_corporate_admin', $user_roles)) {
             $navigation = array(
                 'Dashboard' => home_url('/dashboard/'),
-                'Employee Management' => home_url('/user-management/'),
+                'Employee Management' => home_url('/member-management/'),
                 
                 'Bulk Member Import' => home_url('/bulk-import/'),
                 'CPD Reports' => home_url('/cpd-reports/'),
@@ -127,14 +127,14 @@ class IIPM_Navigation_Manager {
             }
             
             // User management pages
-            if (strpos($current_url, 'user-management') !== false || 
+            if (strpos($current_url, 'member-management') !== false || 
                 strpos($current_url, 'admin-invitations') !== false || 
                 strpos($current_url, 'bulk-import') !== false ||
                 strpos($current_url, 'organisation-management') !== false) {
-                if (!self::breadcrumb_exists($breadcrumbs, 'User Management')) {
+                if (!self::breadcrumb_exists($breadcrumbs, 'Member Management')) {
                     $breadcrumbs[] = array(
-                        'title' => 'User Management',
-                        'url' => home_url('/user-management/')
+                        'title' => 'Member Management',
+                        'url' => home_url('/member-management/')
                     );
                 }
             }
@@ -195,7 +195,7 @@ class IIPM_Navigation_Manager {
         return array(
             'admin' => array(
                 'Dashboard' => array(
-                    'User Management' => array(
+                    'Member Management' => array(
                         'All Users',
                         'Bulk Member Import',
                         'Admin Invitations',

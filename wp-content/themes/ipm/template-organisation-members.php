@@ -171,7 +171,7 @@ get_header();
                     <!-- Search and Filter Section -->
                     <div class="search-filter-section" style="margin-bottom: 30px; display: flex; gap: 20px; align-items: center; flex-wrap: wrap;">
                         <div class="search-box" style="flex: 1; min-width: 250px;">
-                            <input type="text" id="import-search" placeholder="Search users by name or email..." 
+                            <input type="text" id="import-search" placeholder="Search members by name or email..." 
                                    style="width: 100%; padding: 12px 16px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 14px;">
                         </div>
                         <div class="import-count-display" style="padding: 12px 16px; background: #f8fafc; border: 2px solid #e5e7eb; border-radius: 8px; font-weight: 500; color: #374151; min-width: 120px; text-align: center;">
@@ -677,7 +677,7 @@ jQuery(document).ready(function($) {
             <tr>
                 <td colspan="6" style="padding: 40px; text-align: center; color: #6b7280;">
                     <div class="loading-spinner" style="display: inline-block; width: 20px; height: 20px; border: 2px solid #e5e7eb; border-top: 2px solid #667eea; border-radius: 50%; animation: spin 1s linear infinite;"></div>
-                    <span style="margin-left: 10px;">Loading users...</span>
+                    <span style="margin-left: 10px;">Loading members...</span>
                 </td>
             </tr>
         `);

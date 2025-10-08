@@ -117,13 +117,13 @@ get_header();
                     </a>
                 </div>
 
-                <!-- Admin Only - User Management -->
+                <!-- Admin Only - Member Management -->
                 <div class="nav-card admin">
                     <div class="card-icon">👥</div>
-                    <h3>User Management</h3>
-                    <p>Manage all users, view their details, and handle user-related tasks</p>
-                    <a href="<?php echo home_url('/user-management/'); ?>" class="card-button">
-                        Manage Users <span class="arrow">→</span>
+                    <h3>Member Management</h3>
+                    <p>Manage all members, view their details, and handle member-related tasks</p>
+                    <a href="<?php echo home_url('/member-management/'); ?>" class="card-button">
+                        Manage Members <span class="arrow">→</span>
                     </a>
                 </div>
 
@@ -153,7 +153,7 @@ get_header();
                     <div class="card-icon">👥</div>
                     <h3>Employee Management</h3>
                     <p>Manage your organization's employees and their information</p>
-                    <a href="<?php echo home_url('/user-management/'); ?>" class="card-button">
+                    <a href="<?php echo home_url('/member-management/'); ?>" class="card-button">
                         Manage Employees <span class="arrow">→</span>
                     </a>
                 </div>

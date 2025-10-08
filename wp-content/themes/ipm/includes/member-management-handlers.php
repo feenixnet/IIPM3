@@ -1,6 +1,6 @@
 <?php
 /**
- * User Management AJAX Handlers
+ * Member Management AJAX Handlers
  */
 
 // Get users with filtering and pagination

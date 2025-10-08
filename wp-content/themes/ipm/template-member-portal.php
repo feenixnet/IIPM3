@@ -120,6 +120,92 @@ get_header();
             <?php endif; ?>
         <?php endif; ?>
         
+        <!-- Statistics Blocks Section -->
+        <div class="statistics-blocks-section">
+            <?php
+            // Get CPD statistics
+            $cpd_stats = iipm_get_cpd_stats($current_user->ID, $current_year);
+            $total_cpd_hours = $cpd_stats['total_cpd_minutes'] / 60; // Convert minutes to hours
+            
+            // Get course count from category summary
+            $total_courses = 0;
+            if (isset($cpd_stats['courses_summary']) && is_array($cpd_stats['courses_summary'])) {
+                foreach ($cpd_stats['courses_summary'] as $category) {
+                    $total_courses += $category['count'];
+                }
+            }
+            
+            // Get leave hours deducted using the predefined function
+            $leave_duration_days = iipm_calculate_user_leave_duration($current_user->ID, $current_year);
+            $membership_constant = iipm_get_membership_constant($current_user->ID);
+            $leave_hours_deducted = iipm_round_to_nearest_half($membership_constant * ($leave_duration_days / 30));
+            ?>
+            
+            <div class="stats-grid">
+                <!-- CPD Records Block -->
+                <div class="stat-block cpd-records">
+                    <div class="stat-icon">
+                        <i class="fas fa-certificate" style="margin-right: 0px; color: white;"></i>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-number"><?php echo number_format($total_cpd_hours, 1); ?></div>
+                        <div class="stat-label">CPD Hours</div>
+                        <div class="stat-description">Total professional development hours completed</div>
+                    </div>
+                    <div class="stat-progress">
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: <?php echo min(100, ($total_cpd_hours / 8) * 100); ?>%"></div>
+                        </div>
+                        <div class="progress-text"><?php echo number_format(($total_cpd_hours / 8) * 100, 1); ?>% of target</div>
+                    </div>
+                </div>
+                
+                <!-- Courses Block -->
+                <div class="stat-block courses">
+                    <div class="stat-icon">
+                        <i class="fas fa-graduation-cap" style="margin-right: 0px; color: white;"></i>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-number"><?php echo $total_courses; ?></div>
+                        <div class="stat-label">Courses Completed</div>
+                        <div class="stat-description">Total courses studied across all categories</div>
+                    </div>
+                    <div class="stat-categories">
+                        <?php if (isset($cpd_stats['courses_summary']) && is_array($cpd_stats['courses_summary'])): ?>
+                            <?php foreach ($cpd_stats['courses_summary'] as $category): ?>
+                                <div class="category-item">
+                                    <span class="category-name"><?php echo esc_html($category['category']); ?></span>
+                                    <span class="category-count"><?php echo $category['count']; ?></span>
+                                </div>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                
+                <!-- Leave Requests Block -->
+                <div class="stat-block leave-requests">
+                    <div class="stat-icon">
+                        <i class="fas fa-calendar-times" style="margin-right: 0px; color: white;"></i>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-number"><?php echo number_format($leave_hours_deducted, 1); ?></div>
+                        <div class="stat-label">Leave Hours</div>
+                        <div class="stat-description">CPD hours deducted due to approved leave</div>
+                    </div>
+                    <div class="stat-details">
+                        <div class="detail-item">
+                            <span class="detail-label">Leave Days:</span>
+                            <span class="detail-value"><?php echo $leave_duration_days; ?> days</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Membership Factor:</span>
+                            <span class="detail-value"><?php echo $membership_constant; ?></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
         <!-- Submission Status Section -->
         <?php if ($is_submitted): ?>
         <div class="submission-status-section">
@@ -1921,6 +2007,262 @@ get_header();
             margin-bottom: 8px;
         }
     }
+
+    /* Statistics Blocks Section */
+    .statistics-blocks-section {
+        margin-bottom: 40px;
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 25px;
+        margin-bottom: 30px;
+    }
+
+    .stat-block {
+        background: white;
+        border-radius: 20px;
+        padding: 30px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+        animation: fadeInUp 0.6s ease-out;
+    }
+
+    .stat-block::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, #667eea, #764ba2);
+    }
+
+    .stat-block:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+    }
+
+    .stat-block:nth-child(1) {
+        animation-delay: 0.1s;
+    }
+
+    .stat-block:nth-child(2) {
+        animation-delay: 0.2s;
+    }
+
+    .stat-block:nth-child(3) {
+        animation-delay: 0.3s;
+    }
+
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .stat-block.cpd-records::before {
+        background: linear-gradient(90deg, #10b981, #059669);
+    }
+
+    .stat-block.courses::before {
+        background: linear-gradient(90deg, #3b82f6, #1d4ed8);
+    }
+
+    .stat-block.leave-requests::before {
+        background: linear-gradient(90deg, #f59e0b, #d97706);
+    }
+
+    .stat-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 20px;
+        font-size: 24px;
+        color: white;
+    }
+
+    .stat-block.cpd-records .stat-icon {
+        background: linear-gradient(135deg, #10b981, #059669);
+    }
+
+    .stat-block.courses .stat-icon {
+        background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+    }
+
+    .stat-block.leave-requests .stat-icon {
+        background: linear-gradient(135deg, #f59e0b, #d97706);
+    }
+
+    .stat-content {
+        margin-bottom: 20px;
+    }
+
+    .stat-number {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: #1f2937;
+        margin-bottom: 5px;
+        line-height: 1;
+    }
+
+    .stat-label {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 8px;
+    }
+
+    .stat-description {
+        font-size: 0.9rem;
+        color: #6b7280;
+        line-height: 1.4;
+    }
+
+    /* CPD Records Progress Bar */
+    .stat-progress {
+        margin-top: 15px;
+    }
+
+    .progress-bar {
+        width: 100%;
+        height: 8px;
+        background: #e5e7eb;
+        border-radius: 4px;
+        overflow: hidden;
+        margin-bottom: 8px;
+    }
+
+    .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #10b981, #059669);
+        border-radius: 4px;
+        transition: width 0.3s ease;
+    }
+
+    .progress-text {
+        font-size: 0.85rem;
+        color: #6b7280;
+        text-align: center;
+    }
+
+    /* Courses Categories */
+    .stat-categories {
+        margin-top: 15px;
+    }
+
+    .category-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+        border-bottom: 1px solid #f3f4f6;
+    }
+
+    .category-item:last-child {
+        border-bottom: none;
+    }
+
+    .category-name {
+        font-size: 0.9rem;
+        color: #374151;
+        font-weight: 500;
+    }
+
+    .category-count {
+        font-size: 0.9rem;
+        color: #3b82f6;
+        font-weight: 600;
+        background: #eff6ff;
+        padding: 2px 8px;
+        border-radius: 12px;
+    }
+
+    /* Leave Requests Details */
+    .stat-details {
+        margin-top: 15px;
+    }
+
+    .detail-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+        border-bottom: 1px solid #f3f4f6;
+    }
+
+    .detail-item:last-child {
+        border-bottom: none;
+    }
+
+    .detail-label {
+        font-size: 0.9rem;
+        color: #6b7280;
+    }
+
+    .detail-value {
+        font-size: 0.9rem;
+        color: #f59e0b;
+        font-weight: 600;
+        background: #fffbeb;
+        padding: 2px 8px;
+        border-radius: 12px;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .stats-grid {
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        .stat-block {
+            padding: 25px 20px;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+        }
+
+        .stat-icon {
+            width: 50px;
+            height: 50px;
+            font-size: 20px;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .statistics-blocks-section {
+            margin-bottom: 30px;
+        }
+
+        .stat-block {
+            padding: 20px 15px;
+        }
+
+        .stat-number {
+            font-size: 1.8rem;
+        }
+
+        .stat-label {
+            font-size: 1rem;
+        }
+
+        .stat-description {
+            font-size: 0.85rem;
+        }
+    }
 </style>
 
 <script>
@@ -2764,16 +3106,6 @@ get_header();
                         </div>
                         <h3 class="training-title-submitted">Recently Logged Training</h3>
                     </div>
-                    <div class="training-summary">
-                        <div class="summary-item">
-                            <span class="summary-label">Total Courses:</span>
-                            <span class="summary-value">${training.length}</span>
-                        </div>
-                        <div class="summary-item">
-                            <span class="summary-label">Total Duration:</span>
-                            <span class="summary-value">${formatDuration(totalDuration)}</span>
-                        </div>
-                    </div>
                     <div class="training-table-container">
                         <table class="training-table">
                             <thead>
@@ -3048,24 +3380,7 @@ get_header();
             const statusText = submission.status.charAt(0).toUpperCase() + submission.status.slice(1);
             
             let html = `
-                <div class="status-info">
-                    <div class="status-item">
-                        <h4>Submission Status</h4>
-                        <span class="status-badge ${statusClass}">${statusText}</span>
-                    </div>
-                    <div class="status-item">
-                        <h4>Submitted Date</h4>
-                        <p class="value">${submittedDate}</p>
-                    </div>
-                    <div class="status-item">
-                        <h4>Reviewed Date</h4>
-                        <p class="value">${reviewedDate}</p>
-                    </div>
-                    <div class="status-item">
-                        <h4>Submission Year</h4>
-                        <p class="value">${submission.year}</p>
-                    </div>
-                </div>
+
             `;
             
             // Add completed courses section

@@ -287,7 +287,7 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
                 </div>
                 
                 <div class="form-section">
-                    <h4><i class="fas fa-user-cog"></i> Administrator Setup</h4>
+                    <h4><i class="fas fa-user-cog"></i> Member Administrator Setup</h4>
                     <div class="form-group">
                         <label for="admin-email">Admin Email Address</label>
                         <input type="email" id="admin-email" name="admin_email">
@@ -389,7 +389,7 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
                 <div class="notice-icon"><i class="fas fa-exclamation-triangle"></i></div>
                 <div class="notice-content">
                     <strong>Local Development Mode</strong>
-                    <p>This feature allows you to directly assign an existing user as an organization admin without sending emails. Use this for testing in local environments.</p>
+                    <p>This feature allows you to directly assign an existing member as an organization admin without sending emails. Use this for testing in local environments.</p>
                 </div>
             </div>
             
@@ -402,11 +402,11 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
                 </div>
                 
                 <div class="form-group">
-                    <label for="direct-assign-user">Select Existing User *</label>
+                    <label for="direct-assign-user">Select Existing Member *</label>
                     <select id="direct-assign-user" name="user_id" class="user-select" required>
-                        <option value="">Loading users...</option>
+                        <option value="">Loading members...</option>
                     </select>
-                    <small>This user will be assigned as the organization administrator</small>
+                    <small>This member will be assigned as the organization administrator</small>
                 </div>
                 
                 <div class="form-actions">
@@ -1377,7 +1377,7 @@ jQuery(document).ready(function($) {
                 console.log('Users response:', response);
                 if (response.success) {
                     const users = response.data;
-                    let options = '<option value="">Select a user...</option>';
+                    let options = '<option value="">Select a member...</option>';
                     
                     users.forEach(function(user) {
                         options += `<option value="${user.id}">${user.text}</option>`;
@@ -1385,12 +1385,12 @@ jQuery(document).ready(function($) {
                     
                     $('#direct-assign-user').html(options);
                 } else {
-                    $('#direct-assign-user').html('<option value="">Error loading users</option>');
+                    $('#direct-assign-user').html('<option value="">Error loading members</option>');
                     console.error('Error loading users:', response.data);
                 }
             },
             error: function(xhr, status, error) {
-                $('#direct-assign-user').html('<option value="">Error loading users</option>');
+                $('#direct-assign-user').html('<option value="">Error loading members</option>');
                 console.error('AJAX error:', error);
                 console.error('Response:', xhr.responseText);
             }
