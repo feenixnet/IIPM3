@@ -1288,12 +1288,12 @@ function iipm_get_courses_in_learning_path($user_id) {
     $start_year = $current_year - 4; // Past 5 years including current year
     
     $query = $wpdb->prepare(
-        "SELECT course_id, courseName, crs_provider, dateOfCourse, dateOfReturn, year 
+        "SELECT id as confirmation_id, course_id, courseName, crs_provider, dateOfCourse, dateOfReturn, year 
          FROM {$table_name} 
-         WHERE user_id = %d AND year >= %d
+         WHERE user_id = %d AND year = %d
          ORDER BY dateOfCourse DESC",
         $user_id,
-        $start_year
+        $current_year
     );
     
     $courses = $wpdb->get_results($query);
@@ -1302,6 +1302,7 @@ function iipm_get_courses_in_learning_path($user_id) {
     $formatted_courses = array();
     foreach ($courses as $course) {
         $formatted_courses[] = array(
+            'confirmation_id' => $course->confirmation_id,
             'course_id' => $course->course_id,
             'course_name' => $course->courseName,
             'crs_provider' => $course->crs_provider,

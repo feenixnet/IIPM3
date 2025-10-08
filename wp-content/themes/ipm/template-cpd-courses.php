@@ -18,6 +18,19 @@ require_once get_template_directory() . '/includes/cpd-courses-api.php';
 $logging_available = isset($_GET['logging_available']) ? (int)$_GET['logging_available'] : 1;
 $is_logging_period_active = ($logging_available === 1);
 
+// Get current user and year
+$current_user = wp_get_current_user();
+$current_year = date('Y');
+
+// Check if CPD is already submitted for current year
+global $wpdb;
+$is_submitted = false;
+$submitted_rows = $wpdb->get_results("SELECT * FROM {$wpdb->prefix}test_iipm_submissions WHERE user_id = {$current_user->ID} AND year = {$current_year}");
+if(count($submitted_rows) > 0) {
+    $is_submitted = true;
+}
+
+
 get_header(); 
 ?>
 
@@ -145,7 +158,6 @@ get_header();
                 </div>
             </div>
         </div>
-
     </div>
 </div>
 
@@ -597,6 +609,79 @@ get_header();
         transform: none;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     }
+
+    /* Remove Course Button Styles */
+    .remove-course-btn {
+        width: 100%;
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        color: white;
+        border: none;
+        padding: 12px 16px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);
+    }
+
+    .remove-course-btn:hover:not(:disabled) {
+        background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(239, 68, 68, 0.3);
+    }
+
+    .remove-course-btn:active:not(:disabled) {
+        transform: translateY(0);
+        box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);
+    }
+
+    .remove-course-btn.disabled {
+        background: #9ca3af;
+        color: white;
+        cursor: not-allowed;
+        opacity: 0.7;
+        transform: none;
+        box-shadow: 0 2px 4px rgba(156, 163, 175, 0.2);
+    }
+
+    .remove-course-btn.disabled:hover {
+        background: #9ca3af;
+        transform: none;
+        box-shadow: 0 2px 4px rgba(156, 163, 175, 0.2);
+    }
+
+    .remove-course-btn i {
+        font-size: 12px;
+    }
+
+    .remove-course-btn.loading {
+        background: #6b7280;
+        cursor: not-allowed;
+    }
+
+    .remove-course-btn.success {
+        background: #10b981;
+        cursor: not-allowed;
+    }
+
+    .remove-course-btn.error {
+        background: #ef4444;
+        cursor: not-allowed;
+    }
+
+    .remove-course-btn.loading:hover,
+    .remove-course-btn.success:hover,
+    .remove-course-btn.error:hover {
+        transform: none;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
     
     /* Logging Period Banner */
     .logging-period-banner {
@@ -964,27 +1049,43 @@ get_header();
                 }
                 
                 // Check if course is in learning path (either completed or started)
-                const isInLearningPath = isCourseInLearningPath(course);
+                const isInLearningPath = isCourseInLearningPath(course) ? true : false;
+                const confirmation_id = isCourseInLearningPath(course) ? isCourseInLearningPath(course).confirmation_id : null;
+                console.log('isCourseCompleted(course):', isCourseCompleted(course));
                 const isCompleted = isCourseCompleted(course);
                 const isLoggingPeriodActive = <?php echo $is_logging_period_active ? 'true' : 'false'; ?>;
                 
-                // Determine button state based on logging period and course status
-                let addButtonClass, addButtonTitle, addButtonIcon, isDisabled;
+                // Check if CPD is submitted
+                const isCpdSubmitted = <?php echo $is_submitted ? 'true' : 'false'; ?>;
                 
-                if (!isLoggingPeriodActive) {
+                // Determine button state based on logging period, course status, and CPD submission
+                let addButtonClass, addButtonTitle, addButtonIcon, isDisabled, buttonText;
+                
+                if (isCpdSubmitted) {
+                    // If CPD is submitted, don't show any buttons
+                    addButtonClass = 'add-course-btn disabled';
+                    addButtonTitle = 'CPD already submitted';
+                    addButtonIcon = '<i class="fas fa-lock"></i>';
+                    buttonText = 'CPD Submitted';
+                    isDisabled = true;
+                } else if (!isLoggingPeriodActive) {
                     addButtonClass = 'add-course-btn disabled';
                     addButtonTitle = 'Logging period closed';
                     addButtonIcon = '<i class="fas fa-lock"></i>';
+                    buttonText = 'Logging Closed';
                     isDisabled = true;
                 } else if (isInLearningPath) {
-                    addButtonClass = 'add-course-btn disabled';
-                    addButtonTitle = isCompleted ? 'Course completed' : 'Course in progress';
-                    addButtonIcon = isCompleted ? '<i class="fas fa-check"></i>' : '<i class="fas fa-clock"></i>';
-                    isDisabled = true;
+                    // Show REMOVE button for added courses
+                    addButtonClass = 'remove-course-btn';
+                    addButtonTitle = 'Remove from learning path';
+                    addButtonIcon = '<i class="fas fa-trash-alt"></i>';
+                    buttonText = 'Remove';
+                    isDisabled = false;
                 } else {
                     addButtonClass = 'add-course-btn';
                     addButtonTitle = 'Add to learning path';
                     addButtonIcon = '<i class="fas fa-plus"></i>';
+                    buttonText = 'Add to my CPD';
                     isDisabled = false;
                 }
                 
@@ -1023,8 +1124,8 @@ get_header();
                         </div>
 
                         <div class="course-footer">
-                            <button class="${addButtonClass}" title="${addButtonTitle}" ${isDisabled ? 'disabled' : ''} data-course-id="${course.course_id}">
-                                ${addButtonIcon} ${isInLearningPath ? (isCompleted ? 'Added' : 'In Progress') : 'Add to my CPD'}
+                            <button class="${addButtonClass}" title="${addButtonTitle}" ${isDisabled ? 'disabled' : ''} data-course-id="${course.course_id}" data-confirmation-id="${confirmation_id}">
+                                ${addButtonIcon} ${buttonText}
                             </button>
                         </div>
                     </div>
@@ -1033,9 +1134,9 @@ get_header();
             
             coursesGrid.innerHTML = html;
             
-            // Add click event listeners to all add course buttons (only non-disabled ones)
-            const addCourseBtns = document.querySelectorAll('.add-course-btn:not(.disabled)');
-            addCourseBtns.forEach((btn) => {
+            // Add click event listeners to all course buttons (only non-disabled ones)
+            const courseBtns = document.querySelectorAll('.add-course-btn:not(.disabled), .remove-course-btn:not(.disabled)');
+            courseBtns.forEach((btn) => {
                 btn.addEventListener('click', function() {
                     // Get course ID from the button's data attribute
                     const courseId = this.getAttribute('data-course-id');
@@ -1051,13 +1152,18 @@ get_header();
                     
                     console.log('Found course:', course);
                     
-                    // Double-check logging period before allowing course addition
-                    const isLoggingPeriodActive = <?php echo $is_logging_period_active ? 'true' : 'false'; ?>;
-                    if (!isLoggingPeriodActive) {
-                        showNotification('Cannot add courses during logging period closure', 'error');
-                        return;
+                    // Check if this is a remove button
+                    if (this.classList.contains('remove-course-btn')) {
+                        removeCourseFromLearningPath(course);
+                    } else {
+                        // Double-check logging period before allowing course addition
+                        const isLoggingPeriodActive = <?php echo $is_logging_period_active ? 'true' : 'false'; ?>;
+                        if (!isLoggingPeriodActive) {
+                            showNotification('Cannot add courses during logging period closure', 'error');
+                            return;
+                        }
+                        addCourseToLearningPath(course);
                     }
-                    addCourseToLearningPath(course);
                 });
             });
         }
@@ -1151,9 +1257,7 @@ get_header();
                         
                         // Optionally redirect back to member portal
                         setTimeout(() => {
-                            if (confirm('Course added successfully! Would you like to return to your Member Portal?')) {
-                                window.location.href = '<?php echo home_url('/member-portal/'); ?>';
-                            }
+                            window.location.href = '<?php echo home_url('/member-portal/'); ?>';
                         }, 1000);
                         
                     } else {
@@ -1192,6 +1296,124 @@ get_header();
                     }
                     
                     showNotification('Error adding course. Please try again.', 'error');
+                }
+            });
+        }
+        
+        /**
+         * Remove course from learning path
+         */
+        function removeCourseFromLearningPath(course) {
+            console.log('Removing course from learning path:', course);
+            
+            // Show confirmation dialog
+            if (!confirm('Are you sure you want to remove this course from your learning path?')) {
+                return;
+            }
+            
+            // Find the course in learning path to get the confirmation ID
+            const learningPathCourse = coursesInLearningPath.find(lpCourse => {
+                if (lpCourse.course_id && course.course_id) {
+                    return lpCourse.course_id == course.course_id;
+                }
+                return lpCourse.course_name === course.course_name && 
+                       lpCourse.crs_provider === course.crs_provider;
+            });
+            
+            if (!learningPathCourse) {
+                showNotification('Course not found in learning path!', 'error');
+                return;
+            }
+            
+            // Show loading state on the button
+            const removeBtn = event.target.closest('.remove-course-btn');
+            if (removeBtn) {
+                const originalContent = removeBtn.innerHTML;
+                removeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Removing...';
+                removeBtn.disabled = true;
+                removeBtn.classList.add('loading');
+                
+                // Revert after 2 seconds if there's an error
+                setTimeout(() => {
+                    if (removeBtn.disabled && removeBtn.classList.contains('loading')) {
+                        removeBtn.innerHTML = originalContent;
+                        removeBtn.disabled = false;
+                        removeBtn.classList.remove('loading');
+                    }
+                }, 2000);
+            }
+            
+            const formData = new FormData();
+            formData.append('action', 'iipm_delete_cpd_confirmation');
+            formData.append('confirmation_id', learningPathCourse.confirmation_id);
+            
+            jQuery.ajax({
+                url: ajaxurl,
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    if (response.success) {
+                        // Show success state
+                        if (removeBtn) {
+                            removeBtn.innerHTML = '<i class="fas fa-check"></i> Removed';
+                            removeBtn.classList.remove('loading');
+                            removeBtn.classList.add('success');
+                            removeBtn.disabled = true;
+                            
+                            // Update button to show it's been removed permanently
+                            setTimeout(() => {
+                                removeBtn.innerHTML = '<i class="fas fa-plus"></i> Add to my CPD';
+                                removeBtn.classList.remove('success');
+                                removeBtn.classList.remove('remove-course-btn');
+                                removeBtn.classList.add('add-course-btn');
+                                removeBtn.disabled = false;
+                            }, 2000);
+                        }
+                        
+                        // Show success message
+                        showNotification('Course removed from your learning path!', 'success');
+                        
+                        // Refresh the learning path courses list and reload courses to update the UI
+                        loadCoursesInLearningPath();
+                        
+                    } else {
+                        // Show error state
+                        if (removeBtn) {
+                            removeBtn.innerHTML = '<i class="fas fa-times"></i> Error';
+                            removeBtn.classList.remove('loading');
+                            removeBtn.classList.add('error');
+                            
+                            // Revert after 3 seconds
+                            setTimeout(() => {
+                                removeBtn.innerHTML = originalContent;
+                                removeBtn.classList.remove('error');
+                                removeBtn.disabled = false;
+                            }, 3000);
+                        }
+                        
+                        showNotification('Error removing course: ' + (response.data || 'Unknown error'), 'error');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error removing course:', error);
+                    
+                    // Show error state
+                    if (removeBtn) {
+                        removeBtn.innerHTML = '<i class="fas fa-times"></i> Error';
+                        removeBtn.classList.remove('loading');
+                        removeBtn.classList.add('error');
+                        
+                        // Revert after 3 seconds
+                        setTimeout(() => {
+                            removeBtn.innerHTML = originalContent;
+                            removeBtn.classList.remove('error');
+                            removeBtn.disabled = false;
+                        }, 3000);
+                    }
+                    
+                    showNotification('Error removing course. Please try again.', 'error');
                 }
             });
         }
@@ -1257,13 +1479,8 @@ get_header();
          * Check if a course is in learning path (either completed or started)
          */
         function isCourseInLearningPath(course) {
-            return coursesInLearningPath.some(learningPathCourse => {
-                // Check by course ID if available, otherwise by course name and provider
-                if (learningPathCourse.course_id && course.course_id) {
-                    return learningPathCourse.course_id == course.course_id;
-                }
-                return learningPathCourse.course_name === course.course_name && 
-                       learningPathCourse.crs_provider === course.crs_provider;
+            return coursesInLearningPath.find(lpCourse => {
+                return lpCourse.course_id == course.course_id;
             });
         }
         

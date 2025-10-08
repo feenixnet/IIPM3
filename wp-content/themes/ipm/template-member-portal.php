@@ -3684,7 +3684,7 @@ get_header();
     // function completeCourse(courseId) { ... } - No longer needed
     
     function deleteCourse(courseId) {
-        if (confirm('Are you sure you want to delete this course?')) {
+        if (confirm('Are you sure you want to remove this course from your CPD record?')) {
             // Find the delete button and show loading state
             const deleteBtn = event.target;
             const originalText = deleteBtn.textContent;
@@ -3705,7 +3705,7 @@ get_header();
                 success: function(response) {
                     if (response.success) {
                         // Show success state
-                        deleteBtn.textContent = 'Deleted!';
+                        deleteBtn.textContent = 'Removed!';
                         deleteBtn.style.background = '#10b981';
                         deleteBtn.style.color = 'white';
                         

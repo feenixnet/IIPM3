@@ -44,6 +44,17 @@ get_header();
                 <button id="certificate-btn" class="certificate-btn" style="display: none;" onclick="showCertificateModal()">
                     <i class="fas fa-certificate"></i> Certificate
                 </button>
+                <div id="certificate-warning" class="certificate-warning" style="display: none;" onclick="showRequirementsTooltip()">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <div id="requirements-tooltip" class="requirements-tooltip">
+                        <div class="tooltip-content">
+                            <h4>Certificate Requirements Not Met</h4>
+                            <ul id="missed-requirements-list">
+                                <!-- Requirements will be populated here -->
+                            </ul>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div class="cpd-record-layout">
@@ -218,6 +229,113 @@ get_header();
         font-size: 16px;
     }
 
+    /* Certificate Warning Styles */
+    .certificate-warning {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        background: #fee2e2;
+        border: 2px solid #fca5a5;
+        border-radius: 50%;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        margin-left: 15px;
+    }
+
+    .certificate-warning:hover {
+        background: #fecaca;
+        border-color: #f87171;
+        transform: scale(1.05);
+    }
+
+    .certificate-warning i {
+        color: #dc2626;
+        font-size: 18px;
+    }
+
+    .requirements-tooltip {
+        position: absolute;
+        bottom: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        margin-bottom: 10px;
+        background: rgb(218, 59, 59);
+        border-radius: 8px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        z-index: 1000;
+        min-width: 300px;
+        max-width: 400px;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s ease;
+    }
+
+    .requirements-tooltip.show {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    .requirements-tooltip::after {
+        content: '';
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        border: 8px solid transparent;
+        border-top-color:rgb(218, 59, 59);
+    }
+
+    .requirements-tooltip::before {
+        content: '';
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        border: 9px solid transparent;
+        border-top-color:rgb(218, 59, 59);
+        margin-top: -1px;
+    }
+
+    .tooltip-content {
+        padding: 20px;
+    }
+
+    .tooltip-content h4 {
+        margin: 0;
+        color: white;
+        font-size: 16px;
+        font-weight: 600;
+    }
+
+    .tooltip-content ul {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    .tooltip-content li {
+        padding: 8px 0;
+        color: white;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .tooltip-content li:last-child {
+        border-bottom: none;
+    }
+
+    .tooltip-content li i {
+        color: white;
+        font-size: 12px;
+        width: 16px;
+        text-align: center;
+    }
+
     .cpd-record-layout {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -325,39 +443,53 @@ get_header();
         margin-bottom: 20px;
     }
 
-    .summary-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 12px 0;
+    .summary-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 16px;
+    }
+
+    .summary-table th,
+    .summary-table td {
+        padding: 12px;
+        text-align: left;
         border-bottom: 1px solid #e5e7eb;
     }
 
-    .summary-item:last-child {
-        border-bottom: none;
+    .summary-table th {
+        background: #f9fafb;
+        font-weight: 600;
+        color: #374151;
+        font-size: 14px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .summary-table td {
+        color: #1f2937;
+        font-size: 14px;
+    }
+
+    .summary-table tr:hover {
+        background: #f9fafb;
     }
 
     .summary-category {
         font-weight: 500;
         color: #374151;
-        display: flex;
         align-items: center;
     }
 
-    .summary-details {
-        display: flex;
-        gap: 20px;
-        font-size: 14px;
-        color: #6b7280;
+    .summary-hours {
+        font-weight: 600;
+        color: #8b5a96;
     }
 
     .summary-total {
         display: flex;
         justify-content: space-between;
+        padding: 0px 14px;
         align-items: center;
-        padding: 16px 0;
-        border-top: 2px solid #e5e7eb;
-        margin-top: 16px;
     }
 
     .total-label {
@@ -672,9 +804,7 @@ get_header();
             
             // Set up event listeners
             setupEventListeners();
-            
-            // Check certificate availability on page load
-            checkCertificateAvailability();
+        
         }
         
         /**
@@ -684,7 +814,6 @@ get_header();
             if (yearSelect) {
                 yearSelect.addEventListener('change', function() {
                     loadCpdStats();
-                    checkCertificateAvailability();
                 });
             }
         }
@@ -731,6 +860,11 @@ get_header();
                         updateStats(response.data);
                         updateSummary(response.data);
                         updateCourseList(response.data);
+                        
+                        // Check certificate requirements with the fetched data
+                        const selectedYear = yearSelect ? yearSelect.value : new Date().getFullYear();
+                        const certificateBtn = document.getElementById('certificate-btn');
+                        checkCertificateRequirements(selectedYear, certificateBtn, response.data);
                     } else {
                         summaryContent.innerHTML = '<div class="no-data-message">Error loading stats: ' + (response.data || 'Unknown error') + '</div>';
                         courseListContent.innerHTML = '<div class="no-data-message">Error loading courses: ' + (response.data || 'Unknown error') + '</div>';
@@ -775,26 +909,41 @@ get_header();
                 return;
             }
             
-            let html = '';
+            let html = `
+                <table class="summary-table">
+                    <thead>
+                        <tr>
+                            <th>Category</th>
+                            <th>Progress</th>
+                            <th>Hours</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
             data.courses_summary.forEach(item => {
-                // Create completion status with check/uncheck mark
-                const statusIcon = item.completed ? '✅' : '❌';
-                const statusClass = item.completed ? 'status-completed' : 'status-incomplete';
+                // Calculate hours from minutes
+                const hours = Math.round((item.total_minutes / 60) * 2) / 2; // Round to nearest 0.5
+                const progressText = `${hours} / 1`;
+                const statusClass = hours >= 1 ? 'status-completed' : 'status-incomplete';
+                const statusIcon = hours >= 1 ? '✅' : '❌';
                 
                 html += `
-                    <div class="summary-item">
-                        <div class="summary-category">
+                    <tr>
+                        <td class="summary-category">
                             <span class="status-icon ${statusClass}">${statusIcon}</span>
                             ${item.category}
-                        </div>
-                        <div class="summary-details">
-                            <span class="completion-status ${statusClass}">${item.status}</span>
-                            <span>${item.total_minutes} mins</span>
-                            <span>${item.total_hours.toFixed(1)} credits</span>
-                        </div>
-                    </div>
+                        </td>
+                        <td class="completion-status ${statusClass}">${progressText}</td>
+                        <td class="summary-hours">${hours} hours</td>
+                    </tr>
                 `;
             });
+            
+            html += `
+                    </tbody>
+                </table>
+            `;
             
             summaryContent.innerHTML = html;
             
@@ -969,7 +1118,9 @@ get_header();
         function checkCertificateAvailability() {
             const selectedYear = yearSelect ? yearSelect.value : new Date().getFullYear();
             const certificateBtn = document.getElementById('certificate-btn');
+            const certificateWarning = document.getElementById('certificate-warning');
             
+            // First check if CPD is submitted
             fetch(ajaxurl, {
                 method: 'POST',
                 headers: {
@@ -984,16 +1135,137 @@ get_header();
             .then(response => response.json())
             .then(data => {
                 if (data.success && data.data.has_certificate) {
-                    certificateBtn.style.display = 'inline-flex';
+                    // Requirements will be checked in loadCpdStats
+                    // Just ensure warning is hidden initially
+                    certificateWarning.style.display = 'none';
                 } else {
                     certificateBtn.style.display = 'none';
+                    certificateWarning.style.display = 'none';
                 }
             })
             .catch(error => {
                 console.error('Error checking certificate availability:', error);
                 certificateBtn.style.display = 'none';
+                certificateWarning.style.display = 'none';
             });
         }
+
+        // Check certificate requirements using already fetched data
+        function checkCertificateRequirements(year, certificateBtn, cpdStats) {
+            const certificateWarning = document.getElementById('certificate-warning');
+            const missedRequirements = [];
+            
+            // Check if progress is >= 100%
+            const progressRequirement = cpdStats.completion_percentage >= 100;
+            if (!progressRequirement) {
+                missedRequirements.push({
+                    icon: 'fas fa-chart-line',
+                    text: `Overall progress must be 100% or higher (currently ${cpdStats.completion_percentage}%)`
+                });
+            }
+            
+            // Check if each category has at least 1 hour
+            let categoryRequirement = true;
+            const incompleteCategories = [];
+            if (cpdStats.courses_summary && cpdStats.courses_summary.length > 0) {
+                cpdStats.courses_summary.forEach(item => {
+                    const hours = Math.round((item.total_minutes / 60) * 2) / 2;
+                    if (hours < 1) {
+                        categoryRequirement = false;
+                        incompleteCategories.push(`${item.category} (${hours} hours)`);
+                    }
+                });
+            } else {
+                categoryRequirement = false;
+                missedRequirements.push({
+                    icon: 'fas fa-list',
+                    text: 'No courses completed in any category'
+                });
+            }
+            
+            if (!categoryRequirement && incompleteCategories.length > 0) {
+                missedRequirements.push({
+                    icon: 'fas fa-list',
+                    text: `Each category must have at least 1 hour: ${incompleteCategories.join(', ')}`
+                });
+            }
+            
+            // Check if CPD is submitted (this is already checked in the parent function)
+            const submittedRequirement = cpdStats.submission_data.submitted; // Already verified in checkCertificateAvailability
+
+            if (!submittedRequirement) {
+                missedRequirements.push({
+                    icon: 'fas fa-exclamation-circle',
+                    text: 'CPD must be submitted'
+                });
+            }
+            
+            // Show certificate button only if all three requirements are met
+            if (progressRequirement && categoryRequirement && submittedRequirement) {
+                certificateBtn.style.display = 'inline-flex';
+                certificateWarning.style.display = 'none';
+            } else {
+                certificateBtn.style.display = 'none';
+                certificateWarning.style.display = 'inline-flex';
+                
+                // Store missed requirements for popup
+                certificateWarning.setAttribute('data-requirements', JSON.stringify(missedRequirements));
+            }
+
+            console.log(missedRequirements);
+
+            if (missedRequirements.length > 0) {
+                document.getElementById('certificate-btn').style.display = 'none';
+                document.getElementById('certificate-warning').style.display = 'inline-flex';
+            } else {
+                document.getElementById('certificate-btn').style.display = 'inline-flex';
+                document.getElementById('certificate-warning').style.display = 'none';
+            }
+        }
+
+        // Populate the requirements tooltip with missed requirements
+        function populateRequirementsTooltip(missedRequirements) {
+            const requirementsList = document.getElementById('missed-requirements-list');
+            
+            if (missedRequirements.length === 0) {
+                requirementsList.innerHTML = '<li><i class="fas fa-check"></i> All requirements met!</li>';
+            } else {
+                let html = '';
+                missedRequirements.forEach(requirement => {
+                    html += `
+                        <li>
+                            <i class="${requirement.icon}"></i>
+                            ${requirement.text}
+                        </li>
+                    `;
+                });
+                requirementsList.innerHTML = html;
+            }
+        }
+
+        // Show requirements tooltip on click
+        window.showRequirementsTooltip = function() {
+            const tooltip = document.getElementById('requirements-tooltip');
+            const requirementsData = event.target.closest('.certificate-warning').getAttribute('data-requirements');
+            
+            if (requirementsData) {
+                const missedRequirements = JSON.parse(requirementsData);
+                populateRequirementsTooltip(missedRequirements);
+                
+                // Toggle tooltip visibility
+                tooltip.classList.toggle('show');
+                
+                // Close tooltip when clicking outside
+                setTimeout(() => {
+                    document.addEventListener('click', function closeTooltip(e) {
+                        if (!e.target.closest('.certificate-warning')) {
+                            tooltip.classList.remove('show');
+                            document.removeEventListener('click', closeTooltip);
+                        }
+                    });
+                }, 100);
+            }
+        };
     });
 </script>
 
