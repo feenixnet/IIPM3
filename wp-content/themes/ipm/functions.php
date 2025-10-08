@@ -1178,6 +1178,8 @@ function iipm_send_bulk_invitation($email, $organisation_id, $profile_data) {
 		// Generate unique token
 		$token = wp_generate_password(32, false);
 		$expires_at = date('Y-m-d H:i:s', strtotime('+14 days')); // 14 days for bulk invitations
+
+        
 		
 		// Insert invitation record with profile data
 		$result = $wpdb->insert(
@@ -1511,7 +1513,7 @@ function iipm_sync_missing_last_login_data() {
 /**
  * Enhanced Invitation System with Error Handling
  */
-function iipm_send_invitation($email, $type = 'individual', $organisation_id = null) {
+function iipm_send_invitation($email, $type = 'individual', $organisation_id = null, $membership_level = null) {
 	global $wpdb;
 	
 	try {
@@ -1528,9 +1530,10 @@ function iipm_send_invitation($email, $type = 'individual', $organisation_id = n
 				'invitation_type' => $type,
 				'invited_by' => get_current_user_id(),
 				'organisation_id' => $organisation_id,
+				'membership_level' => $membership_level,
 				'expires_at' => $expires_at
 			),
-			array('%s', '%s', '%s', '%d', '%d', '%s')
+			array('%s', '%s', '%s', '%d', '%d', '%d', '%s')
 		);
 		
 		if ($result === false) {
@@ -4005,6 +4008,7 @@ function iipm_send_individual_invitation_enhanced() {
     $email = sanitize_email($_POST['email'] ?? '');
     $type = sanitize_text_field($_POST['type'] ?? 'individual');
     $organisation_id = isset($_POST['organisation_id']) ? intval($_POST['organisation_id']) : null;
+    $membership_level = isset($_POST['membership_level']) ? intval($_POST['membership_level']) : null;
     
     // Check if user is org admin and get their organisation
     $current_user_id = get_current_user_id();
@@ -4061,7 +4065,7 @@ function iipm_send_individual_invitation_enhanced() {
     }
     
     // Send invitation
-    $result = iipm_send_invitation($email, $type, $organisation_id);
+    $result = iipm_send_invitation($email, $type, $organisation_id, $membership_level);
     
     if ($result['success']) {
         iipm_log_user_activity(

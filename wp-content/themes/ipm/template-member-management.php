@@ -138,10 +138,10 @@ if (!function_exists('add_success_notification')) {
                                     <th class="sticky-col sticky-email" style="padding: 16px; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Email</th>
                                     <th style="padding: 16px; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Membership Level</th>
                                     <th style="padding: 16px; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Status</th>
+                                    <th style="padding: 16px; text-align: center; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Actions</th>
                                     <th style="padding: 16px; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Organization</th>
                                     <th style="padding: 16px; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Last Login</th>
                                     <th style="padding: 16px; text-align: center; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">CPD Status</th>
-                                    <th style="padding: 16px; text-align: center; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="users-table-body">
@@ -174,48 +174,25 @@ if (!function_exists('add_success_notification')) {
                                 <input type="email" name="email" id="email" required>
                             </div>
                             
+                            <div class="form-group">
+                                <label for="membership_level">Membership Level *</label>
+                                <select name="membership_level" id="membership_level" required>
+                                    <option value="">Select Membership Level</option>
+                                    <?php
+                                    $membership_levels = iipm_get_membership_levels_data();
+                                    foreach ($membership_levels as $level) {
+                                        echo '<option value="' . esc_attr($level['id']) . '">' . esc_html($level['name']) . ' (' . esc_html($level['designation']) . ')</option>';
+                                    }
+                                    ?>
+                                </select>
+                            </div>
+                            
                             <div class="form-group" style="display:none;">
                                 <label for="type">Invitation Type *</label>
                                 <select name="type" id="type" required>
                                     <option value="individual">Individual Member</option>
                                 </select>
                             </div>
-                            
-                            <?php if ($is_org_admin && !$is_site_admin): ?>
-                                <!-- Corporate admin - auto-set organization -->
-                                <input type="hidden" name="organisation_id" value="<?php echo $user_organisation->id; ?>">
-                                <div class="form-group">
-                                    <label>Organization</label>
-                                    <div class="readonly-field">
-                                        <span class="organisation-badge">
-                                            <i class="fas fa-building"></i> <?php echo esc_html($user_organisation->name); ?>
-                                        </span>
-                                        <small class="field-note">Invitations will be sent for your organization</small>
-                                    </div>
-                                </div>
-                            <?php else: ?>
-                                <!-- Site admin - can select organization -->
-                                <div class="form-group organisation-field" style="display:none;">
-                                    <label for="organisation_id">Organization</label>
-                                    <div class="custom-select-container">
-                                        <div class="custom-select" id="organisation-select">
-                                            <div class="select-trigger">
-                                                <span class="select-placeholder">Select Organization</span>
-                                                <i class="fas fa-chevron-down"></i>
-                                            </div>
-                                            <div class="select-dropdown">
-                                                <div class="select-search">
-                                                    <input type="text" id="organisation-search" placeholder="Search organizations...">
-                                                </div>
-                                                <div class="select-options" id="organisation-options">
-                                                    <!-- Options will be loaded here -->
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <input type="hidden" name="organisation_id" id="organisation_id">
-                                </div>
-                            <?php endif; ?>
                             
                             <button type="submit" class="btn btn-primary">Send Invitation</button>
                         </form>
@@ -230,10 +207,6 @@ if (!function_exists('add_success_notification')) {
                                 <thead>
                                     <tr>
                                         <th>Email</th>
-                                        <th>Type</th>
-                                        <?php if ($is_site_admin): ?>
-                                            <th>Organization</th>
-                                        <?php endif; ?>
                                         <th>Status</th>
                                         <th>Sent Date</th>
                                         <th>Expires</th>
@@ -893,26 +866,20 @@ jQuery(document).ready(function($) {
     // Initialize custom organization select
     initializeOrganizationSelect();
 
-    // Load membership levels from database
+    // Load membership levels from global constants
     function loadMembershipLevels() {
-        $.ajax({
-            url: '<?php echo admin_url('admin-ajax.php'); ?>',
-            type: 'POST',
-            data: {
-                action: 'iipm_get_membership_levels',
-                nonce: '<?php echo wp_create_nonce('iipm_user_management_nonce'); ?>'
-            },
-            success: function(response) {
-                if (response.success) {
-                    populateMembershipDropdowns(response.data.memberships);
-                } else {
-                    console.error('Error loading membership levels:', response.data);
-                }
-            },
-            error: function() {
-                console.error('Error loading membership levels');
-            }
+        // Use global membership constants instead of AJAX call
+        var globalMemberships = <?php echo json_encode(iipm_get_membership_levels_data()); ?>;
+        var membershipData = Object.values(globalMemberships).map(function(level) {
+            return {
+                id: level.id,
+                name: level.name,
+                designation: level.designation,
+                fee: 0, // Default fee, can be updated later
+                cpd_requirement: 0 // Default CPD requirement, can be updated later
+            };
         });
+        populateMembershipDropdowns(membershipData);
     }
 
     // Populate membership dropdowns
@@ -1073,14 +1040,14 @@ jQuery(document).ready(function($) {
                     <td style="padding: 16px;">
                         <span class="status-badge status-${user.membership_status}">${user.membership_status}</span>
                     </td>
+                    <td style="padding: 16px; text-align: center;width: 160px;">
+                        <button class="action-btn edit-btn" onclick="editUser(${user.ID})">View</button>
+                        <button class="action-btn delete-btn" onclick="deleteUser(${user.ID}, '${user.display_name}')">Delete</button>
+                    </td>
                     <td style="padding: 16px; color: #6b7280;">${user.organisation_name || 'N/A'}</td>
                     <td style="padding: 16px; color: #6b7280;">${user.last_login || 'Never'}</td>
                     <td style="padding: 16px; text-align: center;">
                         ${cpdStatusIcon}
-                    </td>
-                    <td style="padding: 16px; text-align: center;width: 150px;">
-                        <button class="action-btn edit-btn" onclick="editUser(${user.ID})">View</button>
-                        <button class="action-btn delete-btn" onclick="deleteUser(${user.ID}, '${user.display_name}')">Delete</button>
                     </td>
                 </tr>
             `;
@@ -1427,10 +1394,6 @@ jQuery(document).ready(function($) {
     function formatInvitationRow(invitation, status) {
         var row = '<tr>';
         row += '<td>' + invitation.email + '</td>';
-        row += '<td>' + invitation.invitation_type + '</td>';
-        <?php if ($is_site_admin): ?>
-        row += '<td>' + (invitation.org_name || 'Individual') + '</td>';
-        <?php endif; ?>
         row += '<td><span class="status-' + status.toLowerCase() + '">' + status + '</span></td>';
         row += '<td>' + formatDate(invitation.created_at) + '</td>';
         row += '<td>' + formatDate(invitation.expires_at) + '</td>';

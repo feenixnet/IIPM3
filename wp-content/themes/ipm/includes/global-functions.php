@@ -9,6 +9,65 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+// Global Membership Constants
+if (!defined('IIPM_MEMBERSHIP_LEVELS')) {
+    define('IIPM_MEMBERSHIP_LEVELS', array(
+        'MIIPM' => array(
+            'id' => 1,
+            'name' => 'Member',
+            'designation' => 'MIIPM'
+        ),
+        'AIIPM' => array(
+            'id' => 2,
+            'name' => 'Associate Member',
+            'designation' => 'AIIPM'
+        ),
+        'FIIPM' => array(
+            'id' => 3,
+            'name' => 'Fellow',
+            'designation' => 'FIIPM'
+        ),
+        'QPT_IIPM' => array(
+            'id' => 5,
+            'name' => 'QPT Trustee Member',
+            'designation' => 'QPT IIPM'
+        )
+    ));
+}
+
+// Helper function to get membership levels (simple function, not AJAX handler)
+if (!function_exists('iipm_get_membership_levels_data')) {
+    function iipm_get_membership_levels_data() {
+        return IIPM_MEMBERSHIP_LEVELS;
+    }
+}
+
+// Helper function to get membership level by ID
+if (!function_exists('iipm_get_membership_level_by_id')) {
+    function iipm_get_membership_level_by_id($id) {
+        $levels = iipm_get_membership_levels_data();
+        foreach ($levels as $level) {
+            if ($level['id'] == $id) {
+                return $level;
+            }
+        }
+        return null;
+    }
+}
+
+// Helper function to get membership level by name
+if (!function_exists('iipm_get_membership_level_by_name')) {
+    function iipm_get_membership_level_by_name($name) {
+        $levels = iipm_get_membership_levels_data();
+        foreach ($levels as $key => $level) {
+            if ($level['name'] === $name) {
+                return $level;
+            }
+        }
+        return null;
+    }
+}
+
 // Notification system should be included individually in templates that need it
 
 // Global function to generate JavaScript notification

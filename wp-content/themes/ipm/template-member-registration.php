@@ -1198,6 +1198,10 @@ jQuery(document).ready(function($){
     
     // Load membership data when page loads
     function loadMembershipData() {
+        var globalMemberships = <?php echo json_encode(iipm_get_membership_levels_data()); ?>;
+        var invitationMembershipLevel = <?php echo $invitation && isset($invitation->membership_level) ? $invitation->membership_level : 'null'; ?>;
+        
+        // Fetch real membership data from database
         $.ajax({
             url: (typeof iipm_ajax !== 'undefined' ? iipm_ajax.ajax_url : '<?php echo admin_url('admin-ajax.php'); ?>'),
             type: 'POST',
@@ -1208,8 +1212,23 @@ jQuery(document).ready(function($){
             }
         }).done(function(resp) {
             if (resp && resp.success && resp.data) {
-                membershipData = resp.data;
-                renderMembershipList();
+                // Filter memberships to only show those that match global constants
+                var allowedDesignations = Object.values(globalMemberships).map(function(level) {
+                    return level.designation;
+                });
+                
+                membershipData = resp.data.filter(function(membership) {
+                    return allowedDesignations.includes(membership.designation);
+                });
+                
+                renderMembershipList(invitationMembershipLevel);
+                
+                // Auto-set the membership selection field if a membership is selected
+                if (selectedMembership) {
+                    $('#membership_selection').val(selectedMembership.name + ' (' + selectedMembership.designation + ')');
+                    $('#membership_id').val(selectedMembership.id);
+                    $('#user_designation').val(selectedMembership.designation);
+                }
             } else {
                 $('#membership-list').html('<div class="error-message">Failed to load membership options</div>');
             }
@@ -1219,21 +1238,36 @@ jQuery(document).ready(function($){
     }
     
     // Render membership list in modal
-    function renderMembershipList() {
+    function renderMembershipList(invitationMembershipLevel) {
         var html = '';
         var allowedDesignations = ['MIIPM', 'AIIPM', 'FIIPM', 'QPT IIPM'];
         var filteredMemberships = membershipData.filter(function(membership) {
             return allowedDesignations.includes(membership.designation);
         });
         
+        // Sort memberships to ensure MIIPM comes first
+        filteredMemberships.sort(function(a, b) {
+            var order = ['MIIPM', 'AIIPM', 'FIIPM', 'QPT IIPM'];
+            return order.indexOf(a.designation) - order.indexOf(b.designation);
+        });
+        
         filteredMemberships.forEach(function(membership, index) {
-            var isSelected = index === 0 ? 'selected' : ''; // First item selected by default
+            var isSelected = false;
+            
+            // If invitation has membership level, find matching membership by ID
+            if (invitationMembershipLevel) {
+                isSelected = membership.id == invitationMembershipLevel;
+            } else {
+                // Default to MIIPM (first in sorted list)
+                isSelected = index === 0;
+            }
+            
             if (isSelected) {
                 selectedMembership = membership;
                 $('#confirm-membership-selection').prop('disabled', false);
             }
             
-            html += '<div class="membership-option ' + isSelected + '" data-membership-id="' + membership.id + '">';
+            html += '<div class="membership-option ' + (isSelected ? 'selected' : '') + '" data-membership-id="' + membership.id + '">';
             html += '<div class="membership-option-header">';
             html += '<h4>' + membership.name + '</h4>';
             html += '<div class="membership-designation">' + membership.designation + '</div>';
