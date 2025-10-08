@@ -920,6 +920,11 @@ get_header();
     let totalCourses = 0;
     let coursesPerPage = 12;
     
+    // Extract URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    let userIdForCourses = urlParams.get('user_id') ? parseInt(urlParams.get('user_id')) : null;
+    let tYear = urlParams.get('tyear') ? parseInt(urlParams.get('tyear')) : null;
+    
     // Global variable to store all courses in fullcpd_confirmations table (both completed and started)
     let coursesInLearningPath = [];
     
@@ -939,6 +944,8 @@ get_header();
         const prevBtn = document.getElementById('prev-btn');
         const nextBtn = document.getElementById('next-btn');
         const paginationInfo = document.getElementById('pagination-info');
+
+        console.log("tYear and userIdForCourses", tYear, userIdForCourses);
         
         // Initialize the page
         initializePage();
@@ -1226,6 +1233,8 @@ get_header();
             formData.append('course_category', course.course_category);
             formData.append('course_cpd_mins', course.course_cpd_mins);
             formData.append('crs_provider', course.crs_provider);
+            formData.append('year', tYear);
+            formData.append('user_id', userIdForCourses);
             
             jQuery.ajax({
                 url: ajaxurl,
@@ -1257,7 +1266,11 @@ get_header();
                         
                         // Optionally redirect back to member portal
                         setTimeout(() => {
-                            window.location.href = '<?php echo home_url('/member-portal/'); ?>';
+                            if(userIdForCourses && parseInt(userIdForCourses) != parseInt(<?php echo get_current_user_id(); ?>)) {
+                                window.location.href = '<?php echo home_url('/member-details/'); ?>' + '?id=' + userIdForCourses;
+                            } else {
+                                window.location.href = '<?php echo home_url('/member-portal/'); ?>';
+                            }
                         }, 1000);
                         
                     } else {
@@ -1346,6 +1359,7 @@ get_header();
             const formData = new FormData();
             formData.append('action', 'iipm_delete_cpd_confirmation');
             formData.append('confirmation_id', learningPathCourse.confirmation_id);
+            formData.append('user_id', userIdForCourses);
             
             jQuery.ajax({
                 url: ajaxurl,
@@ -1458,7 +1472,9 @@ get_header();
                 url: ajaxurl,
                 type: 'POST',
                 data: {
-                    action: 'iipm_get_courses_in_learning_path'
+                    action: 'iipm_get_courses_in_learning_path',
+                    user_id: userIdForCourses,
+                    year: tYear
                 },
                 success: function(response) {
                     if (response.success && response.data.courses) {

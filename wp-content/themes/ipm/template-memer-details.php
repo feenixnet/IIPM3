@@ -76,6 +76,9 @@ if (!function_exists('add_success_notification')) {
                     <button class="tab-btn" data-tab="qualifications" style="padding: 12px 24px; background: none; border: none; border-bottom: 2px solid transparent; color: #6b7280; font-weight: 500; cursor: pointer;">
                         <i class="fas fa-graduation-cap"></i> Qualifications
                     </button>
+                    <button class="tab-btn" data-tab="leave-requests" style="padding: 12px 24px; background: none; border: none; border-bottom: 2px solid transparent; color: #6b7280; font-weight: 500; cursor: pointer;">
+                        <i class="fas fa-calendar-alt"></i> Leave Requests
+                    </button>
                 </div>
             </div>
             
@@ -327,7 +330,7 @@ if (!function_exists('add_success_notification')) {
                             <div class="stat-value" id="total-cpd-hours" style="font-size: 2.5rem; font-weight: bold;">0</div>
                         </div>
                         <div class="stat-card" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);">
-                            <h4 style="margin: 0 0 15px 0; color: rgba(255,255,255,0.9); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.5px;">Target</h4>
+                            <h4 style="margin: 0 0 15px 0; color: rgba(255,255,255,0.9); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.5px;">CPD Requirement</h4>
                             <div class="stat-value" id="original-target" style="font-size: 2.5rem; font-weight: bold;">0</div>
                         </div>
                         <div class="stat-card" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);">
@@ -336,12 +339,11 @@ if (!function_exists('add_success_notification')) {
                         </div>
                     </div>
                     
-                    <!-- Leave Requests Section -->
-                    <div class="cpd-section" style="background: #f8fafc; border-radius: 12px; padding: 30px; margin-bottom: 30px;">
-                        <h3 style="margin: 0 0 20px 0; color: #374151;"><i class="fas fa-calendar-times"></i> Leave Requests</h3>
-                        <div id="leave-requests-list">
-                            <!-- Populated by JavaScript -->
-                        </div>
+                    <!-- Add Courses Button -->
+                    <div style="margin-bottom: 20px; text-align: right;">
+                        <button id="add-courses-btn" class="btn btn-primary" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 500; cursor: pointer; transition: all 0.3s ease;">
+                            <i class="fas fa-plus"></i> Add Courses to CPD Record
+                        </button>
                     </div>
                     
                     <!-- Courses Section -->
@@ -452,6 +454,38 @@ if (!function_exists('add_success_notification')) {
                 <div id="qualifications-error" style="display: none; text-align: center; padding: 40px; color: #dc2626;">
                     <i class="fas fa-exclamation-triangle" style="font-size: 2rem; margin-bottom: 15px;"></i>
                     <p>Error loading qualifications. Please try again.</p>
+                </div>
+            </div>
+            
+            <!-- Leave Requests Tab -->
+            <div id="leave-requests-tab" class="tab-content" style="display: none;">
+                <div id="leave-requests-loading" style="text-align: center; padding: 40px; color: #6b7280;">
+                    <div class="loading-spinner" style="display: inline-block; width: 24px; height: 24px; border: 3px solid #e5e7eb; border-top: 3px solid #667eea; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                    <span style="margin-left: 10px;">Loading leave requests...</span>
+                </div>
+                
+                <div id="leave-requests-content" style="display: none;">
+                    <!-- Year Selector -->
+                    <div id="leave-year-selector" style="display: none; margin-bottom: 30px;">
+                        <label for="leave-year" style="font-weight: 600; margin-right: 15px;">Select Year:</label>
+                        <select id="leave-year" style="padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px;">
+                            <!-- Populated by JavaScript -->
+                        </select>
+                    </div>
+                    
+                    
+                    <!-- Leave Requests List -->
+                    <div class="cpd-section" style="background: #f8fafc; border-radius: 12px; padding: 30px;">
+                        <h3 style="margin: 0 0 20px 0; color: #374151;"><i class="fas fa-calendar-times"></i> Leave Requests</h3>
+                        <div id="leave-requests-list-standalone">
+                            <!-- Populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="leave-requests-error" style="display: none; text-align: center; padding: 40px; color: #dc2626;">
+                    <i class="fas fa-exclamation-triangle" style="font-size: 2rem; margin-bottom: 15px;"></i>
+                    <p>Error loading leave requests. Please try again.</p>
                 </div>
             </div>
             
@@ -923,6 +957,9 @@ jQuery(document).ready(function($) {
         
         // Initialize tabs
         initializeTabs();
+        
+        // Initialize Add Courses button
+        initializeAddCoursesButton();
     }
     
     function showError(message) {
@@ -1029,6 +1066,11 @@ jQuery(document).ready(function($) {
             if (tabName === 'qualifications') {
                 loadQualifications();
             }
+            
+            // Load leave requests data if leave-requests tab is selected
+            if (tabName === 'leave-requests') {
+                loadLeaveRequestsData();
+            }
         });
     }
     
@@ -1115,10 +1157,10 @@ jQuery(document).ready(function($) {
         
         if (originalTargetMinutes !== adjustedTargetMinutes) {
             $('#original-target').html(`${adjustedTargetHours}<sup style="font-size: 0.7em; color: #6b7280;">${originalTargetHours}</sup> hours`);
-            $('#original-target').parent().find('h4').text('Adjusted Target');
+            $('#original-target').parent().find('h4').text('Adjusted CPD Requirement');
         } else {
             $('#original-target').text(adjustedTargetHours + ' hours');
-            $('#original-target').parent().find('h4').text('Target');
+            $('#original-target').parent().find('h4').text('CPD Requirement');
         }
         
         $('#completion-percentage').text((data.completion_percentage || 0) + '%');
@@ -1256,45 +1298,7 @@ jQuery(document).ready(function($) {
         
         return `${formatDateString(startDateStr)} to ${formatDateString(endDateStr)}`;
     }
-    
-    function displayLeaveRequests(leaveRequests) {
-        const $container = $('#leave-requests-list');
-        $container.empty();
-        
-        if (leaveRequests.length === 0) {
-            $container.html('<p style="color: #6b7280; font-style: italic; text-align: center; padding: 20px;">No leave requests for this year</p>');
-            return;
-        }
-        
-        leaveRequests.forEach(function(request) {
-            const statusClass = request.status === 'approved' ? 'status-active' : 
-                              request.status === 'pending' ? 'status-pending' : 
-                              request.status === 'rejected' ? 'status-inactive' : 'status-inactive';
-            const requestHtml = `
-                <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #e5e7eb; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <div style="flex: 1;">
-                            <div style="display: flex; align-items: center; margin-bottom: 8px;">
-                                <strong style="font-size: 1.1rem;">${request.title}</strong>
-                                <span class="status-badge ${statusClass}" style="margin-left: 12px;">${request.status}</span>
-                </div>
-                            <div style="color: #6b7280; font-size: 0.9rem;">
-                                ${request.reason ? 'Reason: ' + request.reason : ''}
-                            </div>
-                        </div>
-                        <div style="text-align: right;">
-                            <div style="font-weight: bold; color: #374151;">${request.duration_days} days</div>
-                            <div style="color: #6b7280; font-size: 0.9rem;">
-                                ${formatLeaveDateRange(request.leave_start_date, request.leave_end_date)}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-            $container.append(requestHtml);
-        });
-    }
-    
+       
     function handleCertificate(available, certificateData = null) {
         if (available && certificateData) {
             $('#certificate-info').show();
@@ -1626,6 +1630,277 @@ jQuery(document).ready(function($) {
      */
     function showQualificationsError(message) {
         $('#qualifications-error').show().find('p').text(message);
+    }
+    
+    /**
+     * Load leave requests data for the standalone tab
+     */
+    function loadLeaveRequestsData() {
+        $('#leave-requests-loading').show();
+        $('#leave-requests-content').hide();
+        $('#leave-requests-error').hide();
+        
+        // Create year selector with current year as default
+        populateLeaveYearSelector();
+        
+        // Show year selector
+        $('#leave-year-selector').show();
+        
+        // Load leave requests for current year
+        const currentYear = new Date().getFullYear();
+        $('#leave-year').val(currentYear);
+        loadLeaveRequestsForYearStandalone(currentYear);
+    }
+    
+    /**
+     * Populate leave year selector
+     */
+    function populateLeaveYearSelector() {
+        const $yearSelect = $('#leave-year');
+        $yearSelect.empty();
+        
+        // Generate years from current year + 1 down to 2020 (latest first)
+        const currentYear = new Date().getFullYear();
+        for (let year = currentYear; year >= 2020; year--) {
+            $yearSelect.append(`<option value="${year}">${year}</option>`);
+        }
+        
+        // Set current year as default
+        $yearSelect.val(currentYear);
+        
+        // Add change handler
+        $yearSelect.off('change').on('change', function() {
+            loadLeaveRequestsForYearStandalone($(this).val());
+        });
+    }
+    
+    /**
+     * Load leave requests for a specific year (standalone tab)
+     */
+    function loadLeaveRequestsForYearStandalone(year) {
+        $('#leave-requests-loading').show();
+        
+        $.ajax({
+            url: '<?php echo admin_url('admin-ajax.php'); ?>',
+            type: 'POST',
+            data: {
+                action: 'iipm_get_user_leave_requests',
+                nonce: '<?php echo wp_create_nonce('iipm_portal_nonce'); ?>',
+                user_id: userDetails.basic_info.user_id,
+                year: year
+            },
+            success: function(response) {
+                $('#leave-requests-loading').hide();
+                if (response.success) {
+                    const leaveRequests = response.data.leave_requests || [];
+                    const totalDeductedHours = response.data.total_deducted_hours || 0;
+                    const originalTarget = response.data.original_target || 0;
+                    const adjustedTarget = response.data.adjusted_target || 0;
+                    
+                    displayLeaveRequestsStandalone(leaveRequests);
+                    displayTotalDeductedHours(totalDeductedHours, originalTarget, adjustedTarget);
+                    $('#leave-requests-content').show();
+                } else {
+                    showLeaveRequestsError(response.data || 'Failed to load leave requests');
+                }
+            },
+            error: function() {
+                $('#leave-requests-loading').hide();
+                showLeaveRequestsError('Network error occurred');
+            }
+        });
+    }
+    
+    /**
+     * Display leave requests in standalone tab
+     */
+    function displayLeaveRequestsStandalone(leaveRequests) {
+        const $container = $('#leave-requests-list-standalone');
+        $container.empty();
+        
+        if (leaveRequests.length === 0) {
+            $container.html('<p style="color: #6b7280; font-style: italic; text-align: center; padding: 20px;">No leave requests for this year.</p>');
+            return;
+        }
+        
+        let html = `
+            <div style="background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead style="background: #f8fafc;">
+                        <tr>
+                            <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb; width: 50px;">No</th>
+                            <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Title</th>
+                            <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Start Date</th>
+                            <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">End Date</th>
+                            <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Duration</th>
+                            <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb; width: 200px;">Description</th>
+                            <th style="padding: 12px; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+        
+        leaveRequests.forEach(function(request, index) {
+            const statusClass = request.status === 'approved' ? 'status-active' : 
+                              request.status === 'pending' ? 'status-pending' : 'status-inactive';
+            const statusText = request.status.charAt(0).toUpperCase() + request.status.slice(1);
+            
+            html += `
+                <tr style="border-bottom: 1px solid #e5e7eb;">
+                    <td style="padding: 12px; color: #374151;">${index + 1}</td>
+                    <td style="padding: 12px; color: #374151;">${request.title || 'Leave Request'}</td>
+                    <td style="padding: 12px; color: #6b7280;">${formatDate(request.leave_start_date)}</td>
+                    <td style="padding: 12px; color: #6b7280;">${formatDate(request.leave_end_date)}</td>
+                    <td style="padding: 12px; color: #6b7280;">${request.duration_days || 'N/A'} days</td>
+                    <td style="padding: 12px; color: #6b7280; max-width: 200px; word-wrap: break-word;">${request.description || 'N/A'}</td>
+                    <td style="padding: 12px;">
+                        <span class="status-badge ${statusClass}">${statusText}</span>
+                    </td>
+                </tr>
+            `;
+        });
+        
+        html += `
+                    </tbody>
+                </table>
+            </div>
+        `;
+        
+        $container.html(html);
+    }
+    
+    /**
+     * Show leave requests error
+     */
+    function showLeaveRequestsError(message) {
+        $('#leave-requests-error').show().find('p').text(message);
+    }
+    
+    /**
+     * Display total deducted hours from server response
+     */
+    function displayTotalDeductedHours(totalDeductedHours, originalTarget, adjustedTarget) {
+        // Add total deducted hours under the table
+        const $container = $('#leave-requests-list-standalone');
+        const existingTotal = $container.find('.total-deducted-summary');
+        if (existingTotal.length > 0) {
+            existingTotal.remove();
+        }
+        
+        const totalHtml = `
+            <div class="total-deducted-summary" style="margin-top: 20px; padding: 15px; background: #f8fafc; border-radius: 8px; text-align: right;">
+                <strong style="color: #374151; font-size: 1.1rem;">Total Deducted: ${totalDeductedHours} hours</strong>
+                <div style="font-size: 0.9rem; color: #6b7280; margin-top: 5px;">
+                    Original Target: ${originalTarget}h → Adjusted Target: ${adjustedTarget}h
+                </div>
+            </div>
+        `;
+        $container.append(totalHtml);
+    }
+    
+    /**
+     * Calculate and display total deducted hours (legacy function - kept for compatibility)
+     */
+    function calculateAndDisplayTotalDeductedHours(leaveRequests, year) {
+        // This function is now deprecated - use displayTotalDeductedHours instead
+        // Calculate total deducted hours using the same logic as CPD record
+        const totalDeductedHours = calculateTotalDeductedHours(leaveRequests, year);
+        
+        // Add total deducted hours under the table
+        const $container = $('#leave-requests-list-standalone');
+        const existingTotal = $container.find('.total-deducted-summary');
+        if (existingTotal.length > 0) {
+            existingTotal.remove();
+        }
+        
+        if (leaveRequests.length > 0) {
+            const totalHtml = `
+                <div class="total-deducted-summary" style="margin-top: 20px; padding: 15px; background: #f8fafc; border-radius: 8px; text-align: right;">
+                    <strong style="color: #374151; font-size: 1.1rem;">Total Deducted: ${totalDeductedHours} hours</strong>
+                </div>
+            `;
+            $container.append(totalHtml);
+        }
+    }
+    
+    /**
+     * Calculate total deducted hours from leave requests
+     */
+    function calculateTotalDeductedHours(leaveRequests, year) {
+        if (!leaveRequests || leaveRequests.length === 0) {
+            return 0;
+        }
+        
+        // Filter approved leave requests for the year
+        const approvedRequests = leaveRequests.filter(request => request.status === 'approved');
+        
+        if (approvedRequests.length === 0) {
+            return 0;
+        }
+        
+        // Calculate total deducted hours directly from hours_deduct field
+        let totalDeductedHours = 0;
+        approvedRequests.forEach(request => {
+            if (request.hours_deduct && !isNaN(request.hours_deduct)) {
+                totalDeductedHours += parseFloat(request.hours_deduct);
+            }
+        });
+        
+        // Round to nearest 0.5
+        return Math.round(totalDeductedHours * 2) / 2;
+    }
+    
+    /**
+     * Get membership constant for the current user
+     */
+    function getMembershipConstantForUser() {
+        // This should match the logic from global-functions.php
+        // For now, return a default value - this should be fetched from user's membership data
+        return 10; // Default membership constant
+    }
+    
+    /**
+     * Format date string for display
+     */
+    function formatDate(dateString) {
+        if (!dateString) return 'N/A';
+        
+        try {
+            // Handle dd-mm-yyyy format
+            if (dateString.includes('-') && dateString.split('-').length === 3) {
+                const parts = dateString.split('-');
+                if (parts[0].length === 2 && parts[1].length === 2 && parts[2].length === 4) {
+                    // dd-mm-yyyy format
+                    const day = parts[0];
+                    const month = parts[1];
+                    const year = parts[2];
+                    return `${day}/${month}/${year}`;
+                }
+            }
+            
+            // Handle other date formats
+            const date = new Date(dateString);
+            if (isNaN(date.getTime())) {
+                return dateString; // Return original if can't parse
+            }
+            return date.toLocaleDateString();
+        } catch (error) {
+            return dateString;
+        }
+    }
+    
+    /**
+     * Add Courses to CPD Record button handler
+     */
+    function initializeAddCoursesButton() {
+        $('#add-courses-btn').on('click', function() {
+            const currentYear = $('#cpd-year').val() || new Date().getFullYear();
+            const targetUserId = userDetails.basic_info.user_id;
+            
+            // Redirect to CPD courses page with parameters
+            const cpdCoursesUrl = `<?php echo home_url('/cpd-courses/'); ?>?tyear=${currentYear}&user_id=${targetUserId}`;
+            window.location.href = cpdCoursesUrl;
+        });
     }
     
     /**

@@ -317,6 +317,73 @@ function iipm_get_recent_leave_requests($limit = 10) {
 // Note: iipm_get_leave_request() function moved to leave-request-functions.php to avoid duplication
 
 /**
+ * AJAX handler for getting user leave requests
+ */
+function iipm_handle_get_user_leave_requests() {
+    // Check permissions
+    if (!current_user_can('administrator') && 
+        !current_user_can('manage_organisation_members') && 
+        !in_array('iipm_corporate_admin', wp_get_current_user()->roles)) {
+        wp_send_json_error('Insufficient permissions');
+        return;
+    }
+    
+    // Verify nonce
+    if (!wp_verify_nonce($_POST['nonce'], 'iipm_portal_nonce')) {
+        wp_send_json_error('Security check failed');
+        return;
+    }
+    
+    $user_id = intval($_POST['user_id']);
+    $year = intval($_POST['year']);
+    
+    error_log('IIPM: Getting leave requests for user_id: ' . $user_id . ', year: ' . $year);
+    
+    if (!$user_id || !$year) {
+        wp_send_json_error('Invalid user ID or year');
+        return;
+    }
+    
+    // Include leave request functions if not already loaded
+    if (!function_exists('iipm_get_user_leave_requests_for_year')) {
+        include_once get_template_directory() . '/includes/leave-request-functions.php';
+    }
+    
+    // Include global functions if not already loaded
+    if (!function_exists('iipm_calculate_adjusted_target_points')) {
+        include_once get_template_directory() . '/includes/global-functions.php';
+    }
+    
+    try {
+        $leave_requests = iipm_get_user_leave_requests_for_year($user_id, $year);
+        
+        // Calculate total deducted hours using the adjusted target points function
+        $original_target = iipm_calculate_adjusted_target_points($user_id, $year, 0); // Get original target (no leave deduction)
+        $adjusted_target = iipm_calculate_adjusted_target_points($user_id, $year); // Get adjusted target (with leave deduction)
+        $total_deducted_hours = $original_target - $adjusted_target;
+        
+        // Ensure deducted hours is not negative
+        if ($total_deducted_hours < 0) {
+            $total_deducted_hours = 0;
+        }
+        
+        error_log('IIPM: Leave deduction calculation - Original: ' . $original_target . ', Adjusted: ' . $adjusted_target . ', Deducted: ' . $total_deducted_hours);
+        
+        wp_send_json_success(array(
+            'leave_requests' => $leave_requests,
+            'total_deducted_hours' => $total_deducted_hours,
+            'original_target' => $original_target,
+            'adjusted_target' => $adjusted_target
+        ));
+        
+    } catch (Exception $e) {
+        error_log('IIPM: Error getting user leave requests: ' . $e->getMessage());
+        wp_send_json_error('Failed to load leave requests');
+    }
+}
+add_action('wp_ajax_iipm_get_user_leave_requests', 'iipm_handle_get_user_leave_requests');
+
+/**
  * Calculate leave balance for user (placeholder function)
  */
 function iipm_get_user_leave_balance($user_id, $leave_type = 'annual') {

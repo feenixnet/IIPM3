@@ -2177,42 +2177,6 @@ function iipm_handle_cancel_leave_request() {
 add_action('wp_ajax_iipm_cancel_leave_request', 'iipm_handle_cancel_leave_request');
 
 /**
- * AJAX handler for getting user leave requests for a specific year
- */
-function iipm_ajax_get_user_leave_requests_for_year() {
-    // Verify nonce
-    if (!wp_verify_nonce($_POST['nonce'], 'iipm_portal_nonce')) {
-        wp_send_json_error('Invalid nonce');
-        return;
-    }
-    
-    // Check user permissions
-    if (!current_user_can('manage_options')) {
-        wp_send_json_error('Insufficient permissions');
-        return;
-    }
-    
-    $user_id = intval($_POST['user_id'] ?? 0);
-    $year = intval($_POST['year'] ?? date('Y'));
-    
-    if (!$user_id) {
-        wp_send_json_error('User ID is required');
-        return;
-    }
-    
-    // Get leave requests for the user and year
-    $leave_requests = iipm_get_user_leave_requests_for_year($user_id, $year);
-    
-    wp_send_json_success(array(
-        'leave_requests' => $leave_requests,
-        'year' => $year,
-        'user_id' => $user_id
-    ));
-}
-add_action('wp_ajax_iipm_get_user_leave_requests_for_year', 'iipm_ajax_get_user_leave_requests_for_year');
-add_action('wp_ajax_nopriv_iipm_get_user_leave_requests_for_year', 'iipm_ajax_get_user_leave_requests_for_year');
-
-/**
  * AJAX handler for creating sample persistent notifications
  */
 function iipm_handle_create_sample_notifications() {

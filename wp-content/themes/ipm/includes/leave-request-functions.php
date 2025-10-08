@@ -146,26 +146,15 @@ function iipm_get_user_leave_requests_for_year($user_id, $year) {
     
     $table_name = $wpdb->prefix . 'test_iipm_leave_requests';
     
-    // Since dates are stored as varchar in dd-mm-yyyy format, we need to extract year
-    // Using STR_TO_DATE to convert dd-mm-yyyy to proper date format for year comparison
+    // First try with STR_TO_DATE approach
     $sql = "SELECT * FROM {$table_name} 
-            WHERE user_id = %d 
-            AND YEAR(STR_TO_DATE(leave_start_date, '%d-%m-%Y')) = %d
+            WHERE user_id = {$user_id}
+            AND YEAR(STR_TO_DATE(leave_start_date, '%d-%m-%Y')) = {$year}
             ORDER BY STR_TO_DATE(leave_start_date, '%d-%m-%Y') DESC";
     
-    $results = $wpdb->get_results($wpdb->prepare($sql, $user_id, $year));
-    
-    // If the above query fails (dates might be in different format), try alternative approach
-    if (empty($results)) {
-        // Try with LIKE pattern matching for year
-        $sql_alt = "SELECT * FROM {$table_name} 
-                    WHERE user_id = %d 
-                    AND leave_start_date LIKE %s
-                    ORDER BY leave_start_date DESC";
-        
-        $year_pattern = "%-{$year}";
-        $results = $wpdb->get_results($wpdb->prepare($sql_alt, $user_id, $year_pattern));
-    }
+    $results = $wpdb->get_results($sql);
+
+    error_log('IIPM: Leave requests query for user ' . $user_id . ', year ' . $year . ': ' . print_r($results, true));
     
     return $results;
 }

@@ -328,7 +328,7 @@ add_action('wp_ajax_iipm_get_uncompleted_cpd_stats', 'iipm_ajax_get_uncompleted_
 add_action('wp_ajax_nopriv_iipm_get_uncompleted_cpd_stats', 'iipm_ajax_get_uncompleted_cpd_stats');
 
 add_action('wp_ajax_iipm_add_cpd_confirmation', 'iipm_ajax_add_cpd_confirmation');
-add_action('wp_ajax_nopriv_iipm_add_cpd_confirmation', 'iipm_ajax_get_cpd_types');
+add_action('wp_ajax_nopriv_iipm_add_cpd_confirmation', 'iipm_ajax_add_cpd_confirmation');
 
 add_action('wp_ajax_iipm_complete_cpd_course', 'iipm_ajax_complete_cpd_course');
 add_action('wp_ajax_nopriv_iipm_complete_cpd_course', 'iipm_ajax_complete_cpd_course');
@@ -398,7 +398,8 @@ function iipm_ajax_get_uncompleted_cpd_stats() {
  * AJAX callback for adding CPD confirmation
  */
 function iipm_ajax_add_cpd_confirmation() {
-    $user_id = get_current_user_id();
+    $user_id = $_POST['user_id'] ?? get_current_user_id();
+    $tYear = $_POST['year'] ?? date('Y');
     
     if (!$user_id) {
         wp_send_json_error('User not logged in');
@@ -416,7 +417,7 @@ function iipm_ajax_add_cpd_confirmation() {
         return;
     }
     
-    $result = iipm_add_cpd_confirmation($user_id, $course_id, $course_name, $course_category, $course_cpd_mins, $crs_provider);
+    $result = iipm_add_cpd_confirmation($user_id, $course_id, $course_name, $course_category, $course_cpd_mins, $crs_provider, $tYear);
     
     if ($result) {
         wp_send_json_success('Course added successfully');
@@ -450,7 +451,7 @@ function iipm_ajax_complete_cpd_course() {
  * AJAX callback for deleting CPD confirmation
  */
 function iipm_ajax_delete_cpd_confirmation() {
-    $user_id = get_current_user_id();
+    $user_id = $_POST['user_id'] ?? get_current_user_id();
     $confirmation_id = intval($_POST['confirmation_id'] ?? 0);
     
     if (!$user_id || !$confirmation_id) {
@@ -507,14 +508,15 @@ function iipm_ajax_get_started_courses() {
  * AJAX callback for getting all courses in learning path (both completed and started)
  */
 function iipm_ajax_get_courses_in_learning_path() {
-    $user_id = get_current_user_id();
+    $user_id = $_POST['user_id'] ?? get_current_user_id();
+    $tYear = intval($_POST['year'] ?? date('Y'));
     
     if (!$user_id) {
         wp_send_json_error('User not logged in');
         return;
     }
     
-    $courses = iipm_get_courses_in_learning_path($user_id);
+    $courses = iipm_get_courses_in_learning_path($user_id, $tYear);
     
     wp_send_json_success(array(
         'courses' => $courses
@@ -1126,7 +1128,7 @@ function iipm_get_uncompleted_cpd_stats($user_id, $year) {
 /**
  * Add CPD confirmation to fullcpd_confirmations table
  */
-function iipm_add_cpd_confirmation($user_id, $course_id, $course_name, $course_category, $course_cpd_mins, $crs_provider) {
+function iipm_add_cpd_confirmation($user_id, $course_id, $course_name, $course_category, $course_cpd_mins, $crs_provider, $tYear) {
     global $wpdb;
     
     $table_name = $wpdb->prefix . 'fullcpd_confirmations';
@@ -1146,7 +1148,7 @@ function iipm_add_cpd_confirmation($user_id, $course_id, $course_name, $course_c
             'hrsAndCategory' => $hrs_and_category,
             'dateOfCourse' => current_time('mysql'),
             'dateOfReturn' => current_time('mysql'),
-            'year' => date('Y'),
+            'year' =>$tYear,
             'crs_provider' => $crs_provider,
             'course_id' => $course_id
         ),
@@ -1278,14 +1280,10 @@ function iipm_get_started_courses($user_id) {
 /**
  * Get all courses in learning path (both completed and started)
  */
-function iipm_get_courses_in_learning_path($user_id) {
+function iipm_get_courses_in_learning_path($user_id, $tYear) {
     global $wpdb;
     
     $table_name = $wpdb->prefix . 'fullcpd_confirmations';
-    
-    // Get all courses in learning path (both completed and started)
-    $current_year = date('Y');
-    $start_year = $current_year - 4; // Past 5 years including current year
     
     $query = $wpdb->prepare(
         "SELECT id as confirmation_id, course_id, courseName, crs_provider, dateOfCourse, dateOfReturn, year 
@@ -1293,7 +1291,7 @@ function iipm_get_courses_in_learning_path($user_id) {
          WHERE user_id = %d AND year = %d
          ORDER BY dateOfCourse DESC",
         $user_id,
-        $current_year
+        $tYear
     );
     
     $courses = $wpdb->get_results($query);
