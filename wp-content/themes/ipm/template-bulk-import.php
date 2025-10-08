@@ -74,10 +74,11 @@ get_header();
                                 <h4>Prepare Your CSV File</h4>
                                 <p>Your CSV file must include the following columns:</p>
                                 <ul class="required-columns">
-                                    <li><strong>first_name</strong> - Employee's first name</li>
-                                    <li><strong>last_name</strong> - Employee's last name</li>
-                                    <li><strong>email</strong> - Employee's email address</li>
+                                    <li><strong>first_name</strong> - Member's first name</li>
+                                    <li><strong>last_name</strong> - Member's last name</li>
+                                    <li><strong>email</strong> - Member's email address</li>
                                     <li><strong>member_type</strong> - Set to "organization"</li>
+                                    <li><strong>membership_level</strong> - Set to "membership level id"</li>
                                 </ul>
                             </div>
                         </div>

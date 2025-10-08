@@ -963,10 +963,11 @@ function iipm_get_individual_member_report($user_id, $year = null) {
     // Get member basic info - ensure member record exists and is active
     $member = $wpdb->get_row($wpdb->prepare("
         SELECT u.ID, u.display_name, u.user_email,
-               m.membership_status, mp.theUsersStatus as role
+               m.membership_status, ms.designation as designation, ms.name as membership_name
         FROM {$wpdb->users} u
         INNER JOIN {$wpdb->prefix}test_iipm_members m ON u.ID = m.user_id
         LEFT JOIN {$wpdb->prefix}test_iipm_member_profiles mp ON u.ID = mp.user_id
+        LEFT JOIN {$wpdb->prefix}memberships ms ON ms.id = m.membership_level
         WHERE u.ID = %d AND m.membership_status = 'active'
     ", $user_id));
     
@@ -986,7 +987,7 @@ function iipm_get_individual_member_report($user_id, $year = null) {
     // Initialize categories with course count requirements
     $categories = array(
         'Pensions' => array('name' => 'Pensions', 'required' => 1, 'completed' => 0, 'courses' => array()),
-        'Savings & Investment' => array('name' => 'Savings & Investment', 'required' => 1, 'completed' => 0, 'courses' => array()),
+        'Savings & Investments' => array('name' => 'Savings & Investments', 'required' => 1, 'completed' => 0, 'courses' => array()),
         'Ethics' => array('name' => 'Ethics', 'required' => 1, 'completed' => 0, 'courses' => array()),
         'Life Assurance' => array('name' => 'Life Assurance', 'required' => 1, 'completed' => 0, 'courses' => array())
     );
@@ -1258,18 +1259,23 @@ function iipm_get_all_members_with_progress($year = null, $report_type = 'employ
         
         $original_target = 8; // Default fallback
         if ($membership_level) {
-            $original_target = $wpdb->get_var($wpdb->prepare(
-                "SELECT cpd_requirement FROM {$wpdb->prefix}memberships WHERE id = %d",
+            $membership_data = $wpdb->get_row($wpdb->prepare(
+                "SELECT cpd_requirement, designation FROM {$wpdb->prefix}memberships WHERE id = %d",
                 $membership_level
             ));
-            if (!$original_target) {
+            // error_log('IIPM: Membership data: ' . print_r(json_encode($membership_data), true));
+            if (!$membership_data) {
                 $original_target = 8; // Default fallback
+            } else {
+                $original_target = $membership_data->cpd_requirement;
+                $designation = $membership_data->designation;
             }
         }
         
         $user_data['earned_points'] = $earned;
         $user_data['required_points'] = $adjusted_target; // Use adjusted target
         $user_data['original_target'] = $original_target; // Get original target from membership
+        $user_data['designation'] = $designation; // Get designation from membership
         
         // Calculate progress percentage
         if ($adjusted_target > 0) {
@@ -1277,21 +1283,7 @@ function iipm_get_all_members_with_progress($year = null, $report_type = 'employ
         } else {
             $user_data['progress_percentage'] = 100;
         }
-        
-        // Get role display name
-        $role_display = 'Member';
-        if ($user_data['theUsersStatus'] === 'Systems Admin') {
-            $role_display = 'Systems Admin';
-        } elseif ($user_data['theUsersStatus'] === 'EmployerContact') {
-            $role_display = 'Employer Contact';
-        } elseif ($user_data['theUsersStatus'] === 'Full Member') {
-            $role_display = 'Full Member';
-        } elseif ($user_data['theUsersStatus'] === 'Life Member') {
-            $role_display = 'Life Member';
-        } elseif ($user_data['theUsersStatus'] === 'QPT Member') {
-            $role_display = 'QPT Member';
-        }
-        $user_data['role'] = $role_display;
+
         
         // Determine compliance status
         $user_data['compliance_status'] = $earned >= $adjusted_target ? 'Yes' : 'No';

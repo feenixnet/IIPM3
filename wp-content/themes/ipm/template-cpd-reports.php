@@ -289,7 +289,7 @@ $stats = iipm_get_cpd_compliance_stats($selected_year);
                                 <thead style="background: #f8fafc;">
                                     <tr>
                                         <th style="padding: 15px; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Member</th>
-                                        <th style="padding: 15px; text-align: center; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Role</th>
+                                        <th style="padding: 15px; text-align: center; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Membership</th>
                                         <th style="padding: 15px; text-align: center; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Points Earned</th>
                                         <th style="padding: 15px; text-align: center; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Required</th>
                                         <th style="padding: 15px; text-align: center; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">CPD Progress</th>
@@ -840,7 +840,7 @@ function updateMemberDetailsTable(data, currentPage) {
                     <strong>${member.name || 'Unknown User'}${submissionIcon}</strong><br>
                     <small style="color: #6b7280;">${member.email}</small>
                 </td>
-                <td style="padding: 15px; text-align: center; border-bottom: 1px solid #e5e7eb;">${member.role || 'Member'}</td>
+                <td style="padding: 15px; text-align: center; border-bottom: 1px solid #e5e7eb;">${member.designation || 'Unknown'}</td>
                 <td style="padding: 15px; text-align: center; border-bottom: 1px solid #e5e7eb;">${member.earned_points || 0}</td>
                 <td style="padding: 15px; text-align: center; border-bottom: 1px solid #e5e7eb;">${member.required_points || 0}</td>
                 <td style="padding: 15px; text-align: center; border-bottom: 1px solid #e5e7eb;">
@@ -1066,8 +1066,8 @@ function displayIndividualReport(reportData, memberName = null) {
                         <span style="color: #6b7280;">${reportData.member.user_email}</span>
                     </div>
                     <div>
-                        <strong style="color: #374151;">Role:</strong> 
-                        <span style="color: #6b7280;">${reportData.member.role || 'N/A'}</span>
+                        <strong style="color: #374151;">Membership:</strong> 
+                        <span style="color: #6b7280;">${reportData.member.membership_name || 'N/A'}(${reportData.member.designation || 'N/A'})</span>
                     </div>
                     <div>
                         <strong style="color: #374151;">Year:</strong> 
