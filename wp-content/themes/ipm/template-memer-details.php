@@ -1354,8 +1354,9 @@ jQuery(document).ready(function($) {
                     // Format user name properly (same as member portal)
                     const userName = (userDetails.profile_info.first_name || '') + ' ' + (userDetails.profile_info.sur_name || '');
                     const formattedUserName = userName.trim() || 'User';
-                    
+                    const userId = userDetails.basic_info.user_id;
                     downloadCertificateDirect(
+                        userId,
                         certificateId,
                         formattedUserName,
                         userDetails.profile_info.email_address || '',
@@ -1401,7 +1402,7 @@ jQuery(document).ready(function($) {
     /**
      * Download certificate function - same as member portal
      */
-    function downloadCertificateDirect(certificateId, userName, userEmail, contactAddress, submissionYear) {
+    function downloadCertificateDirect(userId, certificateId, userName, userEmail, contactAddress, submissionYear) {
         // Show loading state
         const downloadBtn = $('#download-certificate');
         const originalText = downloadBtn.html();
@@ -1415,7 +1416,8 @@ jQuery(document).ready(function($) {
             user_name: userName,
             user_email: userEmail,
             contact_address: contactAddress,
-            submission_year: submissionYear
+            submission_year: submissionYear,
+            user_id: userId
         });
         
         const downloadUrl = `<?php echo admin_url('admin-ajax.php'); ?>?${params.toString()}`;
@@ -1788,7 +1790,7 @@ jQuery(document).ready(function($) {
         }
         
         const totalHtml = `
-            <div class="total-deducted-summary" style="margin-top: 20px; padding: 15px; background: #f8fafc; border-radius: 8px; text-align: right;">
+            <div class="total-deducted-summary" style="margin-top: 5px; padding: 15px 0px; background: #f8fafc; border-radius: 8px; text-align: right;display: flex;justify-content: space-between;">
                 <strong style="color: #374151; font-size: 1.1rem;">Total Deducted: ${totalDeductedHours} hours</strong>
                 <div style="font-size: 0.9rem; color: #6b7280; margin-top: 5px;">
                     Original Target: ${originalTarget}h → Adjusted Target: ${adjustedTarget}h

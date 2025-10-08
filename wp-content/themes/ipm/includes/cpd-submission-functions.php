@@ -484,6 +484,7 @@ function iipm_download_certificate_direct() {
     $user_email = sanitize_email($_GET['user_email'] ?? '');
     $contact_address = sanitize_textarea_field($_GET['contact_address'] ?? '');
     $submission_year = sanitize_text_field($_GET['submission_year'] ?? date('Y'));
+    $user_id = isset($_GET['user_id']) ? intval($_GET['user_id']) : get_current_user_id();
 
     if ($certificate_id <= 0) {
         wp_die('Invalid certificate ID');
@@ -507,7 +508,7 @@ function iipm_download_certificate_direct() {
     error_log('Avatar URL field: ' . ($certificate->avatar_url ?? 'NOT SET'));
 
     // Generate PDF content with avatar image
-    $pdf_content = generate_certificate_pdf($certificate, $user_name, $user_email, $contact_address, $submission_year);
+    $pdf_content = generate_certificate_pdf($user_id, $certificate, $user_name, $user_email, $contact_address, $submission_year);
     
     // Set headers for PDF download (like CSV export)
     $filename = 'CPD_Certificate_' . $user_name . '_' . $submission_year . '.pdf';
@@ -535,7 +536,7 @@ function iipm_download_certificate_direct() {
 /**
  * Generate certificate PDF content using TCPDF
  */
-function generate_certificate_pdf($certificate, $user_name, $user_email, $contact_address, $submission_year) {
+function generate_certificate_pdf($user_id, $certificate, $user_name, $user_email, $contact_address, $submission_year) {
     // Check if TCPDF is available
     if (!class_exists('TCPDF')) {
         // Fallback to simple PDF if TCPDF is not available
@@ -544,7 +545,7 @@ function generate_certificate_pdf($certificate, $user_name, $user_email, $contac
 
     // Fetch membership display (e.g., "Full Member (AIIPM) for 2024")
     global $wpdb;
-    $target_user_id = get_current_user_id();
+    $target_user_id = $user_id;
     $membership_display = '';
     $membership_level_id = $wpdb->get_var($wpdb->prepare(
         "SELECT membership_level FROM {$wpdb->prefix}test_iipm_members WHERE user_id = %d",
