@@ -541,115 +541,108 @@ function generate_certificate_pdf($certificate, $user_name, $user_email, $contac
         // Fallback to simple PDF if TCPDF is not available
         return generate_simple_pdf($certificate, $user_name, $user_email, $contact_address, $submission_year);
     }
+
+    // Fetch membership display (e.g., "Full Member (AIIPM) for 2024")
+    global $wpdb;
+    $target_user_id = get_current_user_id();
+    $membership_display = '';
+    $membership_level_id = $wpdb->get_var($wpdb->prepare(
+        "SELECT membership_level FROM {$wpdb->prefix}test_iipm_members WHERE user_id = %d",
+        $target_user_id
+    ));
+    if ($membership_level_id) {
+        $mrow = $wpdb->get_row($wpdb->prepare(
+            "SELECT name, designation FROM {$wpdb->prefix}memberships WHERE id = %d",
+            $membership_level_id
+        ));
+        if ($mrow) {
+            $membership_display = trim($mrow->name . ' (' . $mrow->designation . ') for ' . $submission_year);
+        }
+    }
+
+    // Create new PDF (Landscape orientation for A4)
+    // A4 Landscape: 297mm x 210mm (width x height)
+    $pdf = new TCPDF('L', 'mm', 'A4', true, 'UTF-8', false);
+    $pdf->setPrintHeader(false);
+    $pdf->setPrintFooter(false);
+    $pdf->SetMargins(20, 15, 20);
     
-    // Create new PDF document
-    $pdf = new TCPDF(PDF_PAGE_ORIENTATION, PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
+    // Disable image alpha channel support to avoid PNG errors
+    $pdf->setAlpha(1);
     
-    // Set document information
-    $pdf->SetCreator('IIPM System');
-    $pdf->SetAuthor('Institute of Insurance and Pension Management');
-    $pdf->SetTitle('CPD Certificate - ' . $certificate->name);
-    $pdf->SetSubject('Continuing Professional Development Certificate');
-    $pdf->SetKeywords('CPD, Certificate, IIPM, Professional Development');
-    
-    // Set default header data
-    $pdf->SetHeaderData('', 0, 'CERTIFICATE OF COMPLETION', 'Continuing Professional Development (CPD)');
-    
-    // Set header and footer fonts
-    $pdf->setHeaderFont(Array(PDF_FONT_NAME_MAIN, '', PDF_FONT_SIZE_MAIN));
-    $pdf->setFooterFont(Array(PDF_FONT_NAME_DATA, '', PDF_FONT_SIZE_DATA));
-    
-    // Set default monospaced font
-    $pdf->SetDefaultMonospacedFont(PDF_FONT_MONOSPACED);
-    
-    // Set margins
-    $pdf->SetMargins(PDF_MARGIN_LEFT, PDF_MARGIN_TOP, PDF_MARGIN_RIGHT);
-    $pdf->SetHeaderMargin(PDF_MARGIN_HEADER);
-    $pdf->SetFooterMargin(PDF_MARGIN_FOOTER);
-    
-    // Set auto page breaks
-    $pdf->SetAutoPageBreak(TRUE, PDF_MARGIN_BOTTOM);
-    
-    // Set image scale factor
-    $pdf->setImageScale(PDF_IMAGE_SCALE_RATIO);
-    
-    // Add a page
     $pdf->AddPage();
-    
-    // Set font
-    $pdf->SetFont('helvetica', 'B', 20);
-    
-    // Certificate title
-    $pdf->Cell(0, 15, $certificate->name, 0, 1, 'C');
-    $pdf->Ln(10);
-    
-    
-    // Award text
-    $pdf->SetFont('helvetica', '', 16);
-    $pdf->Cell(0, 10, 'This is to certify that', 0, 1, 'C');
-    $pdf->Ln(5);
-    
+
+    // Draw page border (a bit away from the edges)
+    // A4 Landscape: 297x210mm; inset 10mm on all sides
+    $pdf->SetLineWidth(0.6);
+    $pdf->Rect(10, 10, 297 - 20, 210 - 20);
+
+    // Title and subtitles - adjusted for landscape (set position FIRST)
+    $pdf->SetY(55);
+    $pdf->SetFont('times', '', 60);
+    $pdf->Cell(0, 20, 'Certificate', 0, 1, 'C');
+    $pdf->Ln(2);
+    $pdf->SetFont('times', '', 28);
+    $pdf->Cell(0, 12, 'of Completion', 0, 1, 'C');
+    $pdf->Ln(6);
+    $pdf->SetFont('helvetica', '', 11);
+    $pdf->Cell(0, 8, 'THIS IS TO CERTIFY THAT', 0, 1, 'C');
+
     // Recipient name
-    $pdf->SetFont('helvetica', 'B', 18);
-    $pdf->Cell(0, 10, $user_name, 0, 1, 'C');
     $pdf->Ln(5);
+    $pdf->SetFont('times', '', 36);
+    $pdf->Cell(0, 14, $user_name, 0, 1, 'C');
+
+    // Rule line - adjusted for landscape width (257mm content area with 20mm margins)
+    $pdf->Ln(8);
+    $y = $pdf->GetY();
+    $pdf->SetLineWidth(0.3);
+    $pdf->Line(30, $y, 267, $y);
+
+    // Membership line
+    $pdf->Ln(8);
+    $pdf->SetFont('helvetica', '', 11);
+    $pdf->MultiCell(0, 8, 'Has met the conditions of the Irish Institute Of Pensions Management and is Registered As', 0, 'C', false, 1);
+    if ($membership_display !== '') {
+        $pdf->SetFont('helvetica', 'B', 12);
+        $pdf->MultiCell(0, 8, $membership_display, 0, 'C', false, 1);
+    }
+
+    // Footer info - positioned at bottom
+    $pdf->SetY(-35);
+    $pdf->SetFont('helvetica', '', 9);
+    $pdf->MultiCell(0, 5, 'IIPM | Website: www.iipm.ie | Email: info@iipm.ie', 0, 'C', false, 1);
+    $pdf->MultiCell(0, 5, 'Address: Irish Institute of Pensions Management, Suite 2, Slane House, 25 Lower Mount Street, Dublin 2, D02 V029', 0, 'C', false, 1);
+
+    // Logo - Using proper JPEG file and center exactly via writeHTMLCell
+    $logo_path = ABSPATH . 'wp-content/uploads/2025/05/logo-1.jpg';
     
-    // Completion text
-    $pdf->SetFont('helvetica', '', 16);
-    $pdf->Cell(0, 10, 'has successfully completed the Continuing Professional Development', 0, 1, 'C');
-    $pdf->Cell(0, 10, 'requirements for the year ' . $submission_year . '.', 0, 1, 'C');
-    $pdf->Ln(20);
-    
-    // Details section
-    $pdf->SetFont('helvetica', 'B', 14);
-    $pdf->Cell(0, 10, 'Certificate Details:', 0, 1, 'L');
-    $pdf->Ln(5);
-    
-    $pdf->SetFont('helvetica', '', 12);
-    $pdf->Cell(60, 8, 'Certificate Name:', 0, 0, 'L');
-    $pdf->Cell(0, 8, $certificate->name, 0, 1, 'L');
-    
-    $pdf->Cell(60, 8, 'Certificate Year:', 0, 0, 'L');
-    $pdf->Cell(0, 8, $certificate->year, 0, 1, 'L');
-    
-    $pdf->Cell(60, 8, 'Submission Year:', 0, 0, 'L');
-    $pdf->Cell(0, 8, $submission_year, 0, 1, 'L');
-    
-    $pdf->Cell(60, 8, 'Recipient Name:', 0, 0, 'L');
-    $pdf->Cell(0, 8, $user_name, 0, 1, 'L');
-    
-    $pdf->Cell(60, 8, 'Email Address:', 0, 0, 'L');
-    $pdf->Cell(0, 8, $user_email, 0, 1, 'L');
-    
-    if (!empty($contact_address)) {
-        $pdf->Cell(60, 8, 'Contact Address:', 0, 0, 'L');
-        $pdf->Cell(0, 8, $contact_address, 0, 1, 'L');
+    $logo_added = false;
+    if (file_exists($logo_path)) {
+        try {
+            // Read image and convert to base64
+            $image_data = file_get_contents($logo_path);
+            $base64_image = base64_encode($image_data);
+            
+            // Place near the top, spanning full width and centered
+            $pdf->SetY(20);
+            $logo_html = '<div style="width:100%; text-align:center;">'
+                . '<img src="data:image/jpeg;base64,' . $base64_image . '" style="display:block; margin:0 auto; width:60mm;" />'
+                . '</div>';
+            // writeHTMLCell(width=0 -> full width), h=0 auto, align center
+            $pdf->writeHTMLCell(0, 0, null, null, $logo_html, 0, 1, 0, true, 'C', true);
+            $logo_added = true;
+            error_log('IIPM Certificate: Logo added successfully from logo-1.jpg (centered)');
+        } catch (Exception $e) {
+            error_log('IIPM Certificate: Could not load logo: ' . $e->getMessage());
+        }
     }
     
-    if (!empty($certificate->description)) {
-        $pdf->Cell(60, 8, 'Description:', 0, 0, 'L');
-        $pdf->Cell(0, 8, $certificate->description, 0, 1, 'L');
+    if (!$logo_added) {
+        error_log('IIPM Certificate: Logo file not found at: ' . $logo_path);
     }
-    
-    $pdf->Ln(20);
-    
-    // Issue date
-    $pdf->SetFont('helvetica', '', 14);
-    $pdf->Cell(0, 10, 'Issued on: ' . date('F j, Y'), 0, 1, 'C');
-    $pdf->Ln(20);
-    
-    // Signatures
-    $pdf->SetFont('helvetica', '', 12);
-    $pdf->Cell(90, 10, 'Administrator', 0, 0, 'C');
-    $pdf->Cell(90, 10, 'Date', 0, 1, 'C');
-    $pdf->Ln(10);
-    
-    // Footer
-    $pdf->SetFont('helvetica', '', 10);
-    $pdf->Cell(0, 8, 'This certificate is issued by the Institute of Insurance and Pension Management (IIPM)', 0, 1, 'C');
-    $pdf->Cell(0, 8, 'For verification purposes, please contact: info@iipm.com', 0, 1, 'C');
-    
-    // Return PDF content
+
+
     return $pdf->Output('', 'S');
 }
 

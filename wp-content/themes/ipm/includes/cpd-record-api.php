@@ -398,8 +398,11 @@ function iipm_ajax_get_uncompleted_cpd_stats() {
  * AJAX callback for adding CPD confirmation
  */
 function iipm_ajax_add_cpd_confirmation() {
-    $user_id = $_POST['user_id'] ?? get_current_user_id();
-    $tYear = $_POST['year'] ?? date('Y');
+    // Normalize user_id and year
+    $user_id = isset($_POST['user_id']) ? intval($_POST['user_id']) : get_current_user_id();
+    if ($user_id <= 0) { $user_id = get_current_user_id(); }
+    $tYear = isset($_POST['year']) ? intval($_POST['year']) : intval(date('Y'));
+    if ($tYear <= 0) { $tYear = intval(date('Y')); }
     
     if (!$user_id) {
         wp_send_json_error('User not logged in');
@@ -451,7 +454,9 @@ function iipm_ajax_complete_cpd_course() {
  * AJAX callback for deleting CPD confirmation
  */
 function iipm_ajax_delete_cpd_confirmation() {
-    $user_id = $_POST['user_id'] ?? get_current_user_id();
+    // Normalize user_id
+    $user_id = isset($_POST['user_id']) ? intval($_POST['user_id']) : get_current_user_id();
+    if ($user_id <= 0) { $user_id = get_current_user_id(); }
     $confirmation_id = intval($_POST['confirmation_id'] ?? 0);
     
     if (!$user_id || !$confirmation_id) {
@@ -508,8 +513,11 @@ function iipm_ajax_get_started_courses() {
  * AJAX callback for getting all courses in learning path (both completed and started)
  */
 function iipm_ajax_get_courses_in_learning_path() {
-    $user_id = $_POST['user_id'] ?? get_current_user_id();
-    $tYear = intval($_POST['year'] ?? date('Y'));
+    // Normalize user_id and year
+    $user_id = isset($_POST['user_id']) ? intval($_POST['user_id']) : get_current_user_id();
+    if ($user_id <= 0) { $user_id = get_current_user_id(); }
+    $tYear = isset($_POST['year']) ? intval($_POST['year']) : intval(date('Y'));
+    if ($tYear <= 0) { $tYear = intval(date('Y')); }
     
     if (!$user_id) {
         wp_send_json_error('User not logged in');
