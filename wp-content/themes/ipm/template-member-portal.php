@@ -106,8 +106,8 @@ get_header();
             }
             $is_fully_completed = ($has_minimum_time && $has_all_categories);
         ?>
-            <?php if ($is_fully_completed): ?>
-            <div class="cpd-success-alert" id="cpd-success-alert">
+            <?php if ($is_submitted && $submitted_rows[0]->is_notified == 0): ?>
+            <div class="cpd-success-alert" id="cpd-success-alert" data-submission-id="<?php echo $submitted_rows[0]->id; ?>">
                 <div class="alert-content">
                     <div class="alert-icon">🎉</div>
                     <div class="alert-message">
@@ -3675,8 +3675,39 @@ get_header();
             alert.style.animation = 'slideUp 0.3s ease-out';
             setTimeout(() => {
                 alert.remove();
+                
+                // Mark submission as notified after alert is closed
+                const submissionId = alert.getAttribute('data-submission-id');
+                if (submissionId) {
+                    markSubmissionAsNotified(submissionId);
+                }
             }, 300);
         }
+    }
+    
+    // Function to mark submission as notified
+    function markSubmissionAsNotified(submissionId) {
+        fetch(ajaxurl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+                action: 'iipm_mark_submission_notified',
+                submission_id: submissionId
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                console.log('Submission marked as notified successfully');
+            } else {
+                console.error('Failed to mark submission as notified:', data.data);
+            }
+        })
+        .catch(error => {
+            console.error('Error marking submission as notified:', error);
+        });
     }
     
     // Global functions for course actions

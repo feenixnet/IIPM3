@@ -777,6 +777,7 @@ function iipm_create_submissions_table() {
         reviewed_by bigint(20) NULL,
         reviewed_at timestamp NULL,
         certificate_id int(11) NULL,
+        is_notified tinyint(1) DEFAULT 0,
         created_at timestamp DEFAULT CURRENT_TIMESTAMP,
         updated_at timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         PRIMARY KEY (id),
@@ -785,11 +786,60 @@ function iipm_create_submissions_table() {
         KEY status (status),
         KEY reviewed_by (reviewed_by),
         KEY certificate_id (certificate_id),
-        KEY created_at (created_at)
+        KEY created_at (created_at),
+        KEY is_notified (is_notified)
     ) $charset_collate;";
     
     require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
     dbDelta($sql_submissions);
+}
+
+/**
+ * Mark submission as notified
+ */
+add_action('wp_ajax_iipm_mark_submission_notified', 'iipm_mark_submission_notified');
+
+function iipm_mark_submission_notified() {
+    if (!is_user_logged_in()) {
+        wp_send_json_error('User not logged in');
+    }
+
+    $submission_id = isset($_POST['submission_id']) ? intval($_POST['submission_id']) : 0;
+    
+    if ($submission_id <= 0) {
+        wp_send_json_error('Invalid submission ID');
+    }
+
+    global $wpdb;
+    $table = $wpdb->prefix . 'test_iipm_submissions';
+    
+    // Verify the submission belongs to the current user
+    $submission = $wpdb->get_row($wpdb->prepare(
+        "SELECT * FROM $table WHERE id = %d AND user_id = %d",
+        $submission_id,
+        get_current_user_id()
+    ));
+    
+    if (!$submission) {
+        wp_send_json_error('Submission not found or access denied');
+    }
+    
+    // Update the is_notified column
+    $result = $wpdb->update(
+        $table,
+        array('is_notified' => 1),
+        array('id' => $submission_id),
+        array('%d'),
+        array('%d')
+    );
+    
+    if ($result === false) {
+        wp_send_json_error('Failed to update notification status');
+    }
+    
+    wp_send_json_success(array(
+        'message' => 'Submission marked as notified successfully'
+    ));
 }
 
 // Create the table when the file is loaded

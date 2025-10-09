@@ -12,7 +12,7 @@ if (!current_user_can('administrator')) {
 }
 
 // Get the active tab from URL, default to 'by-admin'
-$active_tab = isset($_GET['tab']) ? sanitize_text_field($_GET['tab']) : 'by-admin';
+$active_tab = isset($_GET['tab']) ? sanitize_text_field($_GET['tab']) : 'library';
 
 get_header();
 
@@ -32,8 +32,25 @@ if (!function_exists('add_success_notification')) {
                 </p>
             </div>
         </div>
+        <!-- Tab Navigation (like user management) -->
+        <div class="tab-navigation" style="margin-bottom: 30px;">
+            <div style="display: flex; justify-content: center; gap: 20px;">
+                <a href="?tab=library" class="tab-button <?php echo (!isset($_GET['tab']) || $_GET['tab'] === 'library') ? 'active' : ''; ?>" 
+                   style="padding: 12px 24px; background: <?php echo (!isset($_GET['tab']) || $_GET['tab'] === 'library') ? '#f8a135' : '#6b4c93'; ?>; color: white; border-radius: 8px; text-decoration: none; font-weight: 500; transition: all 0.3s ease;">
+                    <span style="margin-right: 8px;"><i class="fas fa-clipboard-list"></i></span>
+                    Course Library
+                </a>
+                <a href="?tab=requests" class="tab-button <?php echo (isset($_GET['tab']) && $_GET['tab'] === 'requests') ? 'active' : ''; ?>"
+                   style="padding: 12px 24px; background: <?php echo (isset($_GET['tab']) && $_GET['tab'] === 'requests') ? '#f8a135' : '#6b4c93'; ?>; color: white; border-radius: 8px; text-decoration: none; font-weight: 500; transition: all 0.3s ease;">
+                    <span style="margin-right: 8px;"><i class="fas fa-inbox"></i></span>
+                    Course Requests
+                </a>
+            </div>
+        </div>
+
         <!-- Course Management Content -->
         <div class="by-admin-content">
+            <?php if (!isset($_GET['tab']) || $_GET['tab'] === 'library'): ?>
             <!-- Course Management Actions -->
             <div class="course-management-header">
                 <div class="header-left">
@@ -79,7 +96,7 @@ if (!function_exists('add_success_notification')) {
         </div>
 
         <!-- Course List -->
-        <div class="course-list-container">
+            <div class="course-list-container" id="library-section">
             <div class="course-list-header">
                 <div class="list-info">
                     <span id="course-count">Loading courses...</span>
@@ -145,6 +162,121 @@ if (!function_exists('add_success_notification')) {
             </div>
             </div>
             </div>
+            <?php endif; ?>
+
+            <?php if (isset($_GET['tab']) && $_GET['tab'] === 'requests'): ?>
+            <!-- Course Requests Section -->
+            <div class="requests-section-modern">
+                <!-- Header with Title and Stats -->
+                <div class="requests-header">
+                    <div class="header-content">
+                        <h2 style="color: #1f2937; font-size: 1.5rem; margin: 0; display: flex; align-items: center; gap: 10px;">
+                            Course Requests Management
+                        </h2>
+                        <p style="color: #6b7280; margin: 5px 0 0 0;">Review and manage course accreditation requests</p>
+                    </div>
+                    <div class="requests-stats" id="requests-stats">
+                        <div class="stat-card stat-pending">
+                            <i class="fas fa-clock"></i>
+                            <div class="stat-info">
+                                <span class="stat-value" id="stat-pending">0</span>
+                                <span class="stat-label">Pending</span>
+                            </div>
+                        </div>
+                        <div class="stat-card stat-approved">
+                            <i class="fas fa-check-circle"></i>
+                            <div class="stat-info">
+                                <span class="stat-value" id="stat-approved">0</span>
+                                <span class="stat-label">Approved</span>
+                            </div>
+                        </div>
+                        <div class="stat-card stat-rejected">
+                            <i class="fas fa-times-circle"></i>
+                            <div class="stat-info">
+                                <span class="stat-value" id="stat-rejected">0</span>
+                                <span class="stat-label">Rejected</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filters Section -->
+                <div class="requests-filters">
+                    <div class="filter-group">
+                        <label>
+                            Status
+                        </label>
+                        <select id="requests-status-filter" class="form-control">
+                            <option value="">All Statuses</option>
+                            <option value="pending" selected>Pending</option>
+                            <option value="approved">Approved</option>
+                            <option value="rejected">Rejected</option>
+                        </select>
+                    </div>
+                    <div class="filter-group filter-search">
+                        <label>
+                            Search User
+                        </label>
+                        <input type="text" id="requests-search" class="form-control" placeholder="Search by first name or surname...">
+                    </div>
+                    <div class="filter-actions">
+                        <button class="btn btn-outline" id="clear-requests-filters">
+                            <i class="fas fa-eraser"></i> Clear Filters
+                        </button>
+                        <button class="btn btn-primary" id="refresh-requests">
+                            <i class="fas fa-sync-alt"></i> Refresh
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Results Info -->
+                <div class="requests-info" id="requests-info">
+                    <span id="requests-count">Loading requests...</span>
+                </div>
+
+                <!-- Table -->
+                <div class="table-container table-modern">
+                    <table class="courses-table requests-table" id="requests-table">
+                        <thead>
+                            <tr>
+                                <th>First Name</th>
+                                <th>Surname</th>
+                                <th>Email</th>
+                                <th>Info</th>
+                                <th>Course</th>
+                                <th>Category</th>
+                                <th>Code</th>
+                                <th>Hours</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="requests-table-body">
+                            <tr>
+                                <td colspan="10" style="text-align: center; padding: 40px;">
+                                    <div class="loading-spinner"></div>
+                                    <p style="margin-top: 15px; color: #6b7280;">Loading requests...</p>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                <div class="course-pagination-container modern-pagination" id="requests-pagination" style="display:none;">
+                    <div class="pagination-info" id="requests-pagination-info"></div>
+                    <div class="pagination-controls">
+                        <button class="btn btn-outline" id="requests-prev-page" disabled>
+                            <i class="fas fa-chevron-left"></i> Previous
+                        </button>
+                        <div class="pagination-numbers" id="requests-page-numbers"></div>
+                        <button class="btn btn-outline" id="requests-next-page" disabled>
+                            Next <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <?php endif; ?>
         </div>
     </div>
 </div>
@@ -358,10 +490,283 @@ if (!function_exists('add_success_notification')) {
     </div>
 </div>
 
+<!-- Additional Info Modal -->
+<div class="modal" id="additional-info-modal" style="display:none;">
+    <div class="modal-content" style="max-width: 500px; margin:auto;">
+        <div class="modal-header">
+            <h3>Additional Information</h3>
+            <button class="modal-close" id="additional-info-close">×</button>
+        </div>
+        <div class="modal-body">
+            <div class="info-row" style="margin-bottom: 20px;">
+                <label style="font-weight: 600; color: #374151; display: block; margin-bottom: 8px;">
+                    <i class="fas fa-id-card" style="margin-right: 8px; color: #667eea;"></i>
+                    Membership Level:
+                </label>
+                <div id="modal-membership" style="padding: 12px; background: #f8fafc; border-radius: 8px; color: #1f2937;">
+                    <!-- Membership will be displayed here -->
+                </div>
+            </div>
+            <div class="info-row">
+                <label style="font-weight: 600; color: #374151; display: block; margin-bottom: 8px;">
+                    <i class="fas fa-building" style="margin-right: 8px; color: #667eea;"></i>
+                    Organisation:
+                </label>
+                <div id="modal-organisation" style="padding: 12px; background: #f8fafc; border-radius: 8px; color: #1f2937;">
+                    <!-- Organisation will be displayed here -->
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-primary" id="additional-info-close-btn">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- Reject Reason Modal -->
+<div class="modal" id="reject-reason-modal" style="display:none;">
+    <div class="modal-content" style="max-width: 520px; margin:auto;">
+        <div class="modal-header">
+            <h3>Reject Course Request</h3>
+            <button class="modal-close" id="reject-close">×</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label for="reject-reason">Reason for rejection</label>
+                <textarea id="reject-reason" class="form-control" rows="5" placeholder="Provide a clear reason. This will be emailed to the requester."></textarea>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-outline" id="reject-cancel">Cancel</button>
+            <button type="button" class="btn btn-danger" id="reject-send">Send</button>
+        </div>
+    </div>
+    <input type="hidden" id="reject-request-id" value="">
+</div>
+
 <style>
 /* Course Management Page */
 .course-management-page {
     min-height: 100vh;
+}
+
+/* Modern Requests Section */
+.requests-section-modern {
+    background: white;
+    border-radius: 12px;
+    padding: 30px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.requests-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid #e5e7eb;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.requests-stats {
+    display: flex;
+    gap: 15px;
+}
+
+.stat-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 15px 20px;
+    background: #f8fafc;
+    border-radius: 10px;
+    border: 2px solid #e5e7eb;
+    transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.stat-card i {
+    font-size: 24px;
+}
+
+.stat-pending i { color: #f59e0b; }
+.stat-approved i { color: #10b981; }
+.stat-rejected i { color: #ef4444; }
+
+.stat-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.stat-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: #1f2937;
+    line-height: 1;
+}
+
+.stat-label {
+    font-size: 12px;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.requests-filters {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 25px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+}
+
+.requests-filters .filter-group {
+    flex: 1;
+    min-width: 200px;
+}
+
+.requests-filters .filter-search {
+    flex: 2;
+}
+
+.requests-filters label {
+    display: block;
+    font-weight: 500;
+    color: #374151;
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+
+.requests-filters label i {
+    margin-right: 6px;
+    color: #667eea;
+}
+
+.filter-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.requests-info {
+    background: #f0f9ff;
+    border-left: 4px solid #3b82f6;
+    padding: 12px 16px;
+    margin-bottom: 20px;
+    border-radius: 6px;
+}
+
+.requests-info span {
+    font-weight: 500;
+    color: #1e40af;
+}
+
+.table-modern {
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid #e5e7eb;
+}
+
+.requests-table thead th {
+    background: #f8fafc;
+    color: #374151;
+    font-weight: 600;
+    padding: 16px;
+    text-align: left;
+    border-bottom: 2px solid #e5e7eb;
+}
+
+.requests-table thead th i {
+    margin-right: 6px;
+    opacity: 0.9;
+}
+
+.requests-table tbody tr {
+    transition: all 0.2s ease;
+}
+
+.requests-table tbody tr:hover {
+    background: #f8fafc;
+    transform: scale(1.01);
+}
+
+.requests-table tbody td {
+    padding: 14px 16px;
+    border-bottom: 1px solid #e5e7eb;
+    color: #374151;
+}
+
+.modern-pagination {
+    margin-top: 25px;
+    padding-top: 20px;
+    border-top: 2px solid #e5e7eb;
+}
+
+.modern-pagination .pagination-info {
+    background: #f8fafc;
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-weight: 500;
+    color: #6b7280;
+}
+
+.modern-pagination .pagination-controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.modern-pagination .page-number {
+    min-width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    border: 2px solid #e5e7eb;
+    background: white;
+    color: #6b7280;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.modern-pagination .page-number:hover {
+    border-color: #667eea;
+    color: #667eea;
+}
+
+.modern-pagination .page-number.active {
+    background: #667eea;
+    color: white;
+    border-color: #667eea;
+}
+
+/* Status Badges */
+.status-badge {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: inline-block;
+}
+
+.status-pending {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.status-approved {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.status-rejected {
+    background: #fee2e2;
+    color: #991b1b;
 }
 
 /* Bulk Import Modal Styles */
@@ -936,10 +1341,18 @@ if (!function_exists('add_success_notification')) {
     padding-top: 120px;
 }
 
+.header-content {
+    flex-wrap: wrap !important;
+}
+
 .course-header .header-content {
     display: flex;
     flex-direction: column;
     gap: 15px;
+}
+
+.header-content p {
+    width: 100%;
 }
 
 .course-header .breadcrumb {
@@ -1236,6 +1649,7 @@ if (!function_exists('add_success_notification')) {
     border-radius: 50%;
     animation: spin 1s linear infinite;
     margin-bottom: 15px;
+    margin: auto;
 }
 
 /* Load More Indicator */
@@ -1555,16 +1969,25 @@ jQuery(document).ready(function($) {
     // Bulk import variables
     let selectedFile = null;
     let csvData = [];
+
+    //Requests management
+    let requestsPage = 1;
+    let requestsTotalPages = 1;
+    let requestsStats = { pending: 0, approved: 0, rejected: 0 };
     
     // Initialize page
     initializePage();
     
     function initializePage() {
-        loadCategories();
-        loadProviders();
-        loadCourses();
+        if(currentTab === 'library'){
+            loadCategories();
+            loadProviders();
+            loadCourses();
+            setupBulkImportListeners();
+        } else {
+            loadRequests();
+        }
         setupEventListeners();
-        setupBulkImportListeners();
     }
     
     function setupEventListeners() {
@@ -1572,6 +1995,45 @@ jQuery(document).ready(function($) {
         $('#add-course-btn').on('click', function() {
             openCourseModal();
         });
+
+        // Requests event listeners
+        $('#refresh-requests').on('click', function(){ 
+            $(this).find('i').addClass('fa-spin');
+            loadRequests(); 
+            setTimeout(() => $(this).find('i').removeClass('fa-spin'), 1000);
+        });
+        $('#requests-status-filter').on('change', function(){ loadRequests(true); });
+        $('#requests-search').on('keyup', debounce(function(){ loadRequests(true); }, 500));
+        $('#clear-requests-filters').on('click', function(){
+            $('#requests-status-filter').val('pending');
+            $('#requests-search').val('');
+            loadRequests(true);
+        });
+        $('#requests-prev-page').on('click', function(){ 
+            if (requestsPage>1){ 
+                requestsPage--; 
+                loadRequests(); 
+            }
+        });
+        $('#requests-next-page').on('click', function(){ 
+            if (requestsPage<requestsTotalPages){ 
+                requestsPage++; 
+                loadRequests(); 
+            }
+        });
+        
+        // Debounce helper
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
         
         // View toggle buttons
         $('.view-btn').on('click', function() {
@@ -1731,6 +2193,213 @@ jQuery(document).ready(function($) {
             }
         });
     }
+
+    function loadRequests(reset=false){
+        const status = $('#requests-status-filter').val();
+        const search = $('#requests-search').val().trim();
+        if (reset) requestsPage = 1;
+        
+        $.ajax({
+            url: ajaxurl,
+            type: 'POST',
+            data: { 
+                action: 'iipm_get_course_requests', 
+                status: status, 
+                search: search,
+                page: requestsPage, 
+                per_page: 10 
+            },
+            beforeSend: function() {
+                $('#requests-table-body').html('<tr><td colspan="10" style="text-align:center; padding:40px;"><div class="loading-spinner"></div><p style="margin-top:15px; color:#6b7280;">Loading requests...</p></td></tr>');
+            },
+            success: function(res){
+                if(!res.success){ 
+                    $('#requests-table-body').html('<tr><td colspan="10" style="text-align:center; padding:20px; color:#ef4444;">Failed to load requests</td></tr>');
+                    return; 
+                }
+                const data = res.data;
+                
+                // Update stats
+                if (data.stats) {
+                    requestsStats = data.stats;
+                    updateRequestsStats();
+                }
+                
+                renderRequestsTable(data.requests||[]);
+                updateRequestsPagination(data.pagination||{});
+                updateRequestsCount(data.pagination||{});
+            }
+        });
+    }
+
+    function updateRequestsStats() {
+        $('#stat-pending').text(requestsStats.pending || 0);
+        $('#stat-approved').text(requestsStats.approved || 0);
+        $('#stat-rejected').text(requestsStats.rejected || 0);
+    }
+
+    function updateRequestsCount(pagination) {
+        const total = pagination.total || 0;
+        const status = $('#requests-status-filter').val();
+        const search = $('#requests-search').val().trim();
+        
+        let text = `Showing ${total} request${total !== 1 ? 's' : ''}`;
+        if (status) {
+            text += ` (${status})`;
+        }
+        if (search) {
+            text += ` matching "${search}"`;
+        }
+        
+        $('#requests-count').text(text);
+    }
+
+    function renderRequestsTable(rows){
+        const $tbody = $('#requests-table-body');
+        $tbody.empty();
+        if (!rows.length){
+            $tbody.html('<tr><td colspan="10" style="text-align:center; padding:40px;"><i class="fas fa-inbox" style="font-size:48px; color:#d1d5db; margin-bottom:15px;"></i><p style="color:#6b7280; margin:0;">No requests found</p></td></tr>');
+            return;
+        }
+        rows.forEach(function(r){
+            // Check if user has membership/organisation info
+            const hasAdditionalInfo = r.membership_level || r.organisation;
+            const infoBtn = hasAdditionalInfo ? 
+                `<button class="btn btn-outline show-additional-info" data-membership="${escapeHtml(r.membership_level||'')}" data-organisation="${escapeHtml(r.organisation||'')}" style="font-size:12px; padding:6px 12px;">
+                    <i class="fas fa-info-circle"></i> View
+                </button>` : 
+                '<span style="color:#9ca3af;">N/A</span>';
+            
+            // Status badge
+            const statusClass = 'status-' + (r.status || 'pending').toLowerCase();
+            const statusBadge = `<span class="status-badge ${statusClass}">${escapeHtml(r.status||'')}</span>`;
+            
+            const tr = $(`
+                <tr>
+                    <td>${escapeHtml(r.first_name||'')}</td>
+                    <td>${escapeHtml(r.sur_name||'')}</td>
+                    <td>${escapeHtml(r.email_address||'')}</td>
+                    <td>${infoBtn}</td>
+                    <td>${escapeHtml(r.course_name||'')}</td>
+                    <td>${escapeHtml(r.course_category||'')}</td>
+                    <td>${escapeHtml(r.LIA_Code||'')}</td>
+                    <td>${(parseFloat(r.course_cpd_mins||0)/60).toFixed(1)}</td>
+                    <td>${statusBadge}</td>
+                    <td>
+                        <div class="table-actions" style="display:flex; gap:8px;">
+                            ${r.status !== 'approved' ? `<button class="btn btn-primary approve-request" data-id="${r.id}" style="font-size:12px; padding:6px 12px;">Approve</button>` : ''}
+                            ${r.status !== 'rejected' ? `<button class="btn btn-outline reject-request" data-id="${r.id}" style="font-size:12px; padding:6px 12px;">Reject</button>` : ''}
+                        </div>
+                    </td>
+                </tr>
+            `);
+            $tbody.append(tr);
+        });
+
+        // Bind actions
+        $('.approve-request').off('click').on('click', function(){
+            const id = $(this).data('id');
+            $.post(ajaxurl, { action: 'iipm_approve_course_request', request_id: id }, function(res){
+                if(res.success){ loadRequests(); } else { alert(res.data||'Failed'); }
+            });
+        });
+        $('.reject-request').off('click').on('click', function(){
+            const id = $(this).data('id');
+            openRejectModal(id);
+        });
+        $('.show-additional-info').off('click').on('click', function(){
+            const membership = $(this).data('membership');
+            const organisation = $(this).data('organisation');
+            showAdditionalInfoModal(membership, organisation);
+        });
+    }
+
+    function updateRequestsPagination(p){
+        requestsTotalPages = p.total_pages||1;
+        const currentPage = p.current_page||1;
+        
+        $('#requests-pagination').toggle(requestsTotalPages>1);
+        $('#requests-pagination-info').html(`<i class="fas fa-file-alt"></i> Page ${currentPage} of ${requestsTotalPages} &nbsp;|&nbsp; Total: ${p.total||0} requests`);
+        
+        // Update prev/next buttons
+        $('#requests-prev-page').prop('disabled', currentPage <= 1);
+        $('#requests-next-page').prop('disabled', currentPage >= requestsTotalPages);
+        
+        // Page numbers
+        const $nums = $('#requests-page-numbers');
+        $nums.empty();
+        
+        // Show max 5 page numbers
+        let startPage = Math.max(1, currentPage - 2);
+        let endPage = Math.min(requestsTotalPages, startPage + 4);
+        
+        if (endPage - startPage < 4) {
+            startPage = Math.max(1, endPage - 4);
+        }
+        
+        for(let i=startPage; i<=endPage; i++){
+            const btn = $('<button class="page-number">').text(i);
+            if (i===currentPage) btn.addClass('active');
+            btn.on('click', function(){ requestsPage=i; loadRequests(); });
+            $nums.append(btn);
+        }
+    }
+
+    function escapeHtml(s){
+        return String(s).replace(/[&<>\"]+/g, function(c){
+            return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]||c;
+        });
+    }
+
+    function showAdditionalInfoModal(membership, organisation) {
+        $('#modal-membership').text(membership || 'N/A');
+        $('#modal-organisation').text(organisation || 'N/A');
+        $('#additional-info-modal').addClass('show').show();
+        $('body').addClass('modal-open');
+    }
+
+    function closeAdditionalInfoModal() {
+        $('#additional-info-modal').removeClass('show').hide();
+        $('body').removeClass('modal-open');
+    }
+
+    // Close modal on background click
+    $('#additional-info-modal').on('click', function(e) {
+        if ($(e.target).is('#additional-info-modal')) {
+            closeAdditionalInfoModal();
+        }
+    });
+    
+    // Reject modal logic
+    function openRejectModal(requestId){
+        $('#reject-request-id').val(requestId);
+        $('#reject-reason').val('');
+        $('#reject-reason-modal').addClass('show').show();
+        $('body').addClass('modal-open');
+    }
+    function closeRejectModal(){
+        $('#reject-reason-modal').removeClass('show').hide();
+        $('body').removeClass('modal-open');
+    }
+    $('#reject-close, #reject-cancel').on('click', function(){ closeRejectModal(); });
+    $('#reject-reason-modal').on('click', function(e){ if($(e.target).is('#reject-reason-modal')) closeRejectModal(); });
+    $('#reject-send').on('click', function(){
+        const id = $('#reject-request-id').val();
+        const reason = $('#reject-reason').val().trim();
+        if (!reason){ notifications && notifications.error ? notifications.error('Reason required','Please enter a rejection reason.') : alert('Please enter a rejection reason.'); return; }
+        $.post(ajaxurl, { action: 'iipm_reject_course_request', request_id: id, reason: reason }, function(res){
+            if(res.success){
+                closeRejectModal();
+                notifications && notifications.success ? notifications.success('Rejected','Requester has been notified via email.') : null;
+                loadRequests();
+            } else {
+                notifications && notifications.error ? notifications.error('Failed', (res.data||'Failed to reject')) : alert(res.data||'Failed');
+            }
+        });
+    });
+    $('#additional-info-close, #additional-info-close-btn').on('click', function(){
+        closeAdditionalInfoModal();
+    });
     
     function setupBulkImportListeners() {
         // Open bulk import modal

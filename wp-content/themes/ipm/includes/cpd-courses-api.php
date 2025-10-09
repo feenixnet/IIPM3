@@ -49,6 +49,26 @@ add_action('wp_ajax_nopriv_iipm_get_course_categories', 'iipm_ajax_get_course_ca
 add_action('wp_ajax_iipm_get_course_providers', 'iipm_ajax_get_course_providers');
 add_action('wp_ajax_nopriv_iipm_get_course_providers', 'iipm_ajax_get_course_providers');
 
+// Course request (users) - submit and admin moderation
+add_action('wp_ajax_iipm_submit_course_request', 'iipm_ajax_submit_course_request');
+add_action('wp_ajax_nopriv_iipm_submit_course_request', 'iipm_ajax_submit_course_request');
+add_action('wp_ajax_iipm_get_course_requests', 'iipm_ajax_get_course_requests');
+
+/**
+ * Generate a robust numeric course_id.
+ * Avoids large max values that can exceed getrandmax on 32-bit builds (causing repeats).
+ */
+function iipm_generate_course_id() {
+    try {
+        // 9-11 digit range is plenty and safe
+        return function_exists('random_int') ? random_int(100000000, 999999999) : wp_rand(100000000, 999999999);
+    } catch (Exception $e) {
+        return wp_rand(100000000, 999999999);
+    }
+}
+add_action('wp_ajax_iipm_approve_course_request', 'iipm_ajax_approve_course_request');
+add_action('wp_ajax_iipm_reject_course_request', 'iipm_ajax_reject_course_request');
+
 // Course Management CRUD Actions
 add_action('wp_ajax_iipm_get_all_courses', 'iipm_ajax_get_all_courses');
 add_action('wp_ajax_iipm_get_all_courses_paginated', 'iipm_ajax_get_all_courses_paginated');
@@ -111,6 +131,210 @@ function iipm_ajax_get_course_categories() {
 function iipm_ajax_get_course_providers() {
     $providers = iipm_get_course_providers();
     wp_send_json_success(array('providers' => $providers));
+}
+
+/**
+ * Submit a course request (stores in {prefix}coursesbyuserbku)
+ */
+function iipm_ajax_submit_course_request() {
+    global $wpdb;
+
+    // Basic spam/abuse guard: require minimal fields
+    $first_name = sanitize_text_field($_POST['first_name'] ?? '');
+    $sur_name = sanitize_text_field($_POST['sur_name'] ?? '');
+    $email_address = sanitize_email($_POST['email_address'] ?? '');
+
+    if (empty($first_name) || empty($sur_name) || empty($email_address)) {
+        wp_send_json_error('First name, surname and email are required');
+    }
+
+    $membership_level = sanitize_text_field($_POST['membership_level'] ?? '');
+    $organisation = sanitize_text_field($_POST['organisation'] ?? '');
+    $course_name = sanitize_text_field($_POST['course_name'] ?? '');
+    $course_category_id = intval($_POST['course_category'] ?? 0);
+    $lia_code = sanitize_text_field($_POST['LIA_Code'] ?? '');
+    $course_cpd_hours = floatval($_POST['course_cpd_mins'] ?? 0); // hours from form
+    $submission_date = sanitize_text_field($_POST['submission_date'] ?? '');
+
+    if (empty($course_name) || $course_category_id <= 0) {
+        wp_send_json_error('Course title and category are required');
+    }
+
+    // Convert hours to minutes (rounded to 0.5h)
+    $course_cpd_hours = round($course_cpd_hours * 2) / 2;
+    $course_cpd_mins = (int) round($course_cpd_hours * 60);
+
+    // Resolve category name by ID
+    $category_table = $wpdb->prefix . 'test_iipm_cpd_categories';
+    $course_category_name = $wpdb->get_var($wpdb->prepare(
+        "SELECT name FROM {$category_table} WHERE id = %d",
+        $course_category_id
+    ));
+
+    if (!$course_category_name) {
+        wp_send_json_error('Invalid course category');
+    }
+
+    $table_requests = $wpdb->prefix . 'coursesbyuserbku';
+
+    $insert_data = array(
+        'first_name' => $first_name,
+        'sur_name' => $sur_name,
+        'email_address' => $email_address,
+        'membership_level' => $membership_level,
+        'organisation' => $organisation,
+        'course_name' => $course_name,
+        'course_category' => $course_category_name,
+        'LIA_Code' => $lia_code,
+        'course_cpd_mins' => $course_cpd_mins,
+        'status' => 'pending',
+        'created_at' => current_time('mysql'),
+        'course_id' => iipm_generate_course_id(),
+        'user_id' => get_current_user_id() ?: 0,
+    );
+
+    $result = $wpdb->insert($table_requests, $insert_data);
+    if ($result === false) {
+        wp_send_json_error('Failed to submit request');
+    }
+
+    wp_send_json_success(array('message' => 'Request submitted', 'id' => intval($wpdb->insert_id)));
+}
+
+/**
+ * List course requests (admin) with status filter
+ */
+function iipm_ajax_get_course_requests() {
+    if (!current_user_can('administrator')) { wp_send_json_error('Unauthorized'); }
+    global $wpdb;
+    $status = sanitize_text_field($_POST['status'] ?? '');
+    $search = sanitize_text_field($_POST['search'] ?? '');
+    $page = intval($_POST['page'] ?? 1);
+    $per_page = intval($_POST['per_page'] ?? 10);
+    $offset = ($page - 1) * $per_page;
+
+    $table = $wpdb->prefix . 'coursesbyuserbku';
+
+    // Build WHERE clause
+    $where_clauses = array();
+    $params = array();
+    
+    if ($status && in_array($status, array('pending','approved','rejected'))) {
+        $where_clauses[] = 'status = %s';
+        $params[] = $status;
+    }
+    
+    if ($search) {
+        $where_clauses[] = '(first_name LIKE %s OR sur_name LIKE %s)';
+        $search_term = '%' . $wpdb->esc_like($search) . '%';
+        $params[] = $search_term;
+        $params[] = $search_term;
+    }
+    
+    $where = !empty($where_clauses) ? 'WHERE ' . implode(' AND ', $where_clauses) : '';
+
+    // Get total count
+    $total = !empty($params)
+        ? $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$table} {$where}", $params))
+        : $wpdb->get_var("SELECT COUNT(*) FROM {$table}");
+
+    // Get requests
+    $query = "SELECT r.* FROM {$table} r {$where} ORDER BY r.id DESC LIMIT %d OFFSET %d";
+    $params2 = $params;
+    $params2[] = $per_page;
+    $params2[] = $offset;
+    $rows = !empty($params)
+        ? $wpdb->get_results($wpdb->prepare($query, $params2))
+        : $wpdb->get_results($wpdb->prepare($query, $per_page, $offset));
+
+    // Get stats for all statuses
+    $stats = array(
+        'pending' => $wpdb->get_var("SELECT COUNT(*) FROM {$table} WHERE status = 'pending'"),
+        'approved' => $wpdb->get_var("SELECT COUNT(*) FROM {$table} WHERE status = 'approved'"),
+        'rejected' => $wpdb->get_var("SELECT COUNT(*) FROM {$table} WHERE status = 'rejected'")
+    );
+
+    wp_send_json_success(array(
+        'requests' => $rows,
+        'stats' => $stats,
+        'pagination' => array(
+            'current_page' => $page,
+            'total_pages' => ceil($total / $per_page),
+            'total' => intval($total)
+        )
+    ));
+}
+
+/**
+ * Approve a course request: set approved and create course in coursesbyadminbku (is_by_admin = 0)
+ */
+function iipm_ajax_approve_course_request() {
+    if (!current_user_can('administrator')) { wp_send_json_error('Unauthorized'); }
+    global $wpdb;
+    $request_id = intval($_POST['request_id'] ?? 0);
+    if ($request_id <= 0) { wp_send_json_error('Invalid request'); }
+
+    $table = $wpdb->prefix . 'coursesbyuserbku';
+    $request = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$table} WHERE id = %d", $request_id));
+    if (!$request) { wp_send_json_error('Request not found'); }
+
+    // Update status to approved
+    $wpdb->update($table, array('status' => 'approved'), array('id' => $request_id), array('%s'), array('%d'));
+
+    // Insert into coursesbyadminbku as user-originated course (is_by_admin = 0)
+    $courses_table = $wpdb->prefix . 'coursesbyadminbku';
+    $insert_course = array(
+        'course_name' => $request->course_name,
+        'LIA_Code' => $request->LIA_Code,
+        'course_category' => $request->course_category,
+        'crs_provider' => '',
+        'course_cpd_mins' => intval($request->course_cpd_mins),
+        'user_id' => intval($request->user_id),
+        'course_id' => $request->course_id ?: iipm_generate_course_id(),
+        'course_date' => date('d-m-Y'),
+        'course_enteredBy' => wp_get_current_user()->user_login,
+        'is_by_admin' => 0,
+        'status' => 'active',
+        'crs_provider' => 'external',
+        'TimeStamp' => current_time('mysql')
+    );
+    $wpdb->insert($courses_table, $insert_course);
+
+    wp_send_json_success(array('message' => 'Request approved and course created'));
+}
+
+/**
+ * Reject a course request: set rejected and email reason to requester
+ */
+function iipm_ajax_reject_course_request() {
+    if (!current_user_can('administrator')) { wp_send_json_error('Unauthorized'); }
+    global $wpdb;
+    $request_id = intval($_POST['request_id'] ?? 0);
+    $reason = sanitize_textarea_field($_POST['reason'] ?? '');
+    if ($request_id <= 0 || empty($reason)) { wp_send_json_error('Invalid request or reason'); }
+
+    $table = $wpdb->prefix . 'coursesbyuserbku';
+    $request = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$table} WHERE id = %d", $request_id));
+    if (!$request) { wp_send_json_error('Request not found'); }
+
+    // Update status to rejected
+    $wpdb->update($table, array('status' => 'rejected'), array('id' => $request_id), array('%s'), array('%d'));
+    $course_request = $wpdb->get_var($wpdb->prepare("SELECT course_id FROM {$table} WHERE id = %d", $request_id));
+    error_log("course request: " . $course_request);
+    $courses_table = $wpdb->prefix . 'coursesbyadminbku';
+    $wpdb->delete($courses_table, array('course_id' => $course_request), array('%d'));
+    // Send email to requester
+    $to = $request->email_address;
+    if (is_email($to)) {
+        $subject = 'Your CPD course request was rejected';
+        $message = 'Hello <b>' . $request->first_name . '</b> <b>' . $request->sur_name . "</b>,<br/>" .
+            'We are unable to approve your course request at this time for the following reason:' . "<br/><br/>" .
+            $reason . "<br/><br/>" .
+            'You may update and resubmit the request if appropriate.';
+        wp_mail($to, $subject, $message);
+    }
+
+    wp_send_json_success(array('message' => 'Request rejected and email sent'));
 }
 
 /**
@@ -552,7 +776,7 @@ function iipm_ajax_add_course() {
         'duration' => round(floatval($_POST['course_cpd_mins']) * 60),
         'status' => sanitize_text_field($_POST['course_status']),
         'user_id' => get_current_user_id(),
-        'course_id' => rand(100000, 999999),
+        'course_id' => iipm_generate_course_id(),
         'course_date' => date('d-m-Y'),
         'course_enteredBy' => $username
     );
@@ -667,7 +891,6 @@ function iipm_get_all_courses_management_paginated($page = 1, $per_page = 10, $c
     $offset = ($page - 1) * $per_page;
     
     // Build WHERE clause based on filters
-    $where_conditions = array("is_by_admin = 1"); // Only show admin-added courses
     $where_values = array();
     
     if (!empty($category_filter)) {
@@ -950,7 +1173,7 @@ function iipm_ajax_add_user_course() {
         'user_id' => $user_id,
         'is_by_admin' => intval($_POST['is_by_admin'] ?? 0),
         'status' => sanitize_text_field($_POST['status'] ?? 'pending'),
-        'course_id' => rand(100000, 999999),
+        'course_id' => iipm_generate_course_id(),
         'course_date' => date('d-m-Y'),
         'course_enteredBy' => $user_id
     );

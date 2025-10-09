@@ -1039,7 +1039,12 @@ get_header();
          */
         function displayCourses(courses) {
             if (!courses || courses.length === 0) {
-                coursesGrid.innerHTML = '<div class="no-courses-message"><h3>No Courses Found</h3><p>No courses match your current filters.</p></div>';
+                coursesGrid.innerHTML = `
+                <div class="no-courses-message">
+                    <h3>No Courses Found</h3>
+                    <p>No courses match your current filters.</p>
+                    <a href="<?php echo home_url('/cpd-course-request/'); ?>" style="text-align: center;">Request a Course</a>
+                </div>`;
                 return;
             }
             
