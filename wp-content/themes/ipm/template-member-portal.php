@@ -3608,7 +3608,7 @@ get_header();
         function selectExternalTraining() {
             hideLogTrainingModal();
             // Redirect to external courses page
-            window.location.href = '<?php echo home_url('/external-courses/'); ?>';
+            window.location.href = '<?php echo home_url('/cpd-course-request/'); ?>';
         }
         
         /**

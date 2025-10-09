@@ -56,6 +56,7 @@ class IIPM_Navigation_Manager {
                 'Member Portal' => home_url('/member-portal/'),
                 'CPD Record' => home_url('/cpd-record/'),
                 'Courses' => home_url('/cpd-courses/'),
+                'Request a course' => home_url('/cpd-course-request/'),
                 'CPD Reports' => home_url('/cpd-reports/'),
                 'Leave Requests' => home_url('/leave-request/'),
                 'My Profile' => home_url('/profile/'),
@@ -69,6 +70,7 @@ class IIPM_Navigation_Manager {
                 'Member Portal' => home_url('/member-portal/'),
                 'CPD Record' => home_url('/cpd-record/'),
                 'Courses' => home_url('/cpd-courses/'),
+                'Request a course' => home_url('/cpd-course-request/'),
                 'Leave Requests' => home_url('/leave-request/'),
                 'My Profile' => home_url('/profile/'),
                 'Logout' => wp_logout_url(home_url())

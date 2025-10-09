@@ -705,6 +705,31 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                 <?php else: ?>
                     <!-- Show only login button for non-logged in users -->
                     <div class="header__auth-buttons">
+						<a href="<?php echo home_url('/cpd-course-request/'); ?>" class="login" style="
+							display: inline-flex;
+							align-items: center;
+							gap: 8px;
+							padding: 8px 16px;
+							background: #4a4a4a;
+							color: white;
+							text-decoration: none;
+							border-radius: 8px;
+							border: 1px solid #6b6b6b;
+							font-weight: 500;
+							font-size: 14px;
+							transition: all 0.3s ease;
+						">
+							<div style="
+								width: 20px;
+								height: 20px;
+								display: flex;
+								align-items: center;
+								justify-content: center;
+							">
+								<i class="fa fa-book"></i>
+							</div>
+							Request a course
+						</a>
                         <a href="<?php echo home_url('/login/'); ?>" class="login" style="
                             display: inline-flex;
                             align-items: center;
@@ -743,6 +768,11 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                                 'menu_class' => '',
                                 'depth' => 1,
                             ));
+                            
+                            // Add "Request a course" for non-logged-in users and non-admins
+                            if (!is_user_logged_in() || (is_user_logged_in() && !current_user_can('administrator'))) {
+                                echo '<li class="request-course-item"><a href="' . home_url('/cpd-course-request/') . '">Request a course</a></li>';
+                            }
                             ?>
                         </div>
                         <div>
@@ -783,6 +813,31 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                             <?php else: ?>
 								<!-- Show only login button for non-logged in users -->
 								<div class="header__auth-buttons">
+									<a href="<?php echo home_url('/cpd-course-request/'); ?>" style="
+										display: inline-flex;
+										align-items: center;
+										gap: 8px;
+										padding: 8px 16px;
+										background: #4a4a4a;
+										color: white;
+										text-decoration: none;
+										border-radius: 8px;
+										border: 1px solid #6b6b6b;
+										font-weight: 500;
+										font-size: 14px;
+										transition: all 0.3s ease;
+									">
+										<div style="
+											width: 20px;
+											height: 20px;
+											display: flex;
+											align-items: center;
+											justify-content: center;
+										">
+											<i class="fa fa-book"></i>
+										</div>
+										Request a course
+									</a>
 									<a href="<?php echo home_url('/login/'); ?>" class="login" style="
 										display: inline-flex;
 										align-items: center;
@@ -846,3 +901,21 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     </div>
 
     <div id="content" class="site-content">
+
+	<style>
+		.request-course-item a {
+			color: #fff;
+			font-family: Gabarito;
+			font-size: 55px;
+			font-style: normal;
+			font-weight: 400;
+			line-height: 93%;
+			text-transform: capitalize;
+			text-decoration: none;
+			white-space: nowrap;
+		}
+
+		.request-course-item {
+			list-style: none;
+		}
+	</style>
