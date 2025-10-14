@@ -85,14 +85,14 @@ get_header();
                             </div>
                         </div>
 
-                        <div class="filter-group">
+                        <!-- <div class="filter-group">
                             <label>Date Range</label>
                             <div class="date-range">
                                 <input type="date" id="date-from" placeholder="From">
                                 <span class="date-separator">to</span>
                                 <input type="date" id="date-to" placeholder="To">
                             </div>
-                        </div>
+                        </div> -->
 
                         <div class="filter-group">
                             <label>Category</label>
@@ -889,7 +889,7 @@ get_header();
 
     .pagination-ellipsis {
         padding: 8px 12px;
-        color: white;
+        color: white !important;
         font-size: 14px;
         user-select: none;
     }
@@ -932,8 +932,6 @@ get_header();
         // Get DOM elements
         const titleSearch = document.getElementById('title-search');
         const liaCodeSearch = document.getElementById('lia-code-search');
-        const dateFrom = document.getElementById('date-from');
-        const dateTo = document.getElementById('date-to');
         const categoryFilters = document.getElementById('category-filters');
         const providerSelect = document.getElementById('provider-select');
         const myCoursesFilter = document.getElementById('my-courses-filter');
@@ -954,10 +952,15 @@ get_header();
          * Initialize the page
          */
         function initializePage() {
-            // Load initial data
-            loadCategories();
-            loadProviders();
-            loadCoursesInLearningPath(); // Load all courses in learning path
+            // Load initial data in order: categories + providers + learning path
+            Promise.all([
+                loadCategories(),
+                loadProviders(),
+            ]).then(() => {
+                loadCoursesInLearningPath()
+            }).catch(() => {
+                loadCoursesInLearningPath()
+            });
             
             // Set up event listeners
             setupEventListeners();
@@ -970,8 +973,6 @@ get_header();
             // Search inputs
             if (titleSearch) titleSearch.addEventListener('input', debounce(filterCourses, 300));
             if (liaCodeSearch) liaCodeSearch.addEventListener('input', debounce(filterCourses, 300));
-            if (dateFrom) dateFrom.addEventListener('change', filterCourses);
-            if (dateTo) dateTo.addEventListener('change', filterCourses);
             if (providerSelect) providerSelect.addEventListener('change', filterCourses);
             if (myCoursesFilter) myCoursesFilter.addEventListener('change', filterCourses);
             
@@ -1184,7 +1185,7 @@ get_header();
          * Load categories from API
          */
         function loadCategories() {
-            jQuery.ajax({
+            return jQuery.ajax({
                 url: ajaxurl,
                 type: 'POST',
                 data: {
@@ -1473,7 +1474,7 @@ get_header();
          * Load all courses in learning path (both completed and started)
          */
         function loadCoursesInLearningPath() {
-            jQuery.ajax({
+            return jQuery.ajax({
                 url: ajaxurl,
                 type: 'POST',
                 data: {
@@ -1491,7 +1492,9 @@ get_header();
                     console.error('Error loading courses in learning path:', error);
                 },
                 complete: function() {
-                    loadCourses();
+                    loadCourses({
+                        categories: Array.from(categoryFilters.querySelectorAll('input[name="category"]:checked')).map(cb => cb.value)
+                    });
                 }
             });
         }
@@ -1523,7 +1526,7 @@ get_header();
          * Load providers from API
          */
         function loadProviders() {
-            jQuery.ajax({
+            return jQuery.ajax({
                 url: ajaxurl,
                 type: 'POST',
                 data: {
@@ -1593,8 +1596,8 @@ get_header();
             const filters = {
                 title_search: titleSearch ? titleSearch.value : '',
                 lia_code_search: liaCodeSearch ? liaCodeSearch.value : '',
-                date_from: dateFrom ? dateFrom.value : '',
-                date_to: dateTo ? dateTo.value : '',
+                date_from: '',
+                date_to: '',
                 categories: Array.from(categoryFilters.querySelectorAll('input[name="category"]:checked')).map(cb => cb.value),
                 providers: providerSelect ? providerSelect.value : '',
                 my_courses: myCoursesFilter ? myCoursesFilter.checked : false,
@@ -1611,8 +1614,6 @@ get_header();
         function clearFilters() {
             if (titleSearch) titleSearch.value = '';
             if (liaCodeSearch) liaCodeSearch.value = '';
-            if (dateFrom) dateFrom.value = '';
-            if (dateTo) dateTo.value = '';
             if (providerSelect) providerSelect.value = '';
             if (myCoursesFilter) myCoursesFilter.checked = false;
             
@@ -1757,8 +1758,8 @@ get_header();
             const filters = {
                 title_search: titleSearch ? titleSearch.value : '',
                 lia_code_search: liaCodeSearch ? liaCodeSearch.value : '',
-                date_from: dateFrom ? dateFrom.value : '',
-                date_to: dateTo ? dateTo.value : '',
+                date_from: '',
+                date_to: '',
                 categories: Array.from(categoryFilters.querySelectorAll('input[name="category"]:checked')).map(cb => cb.value),
                 providers: providerSelect ? providerSelect.value : '',
                 my_courses: myCoursesFilter ? myCoursesFilter.checked : false,

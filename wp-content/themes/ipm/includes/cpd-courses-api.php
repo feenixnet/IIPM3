@@ -435,6 +435,8 @@ function iipm_get_courses($filters = array(), $pagination = array()) {
     } else {
         $total_courses = $wpdb->get_var($count_query);
     }
+
+    error_log("COUNT_QUERY: ".$count_query);
     
     // Apply pagination
     $courses_per_page = $pagination['per_page'] ?? 12;
