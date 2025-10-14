@@ -149,6 +149,11 @@ get_header();
                                         Password
                                     </a>
                                 </li>
+                                <li class="nav-item" data-section="qualifications">
+                                    <a href="javascript:void(0)" onclick="showSection('qualifications')">
+                                        Qualifications
+                                    </a>
+                                </li>
                                 <li class="nav-item" data-section="help">
                                     <a href="javascript:void(0)" onclick="showSection('help')">
                                         Help
@@ -746,6 +751,49 @@ get_header();
                         </div>
                     </div>
 
+                    <!-- Qualifications Section -->
+                    <div class="qualifications-main" id="qualifications-section" style="display: none;">
+                        <div class="qualifications-content">
+                            <div class="qualifications-header">
+                                <h2>My Qualifications</h2>
+                                <p>View your professional qualifications and certifications</p>
+                            </div>
+                            
+                            <div id="qualifications-loading" style="text-align: center; padding: 40px; color: #6b7280;">
+                                <div class="loading-spinner" style="display: inline-block; width: 24px; height: 24px; border: 3px solid #e5e7eb; border-top: 3px solid #667eea; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                                <span style="margin-left: 10px;">Loading qualifications...</span>
+                            </div>
+                            
+                            <div id="qualifications-content" style="display: none;">
+                                <div style="background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                                    <table id="qualifications-table" style="width: 100%; border-collapse: collapse;margin-bottom: 0px;">
+                                        <thead style="background: #f8fafc;">
+                                            <tr>
+                                                <th style="padding: 15px; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Qualification</th>
+                                                <th style="padding: 15px; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Awarding Institute</th>
+                                                <th style="padding: 15px; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Date Attained</th>
+                                                <th style="padding: 15px; text-align: center; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Current Designation</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="qualifications-tbody">
+                                            
+                                        </tbody>
+                                    </table>
+                                </div>
+                                
+                                <div id="no-qualifications" style="display: none; text-align: center; padding: 40px; color: #6b7280;">
+                                    <i class="fas fa-graduation-cap" style="font-size: 3rem; margin-bottom: 15px; opacity: 0.5;"></i>
+                                    <p style="font-size: 1.1rem; margin: 0;">No qualifications found</p>
+                                </div>
+                            </div>
+                            
+                            <div id="qualifications-error" style="display: none; text-align: center; padding: 40px; color: #dc2626;">
+                                <i class="fas fa-exclamation-triangle" style="font-size: 2rem; margin-bottom: 15px;"></i>
+                                <p>Error loading qualifications. Please try again.</p>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Help Section -->
                     <div class="help-main" id="help-section" style="display: none;">
                         <div class="help-content">
@@ -880,6 +928,115 @@ get_header();
     margin: 0 auto;
     padding: 0 20px;
     padding-bottom: 20px;
+}
+
+/* Qualifications Section Styles */
+.qualifications-main {
+    padding: 40px;
+    background-color: #f8fafc;
+}
+
+.qualifications-content {
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+.qualifications-header {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.qualifications-header h2 {
+    color: #1f2937;
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 10px;
+}
+
+.qualifications-header p {
+    color: #6b7280;
+    font-size: 1.1rem;
+    margin: 0;
+}
+
+#qualifications-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+#qualifications-table thead {
+    background: #f8fafc;
+}
+
+#qualifications-table th {
+    padding: 15px;
+    text-align: left;
+    font-weight: 600;
+    color: #374151;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+#qualifications-table td {
+    padding: 15px;
+    color: #374151;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+#qualifications-table tbody tr:hover {
+    background-color: #f9fafb;
+}
+
+#no-qualifications {
+    text-align: center;
+    padding: 40px;
+    color: #6b7280;
+}
+
+#no-qualifications i {
+    font-size: 3rem;
+    margin-bottom: 15px;
+    opacity: 0.5;
+}
+
+#no-qualifications p {
+    font-size: 1.1rem;
+    margin: 0;
+}
+
+#qualifications-error {
+    text-align: center;
+    padding: 40px;
+    color: #dc2626;
+}
+
+#qualifications-error i {
+    font-size: 2rem;
+    margin-bottom: 15px;
+}
+
+#qualifications-loading {
+    text-align: center;
+    padding: 40px;
+    color: #6b7280;
+}
+
+.loading-spinner {
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    border: 3px solid #e5e7eb;
+    border-top: 3px solid #667eea;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }
 
 /* Hero Section */
@@ -3085,7 +3242,7 @@ function saveSection(sectionId) {
 // Section navigation
 function showSection(sectionName) {
     // Hide all sections
-    const sections = ['profile-section', 'payment-section', 'order-details-section', 'settings-section', 'help-section'];
+    const sections = ['profile-section', 'payment-section', 'order-details-section', 'settings-section', 'qualifications-section', 'help-section'];
     sections.forEach(id => {
         const section = document.getElementById(id);
         if (section) {
@@ -3127,6 +3284,114 @@ function showSection(sectionName) {
             window.passwordResetForm = form;
             console.log('Password reset form initialized for settings section');
         }
+    }
+    
+    // Load qualifications when qualifications section is shown
+    if (sectionName === 'qualifications') {
+        loadQualifications();
+    }
+}
+
+// Load qualifications data
+function loadQualifications() {
+    // Show loading state
+    document.getElementById('qualifications-loading').style.display = 'block';
+    document.getElementById('qualifications-content').style.display = 'none';
+    document.getElementById('qualifications-error').style.display = 'none';
+    
+    // Get current user ID and nonce
+    const userId = <?php echo get_current_user_id(); ?>;
+    const nonce = '<?php echo wp_create_nonce('iipm_portal_nonce'); ?>';
+    
+    // Make API call to fetch qualifications
+    fetch('<?php echo admin_url('admin-ajax.php'); ?>', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+            'action': 'iipm_get_user_qualifications',
+            'user_id': userId,
+            'nonce': nonce
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        document.getElementById('qualifications-loading').style.display = 'none';
+        
+        if (data.success && data.data && data.data.qualifications) {
+            displayQualifications(data.data.qualifications);
+        } else {
+            // Show error or no data message
+            if (data.data && data.data.qualifications && data.data.qualifications.length === 0) {
+                document.getElementById('no-qualifications').style.display = 'block';
+                document.getElementById('qualifications-table').style.display = 'none';
+            } else {
+                document.getElementById('qualifications-error').style.display = 'block';
+            }
+        }
+        document.getElementById('qualifications-content').style.display = 'block';
+    })
+    .catch(error => {
+        console.error('Error loading qualifications:', error);
+        document.getElementById('qualifications-loading').style.display = 'none';
+        document.getElementById('qualifications-error').style.display = 'block';
+        document.getElementById('qualifications-content').style.display = 'block';
+    });
+}
+
+// Display qualifications in the table
+function displayQualifications(qualifications) {
+    const tbody = document.getElementById('qualifications-tbody');
+    tbody.innerHTML = '';
+    
+    if (qualifications.length === 0) {
+        document.getElementById('no-qualifications').style.display = 'block';
+        document.getElementById('qualifications-table').style.display = 'none';
+        return;
+    }
+    
+    document.getElementById('no-qualifications').style.display = 'none';
+    document.getElementById('qualifications-table').style.display = 'table';
+    
+    qualifications.forEach(function(qual) {
+        const row = document.createElement('tr');
+        row.style.borderBottom = '1px solid #e5e7eb';
+        
+        const designation = qual.designation || 'N/A';
+        const institute = qual.institute || 'N/A';
+        const dateAttained = formatQualificationDate(qual.date_attained_txt);
+        const isCurrent = qual.isCurrentDesignation == 1;
+        
+        row.innerHTML = `
+            <td style="padding: 15px; color: #374151;">${designation}</td>
+            <td style="padding: 15px; color: #374151;">${institute}</td>
+            <td style="padding: 15px; color: #374151;">${dateAttained}</td>
+            <td style="padding: 15px; text-align: center;">
+                ${isCurrent ? 
+                    '<i class="fas fa-check" style="color: #10b981; font-size: 1.2rem;"></i>' : 
+                    '<i class="fas fa-times" style="color: #ef4444; font-size: 1.2rem;"></i>'
+                }
+            </td>
+        `;
+        
+        tbody.appendChild(row);
+    });
+}
+
+// Format qualification date
+function formatQualificationDate(dateString) {
+    if (!dateString) return 'N/A';
+    
+    try {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('en-GB', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
+        });
+    } catch (error) {
+        return dateString;
     }
 }
 
@@ -3688,7 +3953,7 @@ document.addEventListener('DOMContentLoaded', function() {
     updateSaveButtonState();
     
     // Initialize edit button states
-    const sections = ['basic-info', 'contact-details', 'address', 'employment', 'qualifications'];
+    const sections = ['basic-info', 'contact-details', 'address', 'employment'];
     sections.forEach(sectionId => {
         updateEditButtonState(sectionId, false);
     });

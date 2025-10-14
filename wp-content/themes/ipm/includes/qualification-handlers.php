@@ -147,11 +147,6 @@ function iipm_ajax_get_user_qualifications() {
         return;
     }
     
-    if (!current_user_can('manage_options')) {
-        wp_send_json_error('Insufficient permissions');
-        return;
-    }
-    
     $user_id = intval($_POST['user_id'] ?? 0);
     if (!$user_id) {
         wp_send_json_error('User ID is required');
