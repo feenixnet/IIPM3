@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2025-07-14T10:19:53+00:00\n"
+"POT-Creation-Date: 2025-10-13T20:06:57+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: duplicator\n"
@@ -42,8 +42,8 @@ msgid "RESPONSE SUCCESS"
 msgstr ""
 
 #: assets/js/duplicator/dup.util.php:97
-#: template/admin_pages/settings/general/general.php:325
-#: template/admin_pages/settings/general/general.php:378
+#: template/admin_pages/settings/general/general.php:199
+#: template/admin_pages/settings/general/general.php:244
 msgid "RESPONSE ERROR!"
 msgstr ""
 
@@ -278,7 +278,7 @@ msgid "Suhosin Extension"
 msgstr ""
 
 #: classes/class.server.php:645
-#: template/admin_pages/settings/general/general.php:192
+#: template/admin_pages/settings/misc/misc.php:168
 #: template/parts/DashboardWidget/sections-section.php:51
 #: views/packages/main/s2.scan3.php:46
 #: views/packages/main/s2.scan3.php:416
@@ -300,7 +300,7 @@ msgid "Error Log File"
 msgstr ""
 
 #: classes/class.server.php:669
-#: template/admin_pages/settings/general/general.php:114
+#: template/admin_pages/settings/misc/misc.php:92
 #: views/packages/details/detail.php:130
 msgid "Version"
 msgstr ""
@@ -603,12 +603,8 @@ msgstr ""
 msgid "Please tell us the reason so we can improve it."
 msgstr ""
 
-#: src/Ajax/ServicesEducation.php:203
-msgid "Invalid license key."
-msgstr ""
-
-#: src/Ajax/ServicesEducation.php:280
-msgid "Invalid license JSON data."
+#: src/Ajax/ServicesEducation.php:417
+msgid "Upgrade installation failed: %s. Please try again or install manually."
 msgstr ""
 
 #: src/Controllers/AboutUsController.php:54
@@ -629,149 +625,149 @@ msgstr ""
 msgid "Activated"
 msgstr ""
 
-#: src/Controllers/AboutUsController.php:130
+#: src/Controllers/AboutUsController.php:129
 msgid "Backup Files & Database"
 msgstr ""
 
-#: src/Controllers/AboutUsController.php:134
+#: src/Controllers/AboutUsController.php:133
 #: src/Utils/Upsell.php:26
 #: src/Utils/Upsell.php:52
 #: template/admin_pages/welcome/features.php:71
 msgid "File & Database Table Filters"
 msgstr ""
 
-#: src/Controllers/AboutUsController.php:138
+#: src/Controllers/AboutUsController.php:137
 msgid "Migration Wizard"
 msgstr ""
 
-#: src/Controllers/AboutUsController.php:142
+#: src/Controllers/AboutUsController.php:141
 msgid "Overwrite Live Site"
 msgstr ""
 
-#: src/Controllers/AboutUsController.php:146
+#: src/Controllers/AboutUsController.php:145
 #: src/Utils/Upsell.php:32
 #: src/Utils/Upsell.php:55
 msgid "Drag & Drop Installs"
 msgstr ""
 
-#: src/Controllers/AboutUsController.php:148
+#: src/Controllers/AboutUsController.php:147
 msgid "Classic WordPress-less Installs Only"
 msgstr ""
 
-#: src/Controllers/AboutUsController.php:149
+#: src/Controllers/AboutUsController.php:148
 msgid "Drag and Drop migrations and site restores! Simply drag the bundled site archive to the site you wish to overwrite."
 msgstr ""
 
-#: src/Controllers/AboutUsController.php:155
+#: src/Controllers/AboutUsController.php:154
 #: src/Utils/Upsell.php:22
 #: src/Utils/Upsell.php:48
 #: template/admin_pages/welcome/features.php:28
 msgid "Scheduled Backups"
 msgstr ""
 
-#: src/Controllers/AboutUsController.php:157
+#: src/Controllers/AboutUsController.php:156
 msgid "Ensure that your important data is regularly and consistently backed up, allowing for quick and efficient recovery in case of data loss."
 msgstr ""
 
-#: src/Controllers/AboutUsController.php:163
+#: src/Controllers/AboutUsController.php:162
 #: src/Utils/Upsell.php:23
 #: src/Utils/Upsell.php:49
 #: template/admin_pages/welcome/features.php:45
 msgid "Recovery Points"
 msgstr ""
 
-#: src/Controllers/AboutUsController.php:165
+#: src/Controllers/AboutUsController.php:164
 msgid "Recovery Points provide protection against mistakes and bad updates by letting you quickly rollback your system to a known, good state."
 msgstr ""
 
-#: src/Controllers/AboutUsController.php:171
+#: src/Controllers/AboutUsController.php:170
 #: src/Utils/Upsell.php:53
 msgid "Cloud Storage"
 msgstr ""
 
-#: src/Controllers/AboutUsController.php:173
+#: src/Controllers/AboutUsController.php:172
 msgid "Back up to Dropbox, FTP, Google Drive, OneDrive, Amazon S3 or any S3-compatible storage service for safe storage."
 msgstr ""
 
-#: src/Controllers/AboutUsController.php:179
+#: src/Controllers/AboutUsController.php:178
 #: src/Utils/Upsell.php:33
 #: src/Utils/Upsell.php:59
 msgid "Larger Site Support"
 msgstr ""
 
-#: src/Controllers/AboutUsController.php:181
+#: src/Controllers/AboutUsController.php:180
 msgid "We've developed a new way to package backups especially tailored for larger site. No server timeouts or other restrictions!"
 msgstr ""
 
-#: src/Controllers/AboutUsController.php:187
+#: src/Controllers/AboutUsController.php:186
 msgid "Server-to-Server Import"
 msgstr ""
 
-#: src/Controllers/AboutUsController.php:189
+#: src/Controllers/AboutUsController.php:188
 msgid "Direct Server Transfers allow you to build an archive, then directly transfer it from the source server to the destination server for a lightning fast migration!"
 msgstr ""
 
-#: src/Controllers/AboutUsController.php:196
+#: src/Controllers/AboutUsController.php:195
 msgid "Multisite support"
 msgstr ""
 
-#: src/Controllers/AboutUsController.php:198
+#: src/Controllers/AboutUsController.php:197
 msgid "Supports multisite network backup & migration. Subsite As Standalone Install, Standalone Import Into Multisite and Import Subsite Into Multisite"
 msgstr ""
 
-#: src/Controllers/AboutUsController.php:205
+#: src/Controllers/AboutUsController.php:204
 #: src/Utils/Upsell.php:60
 msgid "Installer Branding"
 msgstr ""
 
-#: src/Controllers/AboutUsController.php:207
+#: src/Controllers/AboutUsController.php:206
 msgid "Create your own custom-configured WordPress site and \"Brand\" the installer file with your look and feel."
 msgstr ""
 
-#: src/Controllers/AboutUsController.php:210
+#: src/Controllers/AboutUsController.php:209
 msgid "Archive Encryption"
 msgstr ""
 
-#: src/Controllers/AboutUsController.php:212
+#: src/Controllers/AboutUsController.php:211
 msgid "Protect and secure the archive file with industry-standard AES-256 encryption!"
 msgstr ""
 
-#: src/Controllers/AboutUsController.php:215
+#: src/Controllers/AboutUsController.php:214
 #: src/Utils/Upsell.php:36
 #: src/Utils/Upsell.php:66
 #: template/mocks/settings/access/capabilities.php:123
 msgid "Advanced Backup Permissions"
 msgstr ""
 
-#: src/Controllers/AboutUsController.php:217
+#: src/Controllers/AboutUsController.php:216
 msgid "Enjoy granular access control to ensure only authorized users can perform these critical functions."
 msgstr ""
 
-#: src/Controllers/AboutUsController.php:223
+#: src/Controllers/AboutUsController.php:222
 msgid "Enhanced Features"
 msgstr ""
 
-#: src/Controllers/AboutUsController.php:225
+#: src/Controllers/AboutUsController.php:224
 msgid "Enhanced features include: Managed Hosting Support, Shared Database Support, Streamlined Installer, Email Alerts and more..."
 msgstr ""
 
-#: src/Controllers/AboutUsController.php:231
+#: src/Controllers/AboutUsController.php:230
 msgid "Advanced Features"
 msgstr ""
 
-#: src/Controllers/AboutUsController.php:233
+#: src/Controllers/AboutUsController.php:232
 msgid "Advanced features included: Hourly Schedules, Custom Search & Replace, Migrate Duplicator Settings, Regenerate Salts and Developer Hooks"
 msgstr ""
 
-#: src/Controllers/AboutUsController.php:239
+#: src/Controllers/AboutUsController.php:238
 msgid "Customer Support"
 msgstr ""
 
-#: src/Controllers/AboutUsController.php:241
+#: src/Controllers/AboutUsController.php:240
 msgid "Limited Support"
 msgstr ""
 
-#: src/Controllers/AboutUsController.php:242
+#: src/Controllers/AboutUsController.php:241
 msgid "Priority Support"
 msgstr ""
 
@@ -852,17 +848,17 @@ msgstr ""
 msgid "Welcome to Duplicator"
 msgstr ""
 
-#: src/Core/Bootstrap.php:267
-#: src/Core/Bootstrap.php:526
+#: src/Core/Bootstrap.php:269
+#: src/Core/Bootstrap.php:544
 msgid "Upgrade to Pro"
 msgstr ""
 
-#: src/Core/Bootstrap.php:268
+#: src/Core/Bootstrap.php:270
 msgid "NEW!"
 msgstr ""
 
-#: src/Core/Bootstrap.php:272
-#: src/Core/Bootstrap.php:273
+#: src/Core/Bootstrap.php:274
+#: src/Core/Bootstrap.php:275
 #: template/mail/email_summary.php:130
 #: views/packages/details/controller.php:76
 #: views/packages/main/s3.build.php:124
@@ -870,18 +866,18 @@ msgstr ""
 msgid "Backups"
 msgstr ""
 
-#: src/Core/Bootstrap.php:282
-#: src/Core/Bootstrap.php:283
+#: src/Core/Bootstrap.php:284
+#: src/Core/Bootstrap.php:285
 msgid "Import Backups"
 msgstr ""
 
-#: src/Core/Bootstrap.php:293
-#: src/Core/Bootstrap.php:294
+#: src/Core/Bootstrap.php:295
+#: src/Core/Bootstrap.php:296
 msgid "Schedule Backups"
 msgstr ""
 
-#: src/Core/Bootstrap.php:304
-#: src/Core/Bootstrap.php:305
+#: src/Core/Bootstrap.php:306
+#: src/Core/Bootstrap.php:307
 #: template/mocks/storage/storage.php:59
 #: views/packages/details/detail.php:278
 #: views/packages/main/s1.setup2.php:104
@@ -889,83 +885,82 @@ msgstr ""
 msgid "Storage"
 msgstr ""
 
-#: src/Core/Bootstrap.php:313
-#: src/Core/Bootstrap.php:314
+#: src/Core/Bootstrap.php:315
+#: src/Core/Bootstrap.php:316
 msgid "Tools"
 msgstr ""
 
-#: src/Core/Bootstrap.php:324
-#: src/Core/Bootstrap.php:325
-#: template/admin_pages/settings/general/general.php:217
+#: src/Core/Bootstrap.php:329
+#: src/Core/Bootstrap.php:330
+#: template/admin_pages/settings/general/general.php:91
 #: template/mocks/storage/storage.php:87
 #: views/settings/controller.php:23
 msgid "Settings"
 msgstr ""
 
-#: src/Core/Bootstrap.php:334
+#: src/Core/Bootstrap.php:339
 msgid "About Duplicator"
 msgstr ""
 
-#: src/Core/Bootstrap.php:335
+#: src/Core/Bootstrap.php:340
 #: template/admin_pages/about_us/tabs.php:17
 msgid "About Us"
 msgstr ""
 
-#: src/Core/Bootstrap.php:378
+#: src/Core/Bootstrap.php:383
 #: template/parts/Education/subscribe-form.php:26
 msgid "Subscribe"
 msgstr ""
 
-#: src/Core/Bootstrap.php:379
+#: src/Core/Bootstrap.php:384
 msgid "Subscribed &#10003"
 msgstr ""
 
-#: src/Core/Bootstrap.php:380
+#: src/Core/Bootstrap.php:385
 msgid "Subscribing..."
 msgstr ""
 
-#: src/Core/Bootstrap.php:381
+#: src/Core/Bootstrap.php:386
 msgid "Failed &#10007"
 msgstr ""
 
-#: src/Core/Bootstrap.php:382
+#: src/Core/Bootstrap.php:387
 msgid "Email subscription failed with message: "
 msgstr ""
 
-#: src/Core/Bootstrap.php:393
-msgid "Failed to activate license for this website."
+#: src/Core/Bootstrap.php:398
+msgid "Failed to connect to Duplicator Pro."
 msgstr ""
 
-#: src/Core/Bootstrap.php:394
+#: src/Core/Bootstrap.php:399
 msgid "Message: "
 msgstr ""
 
-#: src/Core/Bootstrap.php:395
-msgid "Check the license key and try again, if the error persists proceed with manual activation."
+#: src/Core/Bootstrap.php:400
+msgid "Please try again or contact support if the issue persists."
 msgstr ""
 
-#: src/Core/Bootstrap.php:404
+#: src/Core/Bootstrap.php:409
 msgid "Failed to load help content!"
 msgstr ""
 
-#: src/Core/Bootstrap.php:413
+#: src/Core/Bootstrap.php:418
 msgid "Copy to clipboard"
 msgstr ""
 
-#: src/Core/Bootstrap.php:414
+#: src/Core/Bootstrap.php:419
 msgid "copied to clipboard"
 msgstr ""
 
-#: src/Core/Bootstrap.php:415
+#: src/Core/Bootstrap.php:420
 msgid "Unable to copy"
 msgstr ""
 
-#: src/Core/Bootstrap.php:546
+#: src/Core/Bootstrap.php:564
 msgid "Manage Backups"
 msgstr ""
 
-#: src/Core/Bootstrap.php:547
-#: views/settings/license.php:11
+#: src/Core/Bootstrap.php:565
 msgid "Manage"
 msgstr ""
 
@@ -1018,7 +1013,7 @@ msgid "Are you enjoying %s?"
 msgstr ""
 
 #: src/Core/Notifications/Review.php:98
-#: template/admin_pages/settings/general/general.php:301
+#: template/admin_pages/settings/general/general.php:175
 msgid "Yes"
 msgstr ""
 
@@ -1063,8 +1058,8 @@ msgstr ""
 msgid "Please rate <strong>Duplicator</strong> <a href=\"%1$s\" target=\"_blank\" rel=\"noopener noreferrer\">&#9733;&#9733;&#9733;&#9733;&#9733;</a> on <a href=\"%1$s\" target=\"_blank\" rel=\"noopener\">WordPress.org</a> to help us spread the word. Thank you from the Duplicator team!"
 msgstr ""
 
-#: src/Libs/OneClickUpgrade/ConnectSkin.php:35
-msgid "There was an error installing Duplicator Pro. Please try again."
+#: src/Libs/OneClickUpgrade/UpgraderSkin.php:100
+msgid "There was an error installing the upgrade. Please try again."
 msgstr ""
 
 #: src/Lite/Requirements.php:50
@@ -1425,6 +1420,17 @@ msgstr ""
 msgid "Uncanny Automator is the easiest and most powerful way to automate your WordPress site with no code. Build automations in minutes that connect your WordPress plugins, sites and apps together using billions of recipe combinations."
 msgstr ""
 
+#: src/Utils/ExtraPlugins/ExtraPluginsMng.php:532
+msgid "Database Reset Pro"
+msgstr ""
+
+#: src/Utils/ExtraPlugins/ExtraPluginsMng.php:535
+msgid ""
+"Database Reset Pro is the safest and simplest way to reset your WordPress database to its default state. \n"
+"            Unlike reinstalling WordPress, this database reset plugin preserves your files, uploads, \n"
+"            and admin credentials while giving you a fresh start in seconds."
+msgstr ""
+
 #: src/Utils/Support/SupportToolkit.php:60
 msgid "Failed to create zip file"
 msgstr ""
@@ -1586,7 +1592,7 @@ msgstr ""
 
 #: src/Views/AdminNotices.php:410
 msgid ""
-"You created over %d backups with Duplicator. Great job! If you can spare a minute, \n"
+"You created over %d backups with Duplicator. Great job! If you can spare a minute,\n"
 "                                please help us by leaving a five star review on WordPress.org."
 msgstr ""
 
@@ -1600,7 +1606,7 @@ msgstr ""
 
 #: src/Views/AdminNotices.php:448
 msgid ""
-"<strong>Duplicator</strong><hr> Your logged-in user role does not have export \n"
+"<strong>Duplicator</strong><hr> Your logged-in user role does not have export\n"
 "                capability so you don't have access to Duplicator functionality."
 msgstr ""
 
@@ -1807,164 +1813,130 @@ msgstr ""
 msgid "General Settings Saved"
 msgstr ""
 
-#: template/admin_pages/settings/general/general.php:110
-msgid "Plugin"
-msgstr ""
-
-#: template/admin_pages/settings/general/general.php:122
-msgid "Uninstall"
-msgstr ""
-
-#: template/admin_pages/settings/general/general.php:126
-msgid "Delete Plugin Settings"
-msgstr ""
-
-#: template/admin_pages/settings/general/general.php:130
-msgid "Delete Entire Storage Directory"
-msgstr ""
-
-#: template/admin_pages/settings/general/general.php:135
-msgid "Usage statistics"
-msgstr ""
-
-#: template/admin_pages/settings/general/general.php:139
-msgid "Usage statistics are hardcoded disallowed."
-msgstr ""
-
-#: template/admin_pages/settings/general/general.php:149
-msgid "Enable usage tracking"
-msgstr ""
-
-#: template/admin_pages/settings/general/general.php:152
-msgid "Usage Tracking"
-msgstr ""
-
-#: template/admin_pages/settings/general/general.php:161
-msgid "Hide Announcements"
-msgstr ""
-
-#: template/admin_pages/settings/general/general.php:170
-msgid "Check this option to hide plugin announcements and update details."
-msgstr ""
-
-#: template/admin_pages/settings/general/general.php:178
-msgid "Debug"
-msgstr ""
-
-#: template/admin_pages/settings/general/general.php:182
-msgid "Debugging"
-msgstr ""
-
-#: template/admin_pages/settings/general/general.php:185
-msgid "Enable debug options throughout user interface"
-msgstr ""
-
-#: template/admin_pages/settings/general/general.php:189
-msgid "Trace Log"
-msgstr ""
-
-#: template/admin_pages/settings/general/general.php:195
-msgid "Turns on detailed operation logging. Logging will occur in both PHP error and local trace logs."
-msgstr ""
-
-#: template/admin_pages/settings/general/general.php:197
-msgid "WARNING: Only turn on this setting when asked to by support as tracing will impact performance."
-msgstr ""
-
-#: template/admin_pages/settings/general/general.php:205
-msgid "Download Trace Log"
-msgstr ""
-
-#: template/admin_pages/settings/general/general.php:213
+#: template/admin_pages/settings/general/general.php:87
 msgid "Advanced"
 msgstr ""
 
-#: template/admin_pages/settings/general/general.php:220
+#: template/admin_pages/settings/general/general.php:94
 msgid "Reset Backups"
 msgstr ""
 
-#: template/admin_pages/settings/general/general.php:224
+#: template/admin_pages/settings/general/general.php:98
 msgid "This process will reset all Backups by deleting those without a completed status, reset the active Backup id and perform a cleanup of the build tmp file."
 msgstr ""
 
-#: template/admin_pages/settings/general/general.php:228
+#: template/admin_pages/settings/general/general.php:102
 msgid "Reset Settings"
 msgstr ""
 
-#: template/admin_pages/settings/general/general.php:230
+#: template/admin_pages/settings/general/general.php:104
 msgid "This action should only be used if the Backups screen is having issues or a build is stuck."
 msgstr ""
 
-#: template/admin_pages/settings/general/general.php:236
+#: template/admin_pages/settings/general/general.php:110
 msgid "Backup scan"
 msgstr ""
 
-#: template/admin_pages/settings/general/general.php:239
+#: template/admin_pages/settings/general/general.php:113
 #: template/admin_pages/welcome/intro.php:48
 msgid "Skip"
 msgstr ""
 
-#: template/admin_pages/settings/general/general.php:242
+#: template/admin_pages/settings/general/general.php:116
 msgid "If enabled all files check on scan will be skipped before Backup creation.  In some cases, this option can be beneficial if the scan process is having issues running or returning errors."
 msgstr ""
 
-#: template/admin_pages/settings/general/general.php:249
+#: template/admin_pages/settings/general/general.php:123
 msgid "Foreign JavaScript"
 msgstr ""
 
-#: template/admin_pages/settings/general/general.php:252
-#: template/admin_pages/settings/general/general.php:266
+#: template/admin_pages/settings/general/general.php:126
+#: template/admin_pages/settings/general/general.php:140
 msgid "Disable"
 msgstr ""
 
-#: template/admin_pages/settings/general/general.php:255
+#: template/admin_pages/settings/general/general.php:129
 msgid "Check this option if other plugins/themes JavaScript files are conflicting with Duplicator."
 msgstr ""
 
-#: template/admin_pages/settings/general/general.php:257
-#: template/admin_pages/settings/general/general.php:271
+#: template/admin_pages/settings/general/general.php:131
+#: template/admin_pages/settings/general/general.php:145
 msgid "Do not modify this setting unless you know the expected result or have talked to support."
 msgstr ""
 
-#: template/admin_pages/settings/general/general.php:263
+#: template/admin_pages/settings/general/general.php:137
 msgid "Foreign CSS"
 msgstr ""
 
-#: template/admin_pages/settings/general/general.php:269
+#: template/admin_pages/settings/general/general.php:143
 msgid "Check this option if other plugins/themes CSS files are conflicting with Duplicator."
 msgstr ""
 
-#: template/admin_pages/settings/general/general.php:285
+#: template/admin_pages/settings/general/general.php:159
 msgid "Save General Settings"
 msgstr ""
 
-#: template/admin_pages/settings/general/general.php:296
+#: template/admin_pages/settings/general/general.php:170
 msgid "Reset Backups ?"
 msgstr ""
 
-#: template/admin_pages/settings/general/general.php:297
+#: template/admin_pages/settings/general/general.php:171
 msgid "This will clear and reset all of the current temporary Backups.  Would you like to continue?"
 msgstr ""
 
-#: template/admin_pages/settings/general/general.php:298
+#: template/admin_pages/settings/general/general.php:172
 msgid "Resetting settings, Please Wait..."
 msgstr ""
 
-#: template/admin_pages/settings/general/general.php:302
+#: template/admin_pages/settings/general/general.php:176
 msgid "No"
 msgstr ""
 
-#: template/admin_pages/settings/general/general.php:308
+#: template/admin_pages/settings/general/general.php:182
 msgid "AJAX Call Error!"
 msgstr ""
 
-#: template/admin_pages/settings/general/general.php:310
+#: template/admin_pages/settings/general/general.php:184
 msgctxt "1 and 2 are opening and closing <a> tags"
 msgid "AJAX error encountered when resetting Backups. Please see %1$sthis FAQ entry%2$s for possible resolutions."
 msgstr ""
 
-#: template/admin_pages/settings/general/general.php:368
+#: template/admin_pages/settings/general/general.php:234
 msgid "Backups successfully reset"
+msgstr ""
+
+#: template/admin_pages/settings/general/license.php:16
+msgid "License"
+msgstr ""
+
+#: template/admin_pages/settings/general/license.php:20
+msgid "License Key"
+msgstr ""
+
+#: template/admin_pages/settings/general/license.php:23
+msgid "You're using Duplicator Lite - no license needed. Enjoy!"
+msgstr ""
+
+#: template/admin_pages/settings/general/license.php:27
+msgid ""
+"To unlock more features consider <strong><a href=\"%s\" target=\"_blank\"\n"
+"                            rel=\"noopener noreferrer\">upgrading to PRO</a></strong>."
+msgstr ""
+
+#: template/admin_pages/settings/general/license.php:45
+msgid "As a valued Duplicator Lite user you receive <strong>%1$d%% off</strong>, automatically applied at checkout!"
+msgstr ""
+
+#: template/admin_pages/settings/general/license.php:55
+msgid "Already purchased? Connect to unlock <b>Duplicator PRO!</b>"
+msgstr ""
+
+#: template/admin_pages/settings/general/license.php:58
+msgid "Connect to Duplicator Pro"
+msgstr ""
+
+#: template/admin_pages/settings/general/license.php:62
+msgid "This opens connect.duplicator.com where you'll securely connect to Duplicator Pro."
 msgstr ""
 
 #: template/admin_pages/settings/general/usage_tracking_tooltip.php:19
@@ -2019,6 +1991,82 @@ msgstr ""
 
 #: template/admin_pages/settings/general/usage_tracking_tooltip.php:90
 msgid "<b>Backups infos:</b> Information about the Backups created and the type of components included."
+msgstr ""
+
+#: template/admin_pages/settings/misc/misc.php:24
+msgid "Misc Settings Saved"
+msgstr ""
+
+#: template/admin_pages/settings/misc/misc.php:88
+msgid "Plugin"
+msgstr ""
+
+#: template/admin_pages/settings/misc/misc.php:100
+msgid "Uninstall"
+msgstr ""
+
+#: template/admin_pages/settings/misc/misc.php:104
+msgid "Delete Plugin Settings"
+msgstr ""
+
+#: template/admin_pages/settings/misc/misc.php:108
+msgid "Delete Entire Storage Directory"
+msgstr ""
+
+#: template/admin_pages/settings/misc/misc.php:113
+msgid "Usage statistics"
+msgstr ""
+
+#: template/admin_pages/settings/misc/misc.php:117
+msgid "Usage statistics are hardcoded disallowed."
+msgstr ""
+
+#: template/admin_pages/settings/misc/misc.php:127
+msgid "Enable usage tracking"
+msgstr ""
+
+#: template/admin_pages/settings/misc/misc.php:130
+msgid "Usage Tracking"
+msgstr ""
+
+#: template/admin_pages/settings/misc/misc.php:139
+msgid "Hide Announcements"
+msgstr ""
+
+#: template/admin_pages/settings/misc/misc.php:148
+msgid "Check this option to hide plugin announcements and update details."
+msgstr ""
+
+#: template/admin_pages/settings/misc/misc.php:154
+msgid "Debug"
+msgstr ""
+
+#: template/admin_pages/settings/misc/misc.php:158
+msgid "Debugging"
+msgstr ""
+
+#: template/admin_pages/settings/misc/misc.php:161
+msgid "Enable debug options throughout user interface"
+msgstr ""
+
+#: template/admin_pages/settings/misc/misc.php:165
+msgid "Trace Log"
+msgstr ""
+
+#: template/admin_pages/settings/misc/misc.php:171
+msgid "Turns on detailed operation logging. Logging will occur in both PHP error and local trace logs."
+msgstr ""
+
+#: template/admin_pages/settings/misc/misc.php:173
+msgid "WARNING: Only turn on this setting when asked to by support as tracing will impact performance."
+msgstr ""
+
+#: template/admin_pages/settings/misc/misc.php:181
+msgid "Download Trace Log"
+msgstr ""
+
+#: template/admin_pages/settings/misc/misc.php:194
+msgid "Save Misc Settings"
 msgstr ""
 
 #: template/admin_pages/welcome/features.php:21
@@ -2229,6 +2277,10 @@ msgctxt "%s is an <a> tag with a link to the current website."
 msgid "This email was auto-generated and sent from %s."
 msgstr ""
 
+#: template/mocks/db_reset/db_reset.php:17
+msgid "Clean & Reset WordPress Database"
+msgstr ""
+
 #: template/mocks/import/content-popup.php:18
 msgid "In addition to the <a href=\"%s\" target=\"_blank\" rel=\"noopener noreferrer\">classic installer method</a> on an empty site, Duplicator Pro now supports Drag and Drop migrations and site restores! Simply drag the bundled site Backup to the site you wish to overwrite."
 msgstr ""
@@ -2418,7 +2470,6 @@ msgstr ""
 #: views/packages/details/detail.php:287
 #: views/packages/details/detail.php:426
 #: views/packages/main/s1.setup2.php:122
-#: views/settings/license.php:23
 msgid "Type"
 msgstr ""
 
@@ -2779,6 +2830,26 @@ msgstr ""
 
 #: template/parts/Notifications/single-message.php:21
 msgid "Watch video"
+msgstr ""
+
+#: template/parts/plugin-footer.php:28
+msgid "Support"
+msgstr ""
+
+#: template/parts/plugin-footer.php:32
+msgid "Docs"
+msgstr ""
+
+#: template/parts/plugin-footer.php:36
+msgid "Migration Services"
+msgstr ""
+
+#: template/parts/plugin-footer.php:40
+msgid "Free Plugins"
+msgstr ""
+
+#: template/parts/plugin-footer.php:48
+msgid "Made with ♥ by the Duplicator Team"
 msgstr ""
 
 #: views/packages/details/controller.php:29
@@ -4838,56 +4909,8 @@ msgstr ""
 msgid "Access"
 msgstr ""
 
-#: views/settings/controller.php:54
-msgid "License"
-msgstr ""
-
-#: views/settings/license.php:7
-msgid "Activation"
-msgstr ""
-
-#: views/settings/license.php:15
-msgid "%1$sManage Licenses%2$s"
-msgstr ""
-
-#: views/settings/license.php:25
-msgid "Duplicator Lite"
-msgstr ""
-
-#: views/settings/license.php:27
-msgid "Basic Features"
-msgstr ""
-
-#: views/settings/license.php:32
-msgid "Pro Features"
-msgstr ""
-
-#: views/settings/license.php:38
-msgid "License Key"
-msgstr ""
-
-#: views/settings/license.php:41
-msgid "You're using Duplicator Lite - no license needed. Enjoy!"
-msgstr ""
-
-#: views/settings/license.php:45
-msgid "To unlock more features consider <strong><a href=\"%s\" target=\"_blank\" rel=\"noopener noreferrer\">upgrading to PRO</a></strong>."
-msgstr ""
-
-#: views/settings/license.php:62
-msgid "As a valued Duplicator Lite user you receive <strong>%1$d%% off</strong>, automatically applied at checkout!"
-msgstr ""
-
-#: views/settings/license.php:72
-msgid "Already purchased? Simply enter your license key below to enable <b>Duplicator PRO!</b>"
-msgstr ""
-
-#: views/settings/license.php:74
-msgid "Paste license key here"
-msgstr ""
-
-#: views/settings/license.php:75
-msgid "One click Upgrade to Pro"
+#: views/settings/controller.php:55
+msgid "Misc"
 msgstr ""
 
 #: views/settings/packages.php:14

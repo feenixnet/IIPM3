@@ -1761,7 +1761,7 @@ function iipm_process_member_registration($data, $token = null) {
                     'Address_3_pers' => sanitize_text_field($data['Address_3_pers'] ?? ''),
                     'eircode_p' => sanitize_text_field($data['eircode_p'] ?? ''),
                     'eircode_w' => sanitize_text_field($data['eircode_w'] ?? ''),
-                    'correspondence_email' => sanitize_email($data['correspondence_email'] ?? ''),
+                    'correspondence_email' => $email,
                     'user_notes' => sanitize_textarea_field($data['user_notes'] ?? ''),
                     'dateOfUpdatePers' => current_time('mysql'),
                     'dateOfUpdateGen' => current_time('mysql'),
@@ -2722,6 +2722,7 @@ function iipm_protect_portal_pages() {
     if (is_page_template('template-member-portal.php') || 
         is_page_template('template-dashboard.php') ||
         is_page_template('template-member-management.php') ||
+        is_page_template('template-page-super-admin.php') ||
         is_page_template('template-organisation-management.php') ||
         is_page_template('template-bulk-import.php') ||
         is_page_template('template-admin-invitations.php') ||
@@ -6710,7 +6711,7 @@ function iipm_admin_update_user_details() {
         // Employer ID required for organisation members
         if (isset($data['member_type']) && $data['member_type'] === 'organisation') {
             if (!isset($data['employer_id']) || empty($data['employer_id']) || $data['employer_id'] === '0') {
-                $errors[] = 'Employer/Organization is required for organisation members';
+                $errors[] = 'Employer/Organisation is required for organisation members';
             }
         }
         
@@ -6897,13 +6898,13 @@ function iipm_get_organizations_data() {
         ");
         
         if ($wpdb->last_error) {
-            wp_send_json_error('Error fetching organizations: ' . $wpdb->last_error);
+            wp_send_json_error('Error fetching organisations: ' . $wpdb->last_error);
         }
         
         wp_send_json_success($organizations);
         
     } catch (Exception $e) {
-        wp_send_json_error('Exception in iipm_get_organizations_data: ' . $e->getMessage());
+        wp_send_json_error('Exception in iipm_get_organisations_data: ' . $e->getMessage());
     }
 }
 add_action('wp_ajax_iipm_get_organizations_data', 'iipm_get_organizations_data');

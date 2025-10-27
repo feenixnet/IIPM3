@@ -70,7 +70,7 @@ get_header();
                             </div>
 
                             <div class="form-group">
-                                <label for="login_name">Login Name</label>
+                                <label for="login_name">User Name</label>
                                 <input type="text" name="login_name" id="login_name" required>
                             </div>
                             
@@ -118,14 +118,8 @@ get_header();
                             </div>
 
                             <div class="form-group">
-                                    <label for="user_mobile">Member Mobile</label>
-                                    <input type="tel" name="user_mobile" id="user_mobile">
-                                </div>
-                            
-                            <div class="form-group">
-                                <label for="correspondence_email">Correspondence Email *</label>
-                                <input type="email" name="correspondence_email" id="correspondence_email" required>
-                                <small>This email will be used for official correspondence</small>
+                                <label for="user_mobile">Member Mobile</label>
+                                <input type="tel" name="user_mobile" id="user_mobile">
                             </div>
                             
                             <div class="form-group">
@@ -209,7 +203,7 @@ get_header();
                         </div>
 
                         
-                        <div class="form-section">
+                        <!-- <div class="form-section">
                             <h3>Personal Information (optional)</h3>
                             <div class="form-row">
                                 <div class="form-group">
@@ -239,7 +233,7 @@ get_header();
                                 <label for="Address_3_pers">Personal Address Line 3</label>
                                 <input type="address" name="Address_3_pers" id="Address_3_pers">
                             </div>
-                        </div>
+                        </div> -->
                         
                         
                         <!-- Privacy & Consent Section -->
@@ -273,16 +267,6 @@ get_header();
                             <?php endif; ?>
                         </div>
                         
-                        <!-- Error Display Area -->
-                        <div id="registration-errors" class="error-container" style="display:none;">
-                            <div class="error-header">
-                                <span class="error-icon"><i class="fas fa-exclamation-triangle"></i></span>
-                                <span class="error-title">Registration Error</span>
-                            </div>
-                            <div class="error-content">
-                                <ul id="error-list"></ul>
-                            </div>
-                        </div>
                         
                         <div class="form-actions">
                             <button type="submit" class="btn btn-primary btn-large">
@@ -395,6 +379,17 @@ get_header();
                 </div>
                 
                 <div class="registration-info">
+                    <!-- Error Display Area -->
+                    <div id="registration-errors" class="error-container" style="display:none;">
+                        <div class="error-header">
+                            <span class="error-icon"><i class="fas fa-exclamation-triangle"></i></span>
+                            <span class="error-title">Registration Error</span>
+                        </div>
+                        <div class="error-content">
+                            <ul id="error-list"></ul>
+                        </div>
+                    </div>
+                    
                     <div class="info-card">
                         <h3>Membership Benefits</h3>
                         <ul>
@@ -611,7 +606,6 @@ jQuery(document).ready(function($) {
             'password': 'Password',
             'address': 'Address',
             'membership_id': 'Professional Designation',
-            'correspondence_email': 'Correspondence Email'
         };
         
         // Add address fields as required if Employer Invoiced is selected
@@ -644,13 +638,6 @@ jQuery(document).ready(function($) {
         if (email && !isValidEmail(email)) {
             errors.push('Please enter a valid email address');
             $form.find('input[name="email"]').addClass('error');
-        }
-        
-        // Validate correspondence email format
-        var correspondenceEmail = $form.find('input[name="correspondence_email"]').val();
-        if (correspondenceEmail && !isValidEmail(correspondenceEmail)) {
-            errors.push('Please enter a valid correspondence email address');
-            $form.find('input[name="correspondence_email"]').addClass('error');
         }
         
         // Validate password complexity

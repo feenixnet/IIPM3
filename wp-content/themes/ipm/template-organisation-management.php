@@ -1,6 +1,6 @@
 <?php
 /*
-Template Name: Organization Management
+Template Name: Organisation Management
 */
 
 // Check if user has permission (IIPM Admin or Administrator only)
@@ -29,9 +29,9 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
         <!-- Page Header -->
         <div class="page-header" style="text-align: center; margin-bottom: 40px;">
             <div>
-                <h1 style="color: white; font-size: 2.5rem; margin-bottom: 10px;">Organization Management</h1>
+                <h1 style="color: white; font-size: 2.5rem; margin-bottom: 10px;">Organisation Management</h1>
                 <p style="color: rgba(255,255,255,0.9); font-size: 1.1rem;">
-                    Manage member organizations and their administrators
+                    Manage member organisations and their administrators
                 </p>
             </div>
         </div>
@@ -51,7 +51,7 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
                     <div class="stat-icon"><i class="fas fa-building"></i></div>
                     <div class="stat-content">
                         <div class="stat-number"><?php echo $total_orgs; ?></div>
-                        <div class="stat-label">Total Organizations</div>
+                        <div class="stat-label">Total Organisations</div>
                     </div>
                 </div>
                 
@@ -67,7 +67,7 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
                     <div class="stat-icon"><i class="fas fa-chart-bar"></i></div>
                     <div class="stat-content">
                         <div class="stat-number"><?php echo $total_org_members; ?></div>
-                        <div class="stat-label">Organization Members</div>
+                        <div class="stat-label">Organisation Members</div>
                     </div>
                 </div>
                 
@@ -88,7 +88,7 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
                         <line x1="12" y1="8" x2="12" y2="16"/>
                         <line x1="8" y1="12" x2="16" y2="12"/>
                     </svg>
-                    Add New Organization
+                    Add New Organisation
                 </button>
                 
                 <!-- <button id="bulk-setup-btn" class="btn btn-secondary">
@@ -110,12 +110,12 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
                 </button>
             </div>
             
-            <!-- Organizations Table -->
+            <!-- organisations Table -->
             <div class="organisations-section">
                 <div class="section-header">
-                    <h2><i class="fas fa-clipboard-list"></i> Organizations</h2>
+                    <h2><i class="fas fa-clipboard-list"></i> Organisations</h2>
                     <div class="search-filter">
-                        <input type="text" id="org-search" placeholder="Search organizations..." class="search-input">
+                        <input type="text" id="org-search" placeholder="Search organisations..." class="search-input">
                         <select id="status-filter" class="filter-select">
                             <option value="">All Status</option>
                             <option value="setup">Setup Complete</option>
@@ -129,7 +129,7 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
                     <table class="organisations-table" id="organisations-table">
                         <thead>
                             <tr>
-                                <th>Organization</th>
+                                <th>organisation</th>
                                 <th>Contact Info</th>
                                 <th>Admin Status</th>
                                 <th>Members</th>
@@ -153,7 +153,7 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
                             ");
                             
                             if (empty($organisations)) {
-                                echo "<tr><td colspan='6' class='no-data'>No organizations found</td></tr>";
+                                echo "<tr><td colspan='6' class='no-data'>No organisations found</td></tr>";
                             } else {
                                 foreach ($organisations as $org) {
                                     $admin_status = $org->admin_user_id ? 'setup' : 'pending';
@@ -192,7 +192,7 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
                                     
                                     echo "<td style='width: 220px;'>";
                                     echo "<div class='action-buttons-cell'>";
-                                    echo "<button class='btn-small edit-org' data-org-id='{$org->id}' title='Edit Organization'><i class='fas fa-edit'></i></button>";
+                                    echo "<button class='btn-small edit-org' data-org-id='{$org->id}' title='Edit Organisation'><i class='fas fa-edit'></i></button>";
                                     
                                     if (!$org->admin_user_id) {
                                         echo "<button class='btn-small setup-admin' data-org-id='{$org->id}' title='Setup Admin'><i class='fas fa-user-cog'></i></button>";
@@ -201,8 +201,8 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
                                         echo "<a href='" . home_url('/organisation-members?employer_id=' . $org->id) . "' class='btn-small view-members' data-org-id='{$org->id}' title='View Members'><i class='fas fa-users'></i></a>";
                                     }
                                     
-                                    echo "<button class='btn-small btn-danger deactivate-org' data-org-id='{$org->id}' title='Deactivate Organization'><i class='fas fa-pause'></i></button>";
-                                    echo "<button class='btn-small btn-delete delete-org' data-org-id='{$org->id}' data-org-name='" . esc_attr($org->name) . "' title='Delete Organization' style='margin-left: 0px;'><i class='fas fa-trash'></i></button>";
+                                    echo "<button class='btn-small btn-danger deactivate-org' data-org-id='{$org->id}' title='Deactivate organisation'><i class='fas fa-pause'></i></button>";
+                                    echo "<button class='btn-small btn-delete delete-org' data-org-id='{$org->id}' data-org-name='" . esc_attr($org->name) . "' title='Delete organisation' style='margin-left: 0px;'><i class='fas fa-trash'></i></button>";
                                     echo "</div>";
                                     echo "</td>";
                                     echo "</tr>";
@@ -221,7 +221,7 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
 <div id="organisation-modal" class="modal" style="display:none;">
     <div class="modal-content large">
         <div class="modal-header">
-            <h3 id="modal-title">Add New Organization</h3>
+            <h3 id="modal-title">Add New Organisation</h3>
             <button class="modal-close">&times;</button>
         </div>
         <div class="modal-body">
@@ -230,10 +230,10 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
                 <?php wp_nonce_field('iipm_org_management_nonce', 'nonce'); ?>
                 
                 <div class="form-section">
-                    <h4><i class="fas fa-building"></i> Organization Details</h4>
+                    <h4><i class="fas fa-building"></i> Organisation Details</h4>
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="org-name">Organization Name *</label>
+                            <label for="org-name">Organisation Name *</label>
                             <input type="text" id="org-name" name="name" required>
                         </div>
                         
@@ -297,7 +297,7 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
                     
                 </div>
                 
-                <!-- Organization Options -->
+                <!-- organisation Options -->
                 <div class="org-options">
                     <label>
                         <input type="checkbox" name="auto_approve" value="1">
@@ -311,7 +311,7 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
                 
                 <div class="form-actions">
                     <button type="submit" class="btn btn-primary">
-                        <span class="btn-text">Save Organization</span>
+                        <span class="btn-text">Save organisation</span>
                         <span class="btn-loading" style="display:none;">Saving...</span>
                     </button>
                     <button type="button" class="btn btn-secondary modal-close">Cancel</button>
@@ -325,7 +325,7 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
 <div id="setup-admin-modal" class="modal" style="display:none;">
     <div class="modal-content">
         <div class="modal-header">
-            <h3>Setup Organization Administrator</h3>
+            <h3>Setup Organisation Administrator</h3>
             <button class="modal-close">&times;</button>
         </div>
         <div class="modal-body">
@@ -334,14 +334,14 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
                 <?php wp_nonce_field('iipm_setup_admin_nonce', 'nonce'); ?>
                 
                 <div class="org-info-display">
-                    <h4 id="setup-org-name">Organization Name</h4>
-                    <p id="setup-org-details">Organization details will appear here</p>
+                    <h4 id="setup-org-name">Organisation Name</h4>
+                    <p id="setup-org-details">Organisation details will appear here</p>
                 </div>
                 
                 <div class="form-group">
                     <label for="setup-admin-email">Administrator Email Address *</label>
                     <input type="email" id="setup-admin-email" name="admin_email" required>
-                    <small>This person will become the organization administrator</small>
+                    <small>This person will become the organisation administrator</small>
                 </div>
                 
                 <div class="form-group">
@@ -360,8 +360,8 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
                 <div class="invitation-preview">
                     <h5><i class="fas fa-envelope"></i> Invitation Preview</h5>
                     <div class="preview-content">
-                        <p><strong>Subject:</strong> IIPM Organization Administrator Invitation</p>
-                        <p><strong>Message:</strong> You have been invited to become the administrator for <span id="preview-org-name">[Organization]</span> on the IIPM platform...</p>
+                        <p><strong>Subject:</strong> IIPM Organisation Administrator Invitation</p>
+                        <p><strong>Message:</strong> You have been invited to become the administrator for <span id="preview-org-name">[Organisation]</span> on the IIPM platform...</p>
                     </div>
                 </div>
                 
@@ -389,7 +389,7 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
                 <div class="notice-icon"><i class="fas fa-exclamation-triangle"></i></div>
                 <div class="notice-content">
                     <strong>Local Development Mode</strong>
-                    <p>This feature allows you to directly assign an existing member as an organization admin without sending emails. Use this for testing in local environments.</p>
+                    <p>This feature allows you to directly assign an existing member as an organisation admin without sending emails. Use this for testing in local environments.</p>
                 </div>
             </div>
             
@@ -398,7 +398,7 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
                 <?php wp_nonce_field('iipm_portal_nonce', 'nonce'); ?>
                 
                 <div class="org-info-display">
-                    <h4 id="direct-assign-org-name">Organization Name</h4>
+                    <h4 id="direct-assign-org-name">Organisation Name</h4>
                 </div>
                 
                 <div class="form-group">
@@ -406,7 +406,7 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
                     <select id="direct-assign-user" name="user_id" class="user-select" required>
                         <option value="">Loading members...</option>
                     </select>
-                    <small>This member will be assigned as the organization administrator</small>
+                    <small>This member will be assigned as the organisation administrator</small>
                 </div>
                 
                 <div class="form-actions">
@@ -425,7 +425,7 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
 <div id="view-members-modal" class="modal" style="display:none;">
     <div class="modal-content large">
         <div class="modal-header">
-            <h3 id="members-modal-title">Organization Members</h3>
+            <h3 id="members-modal-title">Organisation Members</h3>
             <button class="modal-close">&times;</button>
         </div>
         <div class="modal-body">
@@ -1319,7 +1319,7 @@ jQuery(document).ready(function($) {
     
     // Add Organisation
     $('#add-organisation-btn').click(function() {
-        $('#modal-title').text('Add New Organization');
+        $('#modal-title').text('Add New Organisation');
         $('#organisation-form')[0].reset();
         $('#org-id').val('');
         $('#organisation-modal').addClass('show');
@@ -1428,7 +1428,7 @@ jQuery(document).ready(function($) {
                 if (response.success) {
                     // Show success notification
                     if (window.notifications) {
-                        notifications.success('Organization Saved', response.data.message);
+                        notifications.success('Organisation Saved', response.data.message);
                     }
                     $('#organisation-modal').removeClass('show');
                     setTimeout(function() {
@@ -1436,7 +1436,7 @@ jQuery(document).ready(function($) {
                     }, 1500);
                 } else {
                     // Check if it's a duplicate name error
-                    if (response.data && response.data.includes('organization with this name already exists')) {
+                    if (response.data && response.data.includes('Organisation with this name already exists')) {
                         showDuplicateNameErrorModal(response.data);
                     } else {
                         // Show error notification
@@ -1449,7 +1449,7 @@ jQuery(document).ready(function($) {
             error: function(xhr, status, error) {
                 // Show error notification
                 if (window.notifications) {
-                    notifications.error('Connection Error', 'Unable to save organization. Please check your connection and try again.');
+                    notifications.error('Connection Error', 'Unable to save organisation. Please check your connection and try again.');
                 }
             },
             complete: function() {
@@ -1490,10 +1490,10 @@ jQuery(document).ready(function($) {
                 success: function(response) {
                     if (response.data && response.data.exists) {
                         $input.addClass('duplicate-name');
-                        $input.after('<div class="validation-message error"><i class="fas fa-exclamation-triangle"></i> Organization name already exists: "' + response.data.existing_name + '"</div>');
+                        $input.after('<div class="validation-message error"><i class="fas fa-exclamation-triangle"></i> Organisation name already exists: "' + response.data.existing_name + '"</div>');
                     } else {
                         $input.addClass('valid-name');
-                        $input.after('<div class="validation-message success">✅ Organization name is available</div>');
+                        $input.after('<div class="validation-message success">✅ Organisation name is available</div>');
                     }
                 },
                 error: function() {
@@ -1640,7 +1640,7 @@ jQuery(document).ready(function($) {
                 if (response.success) {
                     const org = response.data;
                     
-                    $('#modal-title').text('Edit Organization');
+                    $('#modal-title').text('Edit Organisation');
                     $('#org-id').val(org.id);
                     $('#org-name').val(org.name);
                     $('#contact-email').val(org.contact_email);
@@ -1654,11 +1654,11 @@ jQuery(document).ready(function($) {
                     
                     $('#organisation-modal').addClass('show');
                 } else {
-                    alert('Error loading organization data: ' + response.data);
+                    alert('Error loading organisation data: ' + response.data);
                 }
             },
             error: function() {
-                alert('An error occurred while loading organization data.');
+                alert('An error occurred while loading organisation data.');
             }
         });
     }
@@ -1724,7 +1724,7 @@ jQuery(document).ready(function($) {
                     if (response.success) {
                         // Show success notification
                         if (window.notifications) {
-                            notifications.success('Organization Deactivated', response.data);
+                            notifications.success('Organisation Deactivated', response.data);
                         }
                         location.reload();
                     } else {
@@ -1811,7 +1811,7 @@ jQuery(document).ready(function($) {
             <div id="duplicate-error-modal" class="modal show">
                 <div class="modal-content">
                     <div class="modal-header" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
-                        <h3><i class="fas fa-exclamation-triangle"></i> Duplicate Organization Name</h3>
+                        <h3><i class="fas fa-exclamation-triangle"></i> Duplicate Organisation Name</h3>
                         <button class="modal-close">&times;</button>
                     </div>
                     <div class="modal-body">
@@ -1821,7 +1821,7 @@ jQuery(document).ready(function($) {
                                 <div>
                                     <p style="margin: 0 0 12px 0; font-size: 1rem; line-height: 1.5; font-weight: 500;">${message}</p>
                                     <p style="margin: 0; font-size: 0.9rem; color: #6b7280; line-height: 1.4;">
-                                        Organization names must be unique to avoid confusion. Please choose a different name for this organization.
+                                        Organisation names must be unique to avoid confusion. Please choose a different name for this organisation.
                                     </p>
                                 </div>
                             </div>
@@ -1880,7 +1880,7 @@ jQuery(document).ready(function($) {
     });
 
     function showDeleteConfirmationModal(orgId, orgName) {
-        // Get organization details first
+        // Get organisation details first
         $.ajax({
             url: iipm_ajax.ajax_url,
             type: 'POST',
@@ -1897,7 +1897,7 @@ jQuery(document).ready(function($) {
                         <div id="delete-confirmation-modal" class="modal delete-confirmation-modal show">
                             <div class="modal-content">
                                 <div class="modal-header">
-                                    <h3><i class="fas fa-exclamation-triangle"></i> Delete Organization</h3>
+                                    <h3><i class="fas fa-exclamation-triangle"></i> Delete Organisation</h3>
                                     <button class="modal-close">&times;</button>
                                 </div>
                                 <div class="modal-body">
@@ -1906,7 +1906,7 @@ jQuery(document).ready(function($) {
                                             <span class="delete-warning-icon"><i class="fas fa-exclamation-triangle"></i></span>
                                             <div>
                                                 <strong>Warning: This action cannot be undone!</strong>
-                                                <p>You are about to permanently delete the organization "${orgName}" and all associated data.</p>
+                                                <p>You are about to permanently delete the organisation "${orgName}" and all associated data.</p>
                                             </div>
                                         </div>
                                     </div>
@@ -1914,10 +1914,10 @@ jQuery(document).ready(function($) {
                                     <div class="delete-details">
                                         <h5><i class="fas fa-chart-bar"></i> What will be deleted:</h5>
                                         <ul>
-                                            <li><strong>${data.member_count}</strong> organization members</li>
+                                            <li><strong>${data.member_count}</strong> Organisation members</li>
                                             <li><strong>${data.import_count}</strong> bulk import records</li>
                                             <li><strong>${data.invitation_count}</strong> pending invitations</li>
-                                            <li>All organization profile data</li>
+                                            <li>All Organisation profile data</li>
                                             <li>All related activity logs</li>
                                         </ul>
                                     </div>
@@ -1933,20 +1933,20 @@ jQuery(document).ready(function($) {
                                     </div>
                                     
                                     <div style="margin: 20px 0; padding: 16px; background: #fef3c7; border-radius: 8px; border: 1px solid #fbbf24;">
-                                        <p><strong><i class="fas fa-exclamation-triangle"></i> Alternative:</strong> Consider using "Deactivate" instead to preserve data while making the organization inactive.</p>
+                                        <p><strong><i class="fas fa-exclamation-triangle"></i> Alternative:</strong> Consider using "Deactivate" instead to preserve data while making the organisation inactive.</p>
                                     </div>
                                     
                                     <div style="margin: 20px 0;">
                                         <label style="font-weight: 600; margin-bottom: 8px; display: block;">
                                             Type "${orgName}" to confirm deletion:
                                         </label>
-                                        <input type="text" id="delete-confirmation-input" placeholder="Type organization name here..." 
+                                        <input type="text" id="delete-confirmation-input" placeholder="Type organisation name here..." 
                                                style="width: 100%; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px;">
                                     </div>
                                     
                                     <div class="form-actions">
                                         <button type="button" id="confirm-delete-btn" class="btn btn-danger" disabled data-org-id="${orgId}">
-                                            <span class="btn-text"><i class="fas fa-trash-alt"></i> Delete Organization</span>
+                                            <span class="btn-text"><i class="fas fa-trash-alt"></i> Delete organisation</span>
                                             <span class="btn-loading" style="display:none;">Deleting...</span>
                                         </button>
                                         <button type="button" class="btn btn-secondary modal-close">Cancel</button>
@@ -2007,7 +2007,7 @@ jQuery(document).ready(function($) {
                                 if (response.success) {
                                     // Show success notification
                                     if (window.notifications) {
-                                        notifications.success('Organization Deleted', "");
+                                        notifications.success('Organisation Deleted', "");
                                     }
                                     $('#delete-confirmation-modal').remove();
                                     location.reload();
@@ -2022,7 +2022,7 @@ jQuery(document).ready(function($) {
                                 console.log('Delete error:', xhr, status, error); // Debug log
                                 // Show error notification
                                 if (window.notifications) {
-                                    notifications.error('Delete Failed', 'An error occurred while deleting the organization.');
+                                    notifications.error('Delete Failed', 'An error occurred while deleting the organisation.');
                                 }
                             },
                             complete: function() {
@@ -2032,11 +2032,11 @@ jQuery(document).ready(function($) {
                     });
                     
                 } else {
-                    alert('Error loading organization details: ' + response.data);
+                    alert('Error loading organisation details: ' + response.data);
                 }
             },
             error: function() {
-                alert('An error occurred while loading organization details.');
+                alert('An error occurred while loading organisation details.');
             }
         });
     }

@@ -97,12 +97,18 @@ add_action('wp_ajax_iipm_get_course_for_duplication', 'iipm_ajax_get_course_for_
 function iipm_ajax_get_courses() {
     global $wpdb;
     
+    // Handle categories - convert array to comma-separated string if needed
+    $categories = $_POST['categories'] ?? '';
+    if (is_array($categories)) {
+        $categories = implode(',', $categories);
+    }
+    
     $filters = array(
         'title_search' => $_POST['title_search'] ?? '',
         'lia_code_search' => $_POST['lia_code_search'] ?? '',
         'date_from' => $_POST['date_from'] ?? '',
         'date_to' => $_POST['date_to'] ?? '',
-        'categories' => $_POST['categories'] ?? '',
+        'categories' => $categories,
         'providers' => $_POST['providers'] ?? '',
         'my_courses' => $_POST['my_courses'] ?? false
     );
@@ -151,54 +157,105 @@ function iipm_ajax_submit_course_request() {
     $membership_level = sanitize_text_field($_POST['membership_level'] ?? '');
     $organisation = sanitize_text_field($_POST['organisation'] ?? '');
     $course_name = sanitize_text_field($_POST['course_name'] ?? '');
-    $course_category_id = intval($_POST['course_category'] ?? 0);
+    
+    // Get selected categories data
+    $selected_categories_data = isset($_POST['selected_categories_data']) ? json_decode(stripslashes($_POST['selected_categories_data']), true) : [];
+    
     $lia_code = sanitize_text_field($_POST['LIA_Code'] ?? '');
     $course_cpd_hours = floatval($_POST['course_cpd_mins'] ?? 0); // hours from form
     $submission_date = sanitize_text_field($_POST['submission_date'] ?? '');
 
-    if (empty($course_name) || $course_category_id <= 0) {
-        wp_send_json_error('Course title and category are required');
+    if (empty($course_name)) {
+        wp_send_json_error('Course title is required');
+    }
+
+    // Check if we have categories (new multi-select) or old single select
+    $categories = [];
+    if (!empty($selected_categories_data) && is_array($selected_categories_data)) {
+        // New multi-select format
+        foreach ($selected_categories_data as $cat_data) {
+            if (isset($cat_data['id']) && isset($cat_data['name'])) {
+                $categories[] = array(
+                    'id' => intval($cat_data['id']),
+                    'name' => sanitize_text_field($cat_data['name'])
+                );
+            }
+        }
+    } else {
+        // Fall back to old single select for backward compatibility
+        $course_category_id = intval($_POST['course_category'] ?? 0);
+        if ($course_category_id <= 0) {
+            wp_send_json_error('At least one category is required');
+        }
+        
+        // Resolve category name by ID
+        $category_table = $wpdb->prefix . 'test_iipm_cpd_categories';
+        $course_category_name = $wpdb->get_var($wpdb->prepare(
+            "SELECT name FROM {$category_table} WHERE id = %d",
+            $course_category_id
+        ));
+
+        if (!$course_category_name) {
+            wp_send_json_error('Invalid course category');
+        }
+        
+        $categories[] = array(
+            'id' => $course_category_id,
+            'name' => $course_category_name
+        );
+    }
+
+    if (empty($categories)) {
+        wp_send_json_error('At least one category is required');
     }
 
     // Convert hours to minutes (rounded to 0.5h)
     $course_cpd_hours = round($course_cpd_hours * 2) / 2;
     $course_cpd_mins = (int) round($course_cpd_hours * 60);
 
-    // Resolve category name by ID
-    $category_table = $wpdb->prefix . 'test_iipm_cpd_categories';
-    $course_category_name = $wpdb->get_var($wpdb->prepare(
-        "SELECT name FROM {$category_table} WHERE id = %d",
-        $course_category_id
-    ));
-
-    if (!$course_category_name) {
-        wp_send_json_error('Invalid course category');
-    }
-
     $table_requests = $wpdb->prefix . 'coursesbyuserbku';
+    $inserted_count = 0;
+    $error_messages = [];
 
-    $insert_data = array(
-        'first_name' => $first_name,
-        'sur_name' => $sur_name,
-        'email_address' => $email_address,
-        'membership_level' => $membership_level,
-        'organisation' => $organisation,
-        'course_name' => $course_name,
-        'course_category' => $course_category_name,
-        'LIA_Code' => $lia_code,
-        'course_cpd_mins' => $course_cpd_mins,
-        'status' => 'pending',
-        'created_at' => current_time('mysql'),
-        'course_id' => iipm_generate_course_id(),
-        'user_id' => get_current_user_id() ?: 0,
-    );
+    // Create a separate course entry for each selected category
+    foreach ($categories as $category) {
+        $insert_data = array(
+            'first_name' => $first_name,
+            'sur_name' => $sur_name,
+            'email_address' => $email_address,
+            'membership_level' => $membership_level,
+            'organisation' => $organisation,
+            'course_name' => $course_name,
+            'course_category' => $category['name'],
+            'LIA_Code' => $lia_code,
+            'course_cpd_mins' => $course_cpd_mins,
+            'status' => 'pending',
+            'created_at' => current_time('mysql'),
+            'course_id' => iipm_generate_course_id(),
+            'user_id' => get_current_user_id() ?: 0,
+        );
 
-    $result = $wpdb->insert($table_requests, $insert_data);
-    if ($result === false) {
-        wp_send_json_error('Failed to submit request');
+        $result = $wpdb->insert($table_requests, $insert_data);
+        if ($result !== false) {
+            $inserted_count++;
+        } else {
+            $error_messages[] = "Failed to submit for category: {$category['name']}";
+        }
     }
 
-    wp_send_json_success(array('message' => 'Request submitted', 'id' => intval($wpdb->insert_id)));
+    if ($inserted_count === 0) {
+        wp_send_json_error(implode('; ', $error_messages) ?: 'Failed to submit request');
+    }
+
+    $message = count($categories) > 1 
+        ? sprintf('Submitted %d course requests (one for each category)', $inserted_count)
+        : 'Request submitted';
+        
+    wp_send_json_success(array(
+        'message' => $message,
+        'submitted_count' => $inserted_count,
+        'total_categories' => count($categories)
+    ));
 }
 
 /**
@@ -287,7 +344,7 @@ function iipm_ajax_approve_course_request() {
         'course_name' => $request->course_name,
         'LIA_Code' => $request->LIA_Code,
         'course_category' => $request->course_category,
-        'crs_provider' => '',
+        'crs_provider' => 'external',
         'course_cpd_mins' => intval($request->course_cpd_mins),
         'user_id' => intval($request->user_id),
         'course_id' => $request->course_id ?: iipm_generate_course_id(),
@@ -295,7 +352,6 @@ function iipm_ajax_approve_course_request() {
         'course_enteredBy' => wp_get_current_user()->user_login,
         'is_by_admin' => 0,
         'status' => 'active',
-        'crs_provider' => 'external',
         'TimeStamp' => current_time('mysql')
     );
     $wpdb->insert($courses_table, $insert_course);
@@ -383,13 +439,29 @@ function iipm_get_courses($filters = array(), $pagination = array()) {
     
     // Date range filters
     if (!empty($filters['date_from'])) {
-        $where_conditions[] = "course_date >= %s";
-        $query_params[] = sanitize_text_field($filters['date_from']);
+        // Convert from YYYY-MM-DD (from date input) to DD-MM-YYYY for database comparison
+        $date_from = sanitize_text_field($filters['date_from']);
+        $date_parts = explode('-', $date_from);
+        if (count($date_parts) == 3) {
+            $date_from_formatted = $date_parts[2] . '-' . $date_parts[1] . '-' . $date_parts[0]; // YYYY-MM-DD to DD-MM-YYYY
+            
+            // Use STR_TO_DATE to convert DD-MM-YYYY strings to dates for proper comparison
+            $where_conditions[] = "STR_TO_DATE(course_date, '%%d-%%m-%%Y') >= STR_TO_DATE(%s, '%%d-%%m-%%Y')";
+            $query_params[] = $date_from_formatted;
+        }
     }
     
     if (!empty($filters['date_to'])) {
-        $where_conditions[] = "course_date <= %s";
-        $query_params[] = sanitize_text_field($filters['date_to']);
+        // Convert from YYYY-MM-DD (from date input) to DD-MM-YYYY for database comparison
+        $date_to = sanitize_text_field($filters['date_to']);
+        $date_parts = explode('-', $date_to);
+        if (count($date_parts) == 3) {
+            $date_to_formatted = $date_parts[2] . '-' . $date_parts[1] . '-' . $date_parts[0]; // YYYY-MM-DD to DD-MM-YYYY
+            
+            // Use STR_TO_DATE to convert DD-MM-YYYY strings to dates for proper comparison
+            $where_conditions[] = "STR_TO_DATE(course_date, '%%d-%%m-%%Y') <= STR_TO_DATE(%s, '%%d-%%m-%%Y')";
+            $query_params[] = $date_to_formatted;
+        }
     }
     
     // Category filter

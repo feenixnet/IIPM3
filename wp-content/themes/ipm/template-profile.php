@@ -198,7 +198,7 @@ get_header();
                                         </div>
                                     </div>
                                     <div class="form-group">
-                                        <label>Membership Level</label>
+                                        <label>Membership Name</label>
                                         <div class="form-value">
                                             <?php 
                                             $membership_level = $member->membership_level;
@@ -381,7 +381,7 @@ get_header();
                                                 if ($display_address) {
                                                     echo nl2br(esc_html($display_address));
                                                 } else {
-                                                    echo '<span class="placeholder-text">No organization address available</span>';
+                                                    echo '<span class="placeholder-text">No organisation address available</span>';
                                                 }
                                             } else {
                                                 // Show personal address for all other payment methods (first non-null value)
@@ -433,15 +433,15 @@ get_header();
                                     <!-- Organization Address Fields (Read-only) -->
                                     <div id="org_address_fields" style="<?php echo ($user_payment_method === 'Employer Invoiced') ? '' : 'display: none;'; ?>">
                                         <div class="form-group">
-                                            <label>Organization Address Line 1</label>
+                                            <label>Organisation Address Line 1</label>
                                             <input type="text" class="form-input" name="Address_1" value="<?php echo esc_attr($org_address_line1); ?>" readonly />
                                         </div>
                                         <div class="form-group">
-                                            <label>Organization Address Line 2</label>
+                                            <label>Organisation Address Line 2</label>
                                             <input type="text" class="form-input" name="Address_2" value="<?php echo esc_attr($org_address_line2); ?>" readonly />
                                         </div>
                                         <div class="form-group">
-                                            <label>Organization Address Line 3</label>
+                                            <label>Organisation Address Line 3</label>
                                             <input type="text" class="form-input" name="Address_3" value="<?php echo esc_attr($org_address_line3); ?>" readonly />
                                         </div>
                                     </div>
@@ -3069,7 +3069,7 @@ function updateViewMode(sectionId) {
                 if (displayAddress) {
                     addressField.innerHTML = displayAddress.replace(/\n/g, '<br>');
                 } else {
-                    addressField.innerHTML = '<span class="placeholder-text">No organization address available</span>';
+                    addressField.innerHTML = '<span class="placeholder-text">No organisation address available</span>';
                 }
             } else {
                 // Show personal address for all other payment methods (first non-null value)

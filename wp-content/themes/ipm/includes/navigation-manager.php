@@ -22,9 +22,9 @@ class IIPM_Navigation_Manager {
         if (in_array('administrator', $user_roles)) {
             $navigation = array(
                 'Dashboard' => home_url('/dashboard/'),
-                'Admin Management' => home_url('/super-admin/'),
+                'Admin Management' => home_url('/super-admin-management/'),
                 'Member Management' => home_url('/member-management/'),
-                'Organization Management' => home_url('/organisation-management/'),
+                'Organisation Management' => home_url('/organisation-management/'),
                 
                 'Bulk Member Import' => array('url' => home_url('/bulk-import/')),
                 'CPD Reports' => home_url('/cpd-reports/'),
@@ -201,7 +201,7 @@ class IIPM_Navigation_Manager {
                         'All Users',
                         'Bulk Member Import',
                         'Admin Invitations',
-                        'Organization Management'
+                        'Organisation Management'
                     ),
                     'CPD Management' => array(
                         'CPD Reports',

@@ -163,8 +163,6 @@ $actionUrl              = ControllersManager::getMenuLink(ControllersManager::SE
 
 </form>
 
-<?php TplMng::getInstance()->render('admin_pages/settings/partials/connector-form'); ?>
-
 <!-- ==========================================
 THICK-BOX DIALOGS: -->
 <?php

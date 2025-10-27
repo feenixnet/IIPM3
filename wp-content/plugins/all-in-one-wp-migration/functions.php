@@ -1693,6 +1693,7 @@ function ai1wm_tell( $handle ) {
  */
 function ai1wm_putcsv( $handle, $fields, $separator = ',', $enclosure = '"', $escape = '\\' ) {
 	if ( PHP_MAJOR_VERSION >= 7 ) {
+		// phpcs:ignore PHPCompatibility.FunctionUse.NewFunctionParameters
 		$write_result = @fputcsv( $handle, $fields, $separator, $enclosure, $escape );
 	} else {
 		$write_result = @fputcsv( $handle, $fields, $separator, $enclosure );
@@ -1962,6 +1963,7 @@ function ai1wm_setup_environment() {
 	@ini_set( 'pcre.backtrack_limit', PHP_INT_MAX );
 
 	// Set binary safe encoding
+	// phpcs:ignore PHPCompatibility.IniDirectives.RemovedIniDirectives
 	if ( @function_exists( 'mb_internal_encoding' ) && ( @ini_get( 'mbstring.func_overload' ) & 2 ) ) {
 		@mb_internal_encoding( 'ISO-8859-1' );
 	}
@@ -2298,6 +2300,7 @@ function ai1wm_encrypt_string( $string, $key ) {
 		throw new Ai1wm_Not_Encryptable_Exception( esc_html__( 'Could not generate random bytes. The process cannot continue.', 'all-in-one-wp-migration' ) );
 	}
 
+	// phpcs:ignore PHPCompatibility.FunctionUse.NewFunctionParameters, PHPCompatibility.Constants.NewConstants
 	$encrypted_string = openssl_encrypt( $string, AI1WM_CIPHER_NAME, $key, OPENSSL_RAW_DATA, $iv );
 	if ( $encrypted_string === false ) {
 		throw new Ai1wm_Not_Encryptable_Exception( esc_html__( 'Could not encrypt data. The process cannot continue.', 'all-in-one-wp-migration' ) );
@@ -2335,6 +2338,7 @@ function ai1wm_decrypt_string( $encrypted_string, $key ) {
 	$key       = substr( sha1( $key, true ), 0, $iv_length );
 	$iv        = substr( $encrypted_string, 0, $iv_length );
 
+	// phpcs:ignore PHPCompatibility.Constants.NewConstants, PHPCompatibility.FunctionUse.NewFunctionParameters
 	$decrypted_string = openssl_decrypt( substr( $encrypted_string, $iv_length ), AI1WM_CIPHER_NAME, $key, OPENSSL_RAW_DATA, $iv );
 	if ( $decrypted_string === false ) {
 		throw new Ai1wm_Not_Decryptable_Exception( esc_html__( 'Could not decrypt data. The process cannot continue.', 'all-in-one-wp-migration' ) );
@@ -2362,7 +2366,7 @@ function ai1wm_is_decryption_password_valid( $encrypted_signature, $password ) {
 
 function ai1wm_populate_roles() {
 	if ( ! function_exists( 'populate_roles' ) && ! function_exists( 'populate_options' ) && ! function_exists( 'populate_network' ) ) {
-		require_once( ABSPATH . 'wp-admin/includes/schema.php' );
+		require_once ABSPATH . 'wp-admin/includes/schema.php';
 	}
 
 	if ( function_exists( 'populate_roles' ) ) {

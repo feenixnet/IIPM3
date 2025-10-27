@@ -1512,7 +1512,7 @@ function iipm_get_import_users() {
             'user_email' => $user->user_email,
             'membership_status' => $user->membership_status ?: 'pending',
             'last_login' => $user->last_login ? date('M j, Y g:i A', strtotime($user->last_login)) : null,
-            'organisation_name' => $user->organisation_name ?: 'No Organization'
+            'organisation_name' => $user->organisation_name ?: 'No Organisation'
         );
     }
     

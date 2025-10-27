@@ -52,15 +52,14 @@ use Duplicator\Utils\LinkManager;
                 </p>
                 <hr>
                 <p>
-                    <?php _e('Already purchased? Simply enter your license key below to enable <b>Duplicator PRO!</b>', 'duplicator'); ?></p>
+                    <?php _e('Already purchased? Connect to unlock <b>Duplicator PRO!</b>', 'duplicator'); ?></p>
                 <p>
-                    <input
-                       type="text"
-                       id="dup-settings-upgrade-license-key"
-                       placeholder="<?php echo esc_attr__('Paste license key here', 'duplicator'); ?>" value="">
-                       <button type="button" class="dup-btn dup-btn-md dup-btn-orange" id="dup-settings-connect-btn">
-                           <?php echo esc_html__('Connect to Duplicator Pro', 'duplicator'); ?>
-                       </button>
+                    <button type="button" class="dup-btn dup-btn-md dup-btn-orange" id="dup-settings-connect-btn">
+                        <?php echo esc_html__('Connect to Duplicator Pro', 'duplicator'); ?>
+                    </button>
+                </p>
+                <p>
+                    <small><?php esc_html_e('This opens connect.duplicator.com where you\'ll securely connect to Duplicator Pro.', 'duplicator'); ?></small>
                 </p>
             </div>
         </td>

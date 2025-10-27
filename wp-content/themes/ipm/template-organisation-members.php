@@ -70,7 +70,7 @@ get_header();
                     <?php echo esc_html($organisation->name); ?> - Members
                 </h1>
                 <p style="color: rgba(255,255,255,0.9); font-size: 1.1rem;">
-                    Manage members and import/export data for this organization
+                    Manage members and import/export data for this organisation
                 </p>
             </div>
         </div>
@@ -165,8 +165,8 @@ get_header();
             <?php elseif ($active_tab === 'bulk-import'): ?>
                 <!-- Bulk Import Tab -->
                 <div class="bulk-import-content">
-                    <h3 style="margin-bottom: 20px; color: #374151;">Import Members from Other Organizations</h3>
-                    <p style="margin-bottom: 30px; color: #6b7280;">Search and import members from other organizations to this organization.</p>
+                    <h3 style="margin-bottom: 20px; color: #374151;">Import Members from Other Organisations</h3>
+                    <p style="margin-bottom: 30px; color: #6b7280;">Search and import members from other organisations to this organisation.</p>
                     
                     <!-- Search and Filter Section -->
                     <div class="search-filter-section" style="margin-bottom: 30px; display: flex; gap: 20px; align-items: center; flex-wrap: wrap;">
@@ -188,7 +188,7 @@ get_header();
                             </select>
                             
                             <select id="import-org-filter" style="padding: 12px 16px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 14px;">
-                                <option value="">All Organizations</option>
+                                <option value="">All Organisations</option>
                                 <!-- Organizations will be loaded here -->
                             </select>
                             
@@ -208,7 +208,7 @@ get_header();
                                     </th>
                                     <th style="padding: 16px; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Name</th>
                                     <th style="padding: 16px; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Email</th>
-                                    <th style="padding: 16px; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Current Organization</th>
+                                    <th style="padding: 16px; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Current Organisation</th>
                                     <th style="padding: 16px; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Status</th>
                                     <th style="padding: 16px; text-align: center; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb; width: 100px;">Actions</th>
                                 </tr>
@@ -238,7 +238,7 @@ get_header();
                 <!-- Export Tab -->
                 <div class="export-content">
                     <h3 style="margin-bottom: 20px; color: #374151;">Export Members Data</h3>
-                    <p style="margin-bottom: 30px; color: #6b7280;">Download member data for this organization as a CSV file.</p>
+                    <p style="margin-bottom: 30px; color: #6b7280;">Download member data for this organisation as a CSV file.</p>
                     
                     <!-- Export Options -->
                     <div class="export-options" style="background: #f8fafc; padding: 30px; border-radius: 12px; margin-bottom: 30px;">
@@ -827,7 +827,7 @@ jQuery(document).ready(function($) {
             },
             success: function(response) {
                 if (response.success) {
-                    let html = '<option value="">All Organizations</option>';
+                    let html = '<option value="">All Organisations</option>';
                     response.data.forEach(function(org) {
                         html += `<option value="${org.id}">${org.name}</option>`;
                     });

@@ -108,11 +108,11 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 				}
 				
 				/* Login button hover effect */
-				.header .login:hover {
+				/* .header .login:hover {
 					background: #5a5a5a !important;
 					transform: translateY(-1px);
 					box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-				}
+				} */
 				
 				/* Header Auth Buttons Styles - High Specificity */
 				.header .header__inner .header__auth-buttons {
@@ -134,7 +134,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 					white-space: nowrap !important;
 					min-width: 100px !important;
 					text-decoration: none !important;
-					font-size: 14px !important;
+					font-size: 20px !important;
 					font-weight: 500 !important;
 					color: white !important;
 					margin: 0 !important;
@@ -144,7 +144,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 					height: auto !important;
 				}
 				
-				.header .header__inner .header__auth-buttons .login {
+				/* .header .header__inner .header__auth-buttons .login {
 					background: transparent !important;
 					border: 1px solid rgba(255, 255, 255, 0.3) !important;
 				}
@@ -152,7 +152,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 				.header .header__inner .header__auth-buttons .login:hover {
 					background: rgba(255, 255, 255, 0.1) !important;
 					border-color: rgba(255, 255, 255, 0.5) !important;
-				}
+				} */
 				
 				.header .header__inner .header__auth-buttons .register {
 					background: #ff6b35 !important;
@@ -705,56 +705,11 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                 <?php else: ?>
                     <!-- Show only login button for non-logged in users -->
                     <div class="header__auth-buttons">
-						<a href="<?php echo home_url('/cpd-course-request/'); ?>" class="login" style="
-							display: inline-flex;
-							align-items: center;
-							gap: 8px;
-							padding: 8px 16px;
-							background: #4a4a4a;
-							color: white;
-							text-decoration: none;
-							border-radius: 8px;
-							border: 1px solid #6b6b6b;
-							font-weight: 500;
-							font-size: 14px;
-							transition: all 0.3s ease;
-						">
-							<div style="
-								width: 20px;
-								height: 20px;
-								display: flex;
-								align-items: center;
-								justify-content: center;
-							">
-								<i class="fa fa-book"></i>
-							</div>
-							Request a course
+						<a href=<?php echo home_url('/login/'); ?> class="login text text-white flex align-center w-max">Member Login <svg width="37" height="37" viewBox="0 0 37 37" fill="none" xmlns="http://www.w3.org/2000/svg">	
+							<path fill-rule="evenodd" clip-rule="evenodd" d="M18.5 15.4166C19.1074 15.4166 19.7088 15.297 20.2699 15.0646C20.831 14.8322 21.3409 14.4915 21.7704 14.062C22.1998 13.6325 22.5405 13.1227 22.7729 12.5616C23.0054 12.0004 23.125 11.399 23.125 10.7916C23.125 10.1843 23.0054 9.58287 22.7729 9.02174C22.5405 8.4606 22.1998 7.95075 21.7704 7.52128C21.3409 7.09181 20.831 6.75113 20.2699 6.5187C19.7088 6.28628 19.1074 6.16665 18.5 6.16665C17.2734 6.16665 16.097 6.65392 15.2296 7.52128C14.3623 8.38863 13.875 9.56502 13.875 10.7916C13.875 12.0183 14.3623 13.1947 15.2296 14.062C16.097 14.9294 17.2734 15.4166 18.5 15.4166ZM18.5 18.5C20.5444 18.5 22.505 17.6879 23.9506 16.2423C25.3962 14.7967 26.2083 12.836 26.2083 10.7916C26.2083 8.74727 25.3962 6.78662 23.9506 5.34103C22.505 3.89544 20.5444 3.08331 18.5 3.08331C16.4556 3.08331 14.495 3.89544 13.0494 5.34103C11.6038 6.78662 10.7917 8.74727 10.7917 10.7916C10.7917 12.836 11.6038 14.7967 13.0494 16.2423C14.495 17.6879 16.4556 18.5 18.5 18.5ZM7.15179 23.8156C8.917 21.4754 11.5764 20.0416 14.9757 20.0416H22.0243C25.4236 20.0416 28.083 21.4754 29.8482 23.8156C31.5764 26.1081 32.375 29.1621 32.375 32.375C32.375 32.7839 32.2126 33.176 31.9235 33.4651C31.6343 33.7542 31.2422 33.9166 30.8333 33.9166C30.4245 33.9166 30.0323 33.7542 29.7432 33.4651C29.4541 33.176 29.2917 32.7839 29.2917 32.375C29.2917 29.6277 28.6041 27.2875 27.3877 25.6718C26.2083 24.1086 24.4616 23.125 22.0227 23.125H14.9773C12.5384 23.125 10.7917 24.1086 9.61229 25.6718C8.39438 27.2875 7.70833 29.6277 7.70833 32.375C7.70833 32.7839 7.54591 33.176 7.25679 33.4651C6.96767 33.7542 6.57554 33.9166 6.16667 33.9166C5.75779 33.9166 5.36566 33.7542 5.07654 33.4651C4.78743 33.176 4.625 32.7839 4.625 32.375C4.625 29.1621 5.42358 26.1081 7.15179 23.8156Z" fill="white"></path>
+							<path fill-rule="evenodd" clip-rule="evenodd" d="M4.625 32.375C4.625 31.9661 4.78743 31.574 5.07654 31.2849C5.36566 30.9957 5.75779 30.8333 6.16667 30.8333H30.7748C31.1836 30.8333 31.5758 30.9957 31.8649 31.2849C32.154 31.574 32.3164 31.9661 32.3164 32.375C32.3164 32.7839 32.154 33.176 31.8649 33.4651C31.5758 33.7542 31.1836 33.9166 30.7748 33.9166H6.16667C5.75779 33.9166 5.36566 33.7542 5.07654 33.4651C4.78743 33.176 4.625 32.7839 4.625 32.375Z" fill="white"></path>
+							</svg>
 						</a>
-                        <a href="<?php echo home_url('/login/'); ?>" class="login" style="
-                            display: inline-flex;
-                            align-items: center;
-                            gap: 8px;
-                            padding: 8px 16px;
-                            background: #4a4a4a;
-                            color: white;
-                            text-decoration: none;
-                            border-radius: 8px;
-                            border: 1px solid #6b6b6b;
-                            font-weight: 500;
-                            font-size: 14px;
-                            transition: all 0.3s ease;
-                        ">
-                            <div style="
-                                width: 20px;
-                                height: 20px;
-								display: flex;
-								align-items: center;
-								justify-content: center;
-                            ">
-								<i class="fa fa-sign-in"></i>
-							</div>
-                            Login
-                        </a>
                     </div>
                 <?php endif; ?>
 
@@ -768,11 +723,6 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                                 'menu_class' => '',
                                 'depth' => 1,
                             ));
-                            
-                            // Add "Request a course" for non-logged-in users and non-admins
-                            if (!is_user_logged_in() || (is_user_logged_in() && !current_user_can('administrator'))) {
-                                echo '<li class="request-course-item"><a href="' . home_url('/cpd-course-request/') . '">Request a course</a></li>';
-                            }
                             ?>
                         </div>
                         <div>
@@ -813,55 +763,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                             <?php else: ?>
 								<!-- Show only login button for non-logged in users -->
 								<div class="header__auth-buttons">
-									<a href="<?php echo home_url('/cpd-course-request/'); ?>" style="
-										display: inline-flex;
-										align-items: center;
-										gap: 8px;
-										padding: 8px 16px;
-										background: #4a4a4a;
-										color: white;
-										text-decoration: none;
-										border-radius: 8px;
-										border: 1px solid #6b6b6b;
-										font-weight: 500;
-										font-size: 14px;
-										transition: all 0.3s ease;
-									">
-										<div style="
-											width: 20px;
-											height: 20px;
-											display: flex;
-											align-items: center;
-											justify-content: center;
-										">
-											<i class="fa fa-book"></i>
-										</div>
-										Request a course
-									</a>
-									<a href="<?php echo home_url('/login/'); ?>" class="login" style="
-										display: inline-flex;
-										align-items: center;
-										gap: 8px;
-										padding: 8px 16px;
-										background: #4a4a4a;
-										color: white;
-										text-decoration: none;
-										border-radius: 8px;
-										border: 1px solid #6b6b6b;
-										font-weight: 500;
-										font-size: 14px;
-										transition: all 0.3s ease;
-									">
-										<div style="
-											width: 20px;
-											height: 20px;
-											display: flex;
-											align-items: center;
-											justify-content: center;
-										">
-											<i class="fa fa-sign-in"></i>
-										</div>
-										Login
+									<a href=<?php echo home_url('/login/'); ?> class="login text text-white flex align-center w-max">Member Login <svg width="37" height="37" viewBox="0 0 37 37" fill="none" xmlns="http://www.w3.org/2000/svg">	
+										<path fill-rule="evenodd" clip-rule="evenodd" d="M18.5 15.4166C19.1074 15.4166 19.7088 15.297 20.2699 15.0646C20.831 14.8322 21.3409 14.4915 21.7704 14.062C22.1998 13.6325 22.5405 13.1227 22.7729 12.5616C23.0054 12.0004 23.125 11.399 23.125 10.7916C23.125 10.1843 23.0054 9.58287 22.7729 9.02174C22.5405 8.4606 22.1998 7.95075 21.7704 7.52128C21.3409 7.09181 20.831 6.75113 20.2699 6.5187C19.7088 6.28628 19.1074 6.16665 18.5 6.16665C17.2734 6.16665 16.097 6.65392 15.2296 7.52128C14.3623 8.38863 13.875 9.56502 13.875 10.7916C13.875 12.0183 14.3623 13.1947 15.2296 14.062C16.097 14.9294 17.2734 15.4166 18.5 15.4166ZM18.5 18.5C20.5444 18.5 22.505 17.6879 23.9506 16.2423C25.3962 14.7967 26.2083 12.836 26.2083 10.7916C26.2083 8.74727 25.3962 6.78662 23.9506 5.34103C22.505 3.89544 20.5444 3.08331 18.5 3.08331C16.4556 3.08331 14.495 3.89544 13.0494 5.34103C11.6038 6.78662 10.7917 8.74727 10.7917 10.7916C10.7917 12.836 11.6038 14.7967 13.0494 16.2423C14.495 17.6879 16.4556 18.5 18.5 18.5ZM7.15179 23.8156C8.917 21.4754 11.5764 20.0416 14.9757 20.0416H22.0243C25.4236 20.0416 28.083 21.4754 29.8482 23.8156C31.5764 26.1081 32.375 29.1621 32.375 32.375C32.375 32.7839 32.2126 33.176 31.9235 33.4651C31.6343 33.7542 31.2422 33.9166 30.8333 33.9166C30.4245 33.9166 30.0323 33.7542 29.7432 33.4651C29.4541 33.176 29.2917 32.7839 29.2917 32.375C29.2917 29.6277 28.6041 27.2875 27.3877 25.6718C26.2083 24.1086 24.4616 23.125 22.0227 23.125H14.9773C12.5384 23.125 10.7917 24.1086 9.61229 25.6718C8.39438 27.2875 7.70833 29.6277 7.70833 32.375C7.70833 32.7839 7.54591 33.176 7.25679 33.4651C6.96767 33.7542 6.57554 33.9166 6.16667 33.9166C5.75779 33.9166 5.36566 33.7542 5.07654 33.4651C4.78743 33.176 4.625 32.7839 4.625 32.375C4.625 29.1621 5.42358 26.1081 7.15179 23.8156Z" fill="white"></path>
+										<path fill-rule="evenodd" clip-rule="evenodd" d="M4.625 32.375C4.625 31.9661 4.78743 31.574 5.07654 31.2849C5.36566 30.9957 5.75779 30.8333 6.16667 30.8333H30.7748C31.1836 30.8333 31.5758 30.9957 31.8649 31.2849C32.154 31.574 32.3164 31.9661 32.3164 32.375C32.3164 32.7839 32.154 33.176 31.8649 33.4651C31.5758 33.7542 31.1836 33.9166 30.7748 33.9166H6.16667C5.75779 33.9166 5.36566 33.7542 5.07654 33.4651C4.78743 33.176 4.625 32.7839 4.625 32.375Z" fill="white"></path>
+										</svg>
 									</a>
 								</div>
                             <?php endif; ?>

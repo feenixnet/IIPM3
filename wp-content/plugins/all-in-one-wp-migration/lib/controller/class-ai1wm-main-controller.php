@@ -1118,14 +1118,6 @@ class Ai1wm_Main_Controller {
 			'ai1wm_updater',
 			Ai1wm_Template::asset_link( 'css/updater.min.css' )
 		);
-
-		ai1wm_register_script(
-			'ai1wm_updater',
-			Ai1wm_Template::asset_link( 'javascript/updater.min.js' ),
-			array( 'ai1wm_servmask' ),
-			AI1WM_VERSION,
-			false
-		);
 	}
 
 	/**
@@ -1249,9 +1241,8 @@ class Ai1wm_Main_Controller {
 			return;
 		}
 
-		// Load scripts and styles
+		// Load styles
 		ai1wm_enqueue_style( 'ai1wm_updater' );
-		ai1wm_enqueue_script( 'ai1wm_updater' );
 	}
 
 	/**

@@ -121,6 +121,7 @@ get_header();
         <?php endif; ?>
         
         <!-- Statistics Blocks Section -->
+        <?php if ($is_submitted): ?>
         <div class="statistics-blocks-section">
             <?php
             // Get CPD statistics
@@ -151,12 +152,25 @@ get_header();
                         <div class="stat-number"><?php echo number_format($total_cpd_hours, 1); ?></div>
                         <div class="stat-label">CPD Hours</div>
                         <div class="stat-description">Total professional development hours completed</div>
+                        <?php if ($leave_hours_deducted > 0): ?>
+                            <div class="stat-subtitle">(<?php echo number_format(($cpd_stats["target_minutes"] / 60), 1); ?> - <?php echo number_format($leave_hours_deducted, 1); ?> = <?php echo number_format(($cpd_stats["target_minutes"] / 60) - $leave_hours_deducted, 1); ?>)</div>
+                        <?php endif; ?>
                     </div>
                     <div class="stat-progress">
                         <div class="progress-bar">
-                            <div class="progress-fill" style="width: <?php echo min(100, ($total_cpd_hours / 8) * 100); ?>%"></div>
+                            <div class="progress-fill" style="width: <?php echo min(100, ($total_cpd_hours / ($cpd_stats["target_minutes"] / 60 )) * 100); ?>%"></div>
                         </div>
-                        <div class="progress-text"><?php echo number_format(($total_cpd_hours / 8) * 100, 1); ?>% of target</div>
+                        <div class="progress-text"><?php echo number_format(($total_cpd_hours / ($cpd_stats["target_minutes"] / 60 )) * 100, 1); ?>% of target</div>
+                        <div class="progress-details">
+                            <div class="detail-item">
+                                <span class="detail-label">Leave Days:</span>
+                                <span class="detail-value"><?php echo $leave_duration_days; ?> days</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Membership Factor:</span>
+                                <span class="detail-value"><?php echo $membership_constant; ?></span>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 
@@ -182,29 +196,37 @@ get_header();
                     </div>
                 </div>
                 
-                <!-- Leave Requests Block -->
-                <div class="stat-block leave-requests">
+                <!-- Subscription Status Block -->
+                <div class="stat-block subscription-status">
                     <div class="stat-icon">
-                        <i class="fas fa-calendar-times" style="margin-right: 0px; color: white;"></i>
+                        <i class="fas fa-credit-card" style="margin-right: 0px; color: white;"></i>
                     </div>
                     <div class="stat-content">
-                        <div class="stat-number"><?php echo number_format($leave_hours_deducted, 1); ?></div>
-                        <div class="stat-label">Leave Hours</div>
-                        <div class="stat-description">CPD hours deducted due to approved leave</div>
+                        <?php
+                        $current_month = date('n'); // Current month number (1-12)
+                        $month_names = ['', 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+                        $current_month_name = $month_names[$current_month];
+                        ?>
+                        <div class="stat-number" style="font-size: 2.5rem;"><?php echo $member_status === 'active' ? 'Active' : 'Inactive'; ?></div>
+                        <div class="stat-label">Subscription Status</div>
+                        <div class="stat-description">Membership status for <?php echo $current_month_name . ' ' . date('Y'); ?></div>
                     </div>
-                    <div class="stat-details">
+                    <div class="stat-details" style="margin-top: 10px;">
                         <div class="detail-item">
-                            <span class="detail-label">Leave Days:</span>
-                            <span class="detail-value"><?php echo $leave_duration_days; ?> days</span>
+                            <span class="detail-label">Status:</span>
+                            <span class="detail-value <?php echo $member_status === 'active' ? 'status-active' : 'status-inactive'; ?>">
+                                <?php echo ucfirst($member_status); ?>
+                            </span>
                         </div>
                         <div class="detail-item">
-                            <span class="detail-label">Membership Factor:</span>
-                            <span class="detail-value"><?php echo $membership_constant; ?></span>
+                            <span class="detail-label">Last Updated:</span>
+                            <span class="detail-value"><?php echo date('M d, Y'); ?></span>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
+        <?php endif; ?>
         
         <!-- Submission Status Section -->
         <?php if ($is_submitted): ?>
@@ -2077,8 +2099,8 @@ get_header();
         background: linear-gradient(90deg, #3b82f6, #1d4ed8);
     }
 
-    .stat-block.leave-requests::before {
-        background: linear-gradient(90deg, #f59e0b, #d97706);
+    .stat-block.subscription-status::before {
+        background: linear-gradient(90deg, #8b5a96, #6b4c93);
     }
 
     .stat-icon {
@@ -2101,8 +2123,8 @@ get_header();
         background: linear-gradient(135deg, #3b82f6, #1d4ed8);
     }
 
-    .stat-block.leave-requests .stat-icon {
-        background: linear-gradient(135deg, #f59e0b, #d97706);
+    .stat-block.subscription-status .stat-icon {
+        background: linear-gradient(135deg, #8b5a96, #6b4c93);
     }
 
     .stat-content {
@@ -2218,6 +2240,32 @@ get_header();
         background: #fffbeb;
         padding: 2px 8px;
         border-radius: 12px;
+    }
+
+    /* CPD Hours Subtitle */
+    .stat-subtitle {
+        font-size: 0.85rem;
+        color: #6b7280;
+        margin-top: 8px;
+    }
+
+    /* Progress Details (for Leave Days and Membership Factor) */
+    .progress-details {
+        margin-top: 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    /* Status Active/Inactive Colors */
+    .status-active {
+        color: #10b981 !important;
+        background: #d1fae5 !important;
+    }
+
+    .status-inactive {
+        color: #ef4444 !important;
+        background: #fee2e2 !important;
     }
 
     /* Responsive Design */

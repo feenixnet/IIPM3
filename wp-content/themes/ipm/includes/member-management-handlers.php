@@ -249,7 +249,7 @@ function iipm_get_user_details() {
         ));
         
         if ($current_org_id != $target_org_id) {
-            wp_send_json_error('You can only edit users from your organization');
+            wp_send_json_error('You can only edit users from your organisation');
             return;
         }
     }
@@ -333,7 +333,7 @@ function iipm_update_user() {
         ));
         
         if ($current_org_id != $target_org_id) {
-            wp_send_json_error('You can only edit users from your organization');
+            wp_send_json_error('You can only edit users from your organisation');
             return;
         }
         
@@ -570,7 +570,7 @@ function iipm_delete_user() {
         ));
         
         if ($current_org_id != $target_org_id) {
-            wp_send_json_error('You can only delete users from your organization');
+            wp_send_json_error('You can only delete users from your organisation');
             return;
         }
     }

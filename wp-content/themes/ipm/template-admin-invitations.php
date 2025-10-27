@@ -46,7 +46,7 @@ get_header();
                 </h1>
                 <p class="hero-subtitle">
                     <?php if ($is_org_admin && !$is_site_admin): ?>
-                        Manage member invitations for your organization
+                        Manage member invitations for your organisation
                     <?php else: ?>
                         Manage member invitations and registrations
                     <?php endif; ?>
@@ -78,7 +78,7 @@ get_header();
                         <label for="type">Invitation Type *</label>
                         <select name="type" id="type" required>
                             <option value="individual">Individual Member</option>
-                            <option value="bulk">Organization Member</option>
+                            <option value="bulk">organisation Member</option>
                         </select>
                     </div>
                     
@@ -86,20 +86,20 @@ get_header();
                         <!-- Corporate admin - auto-set organisation -->
                         <input type="hidden" name="organisation_id" value="<?php echo $user_organisation->id; ?>">
                         <div class="form-group">
-                            <label>Organization</label>
+                            <label>Organisation</label>
                             <div class="readonly-field">
                                 <span class="organisation-badge">
                                     🏢 <?php echo esc_html($user_organisation->name); ?>
                                 </span>
-                                <small class="field-note">Invitations will be sent for your organization</small>
+                                <small class="field-note">Invitations will be sent for your organisation</small>
                             </div>
                         </div>
                     <?php else: ?>
                         <!-- Site admin - can select organisation -->
                         <div class="form-group organisation-field" style="display:none;">
-                            <label for="organisation_id">Organization</label>
+                            <label for="organisation_id">Organisation</label>
                             <select name="organisation_id" id="organisation_id">
-                                <option value="">Select Organization</option>
+                                <option value="">Select Organisation</option>
                                 <?php
                                 global $wpdb;
                                 $organisations = $wpdb->get_results("SELECT id, name FROM {$wpdb->prefix}test_iipm_organisations WHERE is_active = 1 ORDER BY name");
@@ -132,7 +132,7 @@ get_header();
                                 <th>Email</th>
                                 <th>Type</th>
                                 <?php if ($is_site_admin): ?>
-                                    <th>Organization</th>
+                                    <th>Organisation</th>
                                 <?php endif; ?>
                                 <th>Status</th>
                                 <th>Sent Date</th>
@@ -220,11 +220,11 @@ jQuery(document).ready(function($) {
     $('#send-invitation-form').submit(function(e) {
         e.preventDefault();
         
-        // Validate organization selection for bulk invitations
+        // Validate organisation selection for bulk invitations
         if ($('#type').val() === 'bulk' && !isOrgAdmin) {
             var selectedOrg = $('#organisation_id').val();
             if (!selectedOrg) {
-                $('#invitation-result').html('<div class="error">Error: Please select an organization for organization member invitations.</div>').show();
+                $('#invitation-result').html('<div class="error">Error: Please select an organisation for organisation member invitations.</div>').show();
                 return false;
             }
         }

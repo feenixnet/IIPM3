@@ -85,14 +85,14 @@ get_header();
                             </div>
                         </div>
 
-                        <!-- <div class="filter-group">
+                        <div class="filter-group">
                             <label>Date Range</label>
                             <div class="date-range">
                                 <input type="date" id="date-from" placeholder="From">
                                 <span class="date-separator">to</span>
                                 <input type="date" id="date-to" placeholder="To">
                             </div>
-                        </div> -->
+                        </div>
 
                         <div class="filter-group">
                             <label>Category</label>
@@ -932,6 +932,8 @@ get_header();
         // Get DOM elements
         const titleSearch = document.getElementById('title-search');
         const liaCodeSearch = document.getElementById('lia-code-search');
+        const dateFrom = document.getElementById('date-from');
+        const dateTo = document.getElementById('date-to');
         const categoryFilters = document.getElementById('category-filters');
         const providerSelect = document.getElementById('provider-select');
         const myCoursesFilter = document.getElementById('my-courses-filter');
@@ -973,6 +975,8 @@ get_header();
             // Search inputs
             if (titleSearch) titleSearch.addEventListener('input', debounce(filterCourses, 300));
             if (liaCodeSearch) liaCodeSearch.addEventListener('input', debounce(filterCourses, 300));
+            if (dateFrom) dateFrom.addEventListener('change', filterCourses);
+            if (dateTo) dateTo.addEventListener('change', filterCourses);
             if (providerSelect) providerSelect.addEventListener('change', filterCourses);
             if (myCoursesFilter) myCoursesFilter.addEventListener('change', filterCourses);
             
@@ -1007,7 +1011,12 @@ get_header();
             if (filters.lia_code_search) formData.append('lia_code_search', filters.lia_code_search);
             if (filters.date_from) formData.append('date_from', filters.date_from);
             if (filters.date_to) formData.append('date_to', filters.date_to);
-            if (filters.categories) formData.append('categories', filters.categories);
+            if (filters.categories && filters.categories.length > 0) {
+                // Send categories as array so backend can handle it
+                filters.categories.forEach(category => {
+                    formData.append('categories[]', category);
+                });
+            }
             if (filters.providers) formData.append('providers', filters.providers);
             if (filters.my_courses) formData.append('my_courses', filters.my_courses);
             if (filters.page) formData.append('page', filters.page);
@@ -1051,13 +1060,30 @@ get_header();
             
             let html = '';
             courses.forEach(course => {
-                // Format date
-                let courseDate = new Date();
+                // Format date from DD-MM-YYYY to "Month Day, Year" (e.g., "Oct 1, 2019")
+                let courseDateFormatted = 'N/A';
                 if (course.course_date) {
                     try {
-                        courseDate = new Date(course.course_date);
+                        // Parse DD-MM-YYYY format
+                        const dateParts = course.course_date.split('-');
+                        if (dateParts.length === 3) {
+                            const day = parseInt(dateParts[0]);
+                            const month = parseInt(dateParts[1]) - 1; // Month is 0-indexed in JavaScript
+                            const year = parseInt(dateParts[2]);
+                            
+                            // Create date object and format
+                            const date = new Date(year, month, day);
+                            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                            courseDateFormatted = `${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
+                        } else {
+                            // Fallback: try to parse as regular date string
+                            const date = new Date(course.course_date);
+                            if (!isNaN(date.getTime())) {
+                                courseDateFormatted = date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+                            }
+                        }
                     } catch (e) {
-                        courseDate = new Date();
+                        courseDateFormatted = 'Invalid Date';
                     }
                 }
                 
@@ -1123,7 +1149,7 @@ get_header();
                                 </div>
                                 <div class="meta-item">
                                     <span class="meta-label">Date:</span>
-                                    <span class="meta-value">${courseDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                                    <span class="meta-value">${courseDateFormatted}</span>
                                 </div>
                                 <div class="meta-item">
                                     <span class="meta-label">Duration:</span>
@@ -1274,8 +1300,6 @@ get_header();
                         setTimeout(() => {
                             if(userIdForCourses && parseInt(userIdForCourses) != parseInt(<?php echo get_current_user_id(); ?>)) {
                                 window.location.href = '<?php echo home_url('/member-details/'); ?>' + '?id=' + userIdForCourses;
-                            } else {
-                                window.location.href = '<?php echo home_url('/member-portal/'); ?>';
                             }
                         }, 1000);
                         
@@ -1492,8 +1516,17 @@ get_header();
                     console.error('Error loading courses in learning path:', error);
                 },
                 complete: function() {
+                    // Preserve all current filters when reloading
                     loadCourses({
-                        categories: Array.from(categoryFilters.querySelectorAll('input[name="category"]:checked')).map(cb => cb.value)
+                        title_search: titleSearch ? titleSearch.value : '',
+                        lia_code_search: liaCodeSearch ? liaCodeSearch.value : '',
+                        date_from: dateFrom ? dateFrom.value : '',
+                        date_to: dateTo ? dateTo.value : '',
+                        categories: Array.from(categoryFilters.querySelectorAll('input[name="category"]:checked')).map(cb => cb.value),
+                        providers: providerSelect ? providerSelect.value : '',
+                        my_courses: myCoursesFilter ? myCoursesFilter.checked : false,
+                        page: currentPage,  // Keep current page
+                        per_page: coursesPerPage
                     });
                 }
             });
@@ -1596,8 +1629,8 @@ get_header();
             const filters = {
                 title_search: titleSearch ? titleSearch.value : '',
                 lia_code_search: liaCodeSearch ? liaCodeSearch.value : '',
-                date_from: '',
-                date_to: '',
+                date_from: dateFrom ? dateFrom.value : '',
+                date_to: dateTo ? dateTo.value : '',
                 categories: Array.from(categoryFilters.querySelectorAll('input[name="category"]:checked')).map(cb => cb.value),
                 providers: providerSelect ? providerSelect.value : '',
                 my_courses: myCoursesFilter ? myCoursesFilter.checked : false,
@@ -1614,6 +1647,8 @@ get_header();
         function clearFilters() {
             if (titleSearch) titleSearch.value = '';
             if (liaCodeSearch) liaCodeSearch.value = '';
+            if (dateFrom) dateFrom.value = '';
+            if (dateTo) dateTo.value = '';
             if (providerSelect) providerSelect.value = '';
             if (myCoursesFilter) myCoursesFilter.checked = false;
             
@@ -1758,8 +1793,8 @@ get_header();
             const filters = {
                 title_search: titleSearch ? titleSearch.value : '',
                 lia_code_search: liaCodeSearch ? liaCodeSearch.value : '',
-                date_from: '',
-                date_to: '',
+                date_from: dateFrom ? dateFrom.value : '',
+                date_to: dateTo ? dateTo.value : '',
                 categories: Array.from(categoryFilters.querySelectorAll('input[name="category"]:checked')).map(cb => cb.value),
                 providers: providerSelect ? providerSelect.value : '',
                 my_courses: myCoursesFilter ? myCoursesFilter.checked : false,

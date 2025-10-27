@@ -26,7 +26,7 @@ Whether you're looking to arrange important documents for your team, share files
 
 ### Download Manager Index 
 
-Our WordPress Download Manager plugin makes file organization simple by creating an intuitive index page that categorizes downloads based on your preferences. 
+Our WordPress Download Manager plugin makes file organisation simple by creating an intuitive index page that categorizes downloads based on your preferences. 
 
 This enables users to quickly and easily locate the files they need, without having to dig through folders or search for specific filenames. 
 

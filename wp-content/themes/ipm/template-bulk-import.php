@@ -77,7 +77,7 @@ get_header();
                                     <li><strong>first_name</strong> - Member's first name</li>
                                     <li><strong>last_name</strong> - Member's last name</li>
                                     <li><strong>email</strong> - Member's email address</li>
-                                    <li><strong>member_type</strong> - Set to "organization"</li>
+                                    <li><strong>member_type</strong> - Set to "organisation"</li>
                                     <li><strong>membership_level</strong> - Set to "membership level id"</li>
                                 </ul>
                             </div>
@@ -144,20 +144,20 @@ get_header();
                             <!-- Corporate admin - auto-set organisation -->
                             <input type="hidden" name="organisation_id" value="<?php echo $user_organisation->id; ?>">
                             <div class="form-group">
-                                <label>Organization</label>
+                                <label>organisation</label>
                                 <div class="readonly-field">
                                     <span class="organisation-badge">
                                         🏢 <?php echo esc_html($user_organisation->name); ?>
                                     </span>
-                                    <small class="field-note">Members will be imported to your organization</small>
+                                    <small class="field-note">Members will be imported to your organisation</small>
                                 </div>
                             </div>
                         <?php else: ?>
                             <!-- Site admin - can select organisation -->
                             <div class="form-group">
-                                <label for="organisation_id">Select Organization *</label>
+                                <label for="organisation_id">Select organisation *</label>
                                 <select name="organisation_id" id="organisation_id" required>
-                                    <option value="">Choose organization</option>
+                                    <option value="">Choose organisation</option>
                                     <?php
                                     $organisations = $wpdb->get_results("SELECT id, name FROM {$wpdb->prefix}test_iipm_organisations WHERE is_active = 1 ORDER BY name");
                                     foreach ($organisations as $org) {
@@ -358,7 +358,7 @@ get_header();
                                 <th>Date</th>
                                 <th>Filename</th>
                                 <?php if ($is_site_admin): ?>
-                                    <th>Organization</th>
+                                    <th>organisation</th>
                                 <?php endif; ?>
                                 <th>Total</th>
                                 <th>Successful</th>
@@ -457,7 +457,7 @@ get_header();
 <div id="invitations-modal" class="modal" style="display:none;">
     <div class="modal-content">
         <div class="modal-header">
-            <h3>Organization Invitations</h3>
+            <h3>organisation Invitations</h3>
             <button class="modal-close">&times;</button>
         </div>
         <div class="modal-body">

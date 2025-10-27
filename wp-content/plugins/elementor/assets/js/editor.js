@@ -1,4 +1,3 @@
-/*! elementor - v3.32.0 - 08-09-2025 */
 /******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
@@ -15,7 +14,7 @@ var _interopRequireDefault = __webpack_require__(/*! @babel/runtime/helpers/inte
 Object.defineProperty(exports, "__esModule", ({
   value: true
 }));
-exports.stringToRemValues = exports.rgbToHex = exports.pxToRem = exports.isOneOf = exports.arrayToObjectByKey = exports.arrayToClassName = void 0;
+exports.stringToRemValues = exports.rgbToHex = exports.pxToRem = exports.isOneOf = exports.htmlDecodeTextContent = exports.arrayToObjectByKey = exports.arrayToClassName = void 0;
 var _typeof2 = _interopRequireDefault(__webpack_require__(/*! @babel/runtime/helpers/typeof */ "../node_modules/@babel/runtime/helpers/typeof.js"));
 var pxToRem = exports.pxToRem = function pxToRem(pixels) {
   if (!pixels) {
@@ -57,6 +56,10 @@ var arrayToObjectByKey = exports.arrayToObjectByKey = function arrayToObjectByKe
     return finalObject[item[key]] = item;
   });
   return finalObject;
+};
+var htmlDecodeTextContent = exports.htmlDecodeTextContent = function htmlDecodeTextContent(input) {
+  var doc = new DOMParser().parseFromString(input, 'text/html');
+  return doc.documentElement.textContent;
 };
 
 /***/ }),
@@ -11736,7 +11739,23 @@ TemplateLibraryTemplateCloudView = TemplateLibraryTemplateLocalView.extend({
     }
   },
   updatePreviewImgStyle: function updatePreviewImgStyle() {
-    this.ui.previewImg.css('object-fit', 'contain');
+    var _this = this;
+    var img = this.ui.previewImg[0];
+    if (!img) {
+      return;
+    }
+    var applyObjectFit = function applyObjectFit() {
+      var objectFit = img.naturalHeight > 2000 ? 'cover' : 'contain';
+      if ('cover' === objectFit) {
+        _this.ui.previewImg.css('object-fit', 'cover');
+        _this.ui.previewImg.css('object-position', 'top');
+      }
+    };
+    if (img.complete && img.naturalHeight > 0) {
+      applyObjectFit();
+    } else {
+      img.onload = applyObjectFit;
+    }
   },
   shouldGeneratePreview: function shouldGeneratePreview() {
     var view = elementor.templates.getViewSelection();
@@ -18894,7 +18913,7 @@ var Create = exports.Create = /*#__PURE__*/function (_$e$modules$editor$do) {
          * Acknowledge history of each created item, because we cannot pass the elements when they do not exist
          * in getHistory().
          */
-        if (_this.isHistoryActive()) {
+        if (_this.isHistoryActive() && _this.history) {
           $e.internal('document/history/log-sub-item', {
             container: container,
             type: 'sub-add',
@@ -18991,7 +19010,7 @@ var Delete = exports.Delete = /*#__PURE__*/function (_$e$modules$editor$do) {
         containers = _args$containers2 === void 0 ? [args.container] : _args$containers2;
       containers.forEach(function (container) {
         container = container.lookup();
-        if (_this.isHistoryActive()) {
+        if (_this.isHistoryActive() && _this.history) {
           $e.internal('document/history/log-sub-item', {
             container: container,
             type: 'sub-remove',
@@ -27691,8 +27710,10 @@ Object.defineProperty(exports, "__esModule", ({
   value: true
 }));
 exports["default"] = void 0;
+var _regenerator = _interopRequireDefault(__webpack_require__(/*! @babel/runtime/regenerator */ "../node_modules/@babel/runtime/regenerator/index.js"));
 var _slicedToArray2 = _interopRequireDefault(__webpack_require__(/*! @babel/runtime/helpers/slicedToArray */ "../node_modules/@babel/runtime/helpers/slicedToArray.js"));
 var _typeof2 = _interopRequireDefault(__webpack_require__(/*! @babel/runtime/helpers/typeof */ "../node_modules/@babel/runtime/helpers/typeof.js"));
+var _asyncToGenerator2 = _interopRequireDefault(__webpack_require__(/*! @babel/runtime/helpers/asyncToGenerator */ "../node_modules/@babel/runtime/helpers/asyncToGenerator.js"));
 var _classCallCheck2 = _interopRequireDefault(__webpack_require__(/*! @babel/runtime/helpers/classCallCheck */ "../node_modules/@babel/runtime/helpers/classCallCheck.js"));
 var _createClass2 = _interopRequireDefault(__webpack_require__(/*! @babel/runtime/helpers/createClass */ "../node_modules/@babel/runtime/helpers/createClass.js"));
 var _possibleConstructorReturn2 = _interopRequireDefault(__webpack_require__(/*! @babel/runtime/helpers/possibleConstructorReturn */ "../node_modules/@babel/runtime/helpers/possibleConstructorReturn.js"));
@@ -27735,7 +27756,7 @@ var elementTypes = _interopRequireWildcard(__webpack_require__(/*! ./elements/ty
 var hints = _interopRequireWildcard(__webpack_require__(/*! ./hints */ "../assets/dev/js/editor/hints/index.js"));
 var _elementBase = _interopRequireDefault(__webpack_require__(/*! ./elements/types/base/element-base */ "../assets/dev/js/editor/elements/types/base/element-base.js"));
 var _fontVariables = __webpack_require__(/*! ./utils/font-variables */ "../assets/dev/js/editor/utils/font-variables.js");
-function _interopRequireWildcard(e, t) { if ("function" == typeof WeakMap) var r = new WeakMap(), n = new WeakMap(); return (_interopRequireWildcard = function _interopRequireWildcard(e, t) { if (!t && e && e.__esModule) return e; var o, i, f = { __proto__: null, default: e }; if (null === e || "object" != _typeof3(e) && "function" != typeof e) return f; if (o = t ? n : r) { if (o.has(e)) return o.get(e); o.set(e, f); } for (var _t in e) "default" !== _t && {}.hasOwnProperty.call(e, _t) && ((i = (o = Object.defineProperty) && Object.getOwnPropertyDescriptor(e, _t)) && (i.get || i.set) ? o(f, _t, i) : f[_t] = e[_t]); return f; })(e, t); }
+function _interopRequireWildcard(e, t) { if ("function" == typeof WeakMap) var r = new WeakMap(), n = new WeakMap(); return (_interopRequireWildcard = function _interopRequireWildcard(e, t) { if (!t && e && e.__esModule) return e; var o, i, f = { __proto__: null, default: e }; if (null === e || "object" != _typeof3(e) && "function" != typeof e) return f; if (o = t ? n : r) { if (o.has(e)) return o.get(e); o.set(e, f); } for (var _t2 in e) "default" !== _t2 && {}.hasOwnProperty.call(e, _t2) && ((i = (o = Object.defineProperty) && Object.getOwnPropertyDescriptor(e, _t2)) && (i.get || i.set) ? o(f, _t2, i) : f[_t2] = e[_t2]); return f; })(e, t); }
 function ownKeys(e, r) { var t = Object.keys(e); if (Object.getOwnPropertySymbols) { var o = Object.getOwnPropertySymbols(e); r && (o = o.filter(function (r) { return Object.getOwnPropertyDescriptor(e, r).enumerable; })), t.push.apply(t, o); } return t; }
 function _objectSpread(e) { for (var r = 1; r < arguments.length; r++) { var t = null != arguments[r] ? arguments[r] : {}; r % 2 ? ownKeys(Object(t), !0).forEach(function (r) { (0, _defineProperty2.default)(e, r, t[r]); }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(e, Object.getOwnPropertyDescriptors(t)) : ownKeys(Object(t)).forEach(function (r) { Object.defineProperty(e, r, Object.getOwnPropertyDescriptor(t, r)); }); } return e; }
 function _callSuper(t, o, e) { return o = (0, _getPrototypeOf2.default)(o), (0, _possibleConstructorReturn2.default)(t, _isNativeReflectConstruct() ? Reflect.construct(o, e || [], (0, _getPrototypeOf2.default)(t).constructor) : o.apply(t, e)); }
@@ -28800,6 +28821,49 @@ var EditorBase = exports["default"] = /*#__PURE__*/function (_Marionette$Applica
       return ElementorConfig;
     }
   }, {
+    key: "checkAndLoadPostOnboardingTracking",
+    value: function () {
+      var _checkAndLoadPostOnboardingTracking = (0, _asyncToGenerator2.default)(/*#__PURE__*/_regenerator.default.mark(function _callee() {
+        var onboardingStartTime, siteStarterChoice, editorLoadTracked, hasOnboardingData, _yield$import, PostOnboardingTracking, _t;
+        return _regenerator.default.wrap(function (_context) {
+          while (1) switch (_context.prev = _context.next) {
+            case 0:
+              _context.prev = 0;
+              onboardingStartTime = localStorage.getItem('elementor_onboarding_start_time');
+              siteStarterChoice = localStorage.getItem('elementor_onboarding_s4_site_starter_choice');
+              editorLoadTracked = localStorage.getItem('elementor_onboarding_editor_load_tracked');
+              hasOnboardingData = onboardingStartTime || siteStarterChoice || editorLoadTracked;
+              if (hasOnboardingData) {
+                _context.next = 1;
+                break;
+              }
+              return _context.abrupt("return");
+            case 1:
+              _context.next = 2;
+              return Promise.all(/*! import() */[__webpack_require__.e("app_modules_onboarding_assets_js_utils_modules_post-onboarding-tracker_js"), __webpack_require__.e("assets_dev_js_editor_utils_post-onboarding-tracking_js")]).then(__webpack_require__.bind(__webpack_require__, /*! ./utils/post-onboarding-tracking */ "../assets/dev/js/editor/utils/post-onboarding-tracking.js"));
+            case 2:
+              _yield$import = _context.sent;
+              PostOnboardingTracking = _yield$import.default;
+              PostOnboardingTracking.checkAndSendEditorLoadedFromOnboarding();
+              _context.next = 4;
+              break;
+            case 3:
+              _context.prev = 3;
+              _t = _context["catch"](0);
+              // eslint-disable-next-line no-console
+              console.warn('Failed to load post-onboarding tracking:', _t);
+            case 4:
+            case "end":
+              return _context.stop();
+          }
+        }, _callee, null, [[0, 3]]);
+      }));
+      function checkAndLoadPostOnboardingTracking() {
+        return _checkAndLoadPostOnboardingTracking.apply(this, arguments);
+      }
+      return checkAndLoadPostOnboardingTracking;
+    }()
+  }, {
     key: "onStart",
     value: function onStart() {
       var _this8 = this;
@@ -28826,6 +28890,7 @@ var EditorBase = exports["default"] = /*#__PURE__*/function (_Marionette$Applica
       this.addBackgroundClickArea(document);
       this.addDeprecatedConfigProperties();
       _events.default.dispatch(elementorCommon.elements.$window, 'elementor/loaded', null, 'elementor:loaded');
+      this.checkAndLoadPostOnboardingTracking();
       $e.run('editor/documents/open', {
         id: this.config.initial_document.id
       }).then(function () {
@@ -31606,7 +31671,7 @@ BaseElementView = BaseContainer.extend({
     var _this$model;
     var anchor = event.target.closest('a');
     var hash = (anchor === null || anchor === void 0 ? void 0 : anchor.getAttribute('href')) || ((_this$model = this.model) === null || _this$model === void 0 || (_this$model = _this$model.get('settings')) === null || _this$model === void 0 || (_this$model = _this$model.get('link')) === null || _this$model === void 0 ? void 0 : _this$model.url) || '';
-    if (hash && hash.startsWith('#')) {
+    if (hash && hash.startsWith('#') && !hash.includes('elementor-action')) {
       var _event$target;
       var scrollTargetElem = (_event$target = event.target) === null || _event$target === void 0 ? void 0 : _event$target.ownerDocument.querySelector(hash);
       if (scrollTargetElem) {
@@ -35243,6 +35308,21 @@ var _default = exports["default"] = /*#__PURE__*/function (_Marionette$Composite
       this.collection = this.model.get('elements');
       this.childViewContainer = '.elementor-navigator__elements';
       this.listenTo(this.model, 'change', this.onModelChange).listenTo(this.model.get('settings'), 'change', this.onModelSettingsChange);
+      this.listenTo(this.model, 'change:editor_settings', this.onModelEditorSettingsChange);
+    }
+  }, {
+    key: "onModelEditorSettingsChange",
+    value: function onModelEditorSettingsChange(elementModel, editorSettings) {
+      var _elementModel$changed;
+      if (undefined !== ((_elementModel$changed = elementModel.changed) === null || _elementModel$changed === void 0 || (_elementModel$changed = _elementModel$changed.editor_settings) === null || _elementModel$changed === void 0 ? void 0 : _elementModel$changed.title)) {
+        this.ui.title.text(editorSettings.title);
+      }
+      window.dispatchEvent(new CustomEvent('elementor/element/update_editor_settings', {
+        detail: {
+          element: elementModel,
+          editorSettings: editorSettings
+        }
+      }));
     }
   }, {
     key: "getIndent",
@@ -37833,6 +37913,9 @@ PanelElementsLayoutView = Marionette.LayoutView.extend({
       });
     });
     if (elementor.config.integrationWidgets) {
+      var injectionPoint = elementsCollection.findIndex({
+        widgetType: 'image-carousel'
+      }) + 1;
       jQuery.each(elementor.config.integrationWidgets, function (index, widget) {
         elementsCollection.add({
           name: widget.name,
@@ -37843,10 +37926,7 @@ PanelElementsLayoutView = Marionette.LayoutView.extend({
           integration: true,
           keywords: widget.keywords || []
         }, {
-          // Inject after the image-carousel widget.
-          at: elementsCollection.findIndex({
-            widgetType: 'image-carousel'
-          }) + 1
+          at: injectionPoint
         });
       });
     }
@@ -37953,7 +38033,7 @@ PanelElementsLayoutView = Marionette.LayoutView.extend({
     if (!elementor.userCan('design') || !this.search /* Default panel is not elements */ || !this.search.currentView /* On global elements empty */) {
       return;
     }
-    this.search.currentView.ui.input.focus();
+    this.search.currentView.ui.input.trigger('focus');
   },
   onChildviewChildrenRender: function onChildviewChildrenRender() {
     elementor.getPanelView().updateScrollbar();
@@ -38179,7 +38259,7 @@ module.exports = Marionette.ItemView.extend({
     return false !== this.model.get('editable');
   },
   isIntegration: function isIntegration() {
-    return this.model.get('integration');
+    return !!this.model.get('integration');
   },
   onRender: function onRender() {
     var _this = this;
@@ -38204,13 +38284,14 @@ module.exports = Marionette.ItemView.extend({
   onMouseDown: function onMouseDown() {
     var title = this.model.get('title'),
       widgetType = this.model.get('name') || this.model.get('widgetType'),
-      isIntegration = this.isIntegration();
+      isIntegration = this.isIntegration(),
+      configPromotion = elementor.config.promotion;
     var promotion = configPromotion.elements,
       // eslint-disable-next-line @wordpress/valid-sprintf
       url = sprintf(promotion.action_button.url.toString(), widgetType);
     if (isIntegration) {
-      var _configPromotion;
-      promotion = (_configPromotion = configPromotion) === null || _configPromotion === void 0 || (_configPromotion = _configPromotion.integration) === null || _configPromotion === void 0 ? void 0 : _configPromotion[widgetType];
+      var _configPromotion$inte;
+      promotion = configPromotion === null || configPromotion === void 0 || (_configPromotion$inte = configPromotion.integration) === null || _configPromotion$inte === void 0 ? void 0 : _configPromotion$inte[widgetType];
       url = promotion.action_button.url.toString().replaceAll('&amp;', '&');
     }
     elementor.promotion.showDialog({
@@ -38231,7 +38312,7 @@ module.exports = Marionette.ItemView.extend({
     });
   },
   addToPage: function addToPage() {
-    var _this$model$attribute, _this$model$attribute2;
+    var _this$model$attribute, _this$model$attribute2, _elementorCommon;
     var selectedElements = this.getSelectedElements();
     var isMultiSelect = selectedElements.length > 1;
 
@@ -38309,13 +38390,26 @@ module.exports = Marionette.ItemView.extend({
     if ((_this$model$attribute = (_this$model$attribute2 = this.model.attributes) === null || _this$model$attribute2 === void 0 || (_this$model$attribute2 = _this$model$attribute2.custom) === null || _this$model$attribute2 === void 0 ? void 0 : _this$model$attribute2.isPreset) !== null && _this$model$attribute !== void 0 ? _this$model$attribute : false) {
       this.model.set('settings', this.model.get('custom').preset_settings);
     }
+    var modelData = this.model.toJSON();
     $e.run('preview/drop', {
       container: container,
       options: _objectSpread(_objectSpread({}, options), {}, {
         scrollIntoView: true
       }),
-      model: this.model.toJSON()
+      model: modelData
     });
+    if ((_elementorCommon = elementorCommon) !== null && _elementorCommon !== void 0 && (_elementorCommon = _elementorCommon.eventsManager) !== null && _elementorCommon !== void 0 && _elementorCommon.dispatchEvent) {
+      var _modelData$elType, _modelData$widgetType;
+      var elType = (_modelData$elType = modelData === null || modelData === void 0 ? void 0 : modelData.elType) !== null && _modelData$elType !== void 0 ? _modelData$elType : '';
+      var widgetType = (_modelData$widgetType = modelData === null || modelData === void 0 ? void 0 : modelData.widgetType) !== null && _modelData$widgetType !== void 0 ? _modelData$widgetType : '';
+      var elementName = 'widget' === elType ? widgetType : elType;
+      elementorCommon.eventsManager.dispatchEvent('add_element', {
+        location: 'editor_panel',
+        element_name: elementName,
+        element_type: elType,
+        widget_type: widgetType
+      });
+    }
   },
   getSelectedElements: function getSelectedElements() {
     return elementor.selection.getElements().filter(function (_ref2) {
@@ -43069,10 +43163,15 @@ module.exports = Marionette.CompositeView.extend({
     if ((_model$isPreset = (_model = model) === null || _model === void 0 ? void 0 : _model.isPreset) !== null && _model$isPreset !== void 0 ? _model$isPreset : false) {
       model.settings = model.preset_settings;
     }
-    var historyId = $e.internal('document/history/start-log', {
-      type: this.getHistoryType(options.event),
-      title: elementor.helpers.getModelLabel(model)
-    });
+    var _options$useHistory = options.useHistory,
+      useHistory = _options$useHistory === void 0 ? true : _options$useHistory;
+    var historyId;
+    if (useHistory) {
+      historyId = $e.internal('document/history/start-log', {
+        type: this.getHistoryType(options.event),
+        title: elementor.helpers.getModelLabel(model)
+      });
+    }
     var container = this.getContainer();
     if (options.shouldWrap) {
       var containerExperiment = elementorCommon.config.experimentalFeatures.container;
@@ -43084,7 +43183,8 @@ module.exports = Marionette.CompositeView.extend({
         columns: Number(!containerExperiment),
         options: {
           at: options.at,
-          scrollIntoView: options.scrollIntoView
+          scrollIntoView: options.scrollIntoView,
+          useHistory: useHistory
         }
       });
 
@@ -43100,13 +43200,15 @@ module.exports = Marionette.CompositeView.extend({
       model: model,
       options: options
     });
-    $e.internal('document/history/end-log', {
-      id: historyId
-    });
+    if (useHistory) {
+      $e.internal('document/history/end-log', {
+        id: historyId
+      });
+    }
     return widget;
   },
   onDrop: function onDrop(event, options) {
-    var _elementor$channels$p;
+    var _elementor$channels$p, _elementorCommon;
     var input = event.originalEvent.dataTransfer.files;
     if (input.length) {
       $e.run('editor/browser-import/import', {
@@ -43127,11 +43229,23 @@ module.exports = Marionette.CompositeView.extend({
     .filter(function (_ref) {
       var _ref2 = (0, _slicedToArray2.default)(_ref, 1),
         key = _ref2[0];
-      return ['elType', 'widgetType', 'custom'].includes(key);
+      return ['elType', 'widgetType', 'custom', 'editor_settings'].includes(key);
     }));
     args.container = this.getContainer();
     args.options = options;
     $e.run('preview/drop', args);
+    if ((_elementorCommon = elementorCommon) !== null && _elementorCommon !== void 0 && (_elementorCommon = _elementorCommon.eventsManager) !== null && _elementorCommon !== void 0 && _elementorCommon.dispatchEvent && args !== null && args !== void 0 && args.model) {
+      var _args$model$elType, _args$model, _args$model$widgetTyp, _args$model2;
+      var elType = (_args$model$elType = (_args$model = args.model) === null || _args$model === void 0 ? void 0 : _args$model.elType) !== null && _args$model$elType !== void 0 ? _args$model$elType : '';
+      var widgetType = (_args$model$widgetTyp = (_args$model2 = args.model) === null || _args$model2 === void 0 ? void 0 : _args$model2.widgetType) !== null && _args$model$widgetTyp !== void 0 ? _args$model$widgetTyp : '';
+      var elementName = 'widget' === elType ? widgetType : elType;
+      elementorCommon.eventsManager.dispatchEvent('add_element', {
+        location: 'editor_panel',
+        element_name: elementName,
+        element_type: elType,
+        widget_type: widgetType
+      });
+    }
   },
   getHistoryType: function getHistoryType(event) {
     if (event) {
@@ -45116,6 +45230,29 @@ var _default = exports["default"] = /*#__PURE__*/function (_Marionette$LayoutVie
       };
     }
   }, {
+    key: "onRender",
+    value: function onRender() {
+      this.bindEscapeKey();
+    }
+  }, {
+    key: "bindEscapeKey",
+    value: function bindEscapeKey() {
+      var _this = this;
+      this.onDocumentKeyDown = function (event) {
+        if ('Escape' === event.key) {
+          _this.onCloseModalClick();
+        }
+      };
+      document.addEventListener('keydown', this.onDocumentKeyDown);
+    }
+  }, {
+    key: "onDestroy",
+    value: function onDestroy() {
+      if (this.onDocumentKeyDown) {
+        document.removeEventListener('keydown', this.onDocumentKeyDown);
+      }
+    }
+  }, {
     key: "templateHelpers",
     value: function templateHelpers() {
       return {
@@ -45125,10 +45262,9 @@ var _default = exports["default"] = /*#__PURE__*/function (_Marionette$LayoutVie
   }, {
     key: "onCloseModalClick",
     value: function onCloseModalClick() {
-      var _elementor$config$doc, _elementor$config;
       this._parent._parent._parent.hideModal();
-      var type = (_elementor$config$doc = (_elementor$config = elementor.config) === null || _elementor$config === void 0 || (_elementor$config = _elementor$config.document) === null || _elementor$config === void 0 ? void 0 : _elementor$config.type) !== null && _elementor$config$doc !== void 0 ? _elementor$config$doc : 'default';
-      var customEvent = new CustomEvent("core/modal/close/".concat(type));
+      var documentType = this.getDocumentType();
+      var customEvent = new CustomEvent("core/modal/close/".concat(documentType));
       window.dispatchEvent(customEvent);
       if (this.isFloatingButtonLibraryClose()) {
         $e.internal('document/save/set-is-modified', {
@@ -45138,10 +45274,20 @@ var _default = exports["default"] = /*#__PURE__*/function (_Marionette$LayoutVie
       }
     }
   }, {
+    key: "getDocumentType",
+    value: function getDocumentType() {
+      var _elementor$config$doc, _elementor;
+      var DEFAULT_TYPE = 'default';
+      if ('undefined' === typeof window.elementor) {
+        return DEFAULT_TYPE;
+      }
+      return (_elementor$config$doc = (_elementor = elementor) === null || _elementor === void 0 || (_elementor = _elementor.config) === null || _elementor === void 0 || (_elementor = _elementor.document) === null || _elementor === void 0 ? void 0 : _elementor.type) !== null && _elementor$config$doc !== void 0 ? _elementor$config$doc : DEFAULT_TYPE;
+    }
+  }, {
     key: "isFloatingButtonLibraryClose",
     value: function isFloatingButtonLibraryClose() {
-      var _elementor$config2, _elementor$config3;
-      return window.elementor && ((_elementor$config2 = elementor.config) === null || _elementor$config2 === void 0 ? void 0 : _elementor$config2.admin_floating_button_admin_url) && 'floating-buttons' === ((_elementor$config3 = elementor.config) === null || _elementor$config3 === void 0 || (_elementor$config3 = _elementor$config3.document) === null || _elementor$config3 === void 0 ? void 0 : _elementor$config3.type) && (this.$el.closest('.dialog-lightbox-widget-content').find('.elementor-template-library-template-floating_button').length || this.$el.closest('.dialog-lightbox-widget-content').find('#elementor-template-library-preview').length || this.$el.closest('.dialog-lightbox-widget-content').find('#elementor-template-library-templates-empty').length);
+      var _elementor$config, _elementor$config2;
+      return window.elementor && ((_elementor$config = elementor.config) === null || _elementor$config === void 0 ? void 0 : _elementor$config.admin_floating_button_admin_url) && 'floating-buttons' === ((_elementor$config2 = elementor.config) === null || _elementor$config2 === void 0 || (_elementor$config2 = _elementor$config2.document) === null || _elementor$config2 === void 0 ? void 0 : _elementor$config2.type) && (this.$el.closest('.dialog-lightbox-widget-content').find('.elementor-template-library-template-floating_button').length || this.$el.closest('.dialog-lightbox-widget-content').find('#elementor-template-library-preview').length || this.$el.closest('.dialog-lightbox-widget-content').find('#elementor-template-library-templates-empty').length);
     }
   }]);
 }(Marionette.LayoutView);
@@ -53021,18 +53167,24 @@ var Module = exports["default"] = /*#__PURE__*/function (_elementorModules$edi) 
         return;
       }
       elementor.hooks.addFilter('element/view', function (DefaultView, model) {
-        var _elementor$config, _elementor$config2;
+        var _config$promotionWidg, _config$integrationWi;
         var widgetType = model.get('widgetType');
-        var isProWidget = (_elementor$config = elementor.config) === null || _elementor$config === void 0 || (_elementor$config = _elementor$config.promotionWidgets) === null || _elementor$config === void 0 ? void 0 : _elementor$config.find(function (item) {
-          return widgetType === item.name;
-        });
-        if (isProWidget) {
-          return (__webpack_require__(/*! ./widget/view */ "../modules/promotions/assets/js/editor/widget/view.js")["default"]);
+        var _elementor = elementor,
+          config = _elementor.config;
+        var hasWidget = function hasWidget(path) {
+          return !!config[path].find(function (item) {
+            return widgetType === item.name;
+          });
+        };
+        var isProWidget = false,
+          isIntegrationWidget = false;
+        if (config !== null && config !== void 0 && (_config$promotionWidg = config.promotionWidgets) !== null && _config$promotionWidg !== void 0 && _config$promotionWidg.length) {
+          isProWidget = hasWidget('promotionWidgets');
         }
-        var isIntegrationWidget = (_elementor$config2 = elementor.config) === null || _elementor$config2 === void 0 || (_elementor$config2 = _elementor$config2.integrationWidgets) === null || _elementor$config2 === void 0 ? void 0 : _elementor$config2.find(function (item) {
-          return widgetType === item.name;
-        });
-        if (isIntegrationWidget) {
+        if (config !== null && config !== void 0 && (_config$integrationWi = config.integrationWidgets) !== null && _config$integrationWi !== void 0 && _config$integrationWi.length && !isProWidget) {
+          isIntegrationWidget = hasWidget('integrationWidgets');
+        }
+        if (isProWidget || isIntegrationWidget) {
           return (__webpack_require__(/*! ./widget/view */ "../modules/promotions/assets/js/editor/widget/view.js")["default"]);
         }
         return DefaultView;
@@ -53040,16 +53192,20 @@ var Module = exports["default"] = /*#__PURE__*/function (_elementorModules$edi) 
       elementor.hooks.addFilter('controls/base/behaviors', this.registerControlBehavior);
     }
   }, {
+    key: "hasWidgetsElements",
+    value: function hasWidgetsElements(path) {
+      var _elementor$config;
+      return (_elementor$config = elementor.config) === null || _elementor$config === void 0 || (_elementor$config = _elementor$config[path]) === null || _elementor$config === void 0 ? void 0 : _elementor$config.length;
+    }
+  }, {
     key: "hasPromotionWidgets",
     value: function hasPromotionWidgets() {
-      var _elementor$config3;
-      return ((_elementor$config3 = elementor.config) === null || _elementor$config3 === void 0 ? void 0 : _elementor$config3.promotionWidgets) && elementor.config.promotionWidgets.length;
+      return this.hasWidgetsElements('promotionWidgets');
     }
   }, {
     key: "hasIntegrationWidgets",
     value: function hasIntegrationWidgets() {
-      var _elementor$config4;
-      return ((_elementor$config4 = elementor.config) === null || _elementor$config4 === void 0 ? void 0 : _elementor$config4.integrationWidgets) && elementor.config.integrationWidgets.length;
+      return this.hasWidgetsElements('integrationWidgets');
     }
   }, {
     key: "registerControlBehavior",
@@ -62617,6 +62773,9 @@ module.exports = ReactDOM;
 /******/ 		return module.exports;
 /******/ 	}
 /******/ 	
+/******/ 	// expose the modules object (__webpack_modules__)
+/******/ 	__webpack_require__.m = __webpack_modules__;
+/******/ 	
 /************************************************************************/
 /******/ 	/* webpack/runtime/define property getters */
 /******/ 	(() => {
@@ -62627,6 +62786,31 @@ module.exports = ReactDOM;
 /******/ 					Object.defineProperty(exports, key, { enumerable: true, get: definition[key] });
 /******/ 				}
 /******/ 			}
+/******/ 		};
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/ensure chunk */
+/******/ 	(() => {
+/******/ 		__webpack_require__.f = {};
+/******/ 		// This file contains only the entry chunk.
+/******/ 		// The chunk loading function for additional chunks
+/******/ 		__webpack_require__.e = (chunkId) => {
+/******/ 			return Promise.all(Object.keys(__webpack_require__.f).reduce((promises, key) => {
+/******/ 				__webpack_require__.f[key](chunkId, promises);
+/******/ 				return promises;
+/******/ 			}, []));
+/******/ 		};
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/get javascript chunk filename */
+/******/ 	(() => {
+/******/ 		// This function allow to reference async chunks
+/******/ 		__webpack_require__.u = (chunkId) => {
+/******/ 			// return url for filenames not based on template
+/******/ 			if (chunkId === "app_modules_onboarding_assets_js_utils_modules_post-onboarding-tracker_js") return "476658b095f7fe3d4745.bundle.js";
+/******/ 			if (chunkId === "assets_dev_js_editor_utils_post-onboarding-tracking_js") return "ef3edd287b253495c7d6.bundle.js";
+/******/ 			// return url for filenames based on template
+/******/ 			return undefined;
 /******/ 		};
 /******/ 	})();
 /******/ 	
@@ -62647,6 +62831,52 @@ module.exports = ReactDOM;
 /******/ 		__webpack_require__.o = (obj, prop) => (Object.prototype.hasOwnProperty.call(obj, prop))
 /******/ 	})();
 /******/ 	
+/******/ 	/* webpack/runtime/load script */
+/******/ 	(() => {
+/******/ 		var inProgress = {};
+/******/ 		var dataWebpackPrefix = "elementor:";
+/******/ 		// loadScript function to load a script via script tag
+/******/ 		__webpack_require__.l = (url, done, key, chunkId) => {
+/******/ 			if(inProgress[url]) { inProgress[url].push(done); return; }
+/******/ 			var script, needAttach;
+/******/ 			if(key !== undefined) {
+/******/ 				var scripts = document.getElementsByTagName("script");
+/******/ 				for(var i = 0; i < scripts.length; i++) {
+/******/ 					var s = scripts[i];
+/******/ 					if(s.getAttribute("src") == url || s.getAttribute("data-webpack") == dataWebpackPrefix + key) { script = s; break; }
+/******/ 				}
+/******/ 			}
+/******/ 			if(!script) {
+/******/ 				needAttach = true;
+/******/ 				script = document.createElement('script');
+/******/ 		
+/******/ 				script.charset = 'utf-8';
+/******/ 				script.timeout = 120;
+/******/ 				if (__webpack_require__.nc) {
+/******/ 					script.setAttribute("nonce", __webpack_require__.nc);
+/******/ 				}
+/******/ 				script.setAttribute("data-webpack", dataWebpackPrefix + key);
+/******/ 		
+/******/ 				script.src = url;
+/******/ 			}
+/******/ 			inProgress[url] = [done];
+/******/ 			var onScriptComplete = (prev, event) => {
+/******/ 				// avoid mem leaks in IE.
+/******/ 				script.onerror = script.onload = null;
+/******/ 				clearTimeout(timeout);
+/******/ 				var doneFns = inProgress[url];
+/******/ 				delete inProgress[url];
+/******/ 				script.parentNode && script.parentNode.removeChild(script);
+/******/ 				doneFns && doneFns.forEach((fn) => (fn(event)));
+/******/ 				if(prev) return prev(event);
+/******/ 			}
+/******/ 			var timeout = setTimeout(onScriptComplete.bind(null, undefined, { type: 'timeout', target: script }), 120000);
+/******/ 			script.onerror = onScriptComplete.bind(null, script.onerror);
+/******/ 			script.onload = onScriptComplete.bind(null, script.onload);
+/******/ 			needAttach && document.head.appendChild(script);
+/******/ 		};
+/******/ 	})();
+/******/ 	
 /******/ 	/* webpack/runtime/make namespace object */
 /******/ 	(() => {
 /******/ 		// define __esModule on exports
@@ -62656,6 +62886,119 @@ module.exports = ReactDOM;
 /******/ 			}
 /******/ 			Object.defineProperty(exports, '__esModule', { value: true });
 /******/ 		};
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/publicPath */
+/******/ 	(() => {
+/******/ 		var scriptUrl;
+/******/ 		if (__webpack_require__.g.importScripts) scriptUrl = __webpack_require__.g.location + "";
+/******/ 		var document = __webpack_require__.g.document;
+/******/ 		if (!scriptUrl && document) {
+/******/ 			if (document.currentScript && document.currentScript.tagName.toUpperCase() === 'SCRIPT')
+/******/ 				scriptUrl = document.currentScript.src;
+/******/ 			if (!scriptUrl) {
+/******/ 				var scripts = document.getElementsByTagName("script");
+/******/ 				if(scripts.length) {
+/******/ 					var i = scripts.length - 1;
+/******/ 					while (i > -1 && (!scriptUrl || !/^http(s?):/.test(scriptUrl))) scriptUrl = scripts[i--].src;
+/******/ 				}
+/******/ 			}
+/******/ 		}
+/******/ 		// When supporting browsers where an automatic publicPath is not supported you must specify an output.publicPath manually via configuration
+/******/ 		// or pass an empty string ("") and set the __webpack_public_path__ variable from your code to use your own logic.
+/******/ 		if (!scriptUrl) throw new Error("Automatic publicPath is not supported in this browser");
+/******/ 		scriptUrl = scriptUrl.replace(/^blob:/, "").replace(/#.*$/, "").replace(/\?.*$/, "").replace(/\/[^\/]+$/, "/");
+/******/ 		__webpack_require__.p = scriptUrl;
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/jsonp chunk loading */
+/******/ 	(() => {
+/******/ 		// no baseURI
+/******/ 		
+/******/ 		// object to store loaded and loading chunks
+/******/ 		// undefined = chunk not loaded, null = chunk preloaded/prefetched
+/******/ 		// [resolve, reject, Promise] = chunk loading, 0 = chunk loaded
+/******/ 		var installedChunks = {
+/******/ 			"editor": 0
+/******/ 		};
+/******/ 		
+/******/ 		__webpack_require__.f.j = (chunkId, promises) => {
+/******/ 				// JSONP chunk loading for javascript
+/******/ 				var installedChunkData = __webpack_require__.o(installedChunks, chunkId) ? installedChunks[chunkId] : undefined;
+/******/ 				if(installedChunkData !== 0) { // 0 means "already installed".
+/******/ 		
+/******/ 					// a Promise means "currently loading".
+/******/ 					if(installedChunkData) {
+/******/ 						promises.push(installedChunkData[2]);
+/******/ 					} else {
+/******/ 						if(true) { // all chunks have JS
+/******/ 							// setup Promise in chunk cache
+/******/ 							var promise = new Promise((resolve, reject) => (installedChunkData = installedChunks[chunkId] = [resolve, reject]));
+/******/ 							promises.push(installedChunkData[2] = promise);
+/******/ 		
+/******/ 							// start chunk loading
+/******/ 							var url = __webpack_require__.p + __webpack_require__.u(chunkId);
+/******/ 							// create error before stack unwound to get useful stacktrace later
+/******/ 							var error = new Error();
+/******/ 							var loadingEnded = (event) => {
+/******/ 								if(__webpack_require__.o(installedChunks, chunkId)) {
+/******/ 									installedChunkData = installedChunks[chunkId];
+/******/ 									if(installedChunkData !== 0) installedChunks[chunkId] = undefined;
+/******/ 									if(installedChunkData) {
+/******/ 										var errorType = event && (event.type === 'load' ? 'missing' : event.type);
+/******/ 										var realSrc = event && event.target && event.target.src;
+/******/ 										error.message = 'Loading chunk ' + chunkId + ' failed.\n(' + errorType + ': ' + realSrc + ')';
+/******/ 										error.name = 'ChunkLoadError';
+/******/ 										error.type = errorType;
+/******/ 										error.request = realSrc;
+/******/ 										installedChunkData[1](error);
+/******/ 									}
+/******/ 								}
+/******/ 							};
+/******/ 							__webpack_require__.l(url, loadingEnded, "chunk-" + chunkId, chunkId);
+/******/ 						}
+/******/ 					}
+/******/ 				}
+/******/ 		};
+/******/ 		
+/******/ 		// no prefetching
+/******/ 		
+/******/ 		// no preloaded
+/******/ 		
+/******/ 		// no HMR
+/******/ 		
+/******/ 		// no HMR manifest
+/******/ 		
+/******/ 		// no on chunks loaded
+/******/ 		
+/******/ 		// install a JSONP callback for chunk loading
+/******/ 		var webpackJsonpCallback = (parentChunkLoadingFunction, data) => {
+/******/ 			var [chunkIds, moreModules, runtime] = data;
+/******/ 			// add "moreModules" to the modules object,
+/******/ 			// then flag all "chunkIds" as loaded and fire callback
+/******/ 			var moduleId, chunkId, i = 0;
+/******/ 			if(chunkIds.some((id) => (installedChunks[id] !== 0))) {
+/******/ 				for(moduleId in moreModules) {
+/******/ 					if(__webpack_require__.o(moreModules, moduleId)) {
+/******/ 						__webpack_require__.m[moduleId] = moreModules[moduleId];
+/******/ 					}
+/******/ 				}
+/******/ 				if(runtime) var result = runtime(__webpack_require__);
+/******/ 			}
+/******/ 			if(parentChunkLoadingFunction) parentChunkLoadingFunction(data);
+/******/ 			for(;i < chunkIds.length; i++) {
+/******/ 				chunkId = chunkIds[i];
+/******/ 				if(__webpack_require__.o(installedChunks, chunkId) && installedChunks[chunkId]) {
+/******/ 					installedChunks[chunkId][0]();
+/******/ 				}
+/******/ 				installedChunks[chunkId] = 0;
+/******/ 			}
+/******/ 		
+/******/ 		}
+/******/ 		
+/******/ 		var chunkLoadingGlobal = self["webpackChunkelementor"] = self["webpackChunkelementor"] || [];
+/******/ 		chunkLoadingGlobal.forEach(webpackJsonpCallback.bind(null, 0));
+/******/ 		chunkLoadingGlobal.push = webpackJsonpCallback.bind(null, chunkLoadingGlobal.push.bind(chunkLoadingGlobal));
 /******/ 	})();
 /******/ 	
 /************************************************************************/

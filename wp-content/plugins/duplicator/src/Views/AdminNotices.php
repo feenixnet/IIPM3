@@ -134,7 +134,7 @@ class AdminNotices
         }
 
 
-        if (SnapUtil::filterInputRequest('action', FILTER_DEFAULT) === 'installer') {
+        if (sanitize_text_field(SnapUtil::filterInputRequest('action')) === 'installer') {
             if (! wp_verify_nonce($_REQUEST['_wpnonce'], 'duplicator_cleanup_page')) {
                 echo '<p>' . __('Security issue', 'duplicator') . '</p>';
                 exit; // Get out of here bad nounce!
@@ -422,7 +422,7 @@ class AdminNotices
                         >
                             <?php esc_html_e("Sure! I'd love to help", 'duplicator'); ?>
                         </a>
-                        <a href="<?php echo esc_url_raw($dismiss_url); ?>" class="button duplicator-notice-dismiss">
+                        <a href="<?php echo esc_url($dismiss_url); ?>" class="button duplicator-notice-dismiss">
                             <?php esc_html_e('Hide Notification', 'duplicator'); ?>
                         </a>
                     </p>

@@ -6,7 +6,7 @@ use Duplicator\Libs\Snap\SnapUtil;
 
 $safeMsg         = MigrationMng::getSaveModeWarning();
 $cleanupReport   = MigrationMng::getCleanupReport();
-$cleanFileAction = (SnapUtil::filterInputRequest('action', FILTER_DEFAULT) === 'installer');
+$cleanFileAction = (sanitize_text_field(SnapUtil::filterInputRequest('action')) === 'installer');
 ?>
 <div class="dup-notice-success notice notice-success duplicator-pro-admin-notice dup-migration-pass-wrapper">
     <div class="dup-migration-pass-title">

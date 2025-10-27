@@ -139,7 +139,7 @@ if (!function_exists('add_success_notification')) {
                                     <th style="padding: 16px; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Membership Level</th>
                                     <th style="padding: 16px; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Status</th>
                                     <th style="padding: 16px; text-align: center; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Actions</th>
-                                    <th style="padding: 16px; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Organization</th>
+                                    <th style="padding: 16px; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Organisation</th>
                                     <th style="padding: 16px; text-align: left; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">Last Login</th>
                                     <th style="padding: 16px; text-align: center; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb;">CPD Status</th>
                                 </tr>
@@ -383,7 +383,7 @@ if (!function_exists('add_success_notification')) {
             
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
                 <div>
-                    <label style="display: block; margin-bottom: 5px; font-weight: 500; color: #374151;">Employer/Organization</label>
+                    <label style="display: block; margin-bottom: 5px; font-weight: 500; color: #374151;">Employer/Organisation</label>
                     <select id="edit-employer" name="employer_id" 
                             style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px;">
                         <option value="">Select Employer...</option>
@@ -1202,7 +1202,7 @@ jQuery(document).ready(function($) {
         $options.empty();
         
         if (!orgs || orgs.length === 0) {
-            $options.html('<div class="select-option">No organizations found</div>');
+            $options.html('<div class="select-option">No organisations found</div>');
             return;
         }
         
@@ -1653,7 +1653,7 @@ jQuery(document).ready(function($) {
         if ($('#type').val() === 'bulk' && !isOrgAdmin) {
             var selectedOrg = $('#organisation_id').val();
             if (!selectedOrg) {
-                $('#invitation-result').html('<div class="error">Error: Please select an organization for organization member invitations.</div>').show();
+                $('#invitation-result').html('<div class="error">Error: Please select an organisation for organisation member invitations.</div>').show();
                 return false;
             }
         }

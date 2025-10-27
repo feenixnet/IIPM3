@@ -72,8 +72,8 @@ get_header();
 
                     <!-- Third row: Organization (optional) -->
                     <div class="form-group">
-                        <label for="organisation">Organization (optional)</label>
-                        <input type="text" id="organisation" name="organisation" placeholder="Organization name" value="<?php echo $profile->employer_name; ?>" <?php echo is_user_logged_in() ? 'readonly' : ''; ?>>
+                        <label for="organisation">Organisation (optional)</label>
+                        <input type="text" id="organisation" name="organisation" placeholder="Organisation name" value="<?php echo $profile->employer_name; ?>" <?php echo is_user_logged_in() ? 'readonly' : ''; ?>>
                     </div>
 
                     <!-- Course Details section title (as per spec: "Coruse Details -> title") -->
@@ -84,9 +84,11 @@ get_header();
                     <!-- Fifth row: Category -->
                     <div class="form-group">
                         <label for="course_category">Category <span class="required-asterisk">*</span></label>
-                        <select id="course_category" name="course_category" required>
-                            <option value="">Loading categories...</option>
+                        <select id="course_category" name="course_category">
+                            <option value="">Select category</option>
                         </select>
+                        <div id="selected-categories-container" class="selected-categories-container"></div>
+                        <input type="hidden" id="selected_categories_data" name="selected_categories_data" required>
                     </div>
 
                     <!-- Sixth row: Course title -->
@@ -142,9 +144,6 @@ get_header();
 </div>
 
 <style>
-    .member-portal-page {
-
-    }
     .page-header h1, .page-header p {
         color: white;
     }
@@ -190,6 +189,56 @@ get_header();
     .required-asterisk {
         color: #e11d48; /* red */
         font-weight: 700;
+    }
+    
+    /* Selected Categories Tags */
+    .selected-categories-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    
+    .category-tag {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 8px;
+        background-color: #e5e7eb;
+        color: #374151;
+        border-radius: 4px;
+        font-size: 13px;
+        gap: 6px;
+        margin-top: 10px;
+    }
+    
+    .category-tag-text {
+        font-weight: 500;
+    }
+    
+    .category-tag-remove {
+        background: none;
+        border: none;
+        color: #6b7280;
+        cursor: pointer;
+        padding: 0;
+        font-size: 16px;
+        line-height: 1;
+        width: 18px;
+        height: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        transition: all 0.2s;
+    }
+    
+    .category-tag-remove:hover {
+        background-color: #d1d5db;
+        color: #374151;
+    }
+    
+    #course_category:disabled {
+        opacity: 1;
+        background-color: #f9fafb;
     }
 </style>
 
@@ -245,6 +294,10 @@ document.addEventListener('DOMContentLoaded', function() {
         .catch(() => {});
     }
 
+    // Store selected categories and available categories
+    let selectedCategories = [];
+    let allCategories = [];
+    
     // Load categories for everyone
     fetch('<?php echo admin_url('admin-ajax.php'); ?>', {
         method: 'POST',
@@ -258,6 +311,8 @@ document.addEventListener('DOMContentLoaded', function() {
         sel.innerHTML = '';
         if (res && res.success && Array.isArray(res.data.categories)) {
             sel.appendChild(new Option('Select category', ''));
+            // Store all categories
+            allCategories = res.data.categories;
             res.data.categories.forEach(cat => {
                 sel.appendChild(new Option(cat.name || cat.category || 'Unnamed', cat.id || cat.name));
             });
@@ -270,15 +325,86 @@ document.addEventListener('DOMContentLoaded', function() {
         if (sel) sel.innerHTML = '<option value="">Failed to load categories</option>';
     });
 
+    // Handle category selection
+    document.getElementById('course_category')?.addEventListener('change', function() {
+        const selectedValue = this.value;
+        if (!selectedValue) return;
+        
+        // Find the category object
+        const category = allCategories.find(cat => (cat.id || cat.name) === selectedValue);
+        if (!category) return;
+        
+        // Check if already selected
+        if (selectedCategories.find(cat => (cat.id || cat.name) === selectedValue)) {
+            this.value = ''; // Reset select
+            return;
+        }
+        
+        // Add to selected categories
+        selectedCategories.push(category);
+        
+        // Re-render tags
+        renderCategoryTags();
+        
+        // Reset select
+        this.value = '';
+    });
+    
+    // Function to render category tags
+    function renderCategoryTags() {
+        const container = document.getElementById('selected-categories-container');
+        if (!container) return;
+        
+        // Store selected categories data in hidden input
+        const hiddenInput = document.getElementById('selected_categories_data');
+        if (hiddenInput) {
+            hiddenInput.value = JSON.stringify(selectedCategories);
+        }
+        
+        // Clear container
+        container.innerHTML = '';
+        
+        // Render tags
+        selectedCategories.forEach((category, index) => {
+            const tag = document.createElement('div');
+            tag.className = 'category-tag';
+            tag.innerHTML = `
+                <span class="category-tag-text">${category.name || category.category || 'Unnamed'}</span>
+                <button type="button" class="category-tag-remove" data-index="${index}">×</button>
+            `;
+            container.appendChild(tag);
+            
+            // Add remove handler
+            tag.querySelector('.category-tag-remove')?.addEventListener('click', function() {
+                selectedCategories.splice(index, 1);
+                renderCategoryTags();
+            });
+        });
+    }
+    
+    // Validate categories on form submission
+    function validateCategories() {
+        if (selectedCategories.length === 0) {
+            notifications.error('Category required', 'Please select at least one category.');
+            return false;
+        }
+        return true;
+    }
+
     // Submit request to backend
     document.getElementById('submit_external_course').addEventListener('click', function() {
+        // Validate categories first
+        if (!validateCategories()) {
+            return;
+        }
+        
         const payload = {
             membership_level: (document.getElementById('membership_level')?.value || '').trim(),
             email_address: (document.getElementById('email_address')?.value || '').trim(),
             first_name: (document.getElementById('first_name')?.value || '').trim(),
             sur_name: (document.getElementById('sur_name')?.value || '').trim(),
             organisation: (document.getElementById('organisation')?.value || document.getElementById('organization')?.value || '').trim(),
-            course_category: document.getElementById('course_category')?.value,
+            selected_categories_data: document.getElementById('selected_categories_data')?.value,
             course_name: (document.getElementById('course_name')?.value || document.getElementById('course_title')?.value || '').trim(),
             LIA_Code: (document.getElementById('LIA_Code')?.value || document.getElementById('course_code')?.value || '').trim(),
             course_cpd_mins: document.getElementById('course_cpd_mins')?.value || document.getElementById('course_duration')?.value,
@@ -287,7 +413,7 @@ document.addEventListener('DOMContentLoaded', function() {
         };
 
         // Basic validation for key fields (with notification system)
-        if (!payload.email_address || !payload.course_name || !payload.course_category) {
+        if (!payload.email_address || !payload.course_name || !payload.selected_categories_data) {
             notifications.error('Missing required fields', 'Please fill in Email Address, Course Category and Course Title.');
             return;
         }
@@ -324,7 +450,12 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(r => r.json())
         .then(res => {
             if (res && res.success) {
-                alert('Thank you! Your request has been submitted for review.');
+                const count = res.data?.submitted_count || 0;
+                if (count > 1) {
+                    alert(`Thank you! Your request has been submitted for review. ${count} separate course requests have been created (one for each selected category).`);
+                } else {
+                    alert('Thank you! Your request has been submitted for review.');
+                }
                 (document.getElementById('external-course-request-form'))?.reset?.();
             } else {
                 alert('Submission failed: ' + (res?.data || 'Unknown error'));

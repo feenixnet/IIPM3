@@ -47,7 +47,7 @@ $is_corporate_admin = in_array('iipm_corporate_admin', $user_roles);
 $is_council_member = in_array('iipm_council_member', $user_roles);
 $is_member = in_array('iipm_member', $user_roles);
 
-// Get organization info if corporate admin
+// Get organisation info if corporate admin
 $organisation = null;
 if ($is_corporate_admin) {
     $organisation = $wpdb->get_row($wpdb->prepare(
@@ -75,7 +75,7 @@ get_header();
                 <?php if ($is_admin): ?>
                     <span class="role-badge admin">Super Admin</span>
                 <?php elseif ($is_corporate_admin): ?>
-                    <span class="role-badge corporate">Organization Admin</span>
+                    <span class="role-badge corporate">Organisation Admin</span>
                     <?php if ($organisation): ?>
                         <span class="org-name"><?php echo esc_html($organisation->name); ?></span>
                     <?php endif; ?>
@@ -91,7 +91,7 @@ get_header();
                         <?php if ($is_admin): ?>
                             <span class="role-badge admin">Super Admin</span>
                         <?php elseif ($is_corporate_admin): ?>
-                            <span class="role-badge corporate">Organization Admin</span>
+                            <span class="role-badge corporate">organisation Admin</span>
                             <?php if ($organisation): ?>
                                 <span class="org-name"><?php echo esc_html($organisation->name); ?></span>
                             <?php endif; ?>
@@ -107,13 +107,13 @@ get_header();
             <h2>Quick Access</h2>
             <div class="nav-grid">
                 <?php if ($is_admin): ?>
-                <!-- Admin Only - Organization Management -->
+                <!-- Admin Only - organisation Management -->
                 <div class="nav-card admin">
                     <div class="card-icon">🏢</div>
-                    <h3>Organization Management</h3>
-                    <p>Manage organizations, assign admins, and oversee corporate memberships</p>
+                    <h3>Organisation Management</h3>
+                    <p>Manage organisations, assign admins, and oversee corporate memberships</p>
                     <a href="<?php echo home_url('/organisation-management/'); ?>" class="card-button">
-                        Manage Organizations <span class="arrow">→</span>
+                        Manage Organisations <span class="arrow">→</span>
                     </a>
                 </div>
 
@@ -138,12 +138,12 @@ get_header();
                 </div>
 
                 <?php elseif ($is_corporate_admin): ?>
-                <!-- Corporate Admin - Organization Management -->
+                <!-- Corporate Admin - organisation Management -->
                 <div class="nav-card corporate">
                     <div class="card-icon">🏢</div>
-                    <h3>Organization Management</h3>
-                    <p>View your organization's member statistics and manage team members</p>
-                    <a href="<?php echo home_url('/member-portal/#organization'); ?>" class="card-button">
+                    <h3>Organisation Management</h3>
+                    <p>View your organisation's member statistics and manage team members</p>
+                    <a href="<?php echo home_url('/member-portal/#organisation'); ?>" class="card-button">
                         View Dashboard <span class="arrow">→</span>
                     </a>
                 </div>
@@ -152,7 +152,7 @@ get_header();
                 <div class="nav-card corporate">
                     <div class="card-icon">👥</div>
                     <h3>Employee Management</h3>
-                    <p>Manage your organization's employees and their information</p>
+                    <p>Manage your Organisation's employees and their information</p>
                     <a href="<?php echo home_url('/member-management/'); ?>" class="card-button">
                         Manage Employees <span class="arrow">→</span>
                     </a>

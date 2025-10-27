@@ -329,6 +329,14 @@ class Admin_Display extends Base {
 				},
 				1
 			);
+			// Add unified body class for settings page and top-level page
+			add_filter( 'admin_body_class', function ( $classes ) {
+				$screen = get_current_screen();
+				if ( $screen && in_array( $screen->id, [ 'settings_page_litespeed-cache-options', 'toplevel_page_litespeed' ], true ) ) {
+					$classes .= ' litespeed-cache_page_litespeed';
+				}
+				return $classes;
+			} );
 		} );
 	}
 
@@ -357,7 +365,7 @@ class Admin_Display extends Base {
 			'LiteSpeed Cache',
 			'LiteSpeed Cache',
 			$capability,
-			'litespeed',
+			'litespeed'
 		);
 
 		foreach ( $this->_pages as $slug => $meta ) {
@@ -401,6 +409,7 @@ class Admin_Display extends Base {
 	 */
 	public function enqueue_style() {
 		wp_enqueue_style( Core::PLUGIN_NAME, LSWCP_PLUGIN_URL . 'assets/css/litespeed.css', array(), Core::VER, 'all' );
+        wp_enqueue_style( Core::PLUGIN_NAME . '-dark-mode', LSWCP_PLUGIN_URL . 'assets/css/litespeed-dark-mode.css', array(), Core::VER, 'all' );
 	}
 
 	/**

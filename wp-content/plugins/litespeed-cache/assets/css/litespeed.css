@@ -26,7 +26,7 @@
 	color: #D9534F;
 }
 
-*[litespeed-accesskey]:before {
+*[litespeed-accesskey]:not([data-litespeed-noprefix]):before {
 	content: '[' attr(litespeed-accesskey) '] ';
 }
 
@@ -3127,7 +3127,7 @@ a.litespeed-redetect {
 }
 
 .litespeed-warning-bg {
-	background-color: #b58a09 !important;
+	background-color: #b58a09;
 	color: white;
 }
 

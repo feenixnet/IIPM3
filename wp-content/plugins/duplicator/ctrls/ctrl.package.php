@@ -348,22 +348,10 @@ class DUP_CTRL_Package extends DUP_CTRL_Base
         DUP_Handler::init_error_handler();
         check_ajax_referer('DUP_CTRL_Package_addQuickFilters', 'nonce');
         $result    = new DUP_CTRL_Result($this);
-        $inputData = filter_input_array(INPUT_POST, array(
-                'dir_paths' => array(
-                    'filter'  => FILTER_DEFAULT,
-                    'flags'   => FILTER_REQUIRE_SCALAR,
-                    'options' => array(
-                        'default' => ''
-                    )
-                ),
-                'file_paths' => array(
-                    'filter'  => FILTER_DEFAULT,
-                    'flags'   => FILTER_REQUIRE_SCALAR,
-                    'options' => array(
-                        'default' => ''
-                    )
-                ),
-            ));
+        $inputData = array(
+            'dir_paths'  => sanitize_textarea_field($_POST['dir_paths'] ?? ''),
+            'file_paths' => sanitize_textarea_field($_POST['file_paths'] ?? '')
+        );
         try {
             DUP_Util::hasCapability('export', DUP_Util::SECURE_ISSUE_THROW);
             //CONTROLLER LOGIC

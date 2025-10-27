@@ -1478,7 +1478,7 @@ function wp_print_community_events_templates() {
 			<li class="event-none">
 				<?php
 				printf(
-					/* translators: %s: Localized meetup organization documentation URL. */
+					/* translators: %s: Localized meetup organisation documentation URL. */
 					__( 'Want more events? <a href="%s">Help organize the next one</a>!' ),
 					__( 'https://make.wordpress.org/community/organize-event-landing-page/' )
 				);
@@ -1493,7 +1493,7 @@ function wp_print_community_events_templates() {
 			<# if ( data.location.description ) { #>
 				<?php
 				printf(
-					/* translators: 1: The city the user searched for, 2: Meetup organization documentation URL. */
+					/* translators: 1: The city the user searched for, 2: Meetup organisation documentation URL. */
 					__( 'There are no events scheduled near %1$s at the moment. Would you like to <a href="%2$s">organize a WordPress event</a>?' ),
 					'{{ data.location.description }}',
 					__( 'https://make.wordpress.org/community/handbook/meetup-organizer/welcome/' )
@@ -1503,7 +1503,7 @@ function wp_print_community_events_templates() {
 			<# } else { #>
 				<?php
 				printf(
-					/* translators: %s: Meetup organization documentation URL. */
+					/* translators: %s: Meetup organisation documentation URL. */
 					__( 'There are no events scheduled near you at the moment. Would you like to <a href="%s">organize a WordPress event</a>?' ),
 					__( 'https://make.wordpress.org/community/handbook/meetup-organizer/welcome/' )
 				);

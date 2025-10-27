@@ -279,7 +279,7 @@
                         <?php if (current_user_can('administrator')): ?>
                             <a href="<?php echo home_url('/admin-invitations/'); ?>">Admin Invitations</a>
                             <a href="<?php echo home_url('/bulk-import/'); ?>">Bulk Member Import</a>
-                            <a href="<?php echo home_url('/organisation-management/'); ?>">Organization Management</a>
+                            <a href="<?php echo home_url('/organisation-management/'); ?>">Organisation Management</a>
                             <a href="<?php echo home_url('/member-management/'); ?>">Member Management</a>
                         <?php endif; ?>
                         

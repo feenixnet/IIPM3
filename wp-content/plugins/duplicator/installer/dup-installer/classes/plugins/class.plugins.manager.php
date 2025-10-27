@@ -34,7 +34,6 @@ final class DUPX_Plugins_Manager
     const SLUG_DUPLICATOR_PRO        = 'duplicator-pro/duplicator-pro.php';
     const SLUG_DUPLICATOR_LITE       = 'duplicator/duplicator.php';
     const SLUG_DUPLICATOR_TESTER     = 'duplicator-tester-plugin/duplicator-tester.php';
-    const SLUG_WPS_HIDE_LOGIN        = 'wps-hide-login/wps-hide-login.php';
     const SLUG_POPUP_MAKER           = 'popup-maker/popup-maker.php';
     const SLUG_JETPACK               = 'jetpack/jetpack.php';
     const SLUG_WP_ROCKET             = 'wp-rocket/wp-rocket.php';
@@ -142,20 +141,14 @@ final class DUPX_Plugins_Manager
             . "or from the plugins tab."
             . " Your site's frontend will render properly after reactivating the plugin.";
 
-        $this->customPluginsActions[self::SLUG_POPUP_MAKER]    = new DUPX_Plugin_custom_actions(
+        $this->customPluginsActions[self::SLUG_POPUP_MAKER] = new DUPX_Plugin_custom_actions(
             self::SLUG_POPUP_MAKER,
             DUPX_Plugin_custom_actions::BY_DEFAULT_DISABLED,
             true,
             $longMsg
         );
-        $this->customPluginsActions[self::SLUG_WP_ROCKET]      = new DUPX_Plugin_custom_actions(
+        $this->customPluginsActions[self::SLUG_WP_ROCKET]   = new DUPX_Plugin_custom_actions(
             self::SLUG_WP_ROCKET,
-            DUPX_Plugin_custom_actions::BY_DEFAULT_DISABLED,
-            true,
-            $longMsg
-        );
-        $this->customPluginsActions[self::SLUG_WPS_HIDE_LOGIN] = new DUPX_Plugin_custom_actions(
-            self::SLUG_WPS_HIDE_LOGIN,
             DUPX_Plugin_custom_actions::BY_DEFAULT_DISABLED,
             true,
             $longMsg
@@ -369,6 +362,7 @@ final class DUPX_Plugins_Manager
 
             if ($plugin->activateAction) {
                 $activateOnLoginPluginsList[] = $plugin->slug;
+
                 $noticeManager->addFinalReportNotice(array(
                     'shortMsg' => 'Activate ' . $plugin->name . ' after you login.',
                     'level'    => DUPX_NOTICE_ITEM::NOTICE,

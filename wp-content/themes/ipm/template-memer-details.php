@@ -282,9 +282,9 @@ if (!function_exists('add_success_notification')) {
                     <div class="section-content">
                         <div class="form-grid">
                             <div class="form-group full-width">
-                                <label>Organization:</label>
+                                <label>Organisation:</label>
                                 <select name="employer_id" id="employer_id" disabled>
-                                    <option value="">Select Organization</option>
+                                    <option value="">Select Organisation</option>
                                                 <!-- Populated by JavaScript -->
                                 </select>
                             </div>
@@ -928,7 +928,7 @@ jQuery(document).ready(function($) {
         
         // Section 5: Employer Information
         const employerSelect = $('#employer_id');
-        employerSelect.empty().append('<option value="">Select Organization</option>');
+        employerSelect.empty().append('<option value="">Select Organisation</option>');
         organizations.forEach(function(org) {
             employerSelect.append(`<option value="${org.id}">${org.name}</option>`);
         });

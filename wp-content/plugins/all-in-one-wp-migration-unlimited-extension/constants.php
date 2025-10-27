@@ -32,7 +32,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 // ==================
 // = Plugin Version =
 // ==================
-define( 'AI1WMUE_VERSION', '2.76' );
+define( 'AI1WMUE_VERSION', '2.79' );
 
 // ===============
 // = Plugin Name =
@@ -67,7 +67,7 @@ define( 'AI1WMUE_VENDOR_PATH', AI1WMUE_LIB_PATH . DIRECTORY_SEPARATOR . 'vendor'
 // ===============
 // = Service URL =
 // ===============
-define( 'AI1WMUE_SERVICE_URL', 'https://plugin-assets.wp-migration.com/v2/unlimited-extension/service.wasm' );
+define( 'AI1WMUE_SERVICE_URL', 'https://plugin-assets.wp-migration.com/v3/unlimited-extension/service.wasm' );
 
 // ==================
 // = Retention Path =

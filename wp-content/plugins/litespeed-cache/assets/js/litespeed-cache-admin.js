@@ -30,10 +30,13 @@
 	 */
 
 	jQuery(document).ready(function () {
+		/************** Initialize dark mode toggle before accesskey mapping **************/
+		litespeed_init_dark_mode();
+
 		/************** Common LiteSpeed JS **************/
 		// Link confirm
 		$('[data-litespeed-cfm]').on('click', function (event) {
-			cfm_txt = $.trim($(this).data('litespeed-cfm')).replace(/\\n/g, '\n');
+			var cfm_txt = $.trim($(this).data('litespeed-cfm')).replace(/\\n/g, '\n');
 			if (cfm_txt === '') {
 				return true;
 			}
@@ -131,15 +134,21 @@
 			if (thiskey == '') {
 				return;
 			}
-			$(this).attr('title', 'Shortcut : ' + thiskey.toLocaleUpperCase());
+			// Append shortcut info to existing title or set default
+			var currentTitle = $(this).attr('title');
+			if (currentTitle) {
+				$(this).attr('title', currentTitle + ' (Shortcut: ' + thiskey.toLocaleUpperCase() + ')');
+			} else {
+				$(this).attr('title', 'Shortcut : ' + thiskey.toLocaleUpperCase());
+			}
 			var that = this;
 			$(document).on('keydown', function (e) {
-				if ($(':input:focus').length > 0) return;
-				if (event.metaKey) return;
-				if (event.ctrlKey) return;
-				if (event.altKey) return;
-				if (event.shiftKey) return;
-				if (litespeed_keycode(thiskey.charCodeAt(0))) $(that)[0].click();
+				if ($(':input:focus').length) return;
+				if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
+
+				if (e.key && e.key.toLowerCase() === thiskey.toLowerCase()) {
+					$(that)[0].click();
+				}
 			});
 		});
 
@@ -219,21 +228,6 @@ function litespeed_readable_time(seconds) {
 }
 
 /**
- * Trigger a click event on an element
- * @since  1.8
- */
-function litespeed_trigger_click(selector) {
-	jQuery(selector).trigger('click');
-}
-
-function litespeed_keycode(num) {
-	var num = num || 13;
-	var code = window.event ? event.keyCode : event.which;
-	if (num == code) return true;
-	return false;
-}
-
-/**
  * Normalize specified tab type
  * @since  4.7
  */
@@ -302,4 +296,76 @@ function litespeed_copy_to_clipboard(elementId, clickedElement) {
 	window.getSelection().removeAllRanges();
 
 	clickedElement.setAttribute('aria-label', 'Copied!');
+}
+
+// Dark mode toggle functionality
+function litespeed_init_dark_mode() {
+	'use strict';
+
+	// Only add toggle on LiteSpeed pages
+	if (window.location.search.indexOf('page=litespeed') === -1) return;
+
+	// Create toggle button
+	var toggleBtn = document.createElement('button');
+	toggleBtn.className = 'litespeed-dark-mode-toggle';
+	toggleBtn.setAttribute('title', 'Toggle Dark Mode');
+	toggleBtn.setAttribute('aria-label', 'Toggle Dark Mode');
+	toggleBtn.setAttribute('litespeed-accesskey', 'z');
+	toggleBtn.setAttribute('data-litespeed-noprefix', true);
+
+	function applyDarkMode() {
+		var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+		var savedPreference = localStorage.getItem('litespeed-dark-preference');
+		var isDark = savedPreference ? savedPreference === 'dark' : prefersDark;
+
+		// Determine needed class (only when overriding browser preference)
+		var needsClass;
+		if (savedPreference === 'dark' && !prefersDark) {
+			needsClass = 'litespeed-darkmode';
+		} else if (savedPreference === 'light' && prefersDark) {
+			needsClass = 'litespeed-lightmode';
+		}
+
+		// Only update DOM if class needs to change
+		if (needsClass) {
+			if (!document.body.classList.contains(needsClass)) {
+				document.body.classList.remove('litespeed-darkmode', 'litespeed-lightmode');
+				document.body.classList.add(needsClass);
+			}
+		} else {
+			if (document.body.classList.contains('litespeed-darkmode') || document.body.classList.contains('litespeed-lightmode')) {
+				document.body.classList.remove('litespeed-darkmode', 'litespeed-lightmode');
+			}
+		}
+
+		// Update button icon
+		toggleBtn.innerHTML = isDark ? '☀️' : '🌙';
+	}
+
+	// Initialize
+	applyDarkMode();
+
+	// Toggle handler
+	toggleBtn.addEventListener('click', function() {
+		var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+		var savedPreference = localStorage.getItem('litespeed-dark-preference');
+		var currentlyDark = savedPreference ? savedPreference === 'dark' : prefersDark;
+
+		// Toggle and store only if different from browser preference
+		if (!currentlyDark === prefersDark) {
+			localStorage.removeItem('litespeed-dark-preference');
+		} else {
+			localStorage.setItem('litespeed-dark-preference', currentlyDark ? 'light' : 'dark');
+		}
+
+		applyDarkMode();
+	});
+
+	// Listen for system theme changes
+	if (window.matchMedia) {
+		window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyDarkMode);
+	}
+
+	// Add to page
+	document.body.appendChild(toggleBtn);
 }

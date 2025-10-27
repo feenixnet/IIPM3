@@ -1,32 +1,28 @@
-var oneClickUpgradeRemoteEndpoint = "https://connect.duplicator.com/upgrade-free-to-pro";
+// Endpoint to connect to Duplicator Pro
+var remoteEndpoint = "https://connect.duplicator.com/get-remote-url";
 
 jQuery(document).ready(function ($) {
-    if ($('#dup-settings-upgrade-license-key').length) {
-        // Client-side redirect to oneClickUpgradeRemoteEndpoint
-        function redirectToRemoteEndpoint(data) {
-            $("#redirect-to-remote-upgrade-endpoint").attr("action", oneClickUpgradeRemoteEndpoint);
-            $("#form-oth").attr("value", data["oth"]);
-            $("#form-key").attr("value", data["license_key"]);
-            $("#form-version").attr("value", data["version"]);
-            $("#form-redirect").attr("value", data["redirect"]);
-            $("#form-endpoint").attr("value", data["endpoint"]);
-            $("#form-siteurl").attr("value", data["siteurl"]);
-            $("#form-homeurl").attr("value", data["homeurl"]);
-            $("#form-file").attr("value", data["file"]);
-            $("#redirect-to-remote-upgrade-endpoint").submit();
-        }
-        
+    if ($('#dup-settings-connect-btn').length) {
         $('#dup-settings-connect-btn').on('click', function (event) {
             event.stopPropagation();
-            var license_key = $('#dup-settings-upgrade-license-key').eq(0).val();
+
+            // Generate OTH for secure redirect
             Duplicator.Util.ajaxWrapper(
                 {
-                    action: 'duplicator_one_click_upgrade_prepare',
-                    nonce: dup_one_click_upgrade_script_data.nonce_one_click_upgrade,
-                    license_key: license_key
+                    action: 'duplicator_generate_connect_oth',
+                    nonce: dup_one_click_upgrade_script_data.nonce_generate_connect_oth
                 },
                 function (result, data, funcData, textStatus, jqXHR) {
-                    redirectToRemoteEndpoint(funcData);                        
+                    var redirectUrl = remoteEndpoint + "?" + new URLSearchParams({
+                        "oth": funcData.oth,
+                        "homeurl": window.location.origin,
+                        "redirect": funcData.redirect_url,
+                        "origin": window.location.href,
+                        "php_version": funcData.php_version,
+                        "wp_version": funcData.wp_version
+                    }).toString();
+
+                    window.location.href = redirectUrl;
                 },
                 function (result, data, funcData, textStatus, jqXHR) {
                     let errorMsg = `<p>

@@ -1,5 +1,4 @@
 <?php
-// phpcs:ignoreFile
 /**
  * The core plugin class.
  *
@@ -713,7 +712,7 @@ class Core extends Root {
 	 * @param string $data The comment data.
 	 */
 	private function append_comment( $data ) {
-		$this->footer_comment .= "\n<!-- " . $data . ' -->';
+		$this->footer_comment .= "\n<!-- " . htmlspecialchars( $data ) . ' -->';
 	}
 
 	/**
