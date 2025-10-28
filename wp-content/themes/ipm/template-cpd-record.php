@@ -34,7 +34,7 @@ get_header();
                     <select id="year-select">
                         <?php
                         $current_year = date('Y');
-                        for ($year = $current_year; $year >= $current_year - 10; $year--) {
+                        for ($year = $current_year; $year >= 2019; $year--) {
                             $selected = ($year == $current_year) ? 'selected' : '';
                             echo "<option value='{$year}' {$selected}>{$year}</option>";
                         }
@@ -44,7 +44,7 @@ get_header();
                 <button id="certificate-btn" class="certificate-btn" style="display: none;" onclick="showCertificateModal()">
                     <i class="fas fa-certificate"></i> Certificate
                 </button>
-                <div id="certificate-warning" class="certificate-warning" style="display: none;" onclick="showRequirementsTooltip()">
+                <div id="certificate-warning" class="certificate-warning" style="display: none;" onclick="showRequirementsTooltip(this)">
                     <i class="fas fa-exclamation-circle"></i>
                     <div id="requirements-tooltip" class="requirements-tooltip">
                         <div class="tooltip-content">
@@ -1076,7 +1076,6 @@ get_header();
                     </div>
                     <div class="certificate-name">${certificate.name}</div>
                     <div class="certificate-description">${certificate.description || 'Professional Development Certificate'}</div>
-                    <div class="certificate-date">Awarded on ${formatDate(certificate.rewarded_date)}</div>
                     <button class="download-certificate-btn" onclick="downloadCertificate(${certificate.id}, '${user.name}', '${user.email}', '${user.contact_address}', '${data.year}')">
                         <i class="fas fa-download"></i> Download Certificate
                     </button>
@@ -1190,17 +1189,18 @@ get_header();
                 });
             }
             
-            // Check if CPD is submitted (this is already checked in the parent function)
-            const submittedRequirement = cpdStats.submission_data.submitted; // Already verified in checkCertificateAvailability
+            // For 2025 and above, submission is required. For 2024 and earlier, it's not required.
+            const numericYear = parseInt(year, 10);
+            const submittedRequirement = numericYear >= 2025 ? (cpdStats.submission_data.submitted === true) : true;
 
-            if (!submittedRequirement) {
+            if (!submittedRequirement && numericYear >= 2025) {
                 missedRequirements.push({
                     icon: 'fas fa-exclamation-circle',
                     text: 'CPD must be submitted'
                 });
             }
             
-            // Show certificate button only if all three requirements are met
+            // Show certificate button only if requirements are met (submission required only for 2025+)
             if (progressRequirement && categoryRequirement && submittedRequirement) {
                 certificateBtn.style.display = 'inline-flex';
                 certificateWarning.style.display = 'none';
@@ -1234,7 +1234,7 @@ get_header();
                 missedRequirements.forEach(requirement => {
                     html += `
                         <li>
-                            <i class="${requirement.icon}"></i>
+                            <i class="${requirement.icon}" style="margin-right: 10px; margin-top: 6px;"></i>
                             ${requirement.text}
                         </li>
                     `;
@@ -1244,9 +1244,9 @@ get_header();
         }
 
         // Show requirements tooltip on click
-        window.showRequirementsTooltip = function() {
+        window.showRequirementsTooltip = function(el) {
             const tooltip = document.getElementById('requirements-tooltip');
-            const requirementsData = event.target.closest('.certificate-warning').getAttribute('data-requirements');
+            const requirementsData = (el && el.getAttribute('data-requirements')) || '';
             
             if (requirementsData) {
                 const missedRequirements = JSON.parse(requirementsData);

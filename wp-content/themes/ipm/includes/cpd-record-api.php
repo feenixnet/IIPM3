@@ -1440,13 +1440,22 @@ function iipm_ajax_get_certificate_data() {
         return;
     }
 
-    $user_id = get_current_user_id();
-    if (!$user_id) {
+    $current_user_id = get_current_user_id();
+    if (!$current_user_id) {
         wp_send_json_error('User not logged in');
         return;
     }
 
     $year = intval($_POST['year'] ?? date('Y'));
+
+    // Allow admins/org-admins to fetch certificate data for a specific user
+    $user_id = $current_user_id;
+    if (isset($_POST['user_id']) && ($_POST['user_id'] !== '')) {
+        $requested_user_id = intval($_POST['user_id']);
+        if ($requested_user_id > 0 && (current_user_can('administrator') || current_user_can('manage_iipm_members'))) {
+            $user_id = $requested_user_id;
+        }
+    }
 
     // Get user data
     $user = get_userdata($user_id);
@@ -1456,15 +1465,17 @@ function iipm_ajax_get_certificate_data() {
         $user_id
     ));
     
-    // Use existing function to get submission with certificate info
+    // Default: existing logic requires an approved submission with a certificate
+    // Exception: for years <= 2024, allow certificate if requirements met (100% and categories complete)
     $submissions_table = $wpdb->prefix . 'test_iipm_submissions';
     $certificates_table = $wpdb->prefix . 'test_iipm_certifications';
-    
+
+    // First try existing submission-based flow (covers >= 2025 and any already-assigned certs)
     $submission = $wpdb->get_row($wpdb->prepare(
         "SELECT s.*, c.name as certificate_name, c.year as certificate_year, c.description as certificate_description, c.avatar_url
          FROM $submissions_table s
          LEFT JOIN $certificates_table c ON s.certificate_id = c.id
-         WHERE s.user_id = %d AND s.year = %s AND s.status = 'approved'
+         WHERE s.user_id = %d AND s.year = %s AND s.status = 'approved' AND s.certificate_id IS NOT NULL
          ORDER BY s.created_at DESC
          LIMIT 1",
         $user_id,
@@ -1487,9 +1498,54 @@ function iipm_ajax_get_certificate_data() {
             ),
             'year' => $year
         ));
-    } else {
-        wp_send_json_error('No certificate found for this year');
+        return;
     }
+
+    // If no submission certificate and year <= 2024, determine eligibility from CPD stats
+    if (intval($year) <= 2024) {
+        // Compute CPD stats to verify completion and per-category requirements
+        $stats = iipm_get_cpd_stats($user_id, $year);
+
+        $hasFullProgress = isset($stats['completion_percentage']) && floatval($stats['completion_percentage']) >= 100;
+        $categoriesOk = true;
+        if (!empty($stats['courses_summary'])) {
+            foreach ($stats['courses_summary'] as $item) {
+                $hours = isset($item['total_minutes']) ? (floatval($item['total_minutes']) / 60.0) : 0.0;
+                if ($hours < 1) { $categoriesOk = false; break; }
+            }
+        } else {
+            $categoriesOk = false;
+        }
+
+        if ($hasFullProgress && $categoriesOk) {
+            // Find a certificate defined for this year
+            $certificate = $wpdb->get_row($wpdb->prepare(
+                "SELECT * FROM $certificates_table WHERE year = %s ORDER BY id DESC LIMIT 1",
+                strval($year)
+            ));
+
+            if ($certificate) {
+                wp_send_json_success(array(
+                    'certificate' => array(
+                        'id' => intval($certificate->id),
+                        'name' => $certificate->name,
+                        'description' => $certificate->description,
+                        'avatar_url' => $certificate->avatar_url,
+                        'rewarded_date' => date('Y-m-d')
+                    ),
+                    'user' => array(
+                        'name' => $user->first_name . ' ' . $user->last_name,
+                        'email' => $user->user_email,
+                        'contact_address' => $profile->contact_address ?? ''
+                    ),
+                    'year' => $year
+                ));
+                return;
+            }
+        }
+    }
+
+    wp_send_json_error('No certificate found for this year');
 }
 
 /**
@@ -1511,19 +1567,39 @@ function iipm_ajax_check_certificate_availability() {
 
     $year = intval($_POST['year'] ?? date('Y'));
 
-    // Check if user has approved submission with certificate for this year
     global $wpdb;
     $submissions_table = $wpdb->prefix . 'test_iipm_submissions';
-    
-    $submission = $wpdb->get_var($wpdb->prepare(
-        "SELECT COUNT(*) FROM $submissions_table 
-         WHERE user_id = %d AND year = %s AND status = 'approved' AND certificate_id IS NOT NULL",
-        $user_id,
-        $year
-    ));
+
+    // For 2025 and above: submission with assigned certificate is required
+    if (intval($year) >= 2025) {
+        $submission = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM $submissions_table 
+             WHERE user_id = %d AND year = %s AND status = 'approved' AND certificate_id IS NOT NULL",
+            $user_id,
+            $year
+        ));
+
+        wp_send_json_success(array(
+            'has_certificate' => intval($submission) > 0
+        ));
+        return;
+    }
+
+    // For 2024 and earlier: available if completed 100% and each category >= 1 hour
+    $stats = iipm_get_cpd_stats($user_id, $year);
+    $hasFullProgress = isset($stats['completion_percentage']) && floatval($stats['completion_percentage']) >= 100;
+    $categoriesOk = true;
+    if (!empty($stats['courses_summary'])) {
+        foreach ($stats['courses_summary'] as $item) {
+            $hours = isset($item['total_minutes']) ? (floatval($item['total_minutes']) / 60.0) : 0.0;
+            if ($hours < 1) { $categoriesOk = false; break; }
+        }
+    } else {
+        $categoriesOk = false;
+    }
 
     wp_send_json_success(array(
-        'has_certificate' => intval($submission) > 0
+        'has_certificate' => ($hasFullProgress && $categoriesOk)
     ));
 }
 

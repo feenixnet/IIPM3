@@ -1095,7 +1095,7 @@ jQuery(document).ready(function($) {
         
         // Generate years from current year + 1 down to 2020 (latest first)
         const currentYear = new Date().getFullYear();
-        for (let year = currentYear; year >= 2020; year--) {
+        for (let year = currentYear; year >= 2019; year--) {
             $yearSelect.append(`<option value="${year}">${year}</option>`);
         }
         
@@ -1171,9 +1171,61 @@ jQuery(document).ready(function($) {
         // Load leave requests separately
         loadLeaveRequestsForYear($('#cpd-year').val());
         
-        // Handle certificate data from submission_data
-        if (data.submission_data) {
-            handleCertificate(data.submission_data.certificate_available, data.submission_data);
+        // Handle certificate availability per year logic
+        const selectedYear = $('#cpd-year').val();
+        const yearNum = parseInt(selectedYear, 10);
+
+        // If we already have certificate via submission, show it
+        if (data.submission_data && data.submission_data.certificate_available) {
+            handleCertificate(true, data.submission_data);
+        } else if (yearNum <= 2024) {
+            // For 2024 and earlier, if 100% and each category >= 1 hour, fetch cert data even without submission
+            const progressRequirement = (data.completion_percentage || 0) >= 100;
+            let categoriesOk = true;
+            if (data.courses_summary && data.courses_summary.length > 0) {
+                for (const item of data.courses_summary) {
+                    const hours = Math.round((item.total_minutes / 60) * 2) / 2;
+                    if (hours < 1) { categoriesOk = false; break; }
+                }
+            } else {
+                categoriesOk = false;
+            }
+
+            if (progressRequirement && categoriesOk) {
+                // Fetch certificate data using existing endpoint (supports admin user_id)
+                $.ajax({
+                    url: '<?php echo admin_url('admin-ajax.php'); ?>',
+                    type: 'POST',
+                    data: {
+                        action: 'iipm_get_certificate_data',
+                        nonce: '<?php echo wp_create_nonce('iipm_certificate_nonce'); ?>',
+                        year: selectedYear,
+                        user_id: userDetails.basic_info.user_id
+                    },
+                    success: function(resp) {
+                        if (resp.success && resp.data && resp.data.certificate) {
+                            // Adapt payload to handleCertificate format
+                            handleCertificate(true, {
+                                submission_status: 'approved',
+                                submission_date: resp.data.certificate.rewarded_date,
+                                certificate_available: true,
+                                certificate_id: resp.data.certificate.id,
+                                certificate_data: {
+                                    name: resp.data.certificate.name,
+                                    year: selectedYear,
+                                    description: resp.data.certificate.description,
+                                    avatar_url: resp.data.certificate.avatar_url
+                                }
+                            });
+                        } else {
+                            handleCertificate(false);
+                        }
+                    },
+                    error: function() { handleCertificate(false); }
+                });
+            } else {
+                handleCertificate(false);
+            }
         } else {
             handleCertificate(false);
         }
@@ -1315,6 +1367,15 @@ jQuery(document).ready(function($) {
                     submissionDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
             }
             $('#submission-date').text(formattedSubmissionDate);
+            
+            // Hide submission date for years <= 2024 when showing certificate without submission
+            const selectedYear = $('#cpd-year').val();
+            const yearNum = parseInt(selectedYear, 10);
+            if (yearNum <= 2024) {
+                $('#submission-date').parent().hide();
+            } else {
+                $('#submission-date').parent().show();
+            }
             
             // Display certificate data if available
             if (certificateData.certificate_data) {
