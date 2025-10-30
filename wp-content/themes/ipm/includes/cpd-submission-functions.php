@@ -507,8 +507,13 @@ function iipm_download_certificate_direct() {
     error_log('Certificate data: ' . print_r($certificate, true));
     error_log('Avatar URL field: ' . ($certificate->avatar_url ?? 'NOT SET'));
 
-    // Generate PDF content with avatar image
-    $pdf_content = generate_certificate_pdf($user_id, $certificate, $user_name, $user_email, $contact_address, $submission_year);
+    // Get CPD stats for this user and year and generate PDF content
+    if (!function_exists('iipm_get_cpd_stats')) {
+        require_once(ABSPATH . 'wp-content/themes/ipm/includes/cpd-record-api.php');
+    }
+    $cpd_stats = iipm_get_cpd_stats($user_id, intval($submission_year));
+
+    $pdf_content = generate_certificate_pdf($cpd_stats, $certificate, $user_name, $user_email, $contact_address, $submission_year);
     
     // Set headers for PDF download (like CSV export)
     $filename = 'CPD_Certificate_' . $user_name . '_' . $submission_year . '.pdf';
@@ -536,113 +541,243 @@ function iipm_download_certificate_direct() {
 /**
  * Generate certificate PDF content using TCPDF
  */
-function generate_certificate_pdf($user_id, $certificate, $user_name, $user_email, $contact_address, $submission_year) {
+function generate_certificate_pdf($cpd_stats, $certificate, $user_name, $user_email, $contact_address, $submission_year) {
     // Check if TCPDF is available
     if (!class_exists('TCPDF')) {
         // Fallback to simple PDF if TCPDF is not available
         return generate_simple_pdf($certificate, $user_name, $user_email, $contact_address, $submission_year);
     }
 
-    // Fetch membership display (e.g., "Full Member (AIIPM) for 2024")
-    global $wpdb;
-    $target_user_id = $user_id;
-    $membership_display = '';
-    $membership_level_id = $wpdb->get_var($wpdb->prepare(
-        "SELECT membership_level FROM {$wpdb->prefix}test_iipm_members WHERE user_id = %d",
-        $target_user_id
-    ));
-    if ($membership_level_id) {
-        $mrow = $wpdb->get_row($wpdb->prepare(
-            "SELECT name, designation FROM {$wpdb->prefix}memberships WHERE id = %d",
-            $membership_level_id
-        ));
-        if ($mrow) {
-            $membership_display = trim($mrow->name . ' (' . $mrow->designation . ') for ' . $submission_year);
-        }
-    }
-
-    // Create new PDF (Landscape orientation for A4)
-    // A4 Landscape: 297mm x 210mm (width x height)
-    $pdf = new TCPDF('L', 'mm', 'A4', true, 'UTF-8', false);
+    // Create new PDF (Portrait A4 for report layout)
+    $pdf = new TCPDF('P', 'mm', 'A4', true, 'UTF-8', false);
     $pdf->setPrintHeader(false);
     $pdf->setPrintFooter(false);
-    $pdf->SetMargins(20, 15, 20);
-    
-    // Disable image alpha channel support to avoid PNG errors
-    $pdf->setAlpha(1);
-    
+    $pdf->SetMargins(14, 14, 14);
+    // Enable auto page breaks and keep a bottom margin to avoid row cuts
+    $pdf->SetAutoPageBreak(true, 14);
     $pdf->AddPage();
 
-    // Draw page border (a bit away from the edges)
-    // A4 Landscape: 297x210mm; inset 10mm on all sides
-    $pdf->SetLineWidth(0.6);
-    $pdf->Rect(10, 10, 297 - 20, 210 - 20);
-
-    // Title and subtitles - adjusted for landscape (set position FIRST)
-    $pdf->SetY(55);
-    $pdf->SetFont('times', '', 60);
-    $pdf->Cell(0, 20, 'Certificate', 0, 1, 'C');
-    $pdf->Ln(2);
-    $pdf->SetFont('times', '', 28);
-    $pdf->Cell(0, 12, 'of Completion', 0, 1, 'C');
-    $pdf->Ln(6);
-    $pdf->SetFont('helvetica', '', 11);
-    $pdf->Cell(0, 8, 'THIS IS TO CERTIFY THAT', 0, 1, 'C');
-
-    // Recipient name
-    $pdf->Ln(5);
-    $pdf->SetFont('times', '', 36);
-    $pdf->Cell(0, 14, $user_name, 0, 1, 'C');
-
-    // Rule line - adjusted for landscape width (257mm content area with 20mm margins)
-    $pdf->Ln(8);
-    $y = $pdf->GetY();
-    $pdf->SetLineWidth(0.3);
-    $pdf->Line(30, $y, 267, $y);
-
-    // Membership line
-    $pdf->Ln(8);
-    $pdf->SetFont('helvetica', '', 11);
-    $pdf->MultiCell(0, 8, 'Has met the conditions of the Irish Institute Of Pensions Management and is Registered As', 0, 'C', false, 1);
-    if ($membership_display !== '') {
-        $pdf->SetFont('helvetica', 'B', 12);
-        $pdf->MultiCell(0, 8, $membership_display, 0, 'C', false, 1);
-    }
-
-    // Footer info - positioned at bottom
-    $pdf->SetY(-35);
-    $pdf->SetFont('helvetica', '', 9);
-    $pdf->MultiCell(0, 5, 'IIPM | Website: www.iipm.ie | Email: info@iipm.ie', 0, 'C', false, 1);
-    $pdf->MultiCell(0, 5, 'Address: Irish Institute of Pensions Management, Suite 2, Slane House, 25 Lower Mount Street, Dublin 2, D02 V029', 0, 'C', false, 1);
-
-    // Logo - Using proper JPEG file and center exactly via writeHTMLCell
+    // Header with logo and title block
     $logo_path = ABSPATH . 'wp-content/uploads/2025/05/logo-1.jpg';
-    
-    $logo_added = false;
+    $logo_html = '';
     if (file_exists($logo_path)) {
         try {
-            // Read image and convert to base64
             $image_data = file_get_contents($logo_path);
             $base64_image = base64_encode($image_data);
-            
-            // Place near the top, spanning full width and centered
-            $pdf->SetY(20);
-            $logo_html = '<div style="width:100%; text-align:center;">'
-                . '<img src="data:image/jpeg;base64,' . $base64_image . '" style="display:block; margin:0 auto; width:60mm;" />'
-                . '</div>';
-            // writeHTMLCell(width=0 -> full width), h=0 auto, align center
-            $pdf->writeHTMLCell(0, 0, null, null, $logo_html, 0, 1, 0, true, 'C', true);
-            $logo_added = true;
-            error_log('IIPM Certificate: Logo added successfully from logo-1.jpg (centered)');
-        } catch (Exception $e) {
-            error_log('IIPM Certificate: Could not load logo: ' . $e->getMessage());
-        }
-    }
-    
-    if (!$logo_added) {
-        error_log('IIPM Certificate: Logo file not found at: ' . $logo_path);
+            $logo_html = '<img src="data:image/jpeg;base64,' . $base64_image . '" style="height:44px; vertical-align:middle;" />';
+        } catch (Exception $e) { /* ignore */ }
     }
 
+    $pdf->SetFont('helvetica', '', 11);
+    $is_current_period = (strval(date('Y')) === strval($submission_year));
+
+    // First table: stats summary across categories
+    $categories_order = array('Savings & Investments', 'Pensions', 'Ethics', 'Life Assurance');
+    $cat_hours = array(
+        'Savings & Investments' => 0,
+        'Pensions' => 0,
+        'Ethics' => 0,
+        'Life Assurance' => 0
+    );
+    if (!empty($cpd_stats['courses_summary'])) {
+        foreach ($cpd_stats['courses_summary'] as $row) {
+            $name = $row['category'];
+            if (isset($cat_hours[$name])) {
+                $cat_hours[$name] = floatval($row['total_hours']);
+            }
+        }
+    }
+    $completed_total = array_sum($cat_hours);
+
+    // Virtual Pro Rata Deduction row
+    $pro_rata_total = 6; // as requested
+
+    // Required per category (>=1 each); total equals target hours
+    $required_total = isset($cpd_stats['target_minutes']) ? (floatval($cpd_stats['target_minutes']) / 60.0) : 8.0;
+
+    // Requirement met checks
+    $checks = array();
+    foreach ($categories_order as $label) { $checks[$label] = ($cat_hours[$label] >= 1); }
+    $total_ok = ($completed_total >= $required_total);
+
+    // Load check/cross images and convert to base64
+    $checkmark_path = get_template_directory() . '/assets/img/check.jpg';
+    $closemark_path = get_template_directory() . '/assets/img/close.jpg';
+    
+    $checkmark_img = '';
+    $closemark_img = '';
+    
+    if (file_exists($checkmark_path)) {
+        $checkmark_data = file_get_contents($checkmark_path);
+        $checkmark_base64 = base64_encode($checkmark_data);
+        $checkmark_img = '<img src="data:image/jpeg;base64,' . $checkmark_base64 . '" style="height:16px;" />';
+    }
+    
+    if (file_exists($closemark_path)) {
+        $closemark_data = file_get_contents($closemark_path);
+        $closemark_base64 = base64_encode($closemark_data);
+        $closemark_img = '<img src="data:image/jpeg;base64,' . $closemark_base64 . '" style="height:16px;" />';
+    }
+    
+    // Prepare check/cross symbols using images
+    $check_si = $checks['Savings & Investments'] ? $checkmark_img : $closemark_img;
+    $check_pensions = $checks['Pensions'] ? $checkmark_img : $closemark_img;
+    $check_ethics = $checks['Ethics'] ? $checkmark_img : $closemark_img;
+    $check_life = $checks['Life Assurance'] ? $checkmark_img : $closemark_img;
+    $check_total = $total_ok ? $checkmark_img : $closemark_img;
+    
+    $completed_si = number_format($cat_hours['Savings & Investments'], 0);
+    $completed_pensions = number_format($cat_hours['Pensions'], 0);
+    $completed_ethics = number_format($cat_hours['Ethics'], 0);
+    $completed_life = number_format($cat_hours['Life Assurance'], 0);
+    $completed_total_fmt = number_format($completed_total, 0);
+    $required_total_fmt = number_format($required_total, 0);
+    $pro_rata_total_fmt = number_format($pro_rata_total, 0);
+    
+    $user_name_safe = htmlspecialchars($user_name, ENT_QUOTES);
+    $year_safe = esc_html($submission_year);
+    $period_html = $is_current_period ? '<span style="font-size:12px;">(Current Period)</span>' : '';
+
+    // Build second table: completed courses details
+    $courses_rows = '';
+    if (!empty($cpd_stats['all_courses'])) {
+        $row_index = 0;
+        foreach ($cpd_stats['all_courses'] as $course) {
+            $row_index++;
+            $row_bg = ($row_index % 2 === 1) ? '#f9f9f9' : '#ffffff';
+            
+            $course_name = isset($course['courseName']) ? htmlspecialchars($course['courseName'], ENT_QUOTES) : 'N/A';
+            $date_of_course = isset($course['dateOfCourse']) ? htmlspecialchars($course['dateOfCourse'], ENT_QUOTES) : 'N/A';
+            $course_type = isset($course['courseType']) ? htmlspecialchars($course['courseType'], ENT_QUOTES) : 'N/A';
+            $hours_gained = isset($course['hours']) ? number_format($course['hours'], 1) : '0.0';
+            $provider = isset($course['crs_provider']) ? htmlspecialchars($course['crs_provider'], ENT_QUOTES) : 'N/A';
+            $date_added = isset($course['dateOfReturn']) ? htmlspecialchars($course['dateOfReturn'], ENT_QUOTES) : 'N/A';
+            
+            $courses_rows .= <<<ROW
+        <tr nobr="true">
+            <td bgcolor="{$row_bg}" color="#555555" align="left" style="width:25%;padding:14px 10px;">{$course_name}</td>
+            <td bgcolor="{$row_bg}" color="#555555" align="center" style="width:15%;padding:14px 10px;">{$date_of_course}</td>
+            <td bgcolor="{$row_bg}" color="#555555" align="center" style="width:15%;padding:14px 10px;">{$course_type}</td>
+            <td bgcolor="{$row_bg}" color="#555555" align="center" style="width:15%;padding:14px 10px;">{$hours_gained}</td>
+            <td bgcolor="{$row_bg}" color="#555555" align="center" style="width:15%;padding:14px 10px;">{$provider}</td>
+            <td bgcolor="{$row_bg}" color="#555555" align="center" style="width:15%;padding:14px 10px;">{$date_added}</td>
+        </tr>
+
+ROW;
+        }
+    } else {
+        $courses_rows = '<tr><td colspan="7" align="center" color="#555555">No completed courses found</td></tr>';
+    }
+    
+    $courses_table_html = <<<HTML
+<table cellspacing="0" cellpadding="14" style="width:100%;border-color:#c2c2c2;margin-top:10px;">
+    <thead>
+        <tr>
+            <th bgcolor="#5b2c6f" color="#ffffff" align="center" style="width:25%;border-color:#c2c2c2;padding:14px 10px;"><b>Course Name</b></th>
+            <th bgcolor="#5b2c6f" color="#ffffff" align="center" style="width:15%;border-color:#c2c2c2;padding:14px 10px;"><b>Course Date</b></th>
+            <th bgcolor="#5b2c6f" color="#ffffff" align="center" style="width:15%;border-color:#c2c2c2;padding:14px 10px;"><b>Category</b></th>
+            <th bgcolor="#5b2c6f" color="#ffffff" align="center" style="width:15%;border-color:#c2c2c2;padding:14px 10px;"><b>Hours Gained</b></th>
+            <th bgcolor="#5b2c6f" color="#ffffff" align="center" style="width:15%;border-color:#c2c2c2;padding:14px 10px;"><b>Provider</b></th>
+            <th bgcolor="#5b2c6f" color="#ffffff" align="center" style="width:15%;border-color:#c2c2c2;padding:14px 10px;"><b>When Added</b></th>
+        </tr>
+    </thead>
+    <tbody>
+{$courses_rows}
+    </tbody>
+</table>
+HTML;
+
+    // Build table using TCPDF-friendly HTML attributes with clean structure
+    $table_html = <<<HTML
+<table border="0" cellspacing="0" cellpadding="8" style="width:100%;margin-bottom:16px;">
+    <thead>
+        <tr>
+            <th bgcolor="#5b2c6f" color="#ffffff" align="center" style="width:25%"><b>Competency</b></th>
+            <th bgcolor="#5b2c6f" color="#ffffff" align="center" style="width:15%"><b>Savings &amp; Investments</b></th>
+            <th bgcolor="#5b2c6f" color="#ffffff" align="center" style="width:15%"><b>Pensions</b></th>
+            <th bgcolor="#5b2c6f" color="#ffffff" align="center" style="width:15%"><b>Ethics</b></th>
+            <th bgcolor="#5b2c6f" color="#ffffff" align="center" style="width:15%"><b>Life Assurance</b></th>
+            <th bgcolor="#5b2c6f" color="#ffffff" align="center" style="width:15%"><b>Total</b></th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr nobr="true">
+            <td bgcolor="#f7f7f7" color="#555555" align="left" style="width:25%"><b>Completed</b></td>
+            <td color="#555555" align="center" style="width:15%">{$completed_si}</td>
+            <td color="#555555" align="center" style="width:15%">{$completed_pensions}</td>
+            <td color="#555555" align="center" style="width:15%">{$completed_ethics}</td>
+            <td color="#555555" align="center" style="width:15%">{$completed_life}</td>
+            <td color="#555555" align="center" style="width:15%">{$completed_total_fmt}</td>
+        </tr>
+        <tr nobr="true">
+            <td bgcolor="#f7f7f7" color="#555555" align="left" style="width:25%"><b>Pro Rata Deduction:</b></td>
+            <td color="#555555" align="center" style="width:15%">1</td>
+            <td color="#555555" align="center" style="width:15%">1</td>
+            <td color="#555555" align="center" style="width:15%">1</td>
+            <td color="#555555" align="center" style="width:15%">1</td>
+            <td color="#555555" align="center" style="width:15%">{$pro_rata_total_fmt}</td>
+        </tr>
+        <tr nobr="true">
+            <td bgcolor="#f7f7f7" color="#555555" align="left" style="width:25%"><b>Required</b></td>
+            <td color="#555555" align="center" style="width:15%">1</td>
+            <td color="#555555" align="center" style="width:15%">1</td>
+            <td color="#555555" align="center" style="width:15%">1</td>
+            <td color="#555555" align="center" style="width:15%">1</td>
+            <td color="#555555" align="center" style="width:15%">{$required_total_fmt}</td>
+        </tr>
+        <tr nobr="true">
+            <td bgcolor="#f7f7f7" color="#555555" align="left" style="width:25%"><b>Mandatory Requirements Met</b></td>
+            <td color="#555555" align="center" style="width:15%;display: flex;align-items:center;">{$check_si}</td>
+            <td color="#555555" align="center" style="width:15%;display: flex;align-items:center;">{$check_pensions}</td>
+            <td color="#555555" align="center" style="width:15%;display: flex;align-items:center;">{$check_ethics}</td>
+            <td color="#555555" align="center" style="width:15%;display: flex;align-items:center;">{$check_life}</td>
+            <td color="#555555" align="center" style="width:15%;display: flex;align-items:center;">{$check_total}</td>
+        </tr>
+    </tbody>
+</table>
+HTML;
+
+    // Build first HTML (header + first table) and write it
+    $logo_section = $logo_html ? "<div align=\"center\" style=\"margin-bottom:8px;\">{$logo_html}</div>" : '';
+    $first_html = <<<HTML
+{$logo_section}
+<h2 align="center" style="color:#6a1b9a;">CPD – CERTIFICATION OF COMPLETION</h2>
+<p align="center" style="font-size:11px;">The below tables contain an overview of your CPD progress for {$year_safe} and available actions for this year.</p>
+<p align="left" style="font-size:11px;color:#c62828;margin:4px 0 10px 0;"><b>STATUS: COMPLETED AND SUBMITTED</b></p>
+
+<table border="0" cellspacing="0" cellpadding="10" style="width:100%;margin-top:14px;margin-bottom:8px;">
+    <tr>
+        <td bgcolor="#607d8b" color="#ffffff" align="center">
+            <b style="font-size:16px;">{$user_name_safe}</b><br/>
+            <b style="font-size:14px;">PROGRESS FOR {$year_safe}</b><br/>
+            {$period_html}
+        </td>
+    </tr>
+</table>
+
+{$table_html}
+HTML;
+
+    $pdf->writeHTML($first_html, true, false, true, false, '');
+
+    // Use TCPDF spacing between tables
+    $pdf->Ln(4); // add vertical space
+
+    // Second HTML (section header + courses table)
+    $second_html = <<<HTML
+<table border="0" cellspacing="0" cellpadding="10" style="width:100%;margin-bottom:8px;">
+    <tr>
+        <td bgcolor="#607d8b" color="#ffffff" align="center">
+            <b style="font-size:16px;">{$user_name_safe}</b><br/>
+            <b style="font-size:14px;">DETAILS OF COMPLETED COURSES ({$year_safe})</b>
+        </td>
+    </tr>
+</table>
+
+{$courses_table_html}
+HTML;
+
+    $pdf->writeHTML($second_html, true, false, true, false, '');
 
     return $pdf->Output('', 'S');
 }

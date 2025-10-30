@@ -3,34 +3,35 @@
 Template Name: Login Page
 */
 
+// Extend auth cookie expiration when "Remember me" is checked (30 days)
+add_filter('auth_cookie_expiration', function($seconds, $user_id, $remember) {
+    if ($remember) {
+        return 30 * DAY_IN_SECONDS;
+    }
+    return $seconds;
+}, 10, 3);
+
 // Handle login form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login_submit'])) {
-    $email = sanitize_email($_POST['email']);
+    $identifier = isset($_POST['login']) ? sanitize_text_field($_POST['login']) : '';
     $password = $_POST['password'];
     $remember = isset($_POST['remember']) ? true : false;
     
-    // Attempt to authenticate user
-    $user = wp_authenticate($email, $password);
-    
+    // Perform sign-on directly (supports username or email in user_login)
+    $credentials = array(
+        'user_login' => $identifier,
+        'user_password' => $password,
+        'remember' => $remember
+    );
+
+    $user = wp_signon($credentials, is_ssl());
+
     if (is_wp_error($user)) {
         $login_error = $user->get_error_message();
     } else {
-        // Login successful - use wp_signon to trigger wp_login action
-        $credentials = array(
-            'user_login' => $email,
-            'user_password' => $password,
-            'remember' => $remember
-        );
-        
-        $user = wp_signon($credentials);
-        
-        if (is_wp_error($user)) {
-            $login_error = $user->get_error_message();
-        } else {
-            // Redirect to dashboard instead of member portal
-            wp_redirect(home_url('/dashboard/'));
-            exit;
-        }
+        // Redirect to dashboard
+        wp_redirect(home_url('/dashboard/'));
+        exit;
     }
 }
 
@@ -73,7 +74,7 @@ get_header();
                     $error_message = '';
                     
                     if ($login_failed) {
-                        $error_message = 'Invalid email or password. Please try again.';
+                        $error_message = 'Invalid username/email or password. Please try again.';
                     } elseif (isset($login_error)) {
                         $error_message = $login_error;
                     }
@@ -88,9 +89,9 @@ get_header();
                         <?php wp_nonce_field('iipm_login_nonce', 'login_nonce'); ?>
                         
                         <label style="text-align: left;">
-                            E-mail Address
-                            <input type="email" name="email" placeholder="johndoe@iipm.ie" 
-                                   value="<?php echo isset($_POST['email']) ? esc_attr($_POST['email']) : ''; ?>" 
+                            E-mail Address/Username
+                            <input type="text" name="login" placeholder="johndoe or johndoe@iipm.ie" 
+                                   value="<?php echo isset($_POST['login']) ? esc_attr($_POST['login']) : ''; ?>" 
                                    required>
                         </label>
 
@@ -99,9 +100,10 @@ get_header();
                             <input type="password" name="password" placeholder="Enter your password" required>
                         </label>
                         
+                        <?php $remember_checked = (!isset($_POST['login_submit'])) || (isset($_POST['remember'])); ?>
                         <div class="iipm-custom-checkbox-wrapper">
                             <div class="iipm-checkbox-container">
-                                <input type="checkbox" name="remember" value="1" class="iipm-checkbox-input">
+                                <input type="checkbox" name="remember" value="1" class="iipm-checkbox-input" <?php echo $remember_checked ? 'checked' : ''; ?>>
                                 <span class="iipm-checkbox-checkmark"></span>
                                 <span class="iipm-checkbox-text">Remember me</span>
                             </div>
@@ -110,15 +112,35 @@ get_header();
                         <button type="submit" name="login_submit" class="login-btn">Log In</button>
 
                         <a href="<?php echo wp_lostpassword_url(); ?>" class="forgot-password">I forgot my password</a>
-
-                        <p class="register-text">
-                            Don't have an account? <a href="<?php echo home_url('/member-registration/'); ?>">Register here</a>
-                        </p>
                     </form>
                 </div>
             </div>
         </div>
     </div>
 </main>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Sync checkbox input when clicking checkmark
+    const checkboxContainer = document.querySelector('.iipm-checkbox-container');
+    if (checkboxContainer) {
+        const checkboxInput = checkboxContainer.querySelector('.iipm-checkbox-input');
+        const checkboxCheckmark = checkboxContainer.querySelector('.iipm-checkbox-checkmark');
+        
+        if (checkboxCheckmark && checkboxInput) {
+            // Sync checkmark when clicking on it
+            checkboxCheckmark.addEventListener('click', function() {
+                checkboxInput.checked = !checkboxInput.checked;
+            });
+            
+            // Sync checkmark visual state when checkbox input changes
+            checkboxInput.addEventListener('change', function() {
+                // The visual state will be handled by CSS based on :checked pseudo-class
+                // This ensures the checkmark span reflects the input state
+            });
+        }
+    }
+});
+</script>
 
 <?php get_footer(); ?>
