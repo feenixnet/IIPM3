@@ -157,7 +157,7 @@ get_header();
                                     <?php else: ?>
                                         <!-- Non-invitation - both options available -->
                                         <option value="">Select payment method</option>
-                                        <option value="Direct Invoiced">Direct Invoiced</option>
+                                        <option value="Direct Invoiced" selected>Direct Invoiced</option>
                                         <option value="Employer Invoiced">Employer Invoiced</option>
                                     <?php endif; ?>
                                 </select>

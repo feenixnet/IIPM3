@@ -313,12 +313,17 @@ if (!function_exists('add_success_notification')) {
                     <span style="margin-left: 10px;">Loading CPD records...</span>
                 </div>
                 
-                <!-- Year Selector -->
-                <div id="cpd-year-selector" style="display: none; margin-bottom: 30px;">
-                    <label for="cpd-year" style="font-weight: 600; margin-right: 15px;">Select Year:</label>
-                    <select id="cpd-year" style="padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px;">
-                        <!-- Populated by JavaScript -->
-                    </select>
+                <!-- Year Selector and Certificate Button -->
+                <div id="cpd-year-selector" style="display: none; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <label for="cpd-year" style="font-weight: 600; margin-right: 15px;">Select Year:</label>
+                        <select id="cpd-year" style="padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px;">
+                            <!-- Populated by JavaScript -->
+                        </select>
+                    </div>
+                    <button id="admin-certificate-btn" class="admin-certificate-btn" style="display: none;" onclick="downloadMemberCertificate()">
+                        <i class="fas fa-download"></i> Download Certificate
+                    </button>
                 </div>
                 
                 <!-- CPD Stats Container -->
@@ -841,6 +846,36 @@ if (!function_exists('add_success_notification')) {
     padding: 12px;
     border-radius: 6px;
     font-size: 14px;
+}
+
+.admin-certificate-btn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.admin-certificate-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.admin-certificate-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.admin-certificate-btn i {
+    font-size: 16px;
 }
 </style>
 
@@ -1407,6 +1442,10 @@ jQuery(document).ready(function($) {
             }
             
             $('#download-certificate').show();
+            $('#admin-certificate-btn').show();
+            
+            // Store certificate data globally for the top button
+            window.currentCertificateData = certificateData;
             
             // Certificate download handler - same as member portal
             $('#download-certificate').off('click').on('click', function() {
@@ -1430,6 +1469,8 @@ jQuery(document).ready(function($) {
             $('#certificate-info').hide();
             $('#no-certificate').show();
             $('#download-certificate').hide();
+            $('#admin-certificate-btn').hide();
+            window.currentCertificateData = null;
         }
     }
     
@@ -1497,6 +1538,57 @@ jQuery(document).ready(function($) {
             downloadBtn.prop('disabled', false);
         }, 2000);
     }
+    
+    /**
+     * Global function for downloading certificate from top button
+     * Called from the admin certificate button in the header
+     */
+    window.downloadMemberCertificate = function() {
+        const certificateData = window.currentCertificateData;
+        
+        if (!certificateData || !certificateData.certificate_id) {
+            alert('No certificate available for download.');
+            return;
+        }
+        
+        // Show loading state on top button
+        const certificateBtn = $('#admin-certificate-btn');
+        const originalText = certificateBtn.html();
+        certificateBtn.html('<i class="fas fa-spinner fa-spin"></i> Generating PDF...');
+        certificateBtn.prop('disabled', true);
+        
+        // Format user name properly
+        const userName = (userDetails.profile_info.first_name || '') + ' ' + (userDetails.profile_info.sur_name || '');
+        const formattedUserName = userName.trim() || 'User';
+        const userId = userDetails.basic_info.user_id;
+        
+        // Create direct download URL
+        const params = new URLSearchParams({
+            action: 'iipm_download_certificate_direct',
+            certificate_id: certificateData.certificate_id,
+            user_name: formattedUserName,
+            user_email: userDetails.profile_info.email_address || '',
+            contact_address: userDetails.profile_info.Address_1 || '',
+            submission_year: $('#cpd-year').val(),
+            user_id: userId
+        });
+        
+        const downloadUrl = `<?php echo admin_url('admin-ajax.php'); ?>?${params.toString()}`;
+        
+        // Create a temporary link and trigger download
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        // Reset button state
+        setTimeout(() => {
+            certificateBtn.html(originalText);
+            certificateBtn.prop('disabled', false);
+        }, 2000);
+    };
     
     // ===== MEMBERSHIP TOOLTIP FUNCTIONS =====
     

@@ -1063,7 +1063,7 @@ function iipm_process_organisation_admin_registration($data, $invitation) {
             'Address_2' => sanitize_text_field($data['address_line_2'] ?? ''),
             'Address_3' => sanitize_text_field($data['address_line_3'] ?? ''),
             'user_fullName' => $first_name." ".$last_name,
-            'user_payment_method' => sanitize_text_field($data['payment_method'] ?? ''),
+            'user_payment_method' => !empty($data['payment_method']) ? sanitize_text_field($data['payment_method']) : 'Direct Invoiced',
             'sur_name' => sanitize_text_field($last_name ?? ''),
             'first_name' => sanitize_text_field($first_name ?? ''),
             'user_is_admin' => 1,

@@ -41,8 +41,8 @@ get_header();
                         ?>
                     </select>
                 </div>
-                <button id="certificate-btn" class="certificate-btn" style="display: none;" onclick="showCertificateModal()">
-                    <i class="fas fa-certificate"></i> Certificate
+                <button id="certificate-btn" class="certificate-btn" style="display: none;" onclick="directDownloadCertificate()">
+                    <i class="fas fa-download"></i> Download Certificate
                 </button>
                 <div id="certificate-warning" class="certificate-warning" style="display: none;" onclick="showRequirementsTooltip(this)">
                     <i class="fas fa-exclamation-circle"></i>
@@ -1016,6 +1016,71 @@ get_header();
         }
 
         // Certificate functionality - make functions global
+        window.directDownloadCertificate = function() {
+            const selectedYear = yearSelect ? yearSelect.value : new Date().getFullYear();
+            const certificateBtn = document.getElementById('certificate-btn');
+            const originalText = certificateBtn.innerHTML;
+            
+            // Show loading state
+            certificateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating PDF...';
+            certificateBtn.disabled = true;
+            
+            // Fetch certificate data
+            fetch(ajaxurl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    action: 'iipm_get_certificate_data',
+                    year: selectedYear,
+                    nonce: '<?php echo wp_create_nonce("iipm_certificate_nonce"); ?>'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.data.certificate) {
+                    const certificate = data.data.certificate;
+                    const user = data.data.user;
+                    
+                    // Directly trigger download
+                    const params = new URLSearchParams({
+                        action: 'iipm_download_certificate_direct',
+                        certificate_id: certificate.id,
+                        user_name: user.name,
+                        user_email: user.email,
+                        contact_address: user.contact_address,
+                        submission_year: data.data.year
+                    });
+                    
+                    const downloadUrl = `${ajaxurl}?${params.toString()}`;
+                    
+                    const link = document.createElement('a');
+                    link.href = downloadUrl;
+                    link.style.display = 'none';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    
+                    // Reset button after delay
+                    setTimeout(() => {
+                        certificateBtn.innerHTML = originalText;
+                        certificateBtn.disabled = false;
+                    }, 2000);
+                } else {
+                    alert('No certificate available for this year.');
+                    certificateBtn.innerHTML = originalText;
+                    certificateBtn.disabled = false;
+                }
+            })
+            .catch(error => {
+                console.error('Error downloading certificate:', error);
+                alert('Error downloading certificate. Please try again.');
+                certificateBtn.innerHTML = originalText;
+                certificateBtn.disabled = false;
+            });
+        };
+
         window.showCertificateModal = function() {
             const selectedYear = yearSelect ? yearSelect.value : new Date().getFullYear();
             loadCertificateData(selectedYear);

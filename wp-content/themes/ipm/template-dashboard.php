@@ -107,13 +107,13 @@ get_header();
             <h2>Quick Access</h2>
             <div class="nav-grid">
                 <?php if ($is_admin): ?>
-                <!-- Admin Only - organisation Management -->
+                <!-- Admin Only - Course Management -->
                 <div class="nav-card admin">
-                    <div class="card-icon">🏢</div>
-                    <h3>Organisation Management</h3>
-                    <p>Manage organisations, assign admins, and oversee corporate memberships</p>
-                    <a href="<?php echo home_url('/organisation-management/'); ?>" class="card-button">
-                        Manage Organisations <span class="arrow">→</span>
+                    <div class="card-icon">📚</div>
+                    <h3>Course Management</h3>
+                    <p>Manage courses, add new courses, and oversee course catalog</p>
+                    <a href="<?php echo home_url('/course-management/'); ?>" class="card-button">
+                        Manage Courses <span class="arrow">→</span>
                     </a>
                 </div>
 

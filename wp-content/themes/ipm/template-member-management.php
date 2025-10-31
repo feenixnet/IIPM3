@@ -897,12 +897,6 @@ jQuery(document).ready(function($) {
             membershipFilter.append(option);
             editMembership.append(option);
         });
-        
-        // Add Admin option for site admins
-        <?php if ($is_site_admin): ?>
-        membershipFilter.append('<option value="Admin">Admin</option>');
-        editMembership.append('<option value="Admin">Admin</option>');
-        <?php endif; ?>
     }
 
     // Search functionality

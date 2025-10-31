@@ -82,6 +82,11 @@ if (!function_exists('add_success_notification')) {
                 </select>
             </div>
             <div class="filter-group">
+                <select id="year-filter" class="form-control">
+                    <option value="all">All Years</option>
+                </select>
+            </div>
+            <div class="filter-group">
                 <div class="search-input-group">
                     <input type="text" id="search-courses" class="form-control" placeholder="Search courses...">
                     <button class="btn btn-primary" id="search-button" type="button">
@@ -352,6 +357,11 @@ if (!function_exists('add_success_notification')) {
                 <div class="form-group">
                     <label for="course-duration">Duration (Hours) *</label>
                     <input type="number" id="course-duration" name="course_cpd_mins" class="form-control" min="0.5" step="0.5" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="course-year">Year</label>
+                    <input type="number" id="course-year" name="course_year" class="form-control" min="2000" max="2100">
                 </div>
             </form>
         </div>
@@ -1612,6 +1622,18 @@ if (!function_exists('add_success_notification')) {
     margin: 0 0 5px 0;
 }
 
+.year-badge {
+    display: inline-block;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-left: 8px;
+    vertical-align: middle;
+}
+
 .course-details {
     display: flex;
     gap: 15px;
@@ -2149,8 +2171,15 @@ jQuery(document).ready(function($) {
             deleteCourse();
         });
         
+        // Populate year filter with years from 2019 to current year
+        const currentYear = new Date().getFullYear();
+        const yearFilter = $('#year-filter');
+        for (let year = currentYear; year >= 2019; year--) {
+            yearFilter.append(`<option value="${year}">${year}</option>`);
+        }
+        
         // Filters
-        $('#category-filter, #provider-filter').on('change', function() {
+        $('#category-filter, #provider-filter, #year-filter').on('change', function() {
             currentPage = 1;
             loadCourses();
         });
@@ -2564,6 +2593,7 @@ jQuery(document).ready(function($) {
         // Get current filter values
         const categoryFilter = filters ? filters.category : $('#category-filter').val();
         const providerFilter = filters ? filters.provider : $('#provider-filter').val();
+        const yearFilter = filters ? filters.year : $('#year-filter').val();
         const searchTerm = filters ? filters.search : $('#search-courses').val().trim();
         
         if (reset) {
@@ -2588,6 +2618,9 @@ jQuery(document).ready(function($) {
         }
         if (providerFilter && providerFilter !== 'all') {
             ajaxData.provider_filter = providerFilter;
+        }
+        if (yearFilter && yearFilter !== 'all') {
+            ajaxData.year_filter = yearFilter;
         }
         if (searchTerm) {
             ajaxData.search_term = searchTerm;
@@ -2648,10 +2681,11 @@ jQuery(document).ready(function($) {
         // Display courses in card view
         courses.forEach(function(course) {
             const categoryName = course.course_category || 'Uncategorized';
+            const yearBadge = course.year ? `<span class="year-badge">${course.year}</span>` : '';
             const courseCard = $(`
                 <div class="course-item">
                     <div class="course-info">
-                        <h3 class="course-name">${course.course_name}</h3>
+                        <h3 class="course-name">${course.course_name} ${yearBadge}</h3>
                         <div class="course-details">
                             <span><strong>Code:</strong> ${course.LIA_Code || 'N/A'}</span>
                             <span><strong>Category:</strong> ${categoryName}</span>
@@ -2675,10 +2709,11 @@ jQuery(document).ready(function($) {
         // Display courses in table view
         courses.forEach(function(course) {
             const categoryName = course.course_category || 'Uncategorized';
+            const yearBadge = course.year ? `<span class="year-badge">${course.year}</span>` : '';
             const tableRow = $(`
                 <tr>
                     <td class="course-name-cell">
-                        <div class="course-name">${course.course_name}</div>
+                        <div class="course-name">${course.course_name} ${yearBadge}</div>
                     </td>
                     <td>${course.LIA_Code || 'N/A'}</td>
                     <td>${categoryName}</td>
@@ -2784,6 +2819,7 @@ jQuery(document).ready(function($) {
             
             $('#course-provider').val(course.crs_provider);
             $('#course-duration').val(course.course_cpd_mins);
+            $('#course-year').val(course.year || new Date().getFullYear());
         }
     }
     
@@ -2803,6 +2839,7 @@ jQuery(document).ready(function($) {
             course_category: $('#course-category').val(),
             course_provider: $('#course-provider').val(),
             course_cpd_mins: $('#course-duration').val(),
+            course_year: $('#course-year').val(),
             nonce: iipm_ajax.nonce
         };
         
@@ -2923,6 +2960,7 @@ jQuery(document).ready(function($) {
     function clearFilters() {
         $('#category-filter').val('all');
         $('#provider-filter').val('all');
+        $('#year-filter').val('all');
         $('#search-courses').val('');
         currentPage = 1;
         loadCourses();
@@ -2937,7 +2975,7 @@ jQuery(document).ready(function($) {
         selectedCourseForDuplicate = null;
         
         // Re-enable all form fields
-        $('#course-name, #course-code, #course-provider, #course-duration').prop('disabled', false);
+        $('#course-name, #course-code, #course-provider, #course-duration, #course-year').prop('disabled', false);
         $('#course-category').prop('disabled', false);
     }
     
@@ -3027,6 +3065,7 @@ jQuery(document).ready(function($) {
                     $('#course-code').val(course.LIA_Code || '').prop('disabled', true);
                     $('#course-provider').val(course.crs_provider).prop('disabled', true);
                     $('#course-duration').val(course.course_cpd_mins).prop('disabled', true);
+                    $('#course-year').val(course.year || new Date().getFullYear()).prop('disabled', true);
                     
                     // Only category remains editable
                     $('#course-category').val('').prop('disabled', false);

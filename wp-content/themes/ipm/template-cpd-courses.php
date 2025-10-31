@@ -110,6 +110,14 @@ get_header();
                         </div>
                         
                         <div class="filter-group">
+                            <label for="year-select">Year</label>
+                            <select id="year-select" class="year-select">
+                                <option value="">All Years</option>
+                                <!-- Years will be populated via jQuery -->
+                            </select>
+                        </div>
+                        
+                        <div class="filter-group">
                             <label class="custom-checkbox-label">
                                 <input type="checkbox" id="my-courses-filter" name="my-courses" style="margin-right: 10px;" value="1">
                                 <span class="label-text" style="position: relative; top: -2px;">Courses added by me</span>
@@ -494,6 +502,17 @@ get_header();
 
     .category-badge {
         background: #ff6b35;
+        color: white;
+        padding: 4px 12px;
+        border-radius: 16px;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .year-badge {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
         padding: 4px 12px;
         border-radius: 16px;
@@ -936,6 +955,7 @@ get_header();
         const dateTo = document.getElementById('date-to');
         const categoryFilters = document.getElementById('category-filters');
         const providerSelect = document.getElementById('provider-select');
+        const yearSelect = document.getElementById('year-select');
         const myCoursesFilter = document.getElementById('my-courses-filter');
         const clearFiltersBtn = document.getElementById('clear-filters');
         const coursesGrid = document.getElementById('courses-grid');
@@ -946,6 +966,17 @@ get_header();
         const paginationInfo = document.getElementById('pagination-info');
 
         console.log("tYear and userIdForCourses", tYear, userIdForCourses);
+        
+        // Populate year dropdown with years from 2019 to current year
+        if (yearSelect) {
+            const currentYear = new Date().getFullYear();
+            for (let year = currentYear; year >= 2019; year--) {
+                const option = document.createElement('option');
+                option.value = year;
+                option.textContent = year;
+                yearSelect.appendChild(option);
+            }
+        }
         
         // Initialize the page
         initializePage();
@@ -978,6 +1009,7 @@ get_header();
             if (dateFrom) dateFrom.addEventListener('change', filterCourses);
             if (dateTo) dateTo.addEventListener('change', filterCourses);
             if (providerSelect) providerSelect.addEventListener('change', filterCourses);
+            if (yearSelect) yearSelect.addEventListener('change', filterCourses);
             if (myCoursesFilter) myCoursesFilter.addEventListener('change', filterCourses);
             
             // Clear filters
@@ -1018,6 +1050,7 @@ get_header();
                 });
             }
             if (filters.providers) formData.append('providers', filters.providers);
+            if (filters.year) formData.append('year', filters.year);
             if (filters.my_courses) formData.append('my_courses', filters.my_courses);
             if (filters.page) formData.append('page', filters.page);
             if (filters.per_page) formData.append('per_page', filters.per_page);
@@ -1133,6 +1166,7 @@ get_header();
                         <div class="course-header">
                             <div class="course-badges">
                                 <span class="category-badge">${course.course_category || 'N/A'}</span>
+                                ${course.year ? '<span class="year-badge">' + course.year + '</span>' : ''}
                                 ${isCompleted ? '<span class="completed-badge">Added</span>' : ''}
                                 ${isInLearningPath && !isCompleted ? '<span class="started-badge">In Progress</span>' : ''}
                             </div>
@@ -1633,6 +1667,7 @@ get_header();
                 date_to: dateTo ? dateTo.value : '',
                 categories: Array.from(categoryFilters.querySelectorAll('input[name="category"]:checked')).map(cb => cb.value),
                 providers: providerSelect ? providerSelect.value : '',
+                year: yearSelect ? yearSelect.value : '',
                 my_courses: myCoursesFilter ? myCoursesFilter.checked : false,
                 page: 1,
                 per_page: coursesPerPage
@@ -1650,6 +1685,7 @@ get_header();
             if (dateFrom) dateFrom.value = '';
             if (dateTo) dateTo.value = '';
             if (providerSelect) providerSelect.value = '';
+            if (yearSelect) yearSelect.value = '';
             if (myCoursesFilter) myCoursesFilter.checked = false;
             
             const categoryCheckboxes = categoryFilters.querySelectorAll('input[name="category"]');

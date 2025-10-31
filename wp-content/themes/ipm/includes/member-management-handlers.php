@@ -82,14 +82,12 @@ function iipm_get_users() {
     
     // Membership filter (membership level filter)
     if (!empty($membership_filter)) {
-        if ($membership_filter === 'Admin') {
-            // Special case for Admin - check if user has administrator role
-            $where_conditions[] = "EXISTS (SELECT 1 FROM {$wpdb->usermeta} um WHERE um.user_id = u.ID AND um.meta_key = '{$wpdb->prefix}capabilities' AND um.meta_value LIKE '%administrator%')";
-        } else {
-            $where_conditions[] = "mem.id = %d";
-            $where_params[] = intval($membership_filter);
-        }
+        $where_conditions[] = "mem.id = %d";
+        $where_params[] = intval($membership_filter);
     }
+    
+    // Exclude administrators from results
+    $where_conditions[] = "NOT EXISTS (SELECT 1 FROM {$wpdb->usermeta} um WHERE um.user_id = u.ID AND um.meta_key = '{$wpdb->prefix}capabilities' AND um.meta_value LIKE '%administrator%')";
     
     // Build WHERE clause
     $where_clause = '';
@@ -136,11 +134,6 @@ function iipm_get_users() {
         
         // Get membership name from database, fallback to 'Member' if not found
         $membership_display = $user->membership_name ?: 'Member';
-        
-        // Special case for administrators
-        if (in_array('administrator', $user_roles)) {
-            $membership_display = 'Admin';
-        }
         
         // Check CPD submission status for current year
         $current_year = date('Y');
@@ -434,18 +427,13 @@ function iipm_update_user() {
         return;
     }
     
-    // Update user role - handle membership ID vs role name
+    // Update user role - set default subscriber role for all membership levels
     $user = new WP_User($user_id);
-    if ($membership === 'Admin' || $membership === 'Systems Admin') {
-        $user->set_role('administrator');
-    } else {
-        // For membership levels, set a default role
-        $user->set_role('subscriber');
-    }
+    $user->set_role('subscriber');
     
-    // Get membership level ID - membership parameter now contains the membership ID
+    // Get membership level ID - membership parameter contains the membership ID
     $membership_id = null;
-    if ($membership !== 'Admin' && $membership !== 'Systems Admin' && is_numeric($membership)) {
+    if (is_numeric($membership)) {
         $membership_id = intval($membership);
     }
     

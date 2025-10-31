@@ -1096,9 +1096,9 @@ function iipm_process_bulk_import($file_path, $employer_id, $options = array()) 
 				'employer_id' => $employer_id,
 				'user_phone' => sanitize_text_field($record['user_phone'] ?? ''),
 				'user_mobile' => sanitize_email($record['user_mobile'] ?? ''),
-				'user_designation' => sanitize_text_field($record['user_designation'] ?? ''),
+                'user_designation' => sanitize_text_field($record['user_designation'] ?? ''),
                 'city_or_town' => sanitize_text_field($record['city_or_town'] ?? ''),
-                'user_payment_method' => sanitize_text_field($record['user_payment_method'] ?? ''),
+                'user_payment_method' => !empty($record['user_payment_method']) ? sanitize_text_field($record['user_payment_method']) : 'Direct Invoiced',
                 'Address_1' => sanitize_text_field($record['Address_1'] ?? ''),
                 'Address_2' => sanitize_text_field($record['Address_2'] ?? ''),
                 'Address_3' => sanitize_text_field($record['Address_3'] ?? ''),
@@ -1747,7 +1747,7 @@ function iipm_process_member_registration($data, $token = null) {
                     'Address_2' => sanitize_text_field($data['address_line_2'] ?? ''),
                     'Address_3' => sanitize_text_field($data['address_line_3'] ?? ''),
                     'user_fullName' => $first_name." ".$last_name,
-                    'user_payment_method' => sanitize_text_field($data['payment_method'] ?? ''),
+                    'user_payment_method' => !empty($data['payment_method']) ? sanitize_text_field($data['payment_method']) : 'Direct Invoiced',
                     'sur_name' => sanitize_text_field($last_name ?? ''),
                     'first_name' => sanitize_text_field($first_name ?? ''),
                     'user_is_admin' => 0,
@@ -2345,7 +2345,7 @@ function iipm_handle_update_profile() {
             break;
             
         case 'address':
-            $user_payment_method = sanitize_text_field($_POST['user_payment_method']);
+            $user_payment_method = !empty($_POST['user_payment_method']) ? sanitize_text_field($_POST['user_payment_method']) : 'Direct Invoiced';
             if ($user_payment_method != 'Employer Invoiced') {
                 $address_line1 = sanitize_text_field($_POST['Address_1'] ?? '');
                 $address_line2 = sanitize_text_field($_POST['Address_2'] ?? '');
@@ -5880,7 +5880,7 @@ function iipm_handle_update_user_details() {
             'city_or_town' => sanitize_text_field($_POST['city_or_town'] ?? ''),
             'first_name' => sanitize_text_field($_POST['first_name'] ?? ''),
             'sur_name' => sanitize_text_field($_POST['sur_name'] ?? ''),
-            'user_payment_method' => sanitize_text_field($_POST['user_payment_method'] ?? ''),
+            'user_payment_method' => !empty($_POST['user_payment_method']) ? sanitize_text_field($_POST['user_payment_method']) : 'Direct Invoiced',
             'Address_1' => sanitize_text_field($_POST['Address_1'] ?? ''),
             'Address_2' => sanitize_text_field($_POST['Address_2'] ?? ''),
             'Address_3' => sanitize_text_field($_POST['Address_3'] ?? ''),

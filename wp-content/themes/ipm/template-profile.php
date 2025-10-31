@@ -406,10 +406,10 @@ get_header();
                                 </div>
                                 <div class="edit-mode" style="display: none;">
                                     <div class="form-group">
-                                        <label>Payment Method*</label>
+                                        <label>Payment Method</label>
                                         <select class="form-input" name="user_payment_method" id="payment_method_select">
                                             <option value="">Select payment method</option>
-                                            <option value="Direct Invoiced" <?php selected($user_payment_method, 'Direct Invoiced'); ?>>Direct Invoiced</option>
+                                            <option value="Direct Invoiced" <?php selected($user_payment_method, 'Direct Invoiced'); ?><?php if (empty($user_payment_method)) echo ' selected'; ?>>Direct Invoiced</option>
                                             <option value="Employer Invoiced" <?php selected($user_payment_method, 'Employer Invoiced'); ?>>Employer Invoiced</option>
                                         </select>
                                     </div>
