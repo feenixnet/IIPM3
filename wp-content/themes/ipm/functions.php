@@ -93,6 +93,40 @@ function ipm_widgets_init() {
 add_action( 'widgets_init', 'ipm_widgets_init' );
 
 /**
+ * Restrict wp-admin access to super admins only
+ * Redirect non-super-admins to custom 404 page
+ */
+function iipm_restrict_admin_access() {
+	// Skip if not in admin area
+	if (!is_admin()) {
+		return;
+	}
+	
+	// Skip for AJAX requests
+	if (defined('DOING_AJAX') && DOING_AJAX) {
+		return;
+	}
+	
+	// Skip for cron jobs
+	if (defined('DOING_CRON') && DOING_CRON) {
+		return;
+	}
+	
+	// Get current user
+	$current_user = wp_get_current_user();
+	
+	// Allow access if user is logged in and is super admin (administrator role)
+	if (is_user_logged_in() && in_array('administrator', $current_user->roles)) {
+		return;
+	}
+	
+	// Redirect to custom 404 page
+	wp_redirect(home_url('/404-access-denied.html'));
+	exit;
+}
+add_action('admin_init', 'iipm_restrict_admin_access', 1);
+
+/**
  * Enqueue scripts and styles.
  */
 function ipm_scripts() {
