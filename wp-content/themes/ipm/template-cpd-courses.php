@@ -110,14 +110,6 @@ get_header();
                         </div>
                         
                         <div class="filter-group">
-                            <label for="year-select">Year</label>
-                            <select id="year-select" class="year-select">
-                                <option value="">All Years</option>
-                                <!-- Years will be populated via jQuery -->
-                            </select>
-                        </div>
-                        
-                        <div class="filter-group">
                             <label class="custom-checkbox-label">
                                 <input type="checkbox" id="my-courses-filter" name="my-courses" style="margin-right: 10px;" value="1">
                                 <span class="label-text" style="position: relative; top: -2px;">Courses added by me</span>
@@ -511,16 +503,6 @@ get_header();
         letter-spacing: 0.5px;
     }
 
-    .year-badge {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 4px 12px;
-        border-radius: 16px;
-        font-size: 11px;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
 
     .completed-badge {
         background: #10b981;
@@ -942,7 +924,6 @@ get_header();
     // Extract URL parameters
     const urlParams = new URLSearchParams(window.location.search);
     let userIdForCourses = urlParams.get('user_id') ? parseInt(urlParams.get('user_id')) : null;
-    let tYear = urlParams.get('tyear') ? parseInt(urlParams.get('tyear')) : null;
     
     // Global variable to store all courses in fullcpd_confirmations table (both completed and started)
     let coursesInLearningPath = [];
@@ -955,7 +936,6 @@ get_header();
         const dateTo = document.getElementById('date-to');
         const categoryFilters = document.getElementById('category-filters');
         const providerSelect = document.getElementById('provider-select');
-        const yearSelect = document.getElementById('year-select');
         const myCoursesFilter = document.getElementById('my-courses-filter');
         const clearFiltersBtn = document.getElementById('clear-filters');
         const coursesGrid = document.getElementById('courses-grid');
@@ -965,18 +945,7 @@ get_header();
         const nextBtn = document.getElementById('next-btn');
         const paginationInfo = document.getElementById('pagination-info');
 
-        console.log("tYear and userIdForCourses", tYear, userIdForCourses);
-        
-        // Populate year dropdown with years from 2019 to current year
-        if (yearSelect) {
-            const currentYear = new Date().getFullYear();
-            for (let year = currentYear; year >= 2019; year--) {
-                const option = document.createElement('option');
-                option.value = year;
-                option.textContent = year;
-                yearSelect.appendChild(option);
-            }
-        }
+        console.log("userIdForCourses", userIdForCourses);
         
         // Initialize the page
         initializePage();
@@ -1009,7 +978,6 @@ get_header();
             if (dateFrom) dateFrom.addEventListener('change', filterCourses);
             if (dateTo) dateTo.addEventListener('change', filterCourses);
             if (providerSelect) providerSelect.addEventListener('change', filterCourses);
-            if (yearSelect) yearSelect.addEventListener('change', filterCourses);
             if (myCoursesFilter) myCoursesFilter.addEventListener('change', filterCourses);
             
             // Clear filters
@@ -1050,7 +1018,6 @@ get_header();
                 });
             }
             if (filters.providers) formData.append('providers', filters.providers);
-            if (filters.year) formData.append('year', filters.year);
             if (filters.my_courses) formData.append('my_courses', filters.my_courses);
             if (filters.page) formData.append('page', filters.page);
             if (filters.per_page) formData.append('per_page', filters.per_page);
@@ -1093,26 +1060,24 @@ get_header();
             
             let html = '';
             courses.forEach(course => {
-                // Format date from DD-MM-YYYY to "Month Day, Year" (e.g., "Oct 1, 2019")
+                // Format date from DD/MM/YYYY or DD-MM-YYYY to "Month Day, Year" (e.g., "Oct 1, 2019")
                 let courseDateFormatted = 'N/A';
                 if (course.course_date) {
                     try {
-                        // Parse DD-MM-YYYY format
-                        const dateParts = course.course_date.split('-');
+                        // Replace / with - to normalize format, then parse DD-MM-YYYY
+                        const dateStr = course.course_date.replace(/\//g, '-');
+                        const dateParts = dateStr.split('-');
                         if (dateParts.length === 3) {
                             const day = parseInt(dateParts[0]);
                             const month = parseInt(dateParts[1]) - 1; // Month is 0-indexed in JavaScript
                             const year = parseInt(dateParts[2]);
                             
-                            // Create date object and format
-                            const date = new Date(year, month, day);
-                            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-                            courseDateFormatted = `${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
-                        } else {
-                            // Fallback: try to parse as regular date string
-                            const date = new Date(course.course_date);
-                            if (!isNaN(date.getTime())) {
-                                courseDateFormatted = date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+                            // Validate the date parts
+                            if (!isNaN(day) && !isNaN(month) && !isNaN(year) && day >= 1 && day <= 31 && month >= 0 && month <= 11) {
+                                // Create date object and format
+                                const date = new Date(year, month, day);
+                                const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                                courseDateFormatted = `${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
                             }
                         }
                     } catch (e) {
@@ -1166,7 +1131,6 @@ get_header();
                         <div class="course-header">
                             <div class="course-badges">
                                 <span class="category-badge">${course.course_category || 'N/A'}</span>
-                                ${course.year ? '<span class="year-badge">' + course.year + '</span>' : ''}
                                 ${isCompleted ? '<span class="completed-badge">Added</span>' : ''}
                                 ${isInLearningPath && !isCompleted ? '<span class="started-badge">In Progress</span>' : ''}
                             </div>
@@ -1299,7 +1263,6 @@ get_header();
             formData.append('course_category', course.course_category);
             formData.append('course_cpd_mins', course.course_cpd_mins);
             formData.append('crs_provider', course.crs_provider);
-            formData.append('year', tYear);
             formData.append('user_id', userIdForCourses);
             
             jQuery.ajax({
@@ -1537,8 +1500,7 @@ get_header();
                 type: 'POST',
                 data: {
                     action: 'iipm_get_courses_in_learning_path',
-                    user_id: userIdForCourses,
-                    year: tYear
+                    user_id: userIdForCourses
                 },
                 success: function(response) {
                     if (response.success && response.data.courses) {
@@ -1667,7 +1629,6 @@ get_header();
                 date_to: dateTo ? dateTo.value : '',
                 categories: Array.from(categoryFilters.querySelectorAll('input[name="category"]:checked')).map(cb => cb.value),
                 providers: providerSelect ? providerSelect.value : '',
-                year: yearSelect ? yearSelect.value : '',
                 my_courses: myCoursesFilter ? myCoursesFilter.checked : false,
                 page: 1,
                 per_page: coursesPerPage
@@ -1685,7 +1646,6 @@ get_header();
             if (dateFrom) dateFrom.value = '';
             if (dateTo) dateTo.value = '';
             if (providerSelect) providerSelect.value = '';
-            if (yearSelect) yearSelect.value = '';
             if (myCoursesFilter) myCoursesFilter.checked = false;
             
             const categoryCheckboxes = categoryFilters.querySelectorAll('input[name="category"]');

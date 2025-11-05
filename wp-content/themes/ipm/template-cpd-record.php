@@ -113,7 +113,7 @@ get_header();
                         
                         <div class="summary-total">
                             <div class="total-label">Total</div>
-                            <div class="total-value" id="summary-total">0 hours</div>
+                            <div class="total-value" id="summary-total">0</div>
                         </div>
                     </div>
                 </div>
@@ -543,16 +543,23 @@ get_header();
     }
 
     .status-icon {
-        margin-right: 8px;
-        font-size: 16px;
+        margin-right: 6px;
+        font-size: 12px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .status-icon i {
+        display: inline-block;
     }
 
     .status-completed {
-        color: #059669;
+        color: #10b981;
     }
 
     .status-incomplete {
-        color: #dc2626;
+        color: #ef4444;
     }
 
     .completion-status {
@@ -905,7 +912,7 @@ get_header();
         function updateSummary(data) {
             if (!data.courses_summary || data.courses_summary.length === 0) {
                 summaryContent.innerHTML = '<div class="no-data-message">No courses completed for this year.</div>';
-                if (summaryTotal) summaryTotal.textContent = '0 hours';
+                if (summaryTotal) summaryTotal.textContent = '0';
                 return;
             }
             
@@ -926,7 +933,7 @@ get_header();
                 const hours = Math.round((item.total_minutes / 60) * 2) / 2; // Round to nearest 0.5
                 const progressText = `${hours} / 1`;
                 const statusClass = hours >= 1 ? 'status-completed' : 'status-incomplete';
-                const statusIcon = hours >= 1 ? '✅' : '❌';
+                const statusIcon = hours >= 1 ? '<i class="fas fa-check-circle"></i>' : '<i class="fas fa-times-circle"></i>';
                 
                 html += `
                     <tr>
@@ -935,7 +942,7 @@ get_header();
                             ${item.category}
                         </td>
                         <td class="completion-status ${statusClass}">${progressText}</td>
-                        <td class="summary-hours">${hours} hours</td>
+                        <td class="summary-hours">${hours}</td>
                     </tr>
                 `;
             });
@@ -948,7 +955,7 @@ get_header();
             summaryContent.innerHTML = html;
             
             if (summaryTotal) {
-                summaryTotal.textContent = data.total_hours.toFixed(1) + ' hours';
+                summaryTotal.textContent = data.total_hours.toFixed(1);
             }
         }
         

@@ -110,7 +110,6 @@ function iipm_ajax_get_courses() {
         'date_to' => $_POST['date_to'] ?? '',
         'categories' => $categories,
         'providers' => $_POST['providers'] ?? '',
-        'year' => $_POST['year'] ?? '',
         'my_courses' => $_POST['my_courses'] ?? false
     );
     
@@ -164,7 +163,16 @@ function iipm_ajax_submit_course_request() {
     
     $lia_code = sanitize_text_field($_POST['LIA_Code'] ?? '');
     $course_cpd_hours = floatval($_POST['course_cpd_mins'] ?? 0); // hours from form
-    $submission_date = sanitize_text_field($_POST['submission_date'] ?? '');
+    $course_date_input = sanitize_text_field($_POST['course_date'] ?? '');
+    
+    // Convert date from yyyy-mm-dd (HTML date input format) to dd/mm/yyyy (database format)
+    $course_date = '';
+    if (!empty($course_date_input)) {
+        $date_parts = explode('-', $course_date_input);
+        if (count($date_parts) === 3) {
+            $course_date = $date_parts[2] . '/' . $date_parts[1] . '/' . $date_parts[0]; // dd/mm/yyyy
+        }
+    }
 
     if (empty($course_name)) {
         wp_send_json_error('Course title is required');
@@ -230,6 +238,7 @@ function iipm_ajax_submit_course_request() {
             'course_category' => $category['name'],
             'LIA_Code' => $lia_code,
             'course_cpd_mins' => $course_cpd_mins,
+            'course_date' => $course_date ?: date('d/m/Y'),
             'status' => 'pending',
             'created_at' => current_time('mysql'),
             'course_id' => iipm_generate_course_id(),
@@ -342,25 +351,15 @@ function iipm_ajax_approve_course_request() {
     // Insert into coursesbyadminbku as user-originated course (is_by_admin = 0)
     $courses_table = $wpdb->prefix . 'coursesbyadminbku';
     
-    // Extract year from created_at timestamp
-    $year = date('Y'); // Default to current year
-    if (!empty($request->created_at)) {
-        $timestamp = strtotime($request->created_at);
-        if ($timestamp !== false) {
-            $year = date('Y', $timestamp);
-        }
-    }
-    
     $insert_course = array(
         'course_name' => $request->course_name,
         'LIA_Code' => $request->LIA_Code,
         'course_category' => $request->course_category,
         'crs_provider' => 'external',
         'course_cpd_mins' => intval($request->course_cpd_mins),
-        'year' => intval($year),
         'user_id' => intval($request->user_id),
         'course_id' => $request->course_id ?: iipm_generate_course_id(),
-        'course_date' => date('d-m-Y'),
+        'course_date' => !empty($request->course_date) ? $request->course_date : date('d/m/Y'),
         'course_enteredBy' => wp_get_current_user()->user_login,
         'is_by_admin' => 0,
         'status' => 'active',
@@ -466,27 +465,27 @@ function iipm_get_courses($filters = array(), $pagination = array()) {
     
     // Date range filters
     if (!empty($filters['date_from'])) {
-        // Convert from YYYY-MM-DD (from date input) to DD-MM-YYYY for database comparison
+        // Convert from YYYY-MM-DD (from date input) to DD/MM/YYYY for database comparison
         $date_from = sanitize_text_field($filters['date_from']);
         $date_parts = explode('-', $date_from);
         if (count($date_parts) == 3) {
-            $date_from_formatted = $date_parts[2] . '-' . $date_parts[1] . '-' . $date_parts[0]; // YYYY-MM-DD to DD-MM-YYYY
+            $date_from_formatted = $date_parts[2] . '/' . $date_parts[1] . '/' . $date_parts[0]; // YYYY-MM-DD to DD/MM/YYYY
             
-            // Use STR_TO_DATE to convert DD-MM-YYYY strings to dates for proper comparison
-            $where_conditions[] = "STR_TO_DATE(course_date, '%%d-%%m-%%Y') >= STR_TO_DATE(%s, '%%d-%%m-%%Y')";
+            // Use STR_TO_DATE with REPLACE to handle both / and - separators
+            $where_conditions[] = "STR_TO_DATE(REPLACE(course_date, '/', '-'), '%%d-%%m-%%Y') >= STR_TO_DATE(REPLACE(%s, '/', '-'), '%%d-%%m-%%Y')";
             $query_params[] = $date_from_formatted;
         }
     }
     
     if (!empty($filters['date_to'])) {
-        // Convert from YYYY-MM-DD (from date input) to DD-MM-YYYY for database comparison
+        // Convert from YYYY-MM-DD (from date input) to DD/MM/YYYY for database comparison
         $date_to = sanitize_text_field($filters['date_to']);
         $date_parts = explode('-', $date_to);
         if (count($date_parts) == 3) {
-            $date_to_formatted = $date_parts[2] . '-' . $date_parts[1] . '-' . $date_parts[0]; // YYYY-MM-DD to DD-MM-YYYY
+            $date_to_formatted = $date_parts[2] . '/' . $date_parts[1] . '/' . $date_parts[0]; // YYYY-MM-DD to DD/MM/YYYY
             
-            // Use STR_TO_DATE to convert DD-MM-YYYY strings to dates for proper comparison
-            $where_conditions[] = "STR_TO_DATE(course_date, '%%d-%%m-%%Y') <= STR_TO_DATE(%s, '%%d-%%m-%%Y')";
+            // Use STR_TO_DATE with REPLACE to handle both / and - separators
+            $where_conditions[] = "STR_TO_DATE(REPLACE(course_date, '/', '-'), '%%d-%%m-%%Y') <= STR_TO_DATE(REPLACE(%s, '/', '-'), '%%d-%%m-%%Y')";
             $query_params[] = $date_to_formatted;
         }
     }
@@ -506,11 +505,6 @@ function iipm_get_courses($filters = array(), $pagination = array()) {
         $query_params[] = $provider;
     }
     
-    // Year filter
-    if (!empty($filters['year'])) {
-        $where_conditions[] = "year = %d";
-        $query_params[] = intval($filters['year']);
-    }
     
     // My courses filter - show only user's own external courses
     if (!empty($filters['my_courses']) && ($filters['my_courses'] === 'true' || $filters['my_courses'] === true || $filters['my_courses'] === '1')) {
@@ -804,7 +798,6 @@ function iipm_ajax_get_all_courses_paginated() {
     // Get filter parameters
     $category_filter = sanitize_text_field($_POST['category_filter'] ?? '');
     $provider_filter = sanitize_text_field($_POST['provider_filter'] ?? '');
-    $year_filter = sanitize_text_field($_POST['year_filter'] ?? '');
     $search_term = sanitize_text_field($_POST['search_term'] ?? '');
     
     // Debug logging
@@ -813,11 +806,10 @@ function iipm_ajax_get_all_courses_paginated() {
         'per_page' => $per_page,
         'category_filter' => $category_filter,
         'provider_filter' => $provider_filter,
-        'year_filter' => $year_filter,
         'search_term' => $search_term
     ]));
     
-    $result = iipm_get_all_courses_management_paginated($page, $per_page, $category_filter, $provider_filter, $year_filter, $search_term);
+    $result = iipm_get_all_courses_management_paginated($page, $per_page, $category_filter, $provider_filter, $search_term);
     
     // Convert minutes to hours for frontend display
     if (!empty($result['courses'])) {
@@ -877,17 +869,19 @@ function iipm_ajax_add_course() {
         get_current_user_id()
     ));
     
+    // Handle course date - if provided, use it; otherwise use current date
+    $course_date = !empty($_POST['course_date']) ? sanitize_text_field($_POST['course_date']) : date('d/m/Y');
+    
     $course_data = array(
         'course_name' => sanitize_text_field($_POST['course_name']),
         'LIA_Code' => sanitize_text_field($_POST['course_code']),
         'category_id' => intval($_POST['course_category']),
         'provider' => sanitize_text_field($_POST['course_provider']),
         'duration' => round(floatval($_POST['course_cpd_mins']) * 60),
-        'year' => !empty($_POST['course_year']) ? intval($_POST['course_year']) : intval(date('Y')),
         'status' => sanitize_text_field($_POST['course_status']),
         'user_id' => get_current_user_id(),
         'course_id' => iipm_generate_course_id(),
-        'course_date' => date('d-m-Y'),
+        'course_date' => $course_date,
         'course_enteredBy' => $username
     );
     
@@ -924,14 +918,21 @@ function iipm_ajax_update_course() {
         return;
     }
     
+    // Handle course date - if provided, use it; otherwise keep existing
+    $course_date = !empty($_POST['course_date']) ? sanitize_text_field($_POST['course_date']) : null;
+    
     $course_data = array(
         'course_name' => sanitize_text_field($_POST['course_name']),
         'LIA_Code' => sanitize_text_field($_POST['course_code']),
         'category_id' => intval($_POST['course_category']),
         'provider' => sanitize_text_field($_POST['course_provider']),
-        'duration' => round(floatval($_POST['course_cpd_mins']) * 60),
-        'year' => !empty($_POST['course_year']) ? intval($_POST['course_year']) : intval(date('Y'))
+        'duration' => round(floatval($_POST['course_cpd_mins']) * 60)
     );
+    
+    // Only add course_date if it's provided
+    if ($course_date !== null) {
+        $course_data['course_date'] = $course_date;
+    }
     
     // Validate required fields
     if (empty($course_data['course_name']) || empty($course_data['category_id']) || 
@@ -993,7 +994,7 @@ function iipm_get_all_courses_management() {
 /**
  * Get paginated courses for management interface
  */
-function iipm_get_all_courses_management_paginated($page = 1, $per_page = 10, $category_filter = '', $provider_filter = '', $year_filter = '', $search_term = '') {
+function iipm_get_all_courses_management_paginated($page = 1, $per_page = 10, $category_filter = '', $provider_filter = '', $search_term = '') {
     global $wpdb;
     
     $table_name = $wpdb->prefix . 'coursesbyadminbku';
@@ -1021,12 +1022,7 @@ function iipm_get_all_courses_management_paginated($page = 1, $per_page = 10, $c
         $where_conditions[] = "crs_provider = %s";
         $where_values[] = $provider_filter;
     }
-    
-    if (!empty($year_filter)) {
-        $where_conditions[] = "year = %d";
-        $where_values[] = intval($year_filter);
-    }
-    
+
     if (!empty($search_term)) {
         $where_conditions[] = "course_name LIKE %s";
         $search_like = '%' . $wpdb->esc_like($search_term) . '%';
@@ -1108,7 +1104,6 @@ function iipm_add_course_management($course_data) {
         'course_category' => $category_name,
         'crs_provider' => $course_data['provider'],
         'course_cpd_mins' => $course_data['duration'],
-        'year' => $course_data['year'],
         'user_id' => $course_data['user_id'],
         'course_id' => $course_data['course_id'],
         'course_date' => $course_data['course_date'],
@@ -1147,14 +1142,21 @@ function iipm_update_course_management($course_id, $course_data) {
         'course_category' => $category_name,
         'crs_provider' => $course_data['provider'],
         'course_cpd_mins' => $course_data['duration'],
-        'year' => $course_data['year'],
     );
+    
+    $format_array = array('%s', '%s', '%s', '%s', '%f');
+    
+    // Add course_date if provided
+    if (isset($course_data['course_date'])) {
+        $update_data['course_date'] = $course_data['course_date'];
+        $format_array[] = '%s';
+    }
     
     $result = $wpdb->update(
         $table_name,
         $update_data,
         array('id' => $course_id),
-        array('%s', '%s', '%s', '%s', '%f', '%d'),
+        $format_array,
         array('%d')
     );
     
@@ -1292,7 +1294,7 @@ function iipm_ajax_add_user_course() {
         'is_by_admin' => intval($_POST['is_by_admin'] ?? 0),
         'status' => sanitize_text_field($_POST['status'] ?? 'pending'),
         'course_id' => iipm_generate_course_id(),
-        'course_date' => date('d-m-Y'),
+        'course_date' => date('d/m/Y'),
         'course_enteredBy' => $user_id
     );
     

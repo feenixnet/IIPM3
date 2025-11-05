@@ -513,7 +513,7 @@ function iipm_download_certificate_direct() {
     }
     $cpd_stats = iipm_get_cpd_stats($user_id, intval($submission_year));
 
-    $pdf_content = generate_certificate_pdf($cpd_stats, $certificate, $user_name, $user_email, $contact_address, $submission_year);
+    $pdf_content = generate_certificate_pdf($cpd_stats, $certificate, $user_name, $user_email, $contact_address, $submission_year, $user_id);
     
     // Set headers for PDF download (like CSV export)
     $filename = 'CPD_Certificate_' . $user_name . '_' . $submission_year . '.pdf';
@@ -541,7 +541,15 @@ function iipm_download_certificate_direct() {
 /**
  * Generate certificate PDF content using TCPDF
  */
-function generate_certificate_pdf($cpd_stats, $certificate, $user_name, $user_email, $contact_address, $submission_year) {
+function generate_certificate_pdf($cpd_stats, $certificate, $user_name, $user_email, $contact_address, $submission_year, $user_id = null) {
+    // Load required functions if not already loaded
+    if (!function_exists('iipm_round_to_nearest_half')) {
+        require_once(get_template_directory() . '/includes/global-functions.php');
+    }
+    if (!function_exists('iipm_get_user_leave_requests_for_year')) {
+        require_once(get_template_directory() . '/includes/leave-request-functions.php');
+    }
+    
     // Check if TCPDF is available
     if (!class_exists('TCPDF')) {
         // Fallback to simple PDF if TCPDF is not available
@@ -589,8 +597,20 @@ function generate_certificate_pdf($cpd_stats, $certificate, $user_name, $user_em
     }
     $completed_total = array_sum($cat_hours);
 
-    // Virtual Pro Rata Deduction row
-    $pro_rata_total = 6; // as requested
+    // Calculate Pro Rata Deduction by summing hours_deduct from approved leave requests
+    // Use existing function from leave-request-functions.php
+    $pro_rata_total = 0;
+    if ($user_id && function_exists('iipm_get_user_leave_requests_for_year')) {
+        $leave_requests = iipm_get_user_leave_requests_for_year($user_id, intval($submission_year));
+        if (!empty($leave_requests)) {
+            foreach ($leave_requests as $request) {
+                // Only sum up approved leave requests
+                if ($request->status === 'approved' && isset($request->hours_deduct)) {
+                    $pro_rata_total += floatval($request->hours_deduct);
+                }
+            }
+        }
+    }
 
     // Required per category (>=1 each); total equals target hours
     $required_total = isset($cpd_stats['target_minutes']) ? (floatval($cpd_stats['target_minutes']) / 60.0) : 8.0;
@@ -626,13 +646,24 @@ function generate_certificate_pdf($cpd_stats, $certificate, $user_name, $user_em
     $check_life = $checks['Life Assurance'] ? $checkmark_img : $closemark_img;
     $check_total = $total_ok ? $checkmark_img : $closemark_img;
     
-    $completed_si = number_format($cat_hours['Savings & Investments'], 0);
-    $completed_pensions = number_format($cat_hours['Pensions'], 0);
-    $completed_ethics = number_format($cat_hours['Ethics'], 0);
-    $completed_life = number_format($cat_hours['Life Assurance'], 0);
-    $completed_total_fmt = number_format($completed_total, 0);
-    $required_total_fmt = number_format($required_total, 0);
-    $pro_rata_total_fmt = number_format($pro_rata_total, 0);
+    // Round all hours to 0.5 increments
+    if (function_exists('iipm_round_to_nearest_half')) {
+        $completed_si = number_format(iipm_round_to_nearest_half($cat_hours['Savings & Investments']), 1);
+        $completed_pensions = number_format(iipm_round_to_nearest_half($cat_hours['Pensions']), 1);
+        $completed_ethics = number_format(iipm_round_to_nearest_half($cat_hours['Ethics']), 1);
+        $completed_life = number_format(iipm_round_to_nearest_half($cat_hours['Life Assurance']), 1);
+        $completed_total_fmt = number_format(iipm_round_to_nearest_half($completed_total), 1);
+        $required_total_fmt = number_format(iipm_round_to_nearest_half($required_total), 1);
+        $pro_rata_total_fmt = number_format(iipm_round_to_nearest_half($pro_rata_total), 1);
+    } else {
+        $completed_si = number_format($cat_hours['Savings & Investments'], 1);
+        $completed_pensions = number_format($cat_hours['Pensions'], 1);
+        $completed_ethics = number_format($cat_hours['Ethics'], 1);
+        $completed_life = number_format($cat_hours['Life Assurance'], 1);
+        $completed_total_fmt = number_format($completed_total, 1);
+        $required_total_fmt = number_format($required_total, 1);
+        $pro_rata_total_fmt = number_format($pro_rata_total, 1);
+    }
     
     $user_name_safe = htmlspecialchars($user_name, ENT_QUOTES);
     $year_safe = esc_html($submission_year);
@@ -649,7 +680,12 @@ function generate_certificate_pdf($cpd_stats, $certificate, $user_name, $user_em
             $course_name = isset($course['courseName']) ? htmlspecialchars($course['courseName'], ENT_QUOTES) : 'N/A';
             $date_of_course = isset($course['dateOfCourse']) ? htmlspecialchars($course['dateOfCourse'], ENT_QUOTES) : 'N/A';
             $course_type = isset($course['courseType']) ? htmlspecialchars($course['courseType'], ENT_QUOTES) : 'N/A';
-            $hours_gained = isset($course['hours']) ? number_format($course['hours'], 1) : '0.0';
+            // Round hours to 0.5 increments
+            if (isset($course['hours']) && function_exists('iipm_round_to_nearest_half')) {
+                $hours_gained = number_format(iipm_round_to_nearest_half($course['hours']), 1);
+            } else {
+                $hours_gained = isset($course['hours']) ? number_format($course['hours'], 1) : '0.0';
+            }
             $provider = isset($course['crs_provider']) ? htmlspecialchars($course['crs_provider'], ENT_QUOTES) : 'N/A';
             $date_added = isset($course['dateOfReturn']) ? htmlspecialchars($course['dateOfReturn'], ENT_QUOTES) : 'N/A';
             
@@ -670,72 +706,72 @@ ROW;
     }
     
     $courses_table_html = <<<HTML
-<table cellspacing="0" cellpadding="14" style="width:100%;border-color:#c2c2c2;margin-top:10px;">
-    <thead>
-        <tr>
-            <th bgcolor="#5b2c6f" color="#ffffff" align="center" style="width:25%;border-color:#c2c2c2;padding:14px 10px;"><b>Course Name</b></th>
-            <th bgcolor="#5b2c6f" color="#ffffff" align="center" style="width:15%;border-color:#c2c2c2;padding:14px 10px;"><b>Course Date</b></th>
-            <th bgcolor="#5b2c6f" color="#ffffff" align="center" style="width:15%;border-color:#c2c2c2;padding:14px 10px;"><b>Category</b></th>
-            <th bgcolor="#5b2c6f" color="#ffffff" align="center" style="width:15%;border-color:#c2c2c2;padding:14px 10px;"><b>Hours Gained</b></th>
-            <th bgcolor="#5b2c6f" color="#ffffff" align="center" style="width:15%;border-color:#c2c2c2;padding:14px 10px;"><b>Provider</b></th>
-            <th bgcolor="#5b2c6f" color="#ffffff" align="center" style="width:15%;border-color:#c2c2c2;padding:14px 10px;"><b>When Added</b></th>
-        </tr>
-    </thead>
-    <tbody>
-{$courses_rows}
-    </tbody>
-</table>
-HTML;
+        <table cellspacing="0" cellpadding="14" style="width:100%;border-color:#c2c2c2;margin-top:10px;">
+            <thead>
+                <tr>
+                    <th bgcolor="#5b2c6f" color="#ffffff" align="center" style="width:25%;border-color:#c2c2c2;padding:14px 10px;"><b>Course Name</b></th>
+                    <th bgcolor="#5b2c6f" color="#ffffff" align="center" style="width:15%;border-color:#c2c2c2;padding:14px 10px;"><b>Course Date</b></th>
+                    <th bgcolor="#5b2c6f" color="#ffffff" align="center" style="width:15%;border-color:#c2c2c2;padding:14px 10px;"><b>Category</b></th>
+                    <th bgcolor="#5b2c6f" color="#ffffff" align="center" style="width:15%;border-color:#c2c2c2;padding:14px 10px;"><b>Hours Gained</b></th>
+                    <th bgcolor="#5b2c6f" color="#ffffff" align="center" style="width:15%;border-color:#c2c2c2;padding:14px 10px;"><b>Provider</b></th>
+                    <th bgcolor="#5b2c6f" color="#ffffff" align="center" style="width:15%;border-color:#c2c2c2;padding:14px 10px;"><b>When Added</b></th>
+                </tr>
+            </thead>
+            <tbody>
+        {$courses_rows}
+            </tbody>
+        </table>
+    HTML;
 
     // Build table using TCPDF-friendly HTML attributes with clean structure
     $table_html = <<<HTML
-<table border="0" cellspacing="0" cellpadding="8" style="width:100%;margin-bottom:16px;">
-    <thead>
-        <tr>
-            <th bgcolor="#5b2c6f" color="#ffffff" align="center" style="width:25%"><b>Competency</b></th>
-            <th bgcolor="#5b2c6f" color="#ffffff" align="center" style="width:15%"><b>Savings &amp; Investments</b></th>
-            <th bgcolor="#5b2c6f" color="#ffffff" align="center" style="width:15%"><b>Pensions</b></th>
-            <th bgcolor="#5b2c6f" color="#ffffff" align="center" style="width:15%"><b>Ethics</b></th>
-            <th bgcolor="#5b2c6f" color="#ffffff" align="center" style="width:15%"><b>Life Assurance</b></th>
-            <th bgcolor="#5b2c6f" color="#ffffff" align="center" style="width:15%"><b>Total</b></th>
-        </tr>
-    </thead>
-    <tbody>
-        <tr nobr="true">
-            <td bgcolor="#f7f7f7" color="#555555" align="left" style="width:25%"><b>Completed</b></td>
-            <td color="#555555" align="center" style="width:15%">{$completed_si}</td>
-            <td color="#555555" align="center" style="width:15%">{$completed_pensions}</td>
-            <td color="#555555" align="center" style="width:15%">{$completed_ethics}</td>
-            <td color="#555555" align="center" style="width:15%">{$completed_life}</td>
-            <td color="#555555" align="center" style="width:15%">{$completed_total_fmt}</td>
-        </tr>
-        <tr nobr="true">
-            <td bgcolor="#f7f7f7" color="#555555" align="left" style="width:25%"><b>Pro Rata Deduction:</b></td>
-            <td color="#555555" align="center" style="width:15%">1</td>
-            <td color="#555555" align="center" style="width:15%">1</td>
-            <td color="#555555" align="center" style="width:15%">1</td>
-            <td color="#555555" align="center" style="width:15%">1</td>
-            <td color="#555555" align="center" style="width:15%">{$pro_rata_total_fmt}</td>
-        </tr>
-        <tr nobr="true">
-            <td bgcolor="#f7f7f7" color="#555555" align="left" style="width:25%"><b>Required</b></td>
-            <td color="#555555" align="center" style="width:15%">1</td>
-            <td color="#555555" align="center" style="width:15%">1</td>
-            <td color="#555555" align="center" style="width:15%">1</td>
-            <td color="#555555" align="center" style="width:15%">1</td>
-            <td color="#555555" align="center" style="width:15%">{$required_total_fmt}</td>
-        </tr>
-        <tr nobr="true">
-            <td bgcolor="#f7f7f7" color="#555555" align="left" style="width:25%"><b>Mandatory Requirements Met</b></td>
-            <td color="#555555" align="center" style="width:15%;display: flex;align-items:center;">{$check_si}</td>
-            <td color="#555555" align="center" style="width:15%;display: flex;align-items:center;">{$check_pensions}</td>
-            <td color="#555555" align="center" style="width:15%;display: flex;align-items:center;">{$check_ethics}</td>
-            <td color="#555555" align="center" style="width:15%;display: flex;align-items:center;">{$check_life}</td>
-            <td color="#555555" align="center" style="width:15%;display: flex;align-items:center;">{$check_total}</td>
-        </tr>
-    </tbody>
-</table>
-HTML;
+        <table border="0" cellspacing="0" cellpadding="8" style="width:100%;margin-bottom:16px;">
+            <thead>
+                <tr>
+                    <th bgcolor="#5b2c6f" color="#ffffff" align="center" style="width:25%"><b>Competency</b></th>
+                    <th bgcolor="#5b2c6f" color="#ffffff" align="center" style="width:15%"><b>Savings &amp; Investments</b></th>
+                    <th bgcolor="#5b2c6f" color="#ffffff" align="center" style="width:15%"><b>Pensions</b></th>
+                    <th bgcolor="#5b2c6f" color="#ffffff" align="center" style="width:15%"><b>Ethics</b></th>
+                    <th bgcolor="#5b2c6f" color="#ffffff" align="center" style="width:15%"><b>Life Assurance</b></th>
+                    <th bgcolor="#5b2c6f" color="#ffffff" align="center" style="width:15%"><b>Total</b></th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr nobr="true">
+                    <td bgcolor="#f7f7f7" color="#555555" align="left" style="width:25%"><b>Completed</b></td>
+                    <td color="#555555" align="center" style="width:15%">{$completed_si}</td>
+                    <td color="#555555" align="center" style="width:15%">{$completed_pensions}</td>
+                    <td color="#555555" align="center" style="width:15%">{$completed_ethics}</td>
+                    <td color="#555555" align="center" style="width:15%">{$completed_life}</td>
+                    <td color="#555555" align="center" style="width:15%">{$completed_total_fmt}</td>
+                </tr>
+                <tr nobr="true">
+                    <td bgcolor="#f7f7f7" color="#555555" align="left" style="width:25%"><b>Pro Rata Deduction:</b></td>
+                    <td color="#555555" align="center" style="width:15%">-</td>
+                    <td color="#555555" align="center" style="width:15%">-</td>
+                    <td color="#555555" align="center" style="width:15%">-</td>
+                    <td color="#555555" align="center" style="width:15%">-</td>
+                    <td color="#555555" align="center" style="width:15%">{$pro_rata_total_fmt}</td>
+                </tr>
+                <tr nobr="true">
+                    <td bgcolor="#f7f7f7" color="#555555" align="left" style="width:25%"><b>Required</b></td>
+                    <td color="#555555" align="center" style="width:15%">1</td>
+                    <td color="#555555" align="center" style="width:15%">1</td>
+                    <td color="#555555" align="center" style="width:15%">1</td>
+                    <td color="#555555" align="center" style="width:15%">1</td>
+                    <td color="#555555" align="center" style="width:15%">{$required_total_fmt}</td>
+                </tr>
+                <tr nobr="true">
+                    <td bgcolor="#f7f7f7" color="#555555" align="left" style="width:25%"><b>Mandatory Requirements Met</b></td>
+                    <td color="#555555" align="center" style="width:15%;display: flex;align-items:center;">{$check_si}</td>
+                    <td color="#555555" align="center" style="width:15%;display: flex;align-items:center;">{$check_pensions}</td>
+                    <td color="#555555" align="center" style="width:15%;display: flex;align-items:center;">{$check_ethics}</td>
+                    <td color="#555555" align="center" style="width:15%;display: flex;align-items:center;">{$check_life}</td>
+                    <td color="#555555" align="center" style="width:15%;display: flex;align-items:center;">{$check_total}</td>
+                </tr>
+            </tbody>
+        </table>
+    HTML;
 
     // Build first HTML (header + first table) and write it
     $logo_section = $logo_html ? "<div align=\"center\" style=\"margin-bottom:8px;\">{$logo_html}</div>" : '';
@@ -743,7 +779,7 @@ HTML;
 {$logo_section}
 <h2 align="center" style="color:#6a1b9a;">CPD – CERTIFICATION OF COMPLETION</h2>
 <p align="center" style="font-size:11px;">The below tables contain an overview of your CPD progress for {$year_safe} and available actions for this year.</p>
-<p align="left" style="font-size:11px;color:#c62828;margin:4px 0 10px 0;"><b>STATUS: COMPLETED AND SUBMITTED</b></p>
+<p align="left" style="font-size:11px;color:#2e7d32;margin:4px 0 10px 0;"><b>STATUS: COMPLETED AND SUBMITTED</b></p>
 
 <table border="0" cellspacing="0" cellpadding="10" style="width:100%;margin-top:14px;margin-bottom:8px;">
     <tr>

@@ -127,10 +127,10 @@ get_header();
                         </div>
                     </div>
 
-                    <!-- Tenth row (continued in spec): Submission date (date picker) -->
+                    <!-- Tenth row (continued in spec): Course date (date picker) -->
                     <div class="form-group">
-                        <label for="submission_date">Submission Date <span class="required-asterisk">*</span></label>
-                        <input type="date" id="submission_date" name="submission_date" style="width: 300px;" required>
+                        <label for="course_date">Course Date <span class="required-asterisk">*</span></label>
+                        <input type="date" id="course_date" name="course_date" style="width: 300px;" required>
                     </div>
 
                     <!-- 11th row: Submit button centered -->
@@ -409,7 +409,7 @@ document.addEventListener('DOMContentLoaded', function() {
             LIA_Code: (document.getElementById('LIA_Code')?.value || document.getElementById('course_code')?.value || '').trim(),
             course_cpd_mins: document.getElementById('course_cpd_mins')?.value || document.getElementById('course_duration')?.value,
             declaration_agree: document.getElementById('declaration_agree')?.checked,
-            submission_date: document.getElementById('submission_date')?.value
+            course_date: document.getElementById('course_date')?.value
         };
 
         // Basic validation for key fields (with notification system)
@@ -425,8 +425,8 @@ document.addEventListener('DOMContentLoaded', function() {
             notifications.error('Declaration required', 'Please confirm the declaration before submitting.');
             return;
         }
-        if (!payload.submission_date) {
-            notifications.error('Submission date required', 'Please select a Submission Date.');
+        if (!payload.course_date) {
+            notifications.error('Course date required', 'Please select a Course Date.');
             return;
         }
         if (payload.course_cpd_mins && (parseFloat(payload.course_cpd_mins) % 0.5 !== 0)) {

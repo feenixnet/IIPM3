@@ -82,11 +82,6 @@ if (!function_exists('add_success_notification')) {
                 </select>
             </div>
             <div class="filter-group">
-                <select id="year-filter" class="form-control">
-                    <option value="all">All Years</option>
-                </select>
-            </div>
-            <div class="filter-group">
                 <div class="search-input-group">
                     <input type="text" id="search-courses" class="form-control" placeholder="Search courses...">
                     <button class="btn btn-primary" id="search-button" type="button">
@@ -140,6 +135,7 @@ if (!function_exists('add_success_notification')) {
                             <th>Code</th>
                             <th>Category</th>
                             <th>Provider</th>
+                            <th>Date</th>
                             <th>Duration (Hours)</th>
                             <th>Actions</th>
                         </tr>
@@ -360,8 +356,8 @@ if (!function_exists('add_success_notification')) {
                 </div>
                 
                 <div class="form-group">
-                    <label for="course-year">Year</label>
-                    <input type="number" id="course-year" name="course_year" class="form-control" min="2000" max="2100">
+                    <label for="course-date">Course Date *</label>
+                    <input type="date" id="course-date" name="course_date" class="form-control" required>
                 </div>
             </form>
         </div>
@@ -1622,18 +1618,6 @@ if (!function_exists('add_success_notification')) {
     margin: 0 0 5px 0;
 }
 
-.year-badge {
-    display: inline-block;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    padding: 2px 10px;
-    border-radius: 12px;
-    font-size: 0.8rem;
-    font-weight: 600;
-    margin-left: 8px;
-    vertical-align: middle;
-}
-
 .course-details {
     display: flex;
     gap: 15px;
@@ -2171,15 +2155,8 @@ jQuery(document).ready(function($) {
             deleteCourse();
         });
         
-        // Populate year filter with years from 2019 to current year
-        const currentYear = new Date().getFullYear();
-        const yearFilter = $('#year-filter');
-        for (let year = currentYear; year >= 2019; year--) {
-            yearFilter.append(`<option value="${year}">${year}</option>`);
-        }
-        
         // Filters
-        $('#category-filter, #provider-filter, #year-filter').on('change', function() {
+        $('#category-filter, #provider-filter').on('change', function() {
             currentPage = 1;
             loadCourses();
         });
@@ -2587,13 +2564,40 @@ jQuery(document).ready(function($) {
         });
     }
     
+    function formatCourseDate(dateStr) {
+        if (!dateStr) return 'N/A';
+        
+        try {
+            // Replace / with - to normalize format, then parse DD-MM-YYYY or DD/MM/YYYY
+            const normalizedDate = dateStr.replace(/\//g, '-');
+            const dateParts = normalizedDate.split('-');
+            
+            if (dateParts.length === 3) {
+                const day = parseInt(dateParts[0]);
+                const month = parseInt(dateParts[1]) - 1; // Month is 0-indexed in JavaScript
+                const year = parseInt(dateParts[2]);
+                
+                // Validate the date parts
+                if (!isNaN(day) && !isNaN(month) && !isNaN(year) && day >= 1 && day <= 31 && month >= 0 && month <= 11) {
+                    // Create date object and format
+                    const date = new Date(year, month, day);
+                    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                    return `${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
+                }
+            }
+        } catch (e) {
+            console.error('Error formatting date:', e);
+        }
+        
+        return 'Invalid Date';
+    }
+    
     function loadCourses(reset = true, filters = null) {
         if (isLoading) return;
         
         // Get current filter values
         const categoryFilter = filters ? filters.category : $('#category-filter').val();
         const providerFilter = filters ? filters.provider : $('#provider-filter').val();
-        const yearFilter = filters ? filters.year : $('#year-filter').val();
         const searchTerm = filters ? filters.search : $('#search-courses').val().trim();
         
         if (reset) {
@@ -2618,9 +2622,6 @@ jQuery(document).ready(function($) {
         }
         if (providerFilter && providerFilter !== 'all') {
             ajaxData.provider_filter = providerFilter;
-        }
-        if (yearFilter && yearFilter !== 'all') {
-            ajaxData.year_filter = yearFilter;
         }
         if (searchTerm) {
             ajaxData.search_term = searchTerm;
@@ -2674,22 +2675,22 @@ jQuery(document).ready(function($) {
                     <p>Try adjusting your search criteria or add some courses to get started.</p>
                 </div>
             `);
-            $tableBody.html('<tr><td colspan="6" style="text-align: center; padding: 40px; color: #6b7280;">No courses found</td></tr>');
+            $tableBody.html('<tr><td colspan="7" style="text-align: center; padding: 40px; color: #6b7280;">No courses found</td></tr>');
             return;
         }
         
         // Display courses in card view
         courses.forEach(function(course) {
             const categoryName = course.course_category || 'Uncategorized';
-            const yearBadge = course.year ? `<span class="year-badge">${course.year}</span>` : '';
             const courseCard = $(`
                 <div class="course-item">
                     <div class="course-info">
-                        <h3 class="course-name">${course.course_name} ${yearBadge}</h3>
+                        <h3 class="course-name">${course.course_name}</h3>
                         <div class="course-details">
                             <span><strong>Code:</strong> ${course.LIA_Code || 'N/A'}</span>
                             <span><strong>Category:</strong> ${categoryName}</span>
                             <span><strong>Provider:</strong> ${course.crs_provider}</span>
+                            <span><strong>Date:</strong> ${formatCourseDate(course.course_date)}</span>
                             <span><strong>Duration:</strong> ${course.course_cpd_mins} hours</span>
                         </div>
                     </div>
@@ -2709,15 +2710,15 @@ jQuery(document).ready(function($) {
         // Display courses in table view
         courses.forEach(function(course) {
             const categoryName = course.course_category || 'Uncategorized';
-            const yearBadge = course.year ? `<span class="year-badge">${course.year}</span>` : '';
             const tableRow = $(`
                 <tr>
                     <td class="course-name-cell">
-                        <div class="course-name">${course.course_name} ${yearBadge}</div>
+                        <div class="course-name">${course.course_name}</div>
                     </td>
                     <td>${course.LIA_Code || 'N/A'}</td>
                     <td>${categoryName}</td>
                     <td>${course.crs_provider}</td>
+                    <td>${formatCourseDate(course.course_date)}</td>
                     <td>${course.course_cpd_mins} mins</td>
                     <td>
                         <div class="table-actions">
@@ -2819,7 +2820,16 @@ jQuery(document).ready(function($) {
             
             $('#course-provider').val(course.crs_provider);
             $('#course-duration').val(course.course_cpd_mins);
-            $('#course-year').val(course.year || new Date().getFullYear());
+            
+            // Set course date - convert from dd-mm-yyyy or dd/mm/yyyy to yyyy-mm-dd for date input
+            if (course.course_date) {
+                const dateStr = course.course_date.replace(/\//g, '-'); // Replace / with -
+                const dateParts = dateStr.split('-');
+                if (dateParts.length === 3) {
+                    const formattedDate = `${dateParts[2]}-${dateParts[1].padStart(2, '0')}-${dateParts[0].padStart(2, '0')}`; // yyyy-mm-dd
+                    $('#course-date').val(formattedDate);
+                }
+            }
         }
     }
     
@@ -2831,6 +2841,14 @@ jQuery(document).ready(function($) {
     }
     
     function saveCourse() {
+        // Convert date from yyyy-mm-dd (input format) to dd/mm/yyyy (storage format)
+        const dateInput = $('#course-date').val();
+        let formattedDate = '';
+        if (dateInput) {
+            const dateParts = dateInput.split('-');
+            formattedDate = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`; // dd/mm/yyyy
+        }
+        
         const formData = {
             action: currentCourseId ? 'iipm_update_course_v1' : 'iipm_add_course',
             course_id: $('#course-id').val(),
@@ -2839,12 +2857,12 @@ jQuery(document).ready(function($) {
             course_category: $('#course-category').val(),
             course_provider: $('#course-provider').val(),
             course_cpd_mins: $('#course-duration').val(),
-            course_year: $('#course-year').val(),
+            course_date: formattedDate,
             nonce: iipm_ajax.nonce
         };
         
         // Validate required fields
-        if (!formData.course_name || !formData.course_category || !formData.course_provider || !formData.course_cpd_mins) {
+        if (!formData.course_name || !formData.course_category || !formData.course_provider || !formData.course_cpd_mins || !formData.course_date) {
             if (window.notifications) {
                 notifications.error("Error", 'Please fill in all required fields.');
             }
@@ -2960,7 +2978,6 @@ jQuery(document).ready(function($) {
     function clearFilters() {
         $('#category-filter').val('all');
         $('#provider-filter').val('all');
-        $('#year-filter').val('all');
         $('#search-courses').val('');
         currentPage = 1;
         loadCourses();
@@ -2975,7 +2992,7 @@ jQuery(document).ready(function($) {
         selectedCourseForDuplicate = null;
         
         // Re-enable all form fields
-        $('#course-name, #course-code, #course-provider, #course-duration, #course-year').prop('disabled', false);
+        $('#course-name, #course-code, #course-provider, #course-duration, #course-date').prop('disabled', false);
         $('#course-category').prop('disabled', false);
     }
     
@@ -3065,7 +3082,16 @@ jQuery(document).ready(function($) {
                     $('#course-code').val(course.LIA_Code || '').prop('disabled', true);
                     $('#course-provider').val(course.crs_provider).prop('disabled', true);
                     $('#course-duration').val(course.course_cpd_mins).prop('disabled', true);
-                    $('#course-year').val(course.year || new Date().getFullYear()).prop('disabled', true);
+                    
+                    // Set course date
+                    if (course.course_date) {
+                        const dateStr = course.course_date.replace(/\//g, '-');
+                        const dateParts = dateStr.split('-');
+                        if (dateParts.length === 3) {
+                            const formattedDate = `${dateParts[2]}-${dateParts[1].padStart(2, '0')}-${dateParts[0].padStart(2, '0')}`;
+                            $('#course-date').val(formattedDate).prop('disabled', true);
+                        }
+                    }
                     
                     // Only category remains editable
                     $('#course-category').val('').prop('disabled', false);

@@ -109,13 +109,34 @@ foreach ($leave_requests as $request) {
                                     </div>
                                 </div>
                                 <div class="request-details">
-                                    <h5><?php echo esc_html($request->title); ?></h5>
+                                    <h5><?php 
+                                        // Calculate duration if not available or is 0
+                                        $duration = $request->duration_days;
+                                        if (empty($duration) || $duration == 0) {
+                                            if (function_exists('iipm_calculate_duration_days')) {
+                                                $duration = iipm_calculate_duration_days($request->leave_start_date, $request->leave_end_date);
+                                            } else {
+                                                // Fallback calculation
+                                                $start = DateTime::createFromFormat('d-m-Y', $request->leave_start_date);
+                                                $end = DateTime::createFromFormat('d-m-Y', $request->leave_end_date);
+                                                if ($start && $end) {
+                                                    $duration = $end->diff($start)->days + 1;
+                                                }
+                                            }
+                                        }
+                                        // Show title or default "Leave Request for X days"
+                                        if (empty($request->title)) {
+                                            echo esc_html('Leave Request for ' . $duration . ' days');
+                                        } else {
+                                            echo esc_html($request->title);
+                                        }
+                                    ?></h5>
                                     <div class="detail-grid">
                                         <div class="detail-item">
                                             <strong>Reason:</strong> <?php echo ucfirst($request->reason); ?>
                                         </div>
                                         <div class="detail-item">
-                                            <strong>Duration:</strong> <?php echo $request->duration_days; ?> days
+                                            <strong>Duration:</strong> <?php echo $duration; ?> days
                                         </div>
                                         <div class="detail-item">
                                             <strong>Start Date:</strong> <?php echo iipm_format_date_for_display($request->leave_start_date, 'M j, Y'); ?>
@@ -146,80 +167,32 @@ foreach ($leave_requests as $request) {
 
             <!-- Approved Requests Section -->
             <div class="admin-section">
-                <h2>Approved Requests (<?php echo count($approved_requests); ?>)</h2>
-                <div class="requests-list">
-                    <?php if (!empty($approved_requests)): ?>
-                        <?php foreach (array_slice($approved_requests, 0, 5) as $request): ?>
-                            <div class="admin-request-item approved">
-                                <div class="request-header">
-                                    <div class="user-info">
-                                        <h4><?php echo esc_html($request->display_name); ?></h4>
-                                        <span class="user-email"><?php echo esc_html($request->user_email); ?></span>
-                                    </div>
-                                    <div class="status-badge status-approved">Approved</div>
-                                </div>
-                                <div class="request-details">
-                                    <h5><?php echo esc_html($request->title); ?></h5>
-                                    <div class="detail-grid">
-                                        <div class="detail-item">
-                                            <strong>Duration:</strong> <?php echo $request->duration_days; ?> days
-                                        </div>
-                                        <div class="detail-item">
-                                            <strong>Leave Period:</strong> <?php echo date('M j', strtotime($request->leave_start_date)); ?> - <?php echo date('M j, Y', strtotime($request->leave_end_date)); ?>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        <?php endforeach; ?>
-                        <?php if (count($approved_requests) > 5): ?>
-                            <div class="show-more">
-                                <button onclick="showAllApproved()">Show All Approved (<?php echo count($approved_requests); ?>)</button>
-                            </div>
-                        <?php endif; ?>
-                    <?php else: ?>
-                        <div class="no-requests">
-                            <p>No approved requests found.</p>
-                        </div>
-                    <?php endif; ?>
+                <div class="section-header-with-filters">
+                    <h2>Approved Requests (<span id="approved-count"><?php echo count($approved_requests); ?></span>)</h2>
+                    <div class="filter-controls">
+                        <input type="text" id="approved-search" placeholder="Search by name or email..." class="search-input">
+                        <button class="btn-clear" onclick="clearApprovedFilters()">Clear</button>
+                    </div>
                 </div>
+                <div class="requests-list" id="approved-requests-list">
+                    <!-- Will be populated by JavaScript -->
+                </div>
+                <div class="pagination-container" id="approved-pagination"></div>
             </div>
 
             <!-- Rejected Requests Section -->
             <div class="admin-section">
-                <h2>Rejected Requests (<?php echo count($rejected_requests); ?>)</h2>
-                <div class="requests-list">
-                    <?php if (!empty($rejected_requests)): ?>
-                        <?php foreach (array_slice($rejected_requests, 0, 3) as $request): ?>
-                            <div class="admin-request-item rejected">
-                                <div class="request-header">
-                                    <div class="user-info">
-                                        <h4><?php echo esc_html($request->display_name); ?></h4>
-                                        <span class="user-email"><?php echo esc_html($request->user_email); ?></span>
-                                    </div>
-                                    <div class="status-badge status-rejected">Rejected</div>
-                                </div>
-                                <div class="request-details">
-                                    <h5><?php echo esc_html($request->title); ?></h5>
-                                    <?php if ($request->rejection_reason): ?>
-                                        <div class="rejection-reason">
-                                            <strong>Rejection Reason:</strong>
-                                            <p><?php echo esc_html($request->rejection_reason); ?></p>
-                                        </div>
-                                    <?php endif; ?>
-                                </div>
-                            </div>
-                        <?php endforeach; ?>
-                        <?php if (count($rejected_requests) > 3): ?>
-                            <div class="show-more">
-                                <button onclick="showAllRejected()">Show All Rejected (<?php echo count($rejected_requests); ?>)</button>
-                            </div>
-                        <?php endif; ?>
-                    <?php else: ?>
-                        <div class="no-requests">
-                            <p>No rejected requests found.</p>
-                        </div>
-                    <?php endif; ?>
+                <div class="section-header-with-filters">
+                    <h2>Rejected Requests (<span id="rejected-count"><?php echo count($rejected_requests); ?></span>)</h2>
+                    <div class="filter-controls">
+                        <input type="text" id="rejected-search" placeholder="Search by name or email..." class="search-input">
+                        <button class="btn-clear" onclick="clearRejectedFilters()">Clear</button>
+                    </div>
                 </div>
+                <div class="requests-list" id="rejected-requests-list">
+                    <!-- Will be populated by JavaScript -->
+                </div>
+                <div class="pagination-container" id="rejected-pagination"></div>
             </div>
 
         </div>
@@ -449,23 +422,113 @@ foreach ($leave_requests as $request) {
     border-radius: 12px;
 }
 
-.show-more {
-    text-align: center;
-    margin-top: 20px;
+/* Section header with filters */
+.section-header-with-filters {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 15px;
 }
 
-.show-more button {
-    background: #8b5a96;
+.section-header-with-filters h2 {
+    color: #8b5a96;
+    font-size: 1.5rem;
+    margin: 0;
+    font-weight: 600;
+}
+
+.filter-controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.search-input {
+    padding: 10px 15px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+    min-width: 250px;
+    transition: border-color 0.3s;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: #8b5a96;
+}
+
+.btn-clear {
+    background: #6c757d;
     color: white;
     border: none;
     padding: 10px 20px;
     border-radius: 6px;
     cursor: pointer;
-    font-weight: 500;
+    font-size: 14px;
+    transition: background 0.3s;
 }
 
-.show-more button:hover {
-    background: #6d4576;
+.btn-clear:hover {
+    background: #5a6268;
+}
+
+/* Pagination */
+.pagination-container {
+    margin-top: 20px;
+    display: flex;
+    justify-content: center;
+}
+
+.pagination {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.page-btn {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    background: white;
+    color: #333;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.3s;
+    min-width: 40px;
+}
+
+.page-btn:hover {
+    background: #f8f9fa;
+    border-color: #8b5a96;
+}
+
+.page-btn.active {
+    background: #8b5a96;
+    color: white;
+    border-color: #8b5a96;
+}
+
+.page-dots {
+    padding: 0 5px;
+    color: #999;
+}
+
+@media (max-width: 768px) {
+    .section-header-with-filters {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .filter-controls {
+        width: 100%;
+    }
+    
+    .search-input {
+        flex: 1;
+        min-width: 0;
+    }
 }
 
 .rejection-reason {
@@ -612,10 +675,42 @@ window.iipm_ajax = {
 // Global variable for tracking current request ID
 let currentRequestId = null;
 
+// Leave requests data
+const approvedRequests = <?php echo json_encode($approved_requests); ?>;
+const rejectedRequests = <?php echo json_encode($rejected_requests); ?>;
+
+// Pagination state
+let approvedCurrentPage = 1;
+let rejectedCurrentPage = 1;
+const itemsPerPage = 10;
+
 // Wait for DOM to be ready before setting up event handlers
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Leave Admin JS loaded');
     console.log('AJAX object:', window.iipm_ajax);
+    
+    // Initialize pagination and filtering
+    renderApprovedRequests(1, '');
+    renderRejectedRequests(1, '');
+    
+    // Set up search handlers with debounce
+    let approvedTimeout;
+    document.getElementById('approved-search').addEventListener('input', function(e) {
+        clearTimeout(approvedTimeout);
+        approvedTimeout = setTimeout(() => {
+            approvedCurrentPage = 1;
+            renderApprovedRequests(1, e.target.value);
+        }, 300);
+    });
+    
+    let rejectedTimeout;
+    document.getElementById('rejected-search').addEventListener('input', function(e) {
+        clearTimeout(rejectedTimeout);
+        rejectedTimeout = setTimeout(() => {
+            rejectedCurrentPage = 1;
+            renderRejectedRequests(1, e.target.value);
+        }, 300);
+    });
     
     // Set up rejection form handler
     const rejectionForm = document.getElementById('rejectionForm');
@@ -728,13 +823,234 @@ function closeRejectionModal() {
     currentRequestId = null;
 }
 
-function showAllApproved() {
-    alert('Feature to show all approved requests will be implemented.');
+// Pagination and filtering for approved requests
+function renderApprovedRequests(page = 1, searchTerm = '') {
+    const searchLower = searchTerm.toLowerCase();
+    const filtered = approvedRequests.filter(request => {
+        const nameMatch = request.display_name ? request.display_name.toLowerCase().includes(searchLower) : false;
+        const emailMatch = request.user_email ? request.user_email.toLowerCase().includes(searchLower) : false;
+        return nameMatch || emailMatch;
+    });
+    
+    const totalPages = Math.ceil(filtered.length / itemsPerPage);
+    const startIndex = (page - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const pageData = filtered.slice(startIndex, endIndex);
+    
+    const container = document.getElementById('approved-requests-list');
+    document.getElementById('approved-count').textContent = filtered.length;
+    
+    if (pageData.length === 0) {
+        container.innerHTML = '<div class="no-requests"><p>No approved requests found.</p></div>';
+        document.getElementById('approved-pagination').innerHTML = '';
+        return;
+    }
+    
+    let html = '';
+    pageData.forEach(request => {
+        const startDate = parseDateDDMMYYYY(request.leave_start_date);
+        const endDate = parseDateDDMMYYYY(request.leave_end_date);
+        const startFormatted = startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        const endFormatted = endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        
+        // Calculate duration if not available or is 0
+        let duration = request.duration_days;
+        if (!duration || duration == 0) {
+            const timeDiff = endDate.getTime() - startDate.getTime();
+            duration = Math.ceil(timeDiff / (1000 * 3600 * 24)) + 1;
+        }
+        
+        // Show title or default "Leave Request for X days"
+        const displayTitle = request.title && request.title.trim() 
+            ? request.title 
+            : `Leave Request for ${duration} days`;
+        
+        html += `
+            <div class="admin-request-item approved">
+                <div class="request-header">
+                    <div class="user-info">
+                        <h4>${escapeHtml(request.display_name || 'Unknown User')}</h4>
+                        <span class="user-email">${escapeHtml(request.user_email || 'No email')}</span>
+                    </div>
+                    <div class="status-badge status-approved">Approved</div>
+                </div>
+                <div class="request-details">
+                    <h5>${escapeHtml(displayTitle)}</h5>
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <strong>Duration:</strong> ${duration} days
+                        </div>
+                        <div class="detail-item">
+                            <strong>Leave Period:</strong> ${startFormatted} - ${endFormatted}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+    renderPagination('approved', page, totalPages);
 }
 
-function showAllRejected() {
-    alert('Feature to show all rejected requests will be implemented.');
+// Pagination and filtering for rejected requests
+function renderRejectedRequests(page = 1, searchTerm = '') {
+    const searchLower = searchTerm.toLowerCase();
+    const filtered = rejectedRequests.filter(request => {
+        const nameMatch = request.display_name ? request.display_name.toLowerCase().includes(searchLower) : false;
+        const emailMatch = request.user_email ? request.user_email.toLowerCase().includes(searchLower) : false;
+        return nameMatch || emailMatch;
+    });
+    
+    const totalPages = Math.ceil(filtered.length / itemsPerPage);
+    const startIndex = (page - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const pageData = filtered.slice(startIndex, endIndex);
+    
+    const container = document.getElementById('rejected-requests-list');
+    document.getElementById('rejected-count').textContent = filtered.length;
+    
+    if (pageData.length === 0) {
+        container.innerHTML = '<div class="no-requests"><p>No rejected requests found.</p></div>';
+        document.getElementById('rejected-pagination').innerHTML = '';
+        return;
+    }
+    
+    let html = '';
+    pageData.forEach(request => {
+        // Calculate duration for rejected requests
+        const startDate = parseDateDDMMYYYY(request.leave_start_date);
+        const endDate = parseDateDDMMYYYY(request.leave_end_date);
+        let duration = request.duration_days;
+        if (!duration || duration == 0) {
+            const timeDiff = endDate.getTime() - startDate.getTime();
+            duration = Math.ceil(timeDiff / (1000 * 3600 * 24)) + 1;
+        }
+        
+        // Show title or default "Leave Request for X days"
+        const displayTitle = request.title && request.title.trim() 
+            ? request.title 
+            : `Leave Request for ${duration} days`;
+        
+        html += `
+            <div class="admin-request-item rejected">
+                <div class="request-header">
+                    <div class="user-info">
+                        <h4>${escapeHtml(request.display_name || 'Unknown User')}</h4>
+                        <span class="user-email">${escapeHtml(request.user_email || 'No email')}</span>
+                    </div>
+                    <div class="status-badge status-rejected">Rejected</div>
+                </div>
+                <div class="request-details">
+                    <h5>${escapeHtml(displayTitle)}</h5>
+                    ${request.rejection_reason ? `
+                        <div class="rejection-reason">
+                            <strong>Rejection Reason:</strong>
+                            <p>${escapeHtml(request.rejection_reason)}</p>
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+    renderPagination('rejected', page, totalPages);
 }
+
+// Render pagination controls
+function renderPagination(type, currentPage, totalPages) {
+    const container = document.getElementById(`${type}-pagination`);
+    
+    if (!container || totalPages <= 1) {
+        if (container) container.innerHTML = '';
+        return;
+    }
+    
+    let html = '<div class="pagination">';
+    
+    // Previous button
+    if (currentPage > 1) {
+        html += `<button class="page-btn" onclick="goto${capitalize(type)}Page(${currentPage - 1})">Previous</button>`;
+    }
+    
+    // Page numbers
+    for (let i = 1; i <= totalPages; i++) {
+        if (i === 1 || i === totalPages || (i >= currentPage - 2 && i <= currentPage + 2)) {
+            html += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="goto${capitalize(type)}Page(${i})">${i}</button>`;
+        } else if (i === currentPage - 3 || i === currentPage + 3) {
+            html += '<span class="page-dots">...</span>';
+        }
+    }
+    
+    // Next button
+    if (currentPage < totalPages) {
+        html += `<button class="page-btn" onclick="goto${capitalize(type)}Page(${currentPage + 1})">Next</button>`;
+    }
+    
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+// Navigation functions
+function gotoApprovedPage(page) {
+    approvedCurrentPage = page;
+    const searchTerm = document.getElementById('approved-search').value;
+    renderApprovedRequests(page, searchTerm);
+    // Scroll to the approved section
+    const approvedSection = document.getElementById('approved-requests-list');
+    if (approvedSection) {
+        approvedSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+}
+
+function gotoRejectedPage(page) {
+    rejectedCurrentPage = page;
+    const searchTerm = document.getElementById('rejected-search').value;
+    renderRejectedRequests(page, searchTerm);
+    // Scroll to the rejected section
+    const rejectedSection = document.getElementById('rejected-requests-list');
+    if (rejectedSection) {
+        rejectedSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+}
+
+function clearApprovedFilters() {
+    document.getElementById('approved-search').value = '';
+    approvedCurrentPage = 1;
+    renderApprovedRequests(1, '');
+}
+
+function clearRejectedFilters() {
+    document.getElementById('rejected-search').value = '';
+    rejectedCurrentPage = 1;
+    renderRejectedRequests(1, '');
+}
+
+// Helper functions
+function capitalize(str) {
+    return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+function escapeHtml(text) {
+    if (text === null || text === undefined) {
+        return '';
+    }
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Parse dd-mm-yyyy date format correctly
+function parseDateDDMMYYYY(dateString) {
+    if (!dateString) return new Date();
+    const parts = dateString.split('-');
+    if (parts.length !== 3) return new Date(dateString);
+    // parts[0] = day, parts[1] = month, parts[2] = year
+    // JavaScript Date expects: year, month (0-indexed), day
+    return new Date(parts[2], parseInt(parts[1]) - 1, parts[0]);
+}
+
 
 // Close modal when clicking outside
 window.addEventListener('click', function(event) {

@@ -328,19 +328,36 @@ if (!function_exists('add_success_notification')) {
                 
                 <!-- CPD Stats Container -->
                 <div id="cpd-stats-container" style="display: none;">
-                    <!-- CPD Overview Cards -->
-                    <div class="cpd-overview" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 30px;">
-                        <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">
-                            <h4 style="margin: 0 0 15px 0; color: rgba(255,255,255,0.9); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.5px;">Total CPD Hours</h4>
-                            <div class="stat-value" id="total-cpd-hours" style="font-size: 2.5rem; font-weight: bold;">0</div>
+                    <!-- CPD Stats and Course Summary -->
+                    <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 20px; margin-bottom: 30px;">
+                        <!-- CPD Stats Card -->
+                        <div style="background: white; border-radius: 12px; padding: 25px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                            <h4 style="margin: 0 0 20px 0; color: #374151; font-size: 1rem; font-weight: 600; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px;">
+                                <i class="fas fa-chart-bar"></i> CPD Statistics
+                            </h4>
+                            <div style="display: flex; flex-direction: column; gap: 15px;">
+                                <div style="padding: 15px; background: #f0fdf4; border-left: 4px solid #10b981; border-radius: 6px;">
+                                    <div style="font-size: 0.75rem; color: #059669; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px;">CPD Requirement</div>
+                                    <div id="original-target" style="font-size: 1.75rem; font-weight: bold; color: #10b981;">0 hours</div>
+                                </div>
+                                <div style="padding: 15px; background: #eff6ff; border-left: 4px solid #3b82f6; border-radius: 6px;">
+                                    <div style="font-size: 0.75rem; color: #1d4ed8; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px;">CPD Hours Logged</div>
+                                    <div id="total-cpd-hours" style="font-size: 1.75rem; font-weight: bold; color: #3b82f6;">0 hours</div>
+                                </div>
+                            </div>
                         </div>
-                        <div class="stat-card" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);">
-                            <h4 style="margin: 0 0 15px 0; color: rgba(255,255,255,0.9); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.5px;">CPD Requirement</h4>
-                            <div class="stat-value" id="original-target" style="font-size: 2.5rem; font-weight: bold;">0</div>
-                        </div>
-                        <div class="stat-card" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);">
-                            <h4 style="margin: 0 0 15px 0; color: rgba(255,255,255,0.9); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.5px;">Completion</h4>
-                            <div class="stat-value" id="completion-percentage" style="font-size: 2.5rem; font-weight: bold;">0%</div>
+                        
+                        <!-- Course Summary Card -->
+                        <div style="background: white; border-radius: 12px; padding: 25px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                            <h4 style="margin: 0 0 20px 0; color: #374151; font-size: 1rem; font-weight: 600; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px;">
+                                <i class="fas fa-list-check"></i> Courses Summary
+                            </h4>
+                            <div id="course-summary-content" style="min-height: 100px;">
+                                <div style="text-align: center; padding: 20px; color: #9ca3af;">
+                                    <div class="loading-spinner" style="display: inline-block; width: 20px; height: 20px; border: 2px solid #e5e7eb; border-top: 2px solid #667eea; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                                    <p style="margin-top: 10px;">Loading summary...</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     
@@ -877,6 +894,76 @@ if (!function_exists('add_success_notification')) {
 .admin-certificate-btn i {
     font-size: 16px;
 }
+
+/* CPD Summary Table Styles */
+.summary-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 0;
+}
+
+.summary-table th,
+.summary-table td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.summary-table th {
+    background: #f9fafb;
+    font-weight: 600;
+    color: #374151;
+    font-size: 14px;
+    text-transform: capitalize;
+    letter-spacing: 0.5px;
+}
+
+.summary-table td {
+    color: #1f2937;
+    font-size: 14px;
+}
+
+.summary-table tr:hover {
+    background: #f9fafb;
+}
+
+.summary-category {
+    font-weight: 500;
+    color: #374151;
+    align-items: center;
+}
+
+.summary-hours {
+    font-weight: 600;
+    color: #8b5a96;
+}
+
+.completion-status {
+    font-weight: 500;
+}
+
+.status-completed {
+    color: #10b981;
+}
+
+.status-incomplete {
+    color: #ef4444;
+}
+
+/* CPD Summary Grid Responsive */
+@media (max-width: 992px) {
+    #cpd-stats-container > div:first-child {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .summary-table th,
+    .summary-table td {
+        padding: 8px;
+        font-size: 13px;
+    }
+}
 </style>
 
 <script>
@@ -1146,30 +1233,31 @@ jQuery(document).ready(function($) {
         $('#cpd-loading').show();
         
         // Use existing iipm_get_cpd_stats function from CPD record page
-        // Pass user_id if available, otherwise let the function get current user ID
+        // Always pass user_id since we're on member details page
         const requestData = {
             action: 'iipm_get_cpd_stats',
             nonce: '<?php echo wp_create_nonce('iipm_portal_nonce'); ?>',
-            year: year
+            year: year,
+            user_id: userId
         };
         
-        // Only add user_id if we have a specific user (admin viewing another user)
-        if (userId && userId !== '<?php echo get_current_user_id(); ?>') {
-            requestData.user_id = userId;
-        }
+        console.log('Loading CPD data for:', requestData);
         
         $.ajax({
             url: '<?php echo admin_url('admin-ajax.php'); ?>',
             type: 'POST',
             data: requestData,
             success: function(response) {
+                console.log('CPD Stats Response:', response);
                 if (response.success) {
                     displayCPDData(response.data);
-        } else {
+                } else {
+                    console.error('CPD Stats Error:', response);
                     showCPDError('Failed to load CPD data for ' + year);
                 }
             },
-            error: function() {
+            error: function(xhr, status, error) {
+                console.error('AJAX Error:', status, error);
                 showCPDError('Failed to load CPD data for ' + year);
             },
             complete: function() {
@@ -1178,9 +1266,67 @@ jQuery(document).ready(function($) {
         });
     }
     
+    function updateCourseSummaryBadges(coursesSummary) {
+        const summaryContent = document.getElementById('course-summary-content');
+        
+        if (!summaryContent) return;
+        
+        if (!coursesSummary || coursesSummary.length === 0) {
+            summaryContent.innerHTML = '<div style="text-align: center; padding: 30px; color: #9ca3af;">No courses completed for this year.</div>';
+            return;
+        }
+        
+        let html = `
+            <table class="summary-table">
+                <thead>
+                    <tr>
+                        <th>Category</th>
+                        <th>Progress</th>
+                        <th>Hours</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+        
+        coursesSummary.forEach(item => {
+            // Calculate hours from minutes and round to nearest 0.5
+            const hours = Math.round((item.total_minutes / 60) * 2) / 2;
+            const progressText = `${hours} / 1`;
+            const isCompleted = hours >= 1;
+            const statusClass = isCompleted ? 'status-completed' : 'status-incomplete';
+            const iconColor = isCompleted ? '#10b981' : '#ef4444';
+            const iconType = isCompleted ? 'check-circle' : 'times-circle';
+            
+            html += `
+                <tr>
+                    <td class="summary-category">
+                        <i class="fas fa-${iconType}" style="font-size: 11px; color: ${iconColor}; margin-right: 6px;"></i>
+                        ${item.category}
+                    </td>
+                    <td class="completion-status ${statusClass}">${progressText}</td>
+                    <td class="summary-hours">${hours.toFixed(1)}</td>
+                </tr>
+            `;
+        });
+        
+        html += `
+                </tbody>
+            </table>
+        `;
+        
+        summaryContent.innerHTML = html;
+    }
+    
     function displayCPDData(data) {
+        console.log('Displaying CPD data:', data);
+        
+        // Show the stats container
+        $('#cpd-stats-container').show();
+        $('#cpd-error').hide();
+        
         // Update stats cards - using the actual data structure from iipm_get_cpd_stats
-        $('#total-cpd-hours').text(data.total_hours || 0);
+        const totalHours = Math.round((parseFloat(data.total_hours || 0)) * 2) / 2;
+        $('#total-cpd-hours').text(totalHours + ' hours');
         
         // Handle target display - show adjusted target in hours, and original target as superscript if different
         const originalTargetMinutes = data.target_minutes || 0;
@@ -1191,14 +1337,13 @@ jQuery(document).ready(function($) {
         const adjustedTargetHours = Math.round((adjustedTargetMinutes / 60) * 2) / 2;
         
         if (originalTargetMinutes !== adjustedTargetMinutes) {
-            $('#original-target').html(`${adjustedTargetHours}<sup style="font-size: 0.7em; color: #6b7280;">${originalTargetHours}</sup> hours`);
-            $('#original-target').parent().find('h4').text('Adjusted CPD Requirement');
+            $('#original-target').html(`${adjustedTargetHours}<sup style="font-size: 0.7em; color: #6b7280;"> (${originalTargetHours})</sup> hours`);
         } else {
             $('#original-target').text(adjustedTargetHours + ' hours');
-            $('#original-target').parent().find('h4').text('CPD Requirement');
         }
         
-        $('#completion-percentage').text((data.completion_percentage || 0) + '%');
+        // Update course summary
+        updateCourseSummaryBadges(data.courses_summary || []);
         
         // Display courses from courses_summary
         displayCoursesFromSummary(data.courses_summary || []);

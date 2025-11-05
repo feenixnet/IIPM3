@@ -55,15 +55,24 @@ add_action('wp_ajax_nopriv_iipm_get_cpd_stats', 'iipm_ajax_get_cpd_stats');
  * AJAX callback for getting CPD stats
  */
 function iipm_ajax_get_cpd_stats() {
+    // Log the request for debugging
+    error_log('IIPM: iipm_ajax_get_cpd_stats called with POST data: ' . print_r($_POST, true));
+    
     $year = intval($_POST['year'] ?? date('Y'));
-    $user_id = $_POST['user_id'] ?? get_current_user_id();
+    $user_id = isset($_POST['user_id']) ? intval($_POST['user_id']) : get_current_user_id();
+    
+    error_log("IIPM: Getting CPD stats for user_id={$user_id}, year={$year}");
     
     if (!$user_id) {
+        error_log('IIPM: Error - User not logged in');
         wp_send_json_error('User not logged in');
         return;
     }
     
     $stats = iipm_get_cpd_stats($user_id, $year);
+    
+    error_log('IIPM: CPD stats result: ' . print_r($stats, true));
+    
     wp_send_json_success($stats);
 }
 
@@ -105,9 +114,13 @@ function iipm_get_cpd_stats($user_id, $year) {
         }
     }
     
+    // Store original target in minutes
+    $original_target_minutes = $original_target * 60;
+    
     // Calculate adjusted target based on leave requests (returns hours rounded to nearest 0.5)
-    $target_hours = iipm_calculate_adjusted_target_points($user_id, $year);
-    $target_minutes = $target_hours * 60; // Convert hours to minutes for compatibility
+    $adjusted_target_hours = iipm_calculate_adjusted_target_points($user_id, $year);
+    $adjusted_target_minutes = $adjusted_target_hours * 60;
+    $target_minutes = $adjusted_target_minutes; // For backwards compatibility
     
     // Get CPD types to get dates and user assignments (but not target points)
     $cpd_types = iipm_get_cpd_types();
@@ -179,6 +192,8 @@ function iipm_get_cpd_stats($user_id, $year) {
         return array(
             'total_cpd_minutes' => 0,
             'target_minutes' => $target_minutes,
+            'original_target_minutes' => $original_target_minutes,
+            'adjusted_target_minutes' => $adjusted_target_minutes,
             'completion_percentage' => 0,
             'start_date' => null,
             'completion_date' => null,
@@ -301,6 +316,8 @@ function iipm_get_cpd_stats($user_id, $year) {
     return array(
         'total_cpd_minutes' => $total_minutes,
         'target_minutes' => $target_minutes,
+        'original_target_minutes' => $original_target_minutes,
+        'adjusted_target_minutes' => $adjusted_target_minutes,
         'completion_percentage' => $completion_percentage,
         'start_date' => $start_date,
         'completion_date' => $completion_date,

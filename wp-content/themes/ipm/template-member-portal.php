@@ -153,7 +153,11 @@ get_header();
                         <div class="stat-label">CPD Hours</div>
                         <div class="stat-description">Total professional development hours completed</div>
                         <?php if ($leave_hours_deducted > 0): ?>
-                            <div class="stat-subtitle">(<?php echo number_format(($cpd_stats["target_minutes"] / 60), 1); ?> - <?php echo number_format($leave_hours_deducted, 1); ?> = <?php echo number_format(($cpd_stats["target_minutes"] / 60) - $leave_hours_deducted, 1); ?>)</div>
+                            <div class="stat-subtitle">(
+                                <?php echo number_format(
+                                    ($cpd_stats["target_minutes"] / 60) + $leave_hours_deducted,
+                                     1); ?> 
+                                    - <?php echo number_format($leave_hours_deducted, 1); ?> = <?php echo number_format(($cpd_stats["target_minutes"] / 60), 1); ?>)</div>
                         <?php endif; ?>
                     </div>
                     <div class="stat-progress">
@@ -274,82 +278,27 @@ get_header();
                         ?>
                     </button>
                     
-                    <div class="progress-section">
-                        <div class="progress-header">
-                            <h4>Category Progress</h4>
-                            <div class="target-info">
-                                <span class="target-label">Target:</span>
-                                <span class="target-value" id="target-minutes">330 minutes</span>
-                            </div>
+                    <!-- CPD Stats Grid -->
+                    <div class="cpd-stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-label">CPD Requirement</div>
+                            <div class="stat-value" id="cpd-requirement">0</div>
                         </div>
-                        
-                        <div class="form-group">
-                            <div class="progress-info">
-                                <span class="category-name">Pensions</span>
-                                <span class="progress-status" id="pensions-status">0/1</span>
-                            </div>
-                            <div class="strength-bar">
-                                <div class="strength-fill" id="pensions-progress" style="width: 0%"></div>
-                            </div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <div class="progress-info">
-                                <span class="category-name">Savings & Investments</span>
-                                <span class="progress-status" id="savings-status">0/1</span>
-                            </div>
-                            <div class="strength-bar">
-                                <div class="strength-fill" id="savings-progress" style="width: 0%"></div>
-                            </div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <div class="progress-info">
-                                <span class="category-name">Ethics</span>
-                                <span class="progress-status" id="ethics-status">0/1</span>
-                            </div>
-                            <div class="strength-bar">
-                                <div class="strength-fill" id="ethics-progress" style="width: 0%"></div>
-                            </div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <div class="progress-info">
-                                <span class="category-name">Life Assurance</span>
-                                <span class="progress-status" id="life-status">0/1</span>
-                            </div>
-                            <div class="strength-bar">
-                                <div class="strength-fill" id="life-progress" style="width: 0%"></div>
-                            </div>
-                        </div>
-                        
-                        <div class="total-progress">
-                            <span class="total-label">Total:</span>
-                            <span class="target-status" id="total-status">0/4</span>
+                        <div class="stat-item">
+                            <div class="stat-label">CPD hours logged</div>
+                            <div class="stat-value" id="cpd-hours-logged">0</div>
                         </div>
                     </div>
                     
-                    <div class="time-progress-section">
-                        <div class="progress-header">
-                            <h4>Time Progress</h4>
-                            <div class="time-info">
-                                <span class="time-label">Progress</span>
-                                <span class="time-percentage" id="time-percentage">0%</span>
-                            </div>
-                        </div>
-                        
-                        <div class="time-progress-bar">
-                            <div class="time-progress-fill" id="time-progress-fill" style="width: 0%"></div>
-                        </div>
-                        
-                        <div class="time-details">
-                            <div class="time-item">
-                                <span class="time-label w-100">Completed</span>
-                                <span class="time-value" id="completed-minutes">0 minutes</span>
-                            </div>
-                            <div class="time-item">
-                                <span class="time-label">Remaining</span>
-                                <span class="time-value" id="remaining-minutes">330 minutes</span>
+                    <!-- Course Summary Table -->
+                    <div class="course-summary-section">
+                        <h4>Courses Summary</h4>
+                        <div class="summary-content" id="course-summary-content">
+                            <div class="loading-message">
+                                <div class="loading-spinner">
+                                    <div class="spinner"></div>
+                                    <p>Loading summary...</p>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -484,7 +433,7 @@ get_header();
                 
                 <div class="training-option" id="external-training-option">
                     <div class="option-icon"><i class="fas fa-edit"></i></div>
-                    <h4>Ask for a couse to be added to our list</h4>
+                    <h4>Ask for a course to be added to our list</h4>
                     <p>Submit training from external providers. Requires approval from admin.</p>
                 </div>
             </div>
@@ -643,7 +592,7 @@ get_header();
 
     .portal-layout {
         display: grid;
-        grid-template-columns: 350px 1fr;
+        grid-template-columns: 420px 1fr;
         gap: 30px;
         align-items: start;
     }
@@ -729,45 +678,38 @@ get_header();
 
 
 
-    .progress-section {
+    /* CPD Stats Grid */
+    .cpd-stats-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
         margin-bottom: 20px;
     }
 
-    .progress-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 16px;
-        padding-bottom: 12px;
-        border-bottom: 1px solid #e5e7eb;
+    .cpd-stats-grid .stat-item {
+        text-align: center;
+        padding: 16px;
+        background: #f9fafb;
+        border-radius: 8px;
     }
 
-    .progress-header h4 {
-        margin: 0;
-        font-size: 16px;
+    .cpd-stats-grid .stat-label {
+        display: block;
+        font-size: 12px;
+        color: #6b7280;
+        margin-bottom: 8px;
+        text-transform: capitalize;
+        letter-spacing: 0.5px;
+    }
+
+    .cpd-stats-grid .stat-value {
+        font-size: 18px;
         font-weight: 600;
         color: #1f2937;
     }
 
-    .target-info {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        font-size: 14px;
-    }
-
-    .target-label {
-        color: #6b7280;
-        font-weight: 500;
-    }
-
-    .target-value {
-        color: #8b5a96;
-        font-weight: 600;
-    }
-
-    /* Time Progress Section */
-    .time-progress-section {
+    /* Course Summary Section */
+    .course-summary-section {
         margin-bottom: 20px;
         padding: 20px;
         background: #f8fafc;
@@ -775,63 +717,138 @@ get_header();
         border: 1px solid #e2e8f0;
     }
 
-    .time-progress-bar {
+    .course-summary-section h4 {
+        margin: 0 0 16px 0;
+        font-size: 16px;
+        font-weight: 600;
+        color: #1f2937;
+    }
+
+    .summary-content {
+        margin-bottom: 16px;
+    }
+
+    .summary-table {
         width: 100%;
-        height: 12px;
-        background: #e5e7eb;
-        border-radius: 6px;
-        overflow: hidden;
-        margin: 16px 0;
-    }
-
-    .time-progress-fill {
-        height: 100%;
-        background: linear-gradient(90deg, #10b981 0%, #059669 100%);
-        border-radius: 6px;
-        transition: width 0.5s ease;
-    }
-
-    .time-details {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 16px;
+        border-collapse: collapse;
         margin-top: 16px;
     }
 
-    .time-item {
+    .summary-table th,
+    .summary-table td {
+        padding: 12px;
+        text-align: left;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .summary-table th {
+        background: #f9fafb;
+        font-weight: 600;
+        color: #374151;
+        font-size: 14px;
+        text-transform: capitalize;
+        letter-spacing: 0.5px;
+    }
+
+    .summary-table td {
+        color: #1f2937;
+        font-size: 14px;
+    }
+
+    .summary-table tr:hover {
+        background: #f9fafb;
+    }
+
+    .summary-category {
+        font-weight: 500;
+        color: #374151;
+        align-items: center;
+    }
+
+    .summary-hours {
+        font-weight: 600;
+        color: #8b5a96;
+    }
+
+    .status-icon {
+        margin-right: 6px;
+        font-size: 12px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .status-icon i {
+        display: inline-block;
+    }
+
+    .status-completed {
+        color: #10b981;
+    }
+
+    .status-incomplete {
+        color: #ef4444;
+    }
+
+    .completion-status {
+        font-weight: 600;
+        min-width: 40px;
+        text-align: center;
+    }
+
+    .summary-total {
+        display: flex;
+        justify-content: space-between;
+        padding: 0px 14px;
+        align-items: center;
+    }
+
+    .total-label {
+        font-weight: 600;
+        color: #1f2937;
+        font-size: 16px;
+    }
+
+    .total-value {
+        font-weight: 600;
+        color: #8b5a96;
+        font-size: 18px;
+    }
+
+    /* Loading Spinner */
+    .loading-spinner {
         display: flex;
         flex-direction: column;
         align-items: center;
-        padding: 12px;
-        background: white;
-        border-radius: 6px;
-        border: 1px solid #e5e7eb;
+        gap: 20px;
+        padding: 40px 20px;
     }
 
-    .time-item .time-label {
-        width: 100%;
-        display: block;
-        text-align: center;
+    .spinner {
+        width: 40px;
+        height: 40px;
+        border: 4px solid #e5e7eb;
+        border-top: 4px solid #8b5a96;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    .loading-spinner p {
+        margin: 0;
         color: #6b7280;
-        font-weight: 500;
-        font-size: 13px;
+        font-size: 14px;
     }
 
-    .time-item .time-value {
-        color: #1f2937;
-        font-weight: 600;
-        font-size: 13px;
+    .no-data-message {
         text-align: center;
-    }
-
-    .time-info .time-label {
+        padding: 20px;
         color: #6b7280;
-        font-weight: 500;
-    }
-
-    .time-percentage {
-        color: #10b981;
-        font-weight: 600;
+        font-size: 14px;
     }
 
     /* CPD Action Buttons */
@@ -927,33 +944,6 @@ get_header();
         margin: 0;
     }
 
-    .progress-info {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 8px;
-    }
-
-    .category-name {
-        font-size: 14px;
-        color: #374151;
-        font-weight: 500;
-    }
-
-    .progress-status {
-        font-size: 14px;
-        color: #6b7280;
-        font-weight: 600;
-    }
-
-    /* Custom styling for progress form groups */
-    .progress-section .form-group {
-        margin-bottom: 20px;
-    }
-
-    .progress-section .form-group:last-child {
-        margin-bottom: 0;
-    }
 
     /* Make buttons full width */
     .cpd-course-card .btn {
@@ -1002,28 +992,6 @@ get_header();
         color: #1f2937;
         font-weight: 600;
     }
-
-    .total-progress {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding-top: 16px;
-        border-top: 1px solid #e5e7eb;
-        margin-top: 16px;
-    }
-
-    .total-label {
-        font-size: 16px;
-        color: #1f2937;
-        font-weight: 600;
-    }
-
-    .total-status {
-        font-size: 16px;
-        color: #8b5a96;
-        font-weight: 600;
-    }
-
 
 
     .alert-banner {
@@ -2664,15 +2632,9 @@ get_header();
                 updateCpdDates(data.cpd_dates);
             }
             
-            // Update target minutes display
-            if (data.target_minutes) {
-                updateTargetMinutes(data.target_minutes);
-            }
-            
-            // Update time progress
-            if (data.total_cpd_minutes !== undefined && data.target_minutes) {
-                updateTimeProgress(data.total_cpd_minutes, data.target_minutes);
-            }
+            // Update CPD stats and course summary
+            updateCpdStats(data);
+            updateCourseSummary(data);
             
             // Update CPD action buttons based on period and assignment status
             updateCpdActionButtons(data);
@@ -2710,17 +2672,6 @@ get_header();
             }
         }
         
-        /**
-         * Update target minutes display
-         */
-        function updateTargetMinutes(targetMinutes) {
-            console.log('Target minutes:', targetMinutes);
-            
-            const targetElement = document.getElementById('target-minutes');
-            if (targetElement) {
-                targetElement.textContent = formatMinutesToHours(targetMinutes);
-            }
-        }
         
         /**
          * Update CPD action buttons based on period and assignment status
@@ -2988,38 +2939,80 @@ get_header();
         }
         
         /**
-         * Update time progress display
+         * Update CPD stats display (Requirement and Hours Logged)
          */
-        function updateTimeProgress(completedMinutes, targetMinutes) {
-            console.log('Updating time progress:', completedMinutes, targetMinutes);
+        function updateCpdStats(data) {
+            console.log('Updating CPD stats:', data);
             
-            // Calculate percentage
-            const percentage = targetMinutes > 0 ? Math.min(100, Math.round((completedMinutes / targetMinutes) * 100)) : 0;
-            
-            // Update progress bar
-            const progressFill = document.getElementById('time-progress-fill');
-            if (progressFill) {
-                progressFill.style.width = percentage + '%';
+            // Update CPD Requirement
+            const requirementElement = document.getElementById('cpd-requirement');
+            if (requirementElement && data.target_minutes) {
+                const targetHours = Math.round((data.target_minutes / 60) * 2) / 2; // Round to nearest 0.5
+                requirementElement.textContent = targetHours.toFixed(1) + ' hours';
             }
             
-            // Update percentage text
-            const percentageElement = document.getElementById('time-percentage');
-            if (percentageElement) {
-                percentageElement.textContent = percentage + '%';
+            // Update CPD Hours Logged
+            const loggedElement = document.getElementById('cpd-hours-logged');
+            if (loggedElement && data.total_cpd_minutes !== undefined) {
+                const loggedHours = Math.round((data.total_cpd_minutes / 60) * 2) / 2; // Round to nearest 0.5
+                loggedElement.textContent = loggedHours.toFixed(1) + ' hours';
+            }
+        }
+        
+        /**
+         * Update course summary table
+         */
+        function updateCourseSummary(data) {
+            console.log('Updating course summary:', data);
+            
+            const summaryContent = document.getElementById('course-summary-content');
+            
+            if (!summaryContent) return;
+            
+            if (!data.courses_summary || data.courses_summary.length === 0) {
+                summaryContent.innerHTML = '<div class="no-data-message" style="text-align: center; padding: 20px; color: #6b7280;">No courses completed for this year.</div>';
+                return;
             }
             
-            // Update completed minutes
-            const completedElement = document.getElementById('completed-minutes');
-            if (completedElement) {
-                completedElement.textContent = formatMinutesToHours(completedMinutes);
-            }
+            let html = `
+                <table class="summary-table">
+                    <thead>
+                        <tr>
+                            <th>Category</th>
+                            <th>Progress</th>
+                            <th>Hours</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
             
-            // Update remaining minutes
-            const remainingElement = document.getElementById('remaining-minutes');
-            if (remainingElement) {
-                const remainingMinutes = Math.max(0, targetMinutes - completedMinutes);
-                remainingElement.textContent = formatMinutesToHours(remainingMinutes);
-            }
+            data.courses_summary.forEach(item => {
+                // Calculate hours from minutes and round to nearest 0.5
+                const hours = Math.round((item.total_minutes / 60) * 2) / 2;
+                const progressText = `${hours} / 1`;
+                const isCompleted = hours >= 1;
+                const statusClass = isCompleted ? 'status-completed' : 'status-incomplete';
+                const iconColor = isCompleted ? '#10b981' : '#ef4444';
+                const iconType = isCompleted ? 'check-circle' : 'times-circle';
+                
+                html += `
+                    <tr>
+                        <td class="summary-category">
+                            <i class="fas fa-${iconType}" style="font-size: 11px; color: ${iconColor}; margin-right: 6px;"></i>
+                            ${item.category}
+                        </td>
+                        <td class="completion-status ${statusClass}">${progressText}</td>
+                        <td class="summary-hours">${hours.toFixed(1)}</td>
+                    </tr>
+                `;
+            });
+            
+            html += `
+                    </tbody>
+                </table>
+            `;
+            
+            summaryContent.innerHTML = html;
         }
         
         /**
