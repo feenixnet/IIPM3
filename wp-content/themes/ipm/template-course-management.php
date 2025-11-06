@@ -426,13 +426,17 @@ if (!function_exists('add_success_notification')) {
                         <span class="field-name">course_duration</span>
                         <span class="field-desc">Duration in CPD minutes (Required, Number)</span>
                     </div>
+                    <div class="structure-item">
+                        <span class="field-name">course_date</span>
+                        <span class="field-desc">Course Date in dd/mm/yyyy format (Optional, defaults to current date)</span>
+                    </div>
                 </div>
                 
                 <div class="sample-csv">
                     <h5>Sample CSV Format:</h5>
-                    <pre>course_name,course_code,course_category,course_provider,course_duration
-"Project Management Fundamentals","PM101","Project Management","Training Institute","120"
-"Leadership Skills","LS201","Leadership","Corporate Academy","90"</pre>
+                    <pre>course_name,course_code,course_category,course_provider,course_duration,course_date
+"Project Management Fundamentals","PM101","Project Management","Training Institute","120","15/01/2024"
+"Leadership Skills","LS201","Leadership","Corporate Academy","90","20/02/2024"</pre>
                 </div>
             </div>
             
@@ -881,6 +885,10 @@ if (!function_exists('add_success_notification')) {
 
 .upload-content {
     pointer-events: none;
+}
+
+.upload-content .upload-link {
+    pointer-events: auto;
 }
 
 .upload-icon {
@@ -2422,13 +2430,34 @@ jQuery(document).ready(function($) {
             resetBulkImportModal();
         });
         
-        // File upload area click
-        $('#file-upload-area').on('click', function() {
-            $('#csv-file-input').click();
+        // File upload area click - trigger file input
+        $(document).on('click', '#file-upload-area', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            const fileInput = document.getElementById('csv-file-input');
+            if (fileInput) {
+                fileInput.click();
+            }
+        });
+        
+        // Also handle click on the upload link specifically
+        $(document).on('click', '.upload-link', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            const fileInput = document.getElementById('csv-file-input');
+            if (fileInput) {
+                fileInput.click();
+            }
+        });
+        
+        // Prevent file input click from bubbling up
+        $(document).on('click', '#csv-file-input', function(e) {
+            e.stopPropagation();
         });
         
         // File input change
         $('#csv-file-input').on('change', function(e) {
+            e.stopPropagation();
             const file = e.target.files[0];
             if (file) {
                 handleFileSelect(file);
@@ -3133,7 +3162,7 @@ jQuery(document).ready(function($) {
         }
         
         const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
-        const expectedHeaders = ['course_name', 'course_code', 'course_category', 'course_provider', 'course_duration'];
+        const expectedHeaders = ['course_name', 'course_code', 'course_category', 'course_provider', 'course_duration', 'course_date'];
         
         // Validate headers
         const headerMismatch = expectedHeaders.some((expected, index) => 
@@ -3155,7 +3184,8 @@ jQuery(document).ready(function($) {
                     course_code: values[1],
                     course_category: values[2],
                     course_provider: values[3],
-                    course_duration: parseFloat(values[4])
+                    course_duration: parseFloat(values[4]),
+                    course_date: values[5] || '' // course_date from CSV (6th column) or empty
                 });
             }
         }
@@ -3174,7 +3204,7 @@ jQuery(document).ready(function($) {
     function displayCSVPreview() {
         const previewTable = $('#preview-table');
         let tableHTML = '<table><thead><tr>';
-        tableHTML += '<th>Course Name</th><th>Course Code</th><th>Category</th><th>Provider</th><th>Duration (Hours)</th>';
+        tableHTML += '<th>Course Name</th><th>Course Code</th><th>Category</th><th>Provider</th><th>Duration (Hours)</th><th>Course Date</th>';
         tableHTML += '</tr></thead><tbody>';
         
         // Show first 5 rows as preview
@@ -3186,11 +3216,12 @@ jQuery(document).ready(function($) {
             tableHTML += `<td>${row.course_category}</td>`;
             tableHTML += `<td>${row.course_provider}</td>`;
             tableHTML += `<td>${row.course_duration}</td>`;
+            tableHTML += `<td>${row.course_date || 'N/A'}</td>`;
             tableHTML += '</tr>';
         });
         
         if (csvData.length > 5) {
-            tableHTML += `<tr><td colspan="5" style="text-align: center; font-style: italic;">... and ${csvData.length - 5} more rows</td></tr>`;
+            tableHTML += `<tr><td colspan="6" style="text-align: center; font-style: italic;">... and ${csvData.length - 5} more rows</td></tr>`;
         }
         
         tableHTML += '</tbody></table>';
@@ -3212,6 +3243,19 @@ jQuery(document).ready(function($) {
             const batch = csvData.slice(startIndex, endIndex);
             
             const promises = batch.map(courseData => {
+                // Format course_date from CSV (expected format: dd/mm/yyyy or yyyy-mm-dd)
+                let formattedDate = '';
+                if (courseData.course_date) {
+                    // If it's in yyyy-mm-dd format, convert to dd/mm/yyyy
+                    if (courseData.course_date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                        const dateParts = courseData.course_date.split('-');
+                        formattedDate = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
+                    } else {
+                        // Assume it's already in dd/mm/yyyy format
+                        formattedDate = courseData.course_date;
+                    }
+                }
+                
                 return $.ajax({
                     url: ajaxurl,
                     type: 'POST',
@@ -3222,6 +3266,7 @@ jQuery(document).ready(function($) {
                         course_category: courseData.course_category,
                         course_provider: courseData.course_provider,
                         course_duration: courseData.course_duration,
+                        course_date: formattedDate,
                         nonce: iipm_ajax.nonce
                     }
                 });

@@ -645,8 +645,7 @@ h1 {
   top: 0;
   background: #404040;
   width: 100%;
-  height: -moz-max-content;
-  height: max-content;
+  height: 100vh;
   padding: 48px 50px;
 }
 

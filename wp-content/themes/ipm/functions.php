@@ -6287,6 +6287,7 @@ function iipm_handle_bulk_import_courses() {
     $course_category = sanitize_text_field($_POST['course_category']);
     $course_provider = sanitize_text_field($_POST['course_provider']);
     $course_duration = intval($_POST['course_duration']);
+    $course_date_input = sanitize_text_field($_POST['course_date'] ?? '');
     
     // Validate required fields
     if (empty($course_name) || empty($course_category) || empty($course_provider) || empty($course_duration)) {
@@ -6298,6 +6299,16 @@ function iipm_handle_bulk_import_courses() {
     if ($course_duration <= 0) {
         wp_send_json_error('Duration must be a positive number');
         return;
+    }
+    
+    // Process course_date - convert from dd/mm/yyyy to dd-mm-yyyy format for database
+    $course_date = '';
+    if (!empty($course_date_input)) {
+        // Convert from dd/mm/yyyy to dd-mm-yyyy
+        $course_date = str_replace('/', '-', $course_date_input);
+    } else {
+        // Default to current date if not provided
+        $course_date = date('d-m-Y');
     }
     
     $table_name = $wpdb->prefix . 'coursesbyadminbku';
@@ -6323,7 +6334,7 @@ function iipm_handle_bulk_import_courses() {
             'course_cpd_mins' => $course_duration,
             'user_id' => get_current_user_id(),
             'course_id' => rand(100000, 999999),
-            'course_date' => date('d-m-Y'),
+            'course_date' => $course_date,
             'course_enteredBy' => get_current_user_id(),
             'is_by_admin' => 1,
             'status' => 'active',
