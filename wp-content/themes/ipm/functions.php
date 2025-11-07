@@ -2035,7 +2035,13 @@ function iipm_handle_submit_leave_request() {
         return;
     }
     
-    $user_id = get_current_user_id();
+    // Check if admin is submitting on behalf of another user
+    $current_user_id = get_current_user_id();
+    $target_user_id = isset($_POST['user_id']) ? intval($_POST['user_id']) : $current_user_id;
+    $is_admin_mode = (current_user_can('administrator') || current_user_can('iipm_admin')) && $target_user_id !== $current_user_id;
+    
+    // Use target user_id if in admin mode, otherwise use current user
+    $user_id = $is_admin_mode ? $target_user_id : $current_user_id;
     
     $leave_title = sanitize_text_field($_POST['leave_title'] ?? '');
     $leave_reason = sanitize_text_field($_POST['leave_reason'] ?? '');
@@ -2067,7 +2073,8 @@ function iipm_handle_submit_leave_request() {
         return;
     }
     
-    if (strtotime($start_db) < strtotime('today')) {
+    // Only check past dates if not in admin mode
+    if (!$is_admin_mode && strtotime($start_db) < strtotime('today')) {
         wp_send_json_error('Start date cannot be in the past');
         return;
     }
@@ -2209,6 +2216,56 @@ function iipm_handle_cancel_leave_request() {
     }
 }
 add_action('wp_ajax_iipm_cancel_leave_request', 'iipm_handle_cancel_leave_request');
+
+/**
+ * AJAX handler to get leave requests by year
+ */
+function iipm_ajax_get_leave_requests_by_year() {
+    if (!is_user_logged_in()) {
+        wp_send_json_error('User not logged in');
+        return;
+    }
+    
+    if (!wp_verify_nonce($_POST['nonce'], 'iipm_portal_nonce')) {
+        wp_send_json_error('Security check failed');
+        return;
+    }
+    
+    $current_user_id = get_current_user_id();
+    $target_user_id = isset($_POST['user_id']) ? intval($_POST['user_id']) : $current_user_id;
+    $year = isset($_POST['year']) ? intval($_POST['year']) : date('Y');
+    
+    // Check admin permissions if requesting another user's data
+    $is_admin = current_user_can('administrator') || current_user_can('iipm_admin');
+    if ($target_user_id !== $current_user_id && !$is_admin) {
+        wp_send_json_error('Insufficient permissions');
+        return;
+    }
+    
+    global $wpdb;
+    $all_leave_requests = $wpdb->get_results($wpdb->prepare(
+        "SELECT * FROM {$wpdb->prefix}test_iipm_leave_requests 
+         WHERE user_id = %d 
+         ORDER BY created_at DESC",
+        $target_user_id
+    ));
+    
+    // Filter leave requests for the specified year
+    $leave_requests = array();
+    foreach ($all_leave_requests as $request) {
+        // Extract year from leave_start_date (format: DD-MM-YYYY)
+        $date_parts = explode('-', $request->leave_start_date);
+        $request_year = isset($date_parts[2]) ? intval($date_parts[2]) : 0;
+        
+        // Only include requests from the specified year
+        if ($request_year === $year) {
+            $leave_requests[] = $request;
+        }
+    }
+    
+    wp_send_json_success($leave_requests);
+}
+add_action('wp_ajax_iipm_get_leave_requests_by_year', 'iipm_ajax_get_leave_requests_by_year');
 
 /**
  * AJAX handler for creating sample persistent notifications
@@ -6954,3 +7011,27 @@ function iipm_get_organizations_data() {
 }
 add_action('wp_ajax_iipm_get_organizations_data', 'iipm_get_organizations_data');
 add_action('wp_ajax_nopriv_iipm_get_organizations_data', 'iipm_get_organizations_data');
+
+/**
+ * Hide File Dashboard menu item from WordPress admin menu
+ */
+function iipm_remove_file_dashboard_menu() {
+    // Remove File Dashboard menu item if it exists
+    remove_menu_page('file-dashboard');
+    
+    // Also try to remove by checking menu items dynamically
+    global $menu;
+    if (is_array($menu)) {
+        foreach ($menu as $key => $item) {
+            // Check if it's specifically the File Dashboard menu item
+            if (isset($item[0]) && stripos($item[0], 'File Dashboard') !== false) {
+                unset($menu[$key]);
+            }
+            // Also check by menu slug
+            if (isset($item[2]) && ($item[2] === 'file-dashboard' || stripos($item[2], 'file-dashboard') !== false)) {
+                unset($menu[$key]);
+            }
+        }
+    }
+}
+add_action('admin_menu', 'iipm_remove_file_dashboard_menu', 999);

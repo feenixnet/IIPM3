@@ -471,17 +471,38 @@ function iipm_ajax_complete_cpd_course() {
  * AJAX callback for deleting CPD confirmation
  */
 function iipm_ajax_delete_cpd_confirmation() {
-    // Normalize user_id
-    $user_id = isset($_POST['user_id']) ? intval($_POST['user_id']) : get_current_user_id();
-    if ($user_id <= 0) { $user_id = get_current_user_id(); }
+    $current_user_id = get_current_user_id();
     $confirmation_id = intval($_POST['confirmation_id'] ?? 0);
     
-    if (!$user_id || !$confirmation_id) {
+    if (!$current_user_id || !$confirmation_id) {
         wp_send_json_error('Missing required fields');
         return;
     }
     
-    $result = iipm_delete_cpd_confirmation($user_id, $confirmation_id);
+    // Check if admin is deleting on behalf of another user
+    $is_admin = current_user_can('administrator') || current_user_can('iipm_admin');
+    
+    // Get the actual owner of the course
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'fullcpd_confirmations';
+    $course = $wpdb->get_row($wpdb->prepare(
+        "SELECT user_id FROM {$table_name} WHERE id = %d",
+        $confirmation_id
+    ));
+    
+    if (!$course) {
+        wp_send_json_error('Course not found');
+        return;
+    }
+    
+    // If not admin, ensure the user can only delete their own courses
+    if (!$is_admin && $course->user_id != $current_user_id) {
+        wp_send_json_error('Insufficient permissions');
+        return;
+    }
+    
+    // Use the course owner's user_id for deletion
+    $result = iipm_delete_cpd_confirmation($course->user_id, $confirmation_id);
     
     if ($result) {
         wp_send_json_success('Course deleted successfully');

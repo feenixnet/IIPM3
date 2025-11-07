@@ -15,6 +15,58 @@ if (!is_user_logged_in()) {
     exit;
 }
 
+$current_user = wp_get_current_user();
+$user_id = $current_user->ID;
+$is_admin = current_user_can('administrator') || current_user_can('iipm_admin');
+
+// Middleware: Validate admin access requires tYear and user_id params
+if ($is_admin) {
+    $has_user_id = isset($_GET['user_id']) && !empty($_GET['user_id']);
+    $has_tyear = isset($_GET['tYear']) && !empty($_GET['tYear']);
+    
+    // Admin must provide both parameters
+    if (!$has_user_id || !$has_tyear) {
+        wp_die(
+            '<h1>Access Denied</h1><p>Administrators must access this page with valid <code>user_id</code> and <code>tYear</code> parameters.</p>',
+            'Invalid Access',
+            array('response' => 403, 'back_link' => true)
+        );
+    }
+    
+    $target_user_id = intval($_GET['user_id']);
+    $target_year = intval($_GET['tYear']);
+    
+    // Validate user_id exists
+    $target_user = get_userdata($target_user_id);
+    if (!$target_user) {
+        wp_die(
+            '<h1>Invalid User</h1><p>The specified user ID does not exist.</p>',
+            'User Not Found',
+            array('response' => 404, 'back_link' => true)
+        );
+    }
+    
+    // Validate tYear is >= user's registration year
+    $user_registered = $target_user->user_registered;
+    $user_registration_year = date('Y', strtotime($user_registered));
+    
+    if ($target_year < $user_registration_year) {
+        wp_die(
+            '<h1>Invalid Year</h1><p>The specified year (' . $target_year . ') is before the user\'s registration year (' . $user_registration_year . ').</p>',
+            'Invalid Year',
+            array('response' => 400, 'back_link' => true)
+        );
+    }
+    
+    $is_admin_mode = true;
+} else {
+    // Regular user access - use their own ID and current/requested year
+    $target_user_id = $user_id;
+    $target_year = isset($_GET['tYear']) ? intval($_GET['tYear']) : date('Y');
+    $is_admin_mode = false;
+    $target_user = $current_user;
+}
+
 // FORCE LOAD MAIN THEME CSS AND JQUERY
 wp_enqueue_style('iipm-main-style', get_template_directory_uri() . '/assets/css/main.min.css', array(), '1.0.0');
 wp_enqueue_script('jquery');
@@ -27,24 +79,34 @@ wp_enqueue_script('jquery');
 // }
 get_header();
 
-$current_user = wp_get_current_user();
-$user_id = $current_user->ID;
-
-// Get user's leave requests
+// Get user's leave requests for ALL years (for display in lists)
 global $wpdb;
-$leave_requests = $wpdb->get_results($wpdb->prepare(
+$all_leave_requests = $wpdb->get_results($wpdb->prepare(
     "SELECT * FROM {$wpdb->prefix}test_iipm_leave_requests 
      WHERE user_id = %d 
      ORDER BY created_at DESC",
-    $user_id
+    $target_user_id
 ));
 
-// Separate current and past requests with better logic
+// Filter leave requests for the target year ONLY (for calendar blocking)
+$leave_requests = array();
+foreach ($all_leave_requests as $request) {
+    // Extract year from leave_start_date (format: DD-MM-YYYY)
+    $date_parts = explode('-', $request->leave_start_date);
+    $request_year = isset($date_parts[2]) ? intval($date_parts[2]) : 0;
+    
+    // Only include requests from the target year for calendar
+    if ($request_year === $target_year) {
+        $leave_requests[] = $request;
+    }
+}
+
+// Separate current and past requests with better logic (using all requests for display)
 $current_requests = array();
 $past_requests = array();
 $current_date = date('Y-m-d');
 
-foreach ($leave_requests as $request) {
+foreach ($all_leave_requests as $request) {
     if ($request->status === 'pending') {
         // All pending requests go to "Your Leave Requests"
         $current_requests[] = $request;
@@ -68,9 +130,15 @@ foreach ($leave_requests as $request) {
     <div class="container" style="position: relative; z-index: 2;">
         <div class="page-header" style="text-align: center; margin-bottom: 40px;">
             <div>
-                <h1 style="color: white; font-size: 2.5rem; margin-bottom: 10px;">Leave Request</h1>
+                <h1 style="color: white; font-size: 2.5rem; margin-bottom: 10px;">Leave Request<?php echo $is_admin_mode ? ' - Admin Mode' : ''; ?></h1>
                 <p style="color: rgba(255,255,255,0.9); font-size: 1.1rem;">
-                Submit and manage your leave requests
+                <?php 
+                if ($is_admin_mode) {
+                    echo 'Creating leave request for ' . esc_html($target_user->display_name);
+                } else {
+                    echo 'Submit and manage your leave requests';
+                }
+                ?>
                 </p>
             </div>
         </div>
@@ -189,6 +257,11 @@ foreach ($leave_requests as $request) {
                             <button type="button" class="calendar-nav" id="prevMonth">&lt;</button>
                             <span class="calendar-month-year" id="currentMonthYear"></span>
                             <button type="button" class="calendar-nav" id="nextMonth">&gt;</button>
+                        </div>
+                        <div class="calendar-year-selector" style="text-align: center; margin: 0px; padding: 10px; background: #f8f9fa; border-radius: 6px;">
+                            <select id="calendarYearSelect" style="padding: 6px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                                <!-- Populated by JavaScript -->
+                            </select>
                         </div>
                         <div class="calendar-grid">
                             <div class="calendar-weekdays">
@@ -1244,8 +1317,23 @@ window.iipm_ajax = {
     portal_nonce: '<?php echo wp_create_nonce('iipm_portal_nonce'); ?>'
 };
 
-// Calendar functionality
-let currentDate = new Date();
+// Admin mode variables
+const targetUserId = <?php echo $target_user_id; ?>;
+const targetYear = <?php echo $target_year; ?>;
+const isAdminMode = <?php echo $is_admin_mode ? 'true' : 'false'; ?>;
+
+// Existing leave requests dates for disabling (filtered by target year)
+// Using let instead of const because we update it when year changes
+let existingLeaveRequests = <?php echo json_encode($leave_requests); ?>;
+
+// Calendar functionality - Initialize calendar date
+// If target year is current year, show current month; otherwise show January
+const currentYear = new Date().getFullYear();
+const currentMonth = new Date().getMonth();
+let currentDate = targetYear === currentYear 
+    ? new Date(targetYear, currentMonth, 1) 
+    : new Date(targetYear, 0, 1);
+    
 let selectedStartDate = null;
 let selectedEndDate = null;
 let nonce = '<?php echo wp_create_nonce('iipm_portal_nonce'); ?>';
@@ -1275,8 +1363,11 @@ function fetchAndDisplayCpdImpact() {
     const formData = new FormData();
     formData.append('action', 'iipm_get_adjusted_cpd_hours');
     formData.append('nonce', nonce);
-    formData.append('year', new Date().getFullYear());
+    formData.append('year', targetYear);
     formData.append('manual_duration', durationDays);
+    if (isAdminMode) {
+        formData.append('user_id', targetUserId);
+    }
     
     // Fetch CPD data
     fetch(window.iipm_ajax.ajax_url, {
@@ -1348,18 +1439,108 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Calendar navigation
     document.getElementById('prevMonth').addEventListener('click', function() {
-        currentDate.setMonth(currentDate.getMonth() - 1);
-        renderCalendar();
+        const newDate = new Date(currentDate);
+        newDate.setMonth(newDate.getMonth() - 1);
+        
+        // Check if we're still within the selected year
+        const selectedYear = parseInt(document.getElementById('calendarYearSelect').value);
+        if (newDate.getFullYear() >= selectedYear) {
+            currentDate = newDate;
+            renderCalendar();
+        }
     });
     
     document.getElementById('nextMonth').addEventListener('click', function() {
-        currentDate.setMonth(currentDate.getMonth() + 1);
-        renderCalendar();
+        const newDate = new Date(currentDate);
+        newDate.setMonth(newDate.getMonth() + 1);
+        
+        // Check if we're still within the selected year
+        const selectedYear = parseInt(document.getElementById('calendarYearSelect').value);
+        if (newDate.getFullYear() <= selectedYear) {
+            currentDate = newDate;
+            renderCalendar();
+        }
+    });
+    
+    // Year selector change
+    document.getElementById('calendarYearSelect').addEventListener('change', function(e) {
+        const selectedYear = parseInt(e.target.value);
+        const now = new Date();
+        const nowYear = now.getFullYear();
+        const nowMonth = now.getMonth();
+        
+        // If selected year is current year, go to current month; otherwise go to January
+        currentDate = selectedYear === nowYear 
+            ? new Date(selectedYear, nowMonth, 1) 
+            : new Date(selectedYear, 0, 1);
+        
+        // Clear selected dates when changing year
+        selectedStartDate = null;
+        selectedEndDate = null;
+        document.getElementById('date_of_leave').value = '';
+        document.getElementById('duration_of_leave').value = '';
+        document.getElementById('cpdImpactSection').style.display = 'none';
+        
+        // Reload leave requests for the selected year
+        loadLeaveRequestsForYear(selectedYear);
     });
 });
 
 function initializeCalendar() {
+    // Populate year selector from 2018 to current year only
+    const yearSelect = document.getElementById('calendarYearSelect');
+    const currentYear = new Date().getFullYear();
+    const startYear = 2018;
+    const endYear = currentYear;
+    
+    yearSelect.innerHTML = '';
+    for (let year = startYear; year <= endYear; year++) {
+        const option = document.createElement('option');
+        option.value = year;
+        option.textContent = year;
+        if (year === targetYear) {
+            option.selected = true;
+        }
+        yearSelect.appendChild(option);
+    }
+    
     renderCalendar();
+}
+
+// Function to load leave requests for a specific year
+function loadLeaveRequestsForYear(year) {
+    // Make AJAX request to get leave requests for the selected year
+    const formData = new FormData();
+    formData.append('action', 'iipm_get_leave_requests_by_year');
+    formData.append('nonce', nonce);
+    formData.append('user_id', targetUserId);
+    formData.append('year', year);
+    
+    fetch(window.iipm_ajax.ajax_url, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Update the existingLeaveRequests array
+            existingLeaveRequests.length = 0; // Clear array
+            if (data.data && data.data.length > 0) {
+                existingLeaveRequests.push(...data.data);
+            }
+            // Re-render calendar with updated data
+            renderCalendar();
+        } else {
+            console.error('Failed to load leave requests:', data);
+            // Still render calendar even if request fails
+            renderCalendar();
+        }
+    })
+    .catch(error => {
+        console.error('Error loading leave requests:', error);
+        // Still render calendar even if request fails
+        renderCalendar();
+    });
 }
 
 function renderCalendar() {
@@ -1367,7 +1548,7 @@ function renderCalendar() {
         "July", "August", "September", "October", "November", "December"];
     
     document.getElementById('currentMonthYear').textContent = 
-        monthNames[currentDate.getMonth()] + ' ' + currentDate.getFullYear();
+        monthNames[currentDate.getMonth()];
     
     const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
     const lastDay = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
@@ -1389,9 +1570,21 @@ function renderCalendar() {
             dayElement.classList.add('other-month');
         }
         
-        if (day < new Date().setHours(0, 0, 0, 0)) {
+        // Check if date has existing leave request (all statuses to prevent duplicates)
+        const hasExistingLeave = isDateInExistingLeave(day);
+        
+        // In non-admin mode, disable past dates
+        // In admin mode, only disable dates with existing leave requests
+        const isPastDate = day < new Date().setHours(0, 0, 0, 0);
+        const shouldDisable = hasExistingLeave || (!isAdminMode && isPastDate);
+        
+        if (shouldDisable) {
             dayElement.style.opacity = '0.3';
             dayElement.style.cursor = 'not-allowed';
+            if (hasExistingLeave) {
+                dayElement.style.background = '#ffebee';
+                dayElement.title = 'Date has existing leave request';
+            }
         } else {
             dayElement.addEventListener('click', function() {
                 selectDate(day);
@@ -1411,10 +1604,73 @@ function renderCalendar() {
         
         calendarDays.appendChild(dayElement);
     }
+    
+    // Update navigation button states based on year boundaries
+    const selectedYear = parseInt(document.getElementById('calendarYearSelect').value);
+    const prevBtn = document.getElementById('prevMonth');
+    const nextBtn = document.getElementById('nextMonth');
+    
+    // Disable prev button if at January of selected year
+    if (currentDate.getMonth() === 0 && currentDate.getFullYear() === selectedYear) {
+        prevBtn.disabled = true;
+        prevBtn.style.opacity = '0.5';
+        prevBtn.style.cursor = 'not-allowed';
+    } else {
+        prevBtn.disabled = false;
+        prevBtn.style.opacity = '1';
+        prevBtn.style.cursor = 'pointer';
+    }
+    
+    // Disable next button if at December of selected year
+    if (currentDate.getMonth() === 11 && currentDate.getFullYear() === selectedYear) {
+        nextBtn.disabled = true;
+        nextBtn.style.opacity = '0.5';
+        nextBtn.style.cursor = 'not-allowed';
+    } else {
+        nextBtn.disabled = false;
+        nextBtn.style.opacity = '1';
+        nextBtn.style.cursor = 'pointer';
+    }
+}
+
+// Helper function to check if date is in existing leave request
+// Note: existingLeaveRequests is already filtered to only include requests from targetYear
+// This allows admin to create leave requests for different years without interference
+function isDateInExistingLeave(date) {
+    if (!existingLeaveRequests || existingLeaveRequests.length === 0) {
+        return false;
+    }
+    
+    const checkDate = new Date(date);
+    checkDate.setHours(0, 0, 0, 0);
+    
+    for (const request of existingLeaveRequests) {
+        // Check ALL leave requests (not just approved) to prevent duplicates
+        // Parse dates (format: DD-MM-YYYY)
+        const startParts = request.leave_start_date.split('-');
+        const endParts = request.leave_end_date.split('-');
+        
+        // Create dates from DD-MM-YYYY format: [day, month, year]
+        const startDate = new Date(startParts[2], startParts[1] - 1, startParts[0]);
+        const endDate = new Date(endParts[2], endParts[1] - 1, endParts[0]);
+        
+        startDate.setHours(0, 0, 0, 0);
+        endDate.setHours(0, 0, 0, 0);
+        
+        if (checkDate >= startDate && checkDate <= endDate) {
+            return true;
+        }
+    }
+    
+    return false;
 }
 
 function selectDate(date) {
-    if (date < new Date().setHours(0, 0, 0, 0)) return;
+    // In admin mode, allow past dates; otherwise, block them
+    if (!isAdminMode && date < new Date().setHours(0, 0, 0, 0)) return;
+    
+    // Check if date has existing leave
+    if (isDateInExistingLeave(date)) return;
     
     if (!selectedStartDate || (selectedStartDate && selectedEndDate)) {
         // Start new selection
@@ -1516,6 +1772,11 @@ document.addEventListener('DOMContentLoaded', function() {
             formData.append('leave_end_date', formatDate(selectedEndDate));
             formData.append('leave_description', note);
             formData.append('hours_deduct', deductedHours);
+            
+            // If in admin mode, include target user_id
+            if (isAdminMode) {
+                formData.append('user_id', targetUserId);
+            }
             
             // Disable submit button
             const submitBtn = this.querySelector('button[type="submit"]');

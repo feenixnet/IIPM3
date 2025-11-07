@@ -11,6 +11,60 @@ if (!is_user_logged_in()) {
     exit;
 }
 
+$current_user = wp_get_current_user();
+$user_id = $current_user->ID;
+$is_admin = current_user_can('administrator') || current_user_can('iipm_admin');
+
+// Middleware: Validate admin access requires tyear and user_id params
+if ($is_admin) {
+    $has_user_id = isset($_GET['user_id']) && !empty($_GET['user_id']);
+    $has_tyear = isset($_GET['tyear']) && !empty($_GET['tyear']);
+    
+    // Admin must provide both parameters
+    if (!$has_user_id || !$has_tyear) {
+        wp_die(
+            '<h1>Access Denied</h1><p>Administrators must access this page with valid <code>user_id</code> and <code>tyear</code> parameters.</p>',
+            'Invalid Access',
+            array('response' => 403, 'back_link' => true)
+        );
+    }
+    
+    $target_user_id = intval($_GET['user_id']);
+    $target_year = intval($_GET['tyear']);
+    
+    // Validate user_id exists
+    $target_user = get_userdata($target_user_id);
+    if (!$target_user) {
+        wp_die(
+            '<h1>Invalid User</h1><p>The specified user ID does not exist.</p>',
+            'User Not Found',
+            array('response' => 404, 'back_link' => true)
+        );
+    }
+    
+    // Validate tyear is >= user's registration year
+    $user_registered = $target_user->user_registered;
+    $user_registration_year = date('Y', strtotime($user_registered));
+    
+    if ($target_year < $user_registration_year) {
+        wp_die(
+            '<h1>Invalid Year</h1><p>The specified year (' . $target_year . ') is before the user\'s registration year (' . $user_registration_year . ').</p>',
+            'Invalid Year',
+            array('response' => 400, 'back_link' => true)
+        );
+    }
+    
+    $is_admin_mode = true;
+    $current_year = $target_year;
+} else {
+    // Regular user access - use their own ID and current year
+    $target_user_id = $user_id;
+    $target_year = date('Y');
+    $is_admin_mode = false;
+    $target_user = $current_user;
+    $current_year = date('Y');
+}
+
 // Include the CPD courses API
 require_once get_template_directory() . '/includes/cpd-courses-api.php';
 
@@ -18,14 +72,14 @@ require_once get_template_directory() . '/includes/cpd-courses-api.php';
 $logging_available = isset($_GET['logging_available']) ? (int)$_GET['logging_available'] : 1;
 $is_logging_period_active = ($logging_available === 1);
 
-// Get current user and year
-$current_user = wp_get_current_user();
-$current_year = date('Y');
-
 // Check if CPD is already submitted for current year
 global $wpdb;
 $is_submitted = false;
-$submitted_rows = $wpdb->get_results("SELECT * FROM {$wpdb->prefix}test_iipm_submissions WHERE user_id = {$current_user->ID} AND year = {$current_year}");
+$submitted_rows = $wpdb->get_results($wpdb->prepare(
+    "SELECT * FROM {$wpdb->prefix}test_iipm_submissions WHERE user_id = %d AND year = %d",
+    $target_user_id,
+    $current_year
+));
 if(count($submitted_rows) > 0) {
     $is_submitted = true;
 }
@@ -39,9 +93,15 @@ get_header();
     <div class="container" style="position: relative; z-index: 2;">
         <div class="page-header" style="text-align: center; margin-bottom: 40px;">
             <div>
-                <h1 style="color: white; font-size: 2.5rem; margin-bottom: 10px;">All CPD Courses</h1>
+                <h1 style="color: white; font-size: 2.5rem; margin-bottom: 10px;">All CPD Courses<?php echo $is_admin_mode ? ' - Admin Mode' : ''; ?></h1>
                 <p style="color: rgba(255,255,255,0.9); font-size: 1.1rem;">
-                    Select the course in this library to train CPD.
+                <?php 
+                if ($is_admin_mode) {
+                    echo 'Managing CPD courses for ' . esc_html($target_user->display_name) . ' (Year: ' . $current_year . ')';
+                } else {
+                    echo 'Select the course in this library to train CPD.';
+                }
+                ?>
                 </p>
             </div>
         </div>

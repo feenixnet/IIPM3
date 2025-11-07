@@ -316,7 +316,6 @@ if (!function_exists('add_success_notification')) {
                 <!-- Year Selector and Certificate Button -->
                 <div id="cpd-year-selector" style="display: none; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center;">
                     <div>
-                        <label for="cpd-year" style="font-weight: 600; margin-right: 15px;">Select Year:</label>
                         <select id="cpd-year" style="padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px;">
                             <!-- Populated by JavaScript -->
                         </select>
@@ -487,12 +486,14 @@ if (!function_exists('add_success_notification')) {
                 </div>
                 
                 <div id="leave-requests-content" style="display: none;">
-                    <!-- Year Selector -->
-                    <div id="leave-year-selector" style="display: none; margin-bottom: 30px;">
-                        <label for="leave-year" style="font-weight: 600; margin-right: 15px;">Select Year:</label>
+                    <!-- Year Selector and Add Button -->
+                    <div id="leave-year-selector" style="display: none; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center;">
                         <select id="leave-year" style="padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px;">
                             <!-- Populated by JavaScript -->
                         </select>
+                        <button id="add-leave-request-btn" class="btn btn-primary" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 500; cursor: pointer; transition: all 0.3s ease;">
+                            <i class="fas fa-plus"></i> Add Leave Request
+                        </button>
                     </div>
                     
                     
@@ -564,6 +565,40 @@ if (!function_exists('add_success_notification')) {
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
+}
+
+/* Course item hover effect with overlay */
+.course-item-hoverable {
+    transition: transform 0.2s;
+}
+
+.course-item-hoverable:hover {
+    transform: translateY(-2px);
+}
+
+.course-item-hoverable:hover .course-remove-overlay {
+    display: flex !important;
+    animation: fadeIn 0.2s ease-in;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+/* Remove course circular button styles */
+.remove-course-btn-circle:hover {
+    background: #dc2626 !important;
+    transform: scale(1.15);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4) !important;
+}
+
+.remove-course-btn-circle:active {
+    transform: scale(1.05);
 }
 
 .info-section {
@@ -1082,6 +1117,9 @@ jQuery(document).ready(function($) {
         
         // Initialize Add Courses button
         initializeAddCoursesButton();
+        
+        // Initialize Add Leave Request button
+        initializeAddLeaveRequestButton();
     }
     
     function showError(message) {
@@ -1431,7 +1469,15 @@ jQuery(document).ready(function($) {
                 courseDetailsHtml = '<div style="margin-top: 15px; border-top: 1px solid #e5e7eb; padding-top: 15px;">';
                 category.courses.forEach(function(course) {
                     courseDetailsHtml += `
-                        <div style="background: #f8fafc; padding: 15px; border-radius: 6px; margin-bottom: 10px; border-left: 4px solid #667eea;">
+                        <div class="course-item-hoverable" style="background: #f8fafc; padding: 15px; border-radius: 6px; margin-bottom: 10px; border-left: 4px solid #667eea; position: relative; cursor: pointer;">
+                            <!-- Hover Overlay with Remove Button -->
+                            <div class="course-remove-overlay" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.7); border-radius: 6px; display: none; align-items: center; justify-content: center; z-index: 10;">
+                                <button class="remove-course-btn-circle" onclick="deleteCourseAdmin(${course.id}, event)" style="background: #ef4444; color: white; border: none; width: 60px; height: 60px; border-radius: 50%; cursor: pointer; font-size: 1.5rem; display: flex; align-items: center; justify-content: center; transition: all 0.3s; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);" title="Remove course">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </div>
+                            
+                            <!-- Course Content -->
                             <div style="display: flex; justify-content: space-between; align-items: start;">
                                 <div style="flex: 1;">
                                     <div style="font-weight: 600; color: #374151; margin-bottom: 5px;">${course.courseName}</div>
@@ -2204,6 +2250,20 @@ jQuery(document).ready(function($) {
     }
     
     /**
+     * Add Leave Request button handler
+     */
+    function initializeAddLeaveRequestButton() {
+        $('#add-leave-request-btn').on('click', function() {
+            const currentYear = $('#leave-year').val() || new Date().getFullYear();
+            const targetUserId = userDetails.basic_info.user_id;
+            
+            // Redirect to Leave Request page with parameters
+            const leaveRequestUrl = `<?php echo home_url('/leave-request/'); ?>?tYear=${currentYear}&user_id=${targetUserId}`;
+            window.location.href = leaveRequestUrl;
+        });
+    }
+    
+    /**
      * Open qualification modal for adding/editing
      */
     function openQualificationModal(qualificationId = null) {
@@ -2485,6 +2545,101 @@ jQuery(document).ready(function($) {
             }
         });
     });
+    
+    /**
+     * Delete course from CPD record (Admin function)
+     * Uses the same backend action as member portal
+     */
+    window.deleteCourseAdmin = function(courseId, event) {
+        // Prevent event bubbling
+        if (event) {
+            event.stopPropagation();
+        }
+        
+        if (!confirm('Are you sure you want to remove this course from the member\'s CPD record?')) {
+            return;
+        }
+        
+        // Find the button that was clicked
+        const deleteBtn = event ? event.currentTarget : document.querySelector(`[onclick*="deleteCourseAdmin(${courseId})"]`);
+        const originalHtml = deleteBtn.innerHTML;
+        deleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        deleteBtn.disabled = true;
+        deleteBtn.style.background = '#6b7280';
+        
+        const formData = new FormData();
+        formData.append('action', 'iipm_delete_cpd_confirmation');
+        formData.append('confirmation_id', courseId);
+        
+        jQuery.ajax({
+            url: '<?php echo admin_url('admin-ajax.php'); ?>',
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                if (response.success) {
+                    // Show success state
+                    deleteBtn.innerHTML = '<i class="fas fa-check"></i>';
+                    deleteBtn.style.background = '#10b981';
+                    deleteBtn.style.color = 'white';
+                    deleteBtn.style.fontSize = '1.8rem';
+                    
+                    // Reload CPD data after a short delay
+                    setTimeout(() => {
+                        const currentYear = $('#cpd-year').val() || new Date().getFullYear();
+                        loadCPDDataForYear(currentYear);
+                        
+                        // Show success notification
+                        if (window.notifications) {
+                            notifications.success('Course Removed', 'The course has been removed from the CPD record.');
+                        }
+                    }, 800);
+                } else {
+                    // Show error state
+                    deleteBtn.innerHTML = '<i class="fas fa-times"></i>';
+                    deleteBtn.style.background = '#ef4444';
+                    deleteBtn.style.color = 'white';
+                    deleteBtn.style.fontSize = '1.8rem';
+                    
+                    // Revert after 3 seconds
+                    setTimeout(() => {
+                        deleteBtn.innerHTML = originalHtml;
+                        deleteBtn.style.background = '#ef4444';
+                        deleteBtn.style.color = 'white';
+                        deleteBtn.style.fontSize = '1.5rem';
+                        deleteBtn.disabled = false;
+                    }, 3000);
+                    
+                    // Show error notification
+                    if (window.notifications) {
+                        notifications.error('Delete Failed', response.data || 'Unknown error');
+                    }
+                }
+            },
+            error: function(xhr, status, error) {
+                // Show error state
+                deleteBtn.innerHTML = '<i class="fas fa-times"></i>';
+                deleteBtn.style.background = '#ef4444';
+                deleteBtn.style.color = 'white';
+                deleteBtn.style.fontSize = '1.8rem';
+                
+                // Revert after 3 seconds
+                setTimeout(() => {
+                    deleteBtn.innerHTML = originalHtml;
+                    deleteBtn.style.background = '#ef4444';
+                    deleteBtn.style.color = 'white';
+                    deleteBtn.style.fontSize = '1.5rem';
+                    deleteBtn.disabled = false;
+                }, 3000);
+                
+                // Show error notification
+                if (window.notifications) {
+                    notifications.error('Delete Failed', 'An error occurred while removing the course.');
+                }
+            }
+        });
+    };
 });
 </script>
 

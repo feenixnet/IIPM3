@@ -599,11 +599,17 @@ function iipm_ajax_get_adjusted_cpd_hours() {
     error_log('CPD AJAX Request - Nonce: ' . ($_POST['nonce'] ?? 'missing'));
     error_log('CPD AJAX Request - Year: ' . ($_POST['year'] ?? 'missing'));
     
-    $user_id = get_current_user_id();
-    if (!$user_id) {
+    // Check if admin is requesting for another user
+    $current_user_id = get_current_user_id();
+    if (!$current_user_id) {
         wp_send_json_error('User not logged in');
         return;
     }
+    
+    // Use provided user_id if admin, otherwise use current user
+    $target_user_id = isset($_POST['user_id']) ? intval($_POST['user_id']) : $current_user_id;
+    $is_admin = current_user_can('administrator') || current_user_can('iipm_admin');
+    $user_id = ($is_admin && $target_user_id) ? $target_user_id : $current_user_id;
     
     $year = intval($_POST['year'] ?? date('Y'));
     $manual_duration = intval($_POST['manual_duration'] ?? 0);
