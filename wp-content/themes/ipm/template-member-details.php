@@ -168,6 +168,11 @@ if (!function_exists('add_success_notification')) {
                                 </div>
                             </div>
                         </div>
+                        <div style="text-align: center; margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+                            <span style="color: #6b7280; font-size: 13px;">
+                                Enrollment Date: <strong id="enrollment_date_display" style="color: #374151;">-</strong>
+                            </span>
+                        </div>
                     </div>
                 </div>
 
@@ -1007,6 +1012,7 @@ jQuery(document).ready(function($) {
     let userDetails = {};
     let organizations = [];
     let memberships = [];
+    let enrollmentYear = 2019; // Default fallback
     
     // Load user details
     loadUserDetails(userId);
@@ -1057,6 +1063,20 @@ jQuery(document).ready(function($) {
         
         // Initialize tooltip functionality
         initializeMembershipTooltip();
+        
+        // Populate Enrollment Date (text display, formatted as YYYY-MM-DD) and set enrollment year
+        if (data.basic_info.user_registered) {
+            const enrollmentDate = new Date(data.basic_info.user_registered);
+            const formattedDate = enrollmentDate.getFullYear() + '-' + 
+                                  String(enrollmentDate.getMonth() + 1).padStart(2, '0') + '-' + 
+                                  String(enrollmentDate.getDate()).padStart(2, '0');
+            $('#enrollment_date_display').text(formattedDate);
+            
+            // Set global enrollment year for CPD year selector
+            enrollmentYear = enrollmentDate.getFullYear();
+        } else {
+            $('#enrollment_date_display').text('N/A');
+        }
         
         // Update First Name and Surname
         $('#first_name_edit').val(data.profile_info.first_name || '');
@@ -1253,9 +1273,9 @@ jQuery(document).ready(function($) {
         const $yearSelect = $('#cpd-year');
         $yearSelect.empty();
         
-        // Generate years from current year + 1 down to 2020 (latest first)
+        // Generate years from current year down to enrollment year (latest first)
         const currentYear = new Date().getFullYear();
-        for (let year = currentYear; year >= 2019; year--) {
+        for (let year = currentYear; year >= enrollmentYear; year--) {
             $yearSelect.append(`<option value="${year}">${year}</option>`);
         }
         

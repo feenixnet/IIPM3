@@ -172,11 +172,11 @@ foreach ($leave_requests as $request) {
                     <div class="filter-controls">
                         <input type="text" id="approved-search" placeholder="Search by name or email..." class="search-input">
                         <button class="btn-clear" onclick="clearApprovedFilters()">Clear</button>
-                    </div>
-                </div>
+                                    </div>
+                                </div>
                 <div class="requests-list" id="approved-requests-list">
                     <!-- Will be populated by JavaScript -->
-                </div>
+                                        </div>
                 <div class="pagination-container" id="approved-pagination"></div>
             </div>
 
@@ -187,11 +187,11 @@ foreach ($leave_requests as $request) {
                     <div class="filter-controls">
                         <input type="text" id="rejected-search" placeholder="Search by name or email..." class="search-input">
                         <button class="btn-clear" onclick="clearRejectedFilters()">Clear</button>
-                    </div>
-                </div>
+                                    </div>
+                                </div>
                 <div class="requests-list" id="rejected-requests-list">
                     <!-- Will be populated by JavaScript -->
-                </div>
+                                        </div>
                 <div class="pagination-container" id="rejected-pagination"></div>
             </div>
 

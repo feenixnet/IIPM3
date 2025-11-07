@@ -283,13 +283,13 @@ get_header();
                         <div class="stat-item">
                             <div class="stat-label">CPD Requirement</div>
                             <div class="stat-value" id="cpd-requirement">0</div>
-                        </div>
+                            </div>
                         <div class="stat-item">
                             <div class="stat-label">CPD hours logged</div>
                             <div class="stat-value" id="cpd-hours-logged">0</div>
+                            </div>
                         </div>
-                    </div>
-                    
+                        
                     <!-- Course Summary Table -->
                     <div class="course-summary-section">
                         <h4>Courses Summary</h4>
@@ -319,24 +319,16 @@ get_header();
                             <!-- Validation messages will be shown here -->
                         </div>
                     <?php endif; ?>
-                    
-                    <div class="cpd-dates-section">
-                        <h4>Important CPD Dates</h4>
-                        <div class="dates-grid">
-                            <div class="date-item">
-                                <span class="date-label">Logging Period:</span>
-                                <span class="date-value" id="logging-period">-</span>
-                            </div>
-                            <div class="date-item">
-                                <span class="date-label">Submission Period:</span>
-                                <span class="date-value" id="submission-period">-</span>
+
+                    <!-- Submission Deadline Alert -->
+                    <div class="submission-alert" id="submission-alert" style="display: none;">
+                        <div class="alert-content">
+                            <i class="fas fa-calendar-check alert-icon"></i>
+                            <div class="alert-text">
+                                <strong>Submission Deadline</strong>
+                                <p id="submission-deadline-text">-</p>
                             </div>
                         </div>
-                    </div>
-                    
-                    <div class="alert-banner">
-                        <span class="alert-icon"><i class="fas fa-exclamation-triangle"></i></span>
-                        <span class="alert-text" id="deadline-warning">Submit your CPD before the deadline</span>
                     </div>
                 </div>
             </div>
@@ -728,6 +720,44 @@ get_header();
         margin-bottom: 16px;
     }
 
+    /* Submission Alert */
+    .submission-alert {
+        padding: 16px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 8px;
+        color: white;
+        box-shadow: 0 4px 6px rgba(102, 126, 234, 0.15);
+    }
+
+    .submission-alert .alert-content {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .submission-alert .alert-icon {
+        font-size: 20px;
+        margin-top: 2px;
+        opacity: 0.95;
+    }
+
+    .submission-alert .alert-text {
+        flex: 1;
+    }
+
+    .submission-alert .alert-text strong {
+        display: block;
+        font-size: 14px;
+        font-weight: 600;
+        margin-bottom: 4px;
+    }
+
+    .submission-alert .alert-text p {
+        margin: 0;
+        font-size: 13px;
+        opacity: 0.95;
+    }
+
     .summary-table {
         width: 100%;
         border-collapse: collapse;
@@ -955,64 +985,6 @@ get_header();
         margin-bottom: 0;
     }
 
-    /* CPD Dates Section */
-    .cpd-dates-section {
-        margin-bottom: 20px;
-        padding: 16px;
-        background: #f8fafc;
-        border-radius: 8px;
-        border: 1px solid #e2e8f0;
-    }
-
-    .cpd-dates-section h4 {
-        margin: 0 0 12px 0;
-        font-size: 14px;
-        font-weight: 600;
-        color: #374151;
-    }
-
-    .dates-grid {
-        display: grid;
-        gap: 8px;
-    }
-
-    .date-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        font-size: 13px;
-    }
-
-    .date-label {
-        color: #6b7280;
-        font-weight: 500;
-    }
-
-    .date-value {
-        color: #1f2937;
-        font-weight: 600;
-    }
-
-
-    .alert-banner {
-        background: #fef2f2;
-        border: 1px solid #fecaca;
-        border-radius: 6px;
-        padding: 12px;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-
-    .alert-icon {
-        font-size: 16px;
-    }
-
-    .alert-text {
-        font-size: 14px;
-        color: #dc2626;
-        font-weight: 500;
-    }
 
     .portal-right-panel {
         display: flex;
@@ -2627,14 +2599,12 @@ get_header();
                 totalStatus.textContent = `${totalCompleted}/4`;
             }
             
-            // Update CPD dates if available
-            if (data.cpd_dates) {
-                updateCpdDates(data.cpd_dates);
-            }
-            
             // Update CPD stats and course summary
             updateCpdStats(data);
             updateCourseSummary(data);
+            
+            // Update submission deadline alert
+            updateSubmissionAlert(data);
             
             // Update CPD action buttons based on period and assignment status
             updateCpdActionButtons(data);
@@ -2643,35 +2613,27 @@ get_header();
         }
         
         /**
-         * Update CPD dates display
+         * Update submission deadline alert
          */
-        function updateCpdDates(cpdDates) {
-            console.log('Updating CPD dates:', cpdDates);
+        function updateSubmissionAlert(data) {
+            const submissionAlert = document.getElementById('submission-alert');
+            const submissionDeadlineText = document.getElementById('submission-deadline-text');
             
-            // Update logging period
-            const loggingPeriod = document.getElementById('logging-period');
-            if (loggingPeriod && cpdDates.start_logging && cpdDates.end_logging) {
-                const startDate = formatDate(cpdDates.start_logging);
-                const endDate = formatDate(cpdDates.end_logging);
-                loggingPeriod.textContent = `${startDate} - ${endDate}`;
-            }
+            if (!submissionAlert || !submissionDeadlineText) return;
             
-            // Update submission period
-            const submissionPeriod = document.getElementById('submission-period');
-            if (submissionPeriod && cpdDates.start_submission && cpdDates.end_submission) {
-                const startDate = formatDate(cpdDates.start_submission);
-                const endDate = formatDate(cpdDates.end_submission);
-                submissionPeriod.textContent = `${startDate} - ${endDate}`;
-            }
+            // Show alert only if user is assigned and in submission period (not submitted)
+            const isUserAssigned = data.is_user_assigned;
+            const isSubmissionPeriod = data.is_submission_period_available;
+            const isSubmitted = data.is_submitted;
             
-            // Update deadline warning
-            const deadlineWarning = document.getElementById('deadline-warning');
-            if (deadlineWarning && cpdDates.end_logging) {
-                const endDate = formatDate(cpdDates.end_submission);
-                deadlineWarning.textContent = `Submit your CPD before ${endDate}`;
+            if (isUserAssigned && isSubmissionPeriod && !isSubmitted && data.cpd_dates && data.cpd_dates.end_submission) {
+                const deadlineDate = formatDate(data.cpd_dates.end_submission);
+                submissionDeadlineText.textContent = `Submit your CPD return before ${deadlineDate}`;
+                submissionAlert.style.display = 'block';
+            } else {
+                submissionAlert.style.display = 'none';
             }
         }
-        
         
         /**
          * Update CPD action buttons based on period and assignment status

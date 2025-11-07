@@ -65,6 +65,10 @@ if ($is_admin) {
     $target_year = isset($_GET['tYear']) ? intval($_GET['tYear']) : date('Y');
     $is_admin_mode = false;
     $target_user = $current_user;
+    
+    // Get regular user's registration year
+    $user_registered = $target_user->user_registered;
+    $user_registration_year = date('Y', strtotime($user_registered));
 }
 
 // FORCE LOAD MAIN THEME CSS AND JQUERY
@@ -1321,6 +1325,7 @@ window.iipm_ajax = {
 const targetUserId = <?php echo $target_user_id; ?>;
 const targetYear = <?php echo $target_year; ?>;
 const isAdminMode = <?php echo $is_admin_mode ? 'true' : 'false'; ?>;
+const enrollmentYear = <?php echo $user_registration_year; ?>;
 
 // Existing leave requests dates for disabling (filtered by target year)
 // Using let instead of const because we update it when year changes
@@ -1465,6 +1470,17 @@ document.addEventListener('DOMContentLoaded', function() {
     // Year selector change
     document.getElementById('calendarYearSelect').addEventListener('change', function(e) {
         const selectedYear = parseInt(e.target.value);
+        
+        // If in admin mode (tYear parameter exists), refresh page with new year
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('tYear') && urlParams.has('user_id')) {
+            // Update tYear parameter and reload
+            urlParams.set('tYear', selectedYear);
+            window.location.search = urlParams.toString();
+            return;
+        }
+        
+        // Regular mode (non-admin): just update calendar
         const now = new Date();
         const nowYear = now.getFullYear();
         const nowMonth = now.getMonth();
@@ -1487,10 +1503,10 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function initializeCalendar() {
-    // Populate year selector from 2018 to current year only
+    // Populate year selector from enrollment year to current year only
     const yearSelect = document.getElementById('calendarYearSelect');
     const currentYear = new Date().getFullYear();
-    const startYear = 2018;
+    const startYear = enrollmentYear;
     const endYear = currentYear;
     
     yearSelect.innerHTML = '';
@@ -1570,11 +1586,11 @@ function renderCalendar() {
             dayElement.classList.add('other-month');
         }
         
-        // Check if date has existing leave request (all statuses to prevent duplicates)
+        // Check if date has approved leave request
         const hasExistingLeave = isDateInExistingLeave(day);
         
         // In non-admin mode, disable past dates
-        // In admin mode, only disable dates with existing leave requests
+        // In admin mode, only disable dates with approved leave requests
         const isPastDate = day < new Date().setHours(0, 0, 0, 0);
         const shouldDisable = hasExistingLeave || (!isAdminMode && isPastDate);
         
@@ -1583,7 +1599,7 @@ function renderCalendar() {
             dayElement.style.cursor = 'not-allowed';
             if (hasExistingLeave) {
                 dayElement.style.background = '#ffebee';
-                dayElement.title = 'Date has existing leave request';
+                dayElement.title = 'Date already has approved leave';
             }
         } else {
             dayElement.addEventListener('click', function() {
@@ -1645,7 +1661,11 @@ function isDateInExistingLeave(date) {
     checkDate.setHours(0, 0, 0, 0);
     
     for (const request of existingLeaveRequests) {
-        // Check ALL leave requests (not just approved) to prevent duplicates
+        // Only check APPROVED leave requests to disable dates
+        if (request.status !== 'approved') {
+            continue;
+        }
+        
         // Parse dates (format: DD-MM-YYYY)
         const startParts = request.leave_start_date.split('-');
         const endParts = request.leave_end_date.split('-');

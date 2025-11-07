@@ -34,7 +34,23 @@ get_header();
                     <select id="year-select">
                         <?php
                         $current_year = date('Y');
-                        for ($year = $current_year; $year >= 2019; $year--) {
+                        $current_user_id = get_current_user_id();
+                        
+                        // Get user's enrollment date
+                        global $wpdb;
+                        $user_registered = $wpdb->get_var($wpdb->prepare(
+                            "SELECT user_registered FROM {$wpdb->users} WHERE ID = %d",
+                            $current_user_id
+                        ));
+                        
+                        // Extract enrollment year
+                        $enrollment_year = 2019; // Default fallback
+                        if ($user_registered) {
+                            $enrollment_year = (int) date('Y', strtotime($user_registered));
+                        }
+                        
+                        // Generate years from current year down to enrollment year
+                        for ($year = $current_year; $year >= $enrollment_year; $year--) {
                             $selected = ($year == $current_year) ? 'selected' : '';
                             echo "<option value='{$year}' {$selected}>{$year}</option>";
                         }

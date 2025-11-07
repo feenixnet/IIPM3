@@ -68,6 +68,7 @@ function iipm_generate_course_id() {
 }
 add_action('wp_ajax_iipm_approve_course_request', 'iipm_ajax_approve_course_request');
 add_action('wp_ajax_iipm_reject_course_request', 'iipm_ajax_reject_course_request');
+add_action('wp_ajax_iipm_update_course_request', 'iipm_ajax_update_course_request');
 
 // Course Management CRUD Actions
 add_action('wp_ajax_iipm_get_all_courses', 'iipm_ajax_get_all_courses');
@@ -417,6 +418,100 @@ function iipm_ajax_reject_course_request() {
     }
 
     wp_send_json_success(array('message' => 'Request rejected and email sent'));
+}
+
+/**
+ * Update a pending course request
+ */
+function iipm_ajax_update_course_request() {
+    if (!current_user_can('administrator')) { 
+        wp_send_json_error('Unauthorized'); 
+    }
+    
+    global $wpdb;
+    $request_id = intval($_POST['request_id'] ?? 0);
+    
+    if ($request_id <= 0) { 
+        wp_send_json_error('Invalid request ID'); 
+    }
+    
+    $table = $wpdb->prefix . 'coursesbyuserbku';
+    
+    // Check if request exists and is still pending
+    $request = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$table} WHERE id = %d", $request_id));
+    if (!$request) { 
+        wp_send_json_error('Request not found'); 
+    }
+    
+    if ($request->status !== 'pending') {
+        wp_send_json_error('Only pending requests can be edited');
+    }
+    
+    // Get and validate input fields
+    $course_name = sanitize_text_field($_POST['course_name'] ?? '');
+    $lia_code = sanitize_text_field($_POST['lia_code'] ?? '');
+    $course_date = sanitize_text_field($_POST['course_date'] ?? '');
+    $course_cpd_hours = floatval($_POST['course_cpd_hours'] ?? 0);
+    $course_category_id = intval($_POST['course_category'] ?? 0);
+    
+    if (empty($course_name)) {
+        wp_send_json_error('Course name is required');
+    }
+    
+    if ($course_cpd_hours <= 0) {
+        wp_send_json_error('Course hours must be greater than 0');
+    }
+    
+    if ($course_category_id <= 0) {
+        wp_send_json_error('Course category is required');
+    }
+    
+    // Resolve category name by ID
+    $category_table = $wpdb->prefix . 'test_iipm_cpd_categories';
+    $course_category_name = $wpdb->get_var($wpdb->prepare(
+        "SELECT name FROM {$category_table} WHERE id = %d",
+        $course_category_id
+    ));
+    
+    if (!$course_category_name) {
+        wp_send_json_error('Invalid course category');
+    }
+    
+    // Convert hours to minutes (rounded to 0.5h)
+    $course_cpd_hours = round($course_cpd_hours * 2) / 2;
+    $course_cpd_mins = (int) round($course_cpd_hours * 60);
+    
+    // Convert date from YYYY-MM-DD to DD/MM/YYYY if needed
+    if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $course_date)) {
+        $date_parts = explode('-', $course_date);
+        $course_date = $date_parts[2] . '/' . $date_parts[1] . '/' . $date_parts[0];
+    }
+    
+    // Update the request
+    $update_data = array(
+        'course_name' => $course_name,
+        'course_category' => $course_category_name,
+        'LIA_Code' => $lia_code,
+        'course_cpd_mins' => $course_cpd_mins,
+        'course_date' => $course_date ?: date('d/m/Y')
+    );
+    
+    $result = $wpdb->update(
+        $table,
+        $update_data,
+        array('id' => $request_id),
+        array('%s', '%s', '%s', '%d', '%s'),
+        array('%d')
+    );
+    
+    if ($result === false) {
+        wp_send_json_error('Failed to update request');
+    }
+    
+    wp_send_json_success(array(
+        'message' => 'Course request updated successfully',
+        'updated_data' => $update_data
+    ));
 }
 
 /**

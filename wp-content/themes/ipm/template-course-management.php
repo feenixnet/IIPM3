@@ -554,6 +554,52 @@ if (!function_exists('add_success_notification')) {
     <input type="hidden" id="reject-request-id" value="">
 </div>
 
+<!-- Edit Course Request Modal -->
+<div class="modal" id="edit-request-modal" style="display:none;">
+    <div class="modal-content" style="max-width: 600px; margin:auto;">
+        <div class="modal-header">
+            <h3>Edit Course Request</h3>
+            <button class="modal-close" id="edit-request-close">×</button>
+        </div>
+        <div class="modal-body">
+            <form id="edit-request-form">
+                <input type="hidden" id="edit-request-id" value="">
+                
+                <div class="form-group">
+                    <label for="edit-course-name">Course Name *</label>
+                    <input type="text" id="edit-course-name" class="form-control" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="edit-course-category">Category *</label>
+                    <select id="edit-course-category" class="form-control" required>
+                        <option value="">Select category...</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="edit-lia-code">LIA Code</label>
+                    <input type="text" id="edit-lia-code" class="form-control">
+                </div>
+                
+                <div class="form-group">
+                    <label for="edit-course-date">Course Date *</label>
+                    <input type="date" id="edit-course-date" class="form-control" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="edit-course-hours">Course Duration (hours) *</label>
+                    <input type="number" id="edit-course-hours" class="form-control" step="0.5" min="0.5" required>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-outline" id="edit-request-cancel">Cancel</button>
+            <button type="button" class="btn btn-primary" id="edit-request-save">Save Changes</button>
+        </div>
+    </div>
+</div>
+
 <style>
 /* Course Management Page */
 .course-management-page {
@@ -1586,6 +1632,59 @@ if (!function_exists('add_success_notification')) {
     min-width: auto;
 }
 
+/* Action Icon Buttons (icon-only buttons in table) */
+.action-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    background: white;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 14px;
+}
+
+.action-icon-btn:hover {
+    background: #f9fafb;
+    border-color: #d1d5db;
+}
+
+.action-icon-btn.btn-edit {
+    color: #667eea;
+}
+
+.action-icon-btn.btn-edit:hover {
+    color: #5568d3;
+    border-color: #667eea;
+}
+
+.action-icon-btn.btn-approve {
+    color: #10b981;
+}
+
+.action-icon-btn.btn-approve:hover {
+    color: #059669;
+    border-color: #10b981;
+}
+
+.action-icon-btn.btn-reject {
+    color: #ef4444;
+}
+
+.action-icon-btn.btn-reject:hover {
+    color: #dc2626;
+    border-color: #ef4444;
+}
+
+/* Button icon spans (for icons inside buttons) */
+.btn-icon {
+    margin-right: 6px;
+}
+
 .course-name-cell {
     max-width: 200px;
 }
@@ -1869,10 +1968,6 @@ body.modal-open {
 
 .btn-danger:hover {
     background: #c53030;
-}
-
-.btn-icon {
-    font-size: 16px;
 }
 
 /* Course Preview in Delete Modal */
@@ -2284,9 +2379,12 @@ jQuery(document).ready(function($) {
                 </button>` : 
                 '<span style="color:#9ca3af;">N/A</span>';
             
-            // Status badge
-            const statusClass = 'status-' + (r.status || 'pending').toLowerCase();
-            const statusBadge = `<span class="status-badge ${statusClass}">${escapeHtml(r.status||'')}</span>`;
+            // Status indicator as colored circle
+            const statusLower = (r.status || 'pending').toLowerCase();
+            let statusColor = '#f59e0b'; // pending - orange
+            if (statusLower === 'approved') statusColor = '#10b981'; // green
+            if (statusLower === 'rejected') statusColor = '#ef4444'; // red
+            const statusCircle = `<span class="status-circle" style="display:inline-block; width:12px; height:12px; border-radius:50%; background:${statusColor};" title="${escapeHtml(r.status||'pending')}"></span>`;
             
             const tr = $(`
                 <tr>
@@ -2298,11 +2396,12 @@ jQuery(document).ready(function($) {
                     <td>${escapeHtml(r.course_category||'')}</td>
                     <td>${escapeHtml(r.LIA_Code||'')}</td>
                     <td>${(parseFloat(r.course_cpd_mins||0)/60).toFixed(1)}</td>
-                    <td>${statusBadge}</td>
+                    <td style="text-align:center;">${statusCircle}</td>
                     <td>
-                        <div class="table-actions" style="display:flex; gap:8px;">
-                            ${r.status !== 'approved' ? `<button class="btn btn-primary approve-request" data-id="${r.id}" style="font-size:12px; padding:6px 12px;">Approve</button>` : ''}
-                            ${r.status !== 'rejected' ? `<button class="btn btn-outline reject-request" data-id="${r.id}" style="font-size:12px; padding:6px 12px;">Reject</button>` : ''}
+                        <div class="table-actions" style="display:flex; gap:8px; justify-content:center;">
+                            ${r.status === 'pending' ? `<button class="action-icon-btn btn-edit edit-request" data-id="${r.id}" data-request='${JSON.stringify(r)}' title="Edit"><i class="fas fa-edit"></i></button>` : ''}
+                            ${r.status !== 'approved' ? `<button class="action-icon-btn btn-approve approve-request" data-id="${r.id}" title="Approve"><i class="fas fa-check"></i></button>` : ''}
+                            ${r.status !== 'rejected' ? `<button class="action-icon-btn btn-reject reject-request" data-id="${r.id}" title="Reject"><i class="fas fa-times"></i></button>` : ''}
                         </div>
                     </td>
                 </tr>
@@ -2311,6 +2410,11 @@ jQuery(document).ready(function($) {
         });
 
         // Bind actions
+        $('.edit-request').off('click').on('click', function(){
+            const id = $(this).data('id');
+            const request = $(this).data('request');
+            openEditRequestModal(request);
+        });
         $('.approve-request').off('click').on('click', function(){
             const id = $(this).data('id');
             $.post(ajaxurl, { action: 'iipm_approve_course_request', request_id: id }, function(res){
@@ -2413,6 +2517,115 @@ jQuery(document).ready(function($) {
     });
     $('#additional-info-close, #additional-info-close-btn').on('click', function(){
         closeAdditionalInfoModal();
+    });
+    
+    // Edit request modal logic
+    let courseCategories = [];
+    
+    // Fetch categories on page load
+    function fetchCourseCategories() {
+        $.post(ajaxurl, { action: 'iipm_get_categories' }, function(res){
+            if (res.success && res.data) {
+                courseCategories = res.data;
+            }
+        });
+    }
+    fetchCourseCategories();
+    
+    function openEditRequestModal(request) {
+        // Populate categories dropdown
+        const $categorySelect = $('#edit-course-category');
+        $categorySelect.empty().append('<option value="">Select category...</option>');
+        courseCategories.forEach(function(cat){
+            $categorySelect.append(`<option value="${cat.id}">${cat.name}</option>`);
+        });
+        
+        // Populate form fields
+        $('#edit-request-id').val(request.id);
+        $('#edit-course-name').val(request.course_name || '');
+        $('#edit-lia-code').val(request.LIA_Code || '');
+        $('#edit-course-hours').val((parseFloat(request.course_cpd_mins || 0) / 60).toFixed(1));
+        
+        // Convert course date from DD/MM/YYYY or DD-MM-YYYY to YYYY-MM-DD for date input
+        let courseDate = request.course_date || '';
+        if (courseDate) {
+            // Handle both DD/MM/YYYY and DD-MM-YYYY formats
+            courseDate = courseDate.replace(/\//g, '-');
+            const parts = courseDate.split('-');
+            if (parts.length === 3) {
+                courseDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+            }
+        }
+        $('#edit-course-date').val(courseDate);
+        
+        // Select category by name
+        const categoryOption = courseCategories.find(c => c.name === request.course_category);
+        if (categoryOption) {
+            $categorySelect.val(categoryOption.id);
+        }
+        
+        $('#edit-request-modal').addClass('show').show();
+        $('body').addClass('modal-open');
+    }
+    
+    function closeEditRequestModal() {
+        $('#edit-request-modal').removeClass('show').hide();
+        $('body').removeClass('modal-open');
+    }
+    
+    $('#edit-request-close, #edit-request-cancel').on('click', function(){ 
+        closeEditRequestModal(); 
+    });
+    
+    $('#edit-request-modal').on('click', function(e){ 
+        if($(e.target).is('#edit-request-modal')) closeEditRequestModal(); 
+    });
+    
+    $('#edit-request-save').on('click', function(){
+        const id = $('#edit-request-id').val();
+        const courseName = $('#edit-course-name').val().trim();
+        const categoryId = $('#edit-course-category').val();
+        const liaCode = $('#edit-lia-code').val().trim();
+        const courseDate = $('#edit-course-date').val();
+        const courseHours = $('#edit-course-hours').val();
+        
+        if (!courseName) {
+            notifications && notifications.error ? notifications.error('Validation Error', 'Course name is required') : alert('Course name is required');
+            return;
+        }
+        
+        if (!categoryId) {
+            notifications && notifications.error ? notifications.error('Validation Error', 'Category is required') : alert('Category is required');
+            return;
+        }
+        
+        if (!courseDate) {
+            notifications && notifications.error ? notifications.error('Validation Error', 'Course date is required') : alert('Course date is required');
+            return;
+        }
+        
+        if (!courseHours || parseFloat(courseHours) <= 0) {
+            notifications && notifications.error ? notifications.error('Validation Error', 'Course hours must be greater than 0') : alert('Course hours must be greater than 0');
+            return;
+        }
+        
+        $.post(ajaxurl, {
+            action: 'iipm_update_course_request',
+            request_id: id,
+            course_name: courseName,
+            course_category: categoryId,
+            lia_code: liaCode,
+            course_date: courseDate,
+            course_cpd_hours: courseHours
+        }, function(res){
+            if(res.success){
+                closeEditRequestModal();
+                notifications && notifications.success ? notifications.success('Updated', 'Course request updated successfully') : null;
+                loadRequests();
+            } else {
+                notifications && notifications.error ? notifications.error('Failed', (res.data||'Failed to update')) : alert(res.data||'Failed');
+            }
+        });
     });
     
     function setupBulkImportListeners() {

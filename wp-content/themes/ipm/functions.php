@@ -2173,7 +2173,15 @@ function iipm_handle_cancel_leave_request() {
         return;
     }
     
-    $user_id = get_current_user_id();
+    $current_user_id = get_current_user_id();
+    $is_admin = current_user_can('administrator') || current_user_can('iipm_admin');
+    
+    // If admin provides user_id, use it; otherwise use current user's ID
+    $target_user_id = $current_user_id;
+    if ($is_admin && isset($_POST['user_id']) && !empty($_POST['user_id'])) {
+        $target_user_id = intval($_POST['user_id']);
+    }
+    
     $request_id = intval($_POST['request_id'] ?? 0);
     
     if (!$request_id) {
@@ -2183,12 +2191,21 @@ function iipm_handle_cancel_leave_request() {
     
     global $wpdb;
     
-    $request = $wpdb->get_row($wpdb->prepare(
-        "SELECT * FROM {$wpdb->prefix}test_iipm_leave_requests 
-         WHERE id = %d AND user_id = %d AND status = 'pending'",
-        $request_id,
-        $user_id
-    ));
+    // Admin can cancel any pending request, regular users can only cancel their own
+    if ($is_admin) {
+        $request = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$wpdb->prefix}test_iipm_leave_requests 
+             WHERE id = %d AND status = 'pending'",
+            $request_id
+        ));
+    } else {
+        $request = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$wpdb->prefix}test_iipm_leave_requests 
+             WHERE id = %d AND user_id = %d AND status = 'pending'",
+            $request_id,
+            $target_user_id
+        ));
+    }
     
     if (!$request) {
         wp_send_json_error('Request not found or cannot be cancelled');
@@ -2198,16 +2215,16 @@ function iipm_handle_cancel_leave_request() {
     $result = $wpdb->update(
         $wpdb->prefix . 'test_iipm_leave_requests',
         array('status' => 'cancelled'),
-        array('id' => $request_id, 'user_id' => $user_id),
+        array('id' => $request_id),
         array('%s'),
-        array('%d', '%d')
+        array('%d')
     );
     
     if ($result !== false) {
         iipm_log_user_activity(
-            $user_id, 
+            $request->user_id, 
             'leave_request_cancelled', 
-            "Leave request cancelled: {$request->title}"
+            "Leave request cancelled: {$request->title}" . ($is_admin && $request->user_id != $current_user_id ? " (by admin)" : "")
         );
         
         wp_send_json_success('Leave request cancelled successfully');
@@ -6650,7 +6667,7 @@ function iipm_admin_get_user_details() {
     
     // Get user basic info from wp_users
     $user_data = $wpdb->get_row($wpdb->prepare(
-        "SELECT user_login, user_email FROM {$wpdb->users} WHERE ID = %d",
+        "SELECT user_login, user_email, user_registered FROM {$wpdb->users} WHERE ID = %d",
         $user_id
     ));
     
@@ -6697,7 +6714,8 @@ function iipm_admin_get_user_details() {
         'basic_info' => array(
             'user_id' => $user_id,
             'user_login' => $user_data->user_login,
-            'user_email' => $user_data->user_email
+            'user_email' => $user_data->user_email,
+            'user_registered' => $user_data->user_registered
         ),
         'member_info' => array(
             'member_type' => $member_data ? $member_data->member_type : '',
