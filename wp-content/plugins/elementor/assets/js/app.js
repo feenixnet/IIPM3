@@ -8806,8 +8806,8 @@ var messagesContent = exports.messagesContent = {
     }, (0, _i18n.__)('Learn more', 'elementor')))
   },
   'error-loading-resource': {
-    title: (0, _i18n.__)('Couldn’t “My Website Templates”', 'elementor'),
-    text: /*#__PURE__*/_react.default.createElement(_react.default.Fragment, null, (0, _i18n.__)('We couldn’t reach your template library due to a technical issue on our side. Please try again. If the problem continues, contact ', 'elementor'), /*#__PURE__*/_react.default.createElement(Link, {
+    title: (0, _i18n.__)('Unable to download the Website Template', 'elementor'),
+    text: /*#__PURE__*/_react.default.createElement(_react.default.Fragment, null, (0, _i18n.__)('We couldn’t download the Website Template due to technical difficulties on our part. Try again and if the problem persists contact ', 'elementor'), /*#__PURE__*/_react.default.createElement(Link, {
       href: "https://my.elementor.com/support-center/"
     }, (0, _i18n.__)('Support', 'elementor')), '. ', /*#__PURE__*/_react.default.createElement(Link, {
       href: "https://go.elementor.com/app-import-export-common-errors"
@@ -28979,7 +28979,7 @@ module.exports = ReactDOM;
 /******/ 		__webpack_require__.u = (chunkId) => {
 /******/ 			// return url for filenames not based on template
 /******/ 			if (chunkId === "vendors-node_modules_react-query_devtools_index_js") return "bb8b6cce5ae5b36077e0.bundle.js";
-/******/ 			if (chunkId === "kit-library") return "" + chunkId + ".854d9c77e4f63676ffda.bundle.js";
+/******/ 			if (chunkId === "kit-library") return "" + chunkId + ".632768ed8f10d73887d4.bundle.js";
 /******/ 			if (chunkId === "app_modules_onboarding_assets_js_utils_modules_post-onboarding-tracker_js") return "476658b095f7fe3d4745.bundle.js";
 /******/ 			if (chunkId === "onboarding") return "" + chunkId + ".a7a34522c0205e4ea1ea.bundle.js";
 /******/ 			// return url for filenames based on template

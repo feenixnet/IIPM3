@@ -5,7 +5,7 @@
  * Description: Extension for All-in-One WP Migration that enables unlimited size exports and imports
  * Author: ServMask
  * Author URI: https://servmask.com/
- * Version: 2.79
+ * Version: 2.80
  * Text Domain: all-in-one-wp-migration-unlimited-extension
  * Domain Path: /languages
  * Network: True
@@ -51,22 +51,22 @@ if ( isset( $_SERVER['HTTP_X_FORWARDED_PROTO'] ) && ( $_SERVER['HTTP_X_FORWARDED
 }
 
 // Plugin Basename
-define( 'AI1WMUE_PLUGIN_BASENAME', basename( dirname( __FILE__ ) ) . '/' . basename( __FILE__ ) );
+define( 'AI1WMUE_PLUGIN_BASENAME', basename( __DIR__ ) . '/' . basename( __FILE__ ) );
 
 // Plugin Path
-define( 'AI1WMUE_PATH', dirname( __FILE__ ) );
+define( 'AI1WMUE_PATH', __DIR__ );
 
 // Plugin URL
 define( 'AI1WMUE_URL', plugins_url( '', AI1WMUE_PLUGIN_BASENAME ) );
 
 // Include constants
-require_once dirname( __FILE__ ) . DIRECTORY_SEPARATOR . 'constants.php';
+require_once __DIR__ . DIRECTORY_SEPARATOR . 'constants.php';
 
 // Include functions
-require_once dirname( __FILE__ ) . DIRECTORY_SEPARATOR . 'functions.php';
+require_once __DIR__ . DIRECTORY_SEPARATOR . 'functions.php';
 
 // Include loader
-require_once dirname( __FILE__ ) . DIRECTORY_SEPARATOR . 'loader.php';
+require_once __DIR__ . DIRECTORY_SEPARATOR . 'loader.php';
 
 // Register activation hook to install and activate base plugin if needed
 register_activation_hook( __FILE__, 'ai1wmue_activate_plugin' );

@@ -2205,6 +2205,10 @@ fieldset:disabled a.e-button {
   width: 330px;
   height: 315px;
   padding: 0.625rem;
+  -o-object-fit: cover;
+     object-fit: cover;
+  -o-object-position: top;
+     object-position: top;
 }
 .tab-import-export-kit__revert .button, .tab-import-export-kit__revert .button:hover {
   color: #a94442;

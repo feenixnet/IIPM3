@@ -2818,7 +2818,8 @@ function iipm_enqueue_portal_scripts() {
 		'nonce' => wp_create_nonce('iipm_portal_nonce'),
 		'cpd_nonce' => wp_create_nonce('iipm_cpd_nonce'),
 		'cpd_admin_nonce' => wp_create_nonce('iipm_cpd_admin_nonce'),
-		'leave_nonce' => wp_create_nonce('iipm_leave_nonce')
+		'leave_nonce' => wp_create_nonce('iipm_leave_nonce'),
+		'payment_nonce' => wp_create_nonce('iipm_payment_nonce')
 	));
 }
 add_action('wp_enqueue_scripts', 'iipm_enqueue_portal_scripts');
@@ -2838,7 +2839,8 @@ function iipm_protect_portal_pages() {
         is_page_template('template-leave-request.php') ||
         is_page_template('template-leave-admin.php') ||
         is_page_template('template-course-management.php') ||
-        is_page_template('template-member-details.php')) {
+        is_page_template('template-member-details.php') ||
+        is_page_template('template-payment-management.php')) {
         
         if (!is_user_logged_in()) {
             wp_redirect(home_url('/login/'));
@@ -6629,6 +6631,7 @@ add_action('wp_ajax_iipm_delete_course_v1', 'iipm_handle_delete_course_v1');
 // Include CPD certificate CRUD
 require_once get_template_directory() . '/includes/cpd-certificate-functions.php';
 require_once get_template_directory() . '/includes/cpd-submission-functions.php';
+require_once get_template_directory() . '/includes/payment-management.php';
 
 // Include qualification handlers
 require_once get_template_directory() . '/includes/qualification-handlers.php';

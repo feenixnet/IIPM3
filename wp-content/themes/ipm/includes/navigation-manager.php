@@ -30,6 +30,7 @@ class IIPM_Navigation_Manager {
                 'CPD Reports' => home_url('/cpd-reports/'),
                 'CPD Administration' => home_url('/cpd-admin/'),
                 'Course Management' => home_url('/course-management/'),
+                'Payment Management' => home_url('/payment-management/'),
                 'Leave Administration' => home_url('/leave-admin/'),
                 'File Dashboard' => home_url('/file-dashboard/'),
                 'Logout' => wp_logout_url(home_url())
