@@ -352,11 +352,17 @@ function iipm_ajax_approve_course_request() {
     // Insert into coursesbyadminbku as user-originated course (is_by_admin = 0)
     $courses_table = $wpdb->prefix . 'coursesbyadminbku';
     
+    // Build full name from requester
+    $provider_name = trim($request->first_name . ' ' . $request->sur_name);
+    if (empty($provider_name)) {
+        $provider_name = 'external';
+    }
+    
     $insert_course = array(
         'course_name' => $request->course_name,
         'LIA_Code' => $request->LIA_Code,
         'course_category' => $request->course_category,
-        'crs_provider' => 'external',
+        'crs_provider' => $provider_name,
         'course_cpd_mins' => intval($request->course_cpd_mins),
         'user_id' => intval($request->user_id),
         'course_id' => $request->course_id ?: iipm_generate_course_id(),
@@ -372,15 +378,85 @@ function iipm_ajax_approve_course_request() {
     $to = $request->email_address;
 
     if (is_email($to)) {
-        $subject = 'Your CPD course request was approved';
-        $message = 'Hello, <b>' . $request->first_name . '</b> <b>' . $request->sur_name . "</b>,<br/>" .
-            'Your course request has been approved and a course has been created for you.' . "<br/><br/>" .
-            'Course Name: ' . $request->course_name . "<br/>" .
-            'LIA Code: ' . $request->LIA_Code . "<br/>" .
-            'Course Category: ' . $request->course_category . "<br/>" .
-            'Course CPD Minutes: ' . $request->course_cpd_mins . "<br/>" .
-            'You can view your course in the courses section of the website.';
-        wp_mail($to, $subject, $message);
+        $subject = '✅ Your CPD Course Request Was Approved';
+        $full_name = esc_html($request->first_name . ' ' . $request->sur_name);
+        $courses_url = home_url('/cpd-courses/');
+        
+        $message = '
+        <div style="font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, \'Helvetica Neue\', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff;">
+            <!-- Header -->
+            <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 40px 30px; text-align: center; border-radius: 8px 8px 0 0;">
+                <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700;">
+                    <span style="font-size: 48px;">✅</span><br>
+                    Course Request Approved!
+                </h1>
+            </div>
+            
+            <!-- Content -->
+            <div style="padding: 40px 30px; background: #ffffff; border-left: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb;">
+                <p style="font-size: 18px; color: #1f2937; margin: 0 0 20px 0;">Hello <strong>' . $full_name . '</strong>,</p>
+                
+                <div style="background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); border-left: 4px solid #10b981; padding: 20px; margin: 20px 0; border-radius: 8px;">
+                    <p style="margin: 0; color: #065f46; font-size: 16px; line-height: 1.6;">
+                        <strong>🎉 Great news!</strong> Your course request has been approved and a course has been created for you.
+                    </p>
+                </div>
+                
+                <!-- Course Details -->
+                <div style="background: #ffffff; border: 2px solid #e5e7eb; padding: 20px; border-radius: 8px; margin: 25px 0;">
+                    <p style="margin: 0 0 15px 0; color: #6b7280; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">📚 Course Details</p>
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <tr>
+                            <td style="padding: 10px 0; color: #6b7280; font-size: 14px;">Course Name:</td>
+                            <td style="padding: 10px 0; color: #1f2937; font-size: 14px; font-weight: 600; text-align: right;">' . esc_html($request->course_name) . '</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px 0; border-top: 1px solid #f3f4f6; color: #6b7280; font-size: 14px;">LIA Code:</td>
+                            <td style="padding: 10px 0; border-top: 1px solid #f3f4f6; color: #1f2937; font-size: 14px; font-weight: 600; text-align: right;">' . esc_html($request->LIA_Code) . '</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px 0; border-top: 1px solid #f3f4f6; color: #6b7280; font-size: 14px;">Category:</td>
+                            <td style="padding: 10px 0; border-top: 1px solid #f3f4f6; color: #1f2937; font-size: 14px; font-weight: 600; text-align: right;">' . esc_html($request->course_category) . '</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px 0; border-top: 1px solid #f3f4f6; color: #6b7280; font-size: 14px;">CPD Minutes:</td>
+                            <td style="padding: 10px 0; border-top: 1px solid #f3f4f6; color: #1f2937; font-size: 14px; font-weight: 600; text-align: right;">' . esc_html($request->course_cpd_mins) . '</td>
+                        </tr>
+                    </table>
+                </div>
+                
+                <!-- CTA Button -->
+                <div style="text-align: center; margin: 35px 0;">
+                    <a href="' . esc_url($courses_url) . '" style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; padding: 16px 40px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);">
+                        📚 View My Courses
+                    </a>
+                </div>
+                
+                <!-- Link fallback -->
+                <div style="background: #f9fafb; padding: 15px; border-radius: 6px; margin: 20px 0;">
+                    <p style="margin: 0 0 8px 0; color: #6b7280; font-size: 13px;">Or copy and paste this link:</p>
+                    <p style="margin: 0; word-break: break-all;">
+                        <a href="' . esc_url($courses_url) . '" style="color: #10b981; text-decoration: none; font-size: 14px;">' . esc_html($courses_url) . '</a>
+                    </p>
+                </div>
+            </div>
+            
+            <!-- Footer -->
+            <div style="background: #f9fafb; padding: 30px; text-align: center; border-radius: 0 0 8px 8px; border: 1px solid #e5e7eb; border-top: none;">
+                <p style="margin: 0 0 10px 0; color: #6b7280; font-size: 14px;">
+                    <strong>Irish Institute of Pensions Management</strong>
+                </p>
+                <p style="margin: 0 0 10px 0; color: #6b7280; font-size: 14px;">
+                    Email: <a href="mailto:info@iipm.ie" style="color: #10b981; text-decoration: none;">info@iipm.ie</a>
+                </p>
+                <p style="margin: 0; color: #9ca3af; font-size: 12px;">
+                    © ' . date('Y') . ' IIPM. All rights reserved.
+                </p>
+            </div>
+        </div>';
+        
+        $headers = array('Content-Type: text/html; charset=UTF-8');
+        wp_mail($to, $subject, $message, $headers);
     }
 
     wp_send_json_success(array('message' => 'Request approved and course created'));
@@ -409,12 +485,79 @@ function iipm_ajax_reject_course_request() {
     // Send email to requester
     $to = $request->email_address;
     if (is_email($to)) {
-        $subject = 'Your CPD course request was rejected';
-        $message = 'Hello <b>' . $request->first_name . '</b> <b>' . $request->sur_name . "</b>,<br/>" .
-            'We are unable to approve your course request at this time for the following reason:' . "<br/><br/>" .
-            $reason . "<br/><br/>" .
-            'You may update and resubmit the request if appropriate.';
-        wp_mail($to, $subject, $message);
+        $subject = '❌ Your CPD Course Request Was Not Approved';
+        $full_name = esc_html($request->first_name . ' ' . $request->sur_name);
+        $contact_url = home_url('/contact/');
+        
+        $message = '
+        <div style="font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, \'Helvetica Neue\', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff;">
+            <!-- Header -->
+            <div style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); padding: 40px 30px; text-align: center; border-radius: 8px 8px 0 0;">
+                <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700;">
+                    <span style="font-size: 48px;">📋</span><br>
+                    Course Request Update
+                </h1>
+            </div>
+            
+            <!-- Content -->
+            <div style="padding: 40px 30px; background: #ffffff; border-left: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb;">
+                <p style="font-size: 18px; color: #1f2937; margin: 0 0 20px 0;">Hello <strong>' . $full_name . '</strong>,</p>
+                
+                <div style="background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%); border-left: 4px solid #ef4444; padding: 20px; margin: 20px 0; border-radius: 8px;">
+                    <p style="margin: 0; color: #991b1b; font-size: 16px; line-height: 1.6;">
+                        <strong>We are unable to approve your course request at this time.</strong>
+                    </p>
+                </div>
+                
+                <p style="color: #374151; font-size: 15px; line-height: 1.7; margin: 20px 0;">
+                    <strong>Reason for rejection:</strong>
+                </p>
+                
+                <!-- Reason Box -->
+                <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 20px; margin: 20px 0; border-radius: 8px;">
+                    <p style="margin: 0; color: #78350f; font-size: 15px; line-height: 1.6;">
+                        ' . nl2br(esc_html($reason)) . '
+                    </p>
+                </div>
+                
+                <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 20px; margin: 25px 0; border-radius: 8px;">
+                    <p style="margin: 0; color: #1e40af; font-size: 15px; line-height: 1.6;">
+                        💡 <strong>You may update and resubmit your request if appropriate.</strong> If you have any questions, please don\'t hesitate to contact us.
+                    </p>
+                </div>
+                
+                <!-- CTA Button -->
+                <div style="text-align: center; margin: 35px 0;">
+                    <a href="' . esc_url($contact_url) . '" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; padding: 16px 40px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">
+                        📧 Contact Us
+                    </a>
+                </div>
+                
+                <!-- Link fallback -->
+                <div style="background: #f9fafb; padding: 15px; border-radius: 6px; margin: 20px 0;">
+                    <p style="margin: 0 0 8px 0; color: #6b7280; font-size: 13px;">Or email us directly at:</p>
+                    <p style="margin: 0;">
+                        <a href="mailto:info@iipm.ie" style="color: #667eea; text-decoration: none; font-size: 16px; font-weight: 600;">info@iipm.ie</a>
+                    </p>
+                </div>
+            </div>
+            
+            <!-- Footer -->
+            <div style="background: #f9fafb; padding: 30px; text-align: center; border-radius: 0 0 8px 8px; border: 1px solid #e5e7eb; border-top: none;">
+                <p style="margin: 0 0 10px 0; color: #6b7280; font-size: 14px;">
+                    <strong>Irish Institute of Pensions Management</strong>
+                </p>
+                <p style="margin: 0 0 10px 0; color: #6b7280; font-size: 14px;">
+                    Email: <a href="mailto:info@iipm.ie" style="color: #667eea; text-decoration: none;">info@iipm.ie</a>
+                </p>
+                <p style="margin: 0; color: #9ca3af; font-size: 12px;">
+                    © ' . date('Y') . ' IIPM. All rights reserved.
+                </p>
+            </div>
+        </div>';
+        
+        $headers = array('Content-Type: text/html; charset=UTF-8');
+        wp_mail($to, $subject, $message, $headers);
     }
 
     wp_send_json_success(array('message' => 'Request rejected and email sent'));

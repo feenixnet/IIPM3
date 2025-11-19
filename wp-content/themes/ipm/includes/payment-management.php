@@ -1544,44 +1544,203 @@ function iipm_send_org_invoice_email($order_id, $org_id, $token, $order_status =
 	
 	// Customize email content based on order status
 	$to = $org->contact_email;
+	$org_name = esc_html($org->name);
+	
+	// Email template styles
+	$email_wrapper_start = '
+	<div style="font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, \'Helvetica Neue\', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff;">
+		<!-- Header -->
+		<div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center; border-radius: 8px 8px 0 0;">
+			<h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700;">
+				<span style="font-size: 32px;">🏢</span><br>
+				Irish Institute of Pensions Management
+			</h1>
+		</div>
+		
+		<!-- Content -->
+		<div style="padding: 40px 30px; background: #ffffff; border-left: 1px solid #e5e7eb; border-right: 1px solid #e5e7eb;">';
+	
+	$email_wrapper_end = '
+		</div>
+		
+		<!-- Footer -->
+		<div style="background: #f9fafb; padding: 30px; text-align: center; border-radius: 0 0 8px 8px; border: 1px solid #e5e7eb; border-top: none;">
+			<p style="margin: 0 0 10px 0; color: #6b7280; font-size: 14px;">
+				<strong>Irish Institute of Pensions Management</strong>
+			</p>
+			<p style="margin: 0 0 10px 0; color: #6b7280; font-size: 14px;">
+				Email: <a href="mailto:info@iipm.ie" style="color: #667eea; text-decoration: none;">info@iipm.ie</a>
+			</p>
+			<p style="margin: 0; color: #9ca3af; font-size: 12px;">
+				© ' . date('Y') . ' IIPM. All rights reserved.
+			</p>
+		</div>
+	</div>';
 	
 	if ($order_status === 'pending') {
 		// New invoice - include review link
 		$review_url = home_url('/org-invoice-review/?token=' . $token);
-		$subject = 'New Invoice Generated - ' . $org->name;
-		$message = "Dear " . $org->name . ",\n\n";
-		$message .= "A new invoice has been generated for your organization.\n\n";
-		$message .= "Please review and approve or decline the invoice by clicking the link below:\n\n";
-		$message .= $review_url . "\n\n";
-		$message .= "This link will expire in 30 days.\n\n";
-		$message .= "Order ID: " . $order_id . "\n\n";
+		$subject = '🔔 New Invoice Generated - ' . $org->name;
+		
+		$message = $email_wrapper_start;
+		$message .= '
+			<p style="font-size: 18px; color: #1f2937; margin: 0 0 20px 0;">Dear <strong>' . $org_name . '</strong>,</p>
+			
+			<div style="background: linear-gradient(135deg, #eff6ff 0%, #f3e8ff 100%); border-left: 4px solid #667eea; padding: 20px; margin: 20px 0; border-radius: 8px;">
+				<p style="margin: 0; color: #1f2937; font-size: 16px; line-height: 1.6;">
+					<strong style="color: #667eea;">📋 A new invoice has been generated for your organization.</strong>
+				</p>
+			</div>
+			
+			<p style="color: #374151; font-size: 15px; line-height: 1.7; margin: 20px 0;">
+				Please review and approve or decline the invoice by clicking the button below:
+			</p>
+			
+			<!-- CTA Button -->
+			<div style="text-align: center; margin: 35px 0;">
+				<a href="' . esc_url($review_url) . '" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; padding: 16px 40px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">
+					📝 Review Invoice Now
+				</a>
+			</div>
+			
+			<!-- Link fallback -->
+			<div style="background: #f9fafb; padding: 15px; border-radius: 6px; margin: 20px 0;">
+				<p style="margin: 0 0 8px 0; color: #6b7280; font-size: 13px;">Or copy and paste this link:</p>
+				<p style="margin: 0; word-break: break-all;">
+					<a href="' . esc_url($review_url) . '" style="color: #667eea; text-decoration: none; font-size: 14px;">' . esc_html($review_url) . '</a>
+				</p>
+			</div>
+			
+			<!-- Order Details -->
+			<div style="background: #ffffff; border: 2px solid #e5e7eb; padding: 20px; border-radius: 8px; margin: 25px 0;">
+				<p style="margin: 0 0 12px 0; color: #6b7280; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Invoice Details</p>
+				<table style="width: 100%; border-collapse: collapse;">
+					<tr>
+						<td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Order ID:</td>
+						<td style="padding: 8px 0; color: #1f2937; font-size: 14px; font-weight: 600; text-align: right;">#' . esc_html($order_id) . '</td>
+					</tr>
+					<tr>
+						<td style="padding: 8px 0; border-top: 1px solid #f3f4f6; color: #6b7280; font-size: 14px;">Valid Until:</td>
+						<td style="padding: 8px 0; border-top: 1px solid #f3f4f6; color: #1f2937; font-size: 14px; font-weight: 600; text-align: right;">30 days</td>
+					</tr>
+				</table>
+			</div>
+			
+			<div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0; border-radius: 6px;">
+				<p style="margin: 0; color: #92400e; font-size: 14px;">
+					⏰ <strong>Important:</strong> This link will expire in 30 days. Please review your invoice at your earliest convenience.
+				</p>
+			</div>';
+		
+		$message .= $email_wrapper_end;
+		
 	} elseif ($order_status === 'processing') {
 		// Processing status - no review link
-		$subject = 'Invoice Processing - ' . $org->name;
-		$message = "Dear " . $org->name . ",\n\n";
-		$message .= "Your invoice is currently being processed.\n\n";
-		$message .= "We will notify you once the payment is completed.\n\n";
-		$message .= "Order ID: " . $order_id . "\n\n";
+		$subject = '⏳ Invoice Processing - ' . $org->name;
+		
+		$message = $email_wrapper_start;
+		$message .= '
+			<p style="font-size: 18px; color: #1f2937; margin: 0 0 20px 0;">Dear <strong>' . $org_name . '</strong>,</p>
+			
+			<div style="background: linear-gradient(135deg, #dbeafe 0%, #ddd6fe 100%); border-left: 4px solid #3b82f6; padding: 20px; margin: 20px 0; border-radius: 8px;">
+				<p style="margin: 0; color: #1f2937; font-size: 16px; line-height: 1.6;">
+					<strong style="color: #3b82f6;">⏳ Your invoice is currently being processed.</strong>
+				</p>
+			</div>
+			
+			<p style="color: #374151; font-size: 15px; line-height: 1.7; margin: 20px 0;">
+				We will notify you once the payment is completed.
+			</p>
+			
+			<!-- Order Details -->
+			<div style="background: #ffffff; border: 2px solid #e5e7eb; padding: 20px; border-radius: 8px; margin: 25px 0;">
+				<p style="margin: 0 0 12px 0; color: #6b7280; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Order Information</p>
+				<table style="width: 100%; border-collapse: collapse;">
+					<tr>
+						<td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Order ID:</td>
+						<td style="padding: 8px 0; color: #1f2937; font-size: 14px; font-weight: 600; text-align: right;">#' . esc_html($order_id) . '</td>
+					</tr>
+					<tr>
+						<td style="padding: 8px 0; border-top: 1px solid #f3f4f6; color: #6b7280; font-size: 14px;">Status:</td>
+						<td style="padding: 8px 0; border-top: 1px solid #f3f4f6; text-align: right;">
+							<span style="background: #dbeafe; color: #1e40af; padding: 4px 12px; border-radius: 12px; font-size: 13px; font-weight: 600;">Processing</span>
+						</td>
+					</tr>
+				</table>
+			</div>';
+		
+		$message .= $email_wrapper_end;
+		
 	} elseif ($order_status === 'cancelled') {
 		// Declined/Cancelled status - no review link
-		$subject = 'Invoice Declined - ' . $org->name;
-		$message = "Dear " . $org->name . ",\n\n";
-		$message .= "Your invoice has been declined successfully.\n\n";
-		$message .= "If you have any questions or would like to request adjustments, please contact us.\n\n";
-		$message .= "Order ID: " . $order_id . "\n\n";
+		$subject = '❌ Invoice Declined - ' . $org->name;
+		
+		$message = $email_wrapper_start;
+		$message .= '
+			<p style="font-size: 18px; color: #1f2937; margin: 0 0 20px 0;">Dear <strong>' . $org_name . '</strong>,</p>
+			
+			<div style="background: linear-gradient(135deg, #fee2e2 0%, #fce7f3 100%); border-left: 4px solid #ef4444; padding: 20px; margin: 20px 0; border-radius: 8px;">
+				<p style="margin: 0; color: #1f2937; font-size: 16px; line-height: 1.6;">
+					<strong style="color: #dc2626;">❌ Your invoice has been declined successfully.</strong>
+				</p>
+			</div>
+			
+			<p style="color: #374151; font-size: 15px; line-height: 1.7; margin: 20px 0;">
+				If you have any questions or would like to request adjustments, please contact us at <a href="mailto:info@iipm.ie" style="color: #667eea; text-decoration: none; font-weight: 600;">info@iipm.ie</a>
+			</p>
+			
+			<!-- Order Details -->
+			<div style="background: #ffffff; border: 2px solid #e5e7eb; padding: 20px; border-radius: 8px; margin: 25px 0;">
+				<p style="margin: 0 0 12px 0; color: #6b7280; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Order Information</p>
+				<table style="width: 100%; border-collapse: collapse;">
+					<tr>
+						<td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Order ID:</td>
+						<td style="padding: 8px 0; color: #1f2937; font-size: 14px; font-weight: 600; text-align: right;">#' . esc_html($order_id) . '</td>
+					</tr>
+					<tr>
+						<td style="padding: 8px 0; border-top: 1px solid #f3f4f6; color: #6b7280; font-size: 14px;">Status:</td>
+						<td style="padding: 8px 0; border-top: 1px solid #f3f4f6; text-align: right;">
+							<span style="background: #fee2e2; color: #991b1b; padding: 4px 12px; border-radius: 12px; font-size: 13px; font-weight: 600;">Declined</span>
+						</td>
+					</tr>
+				</table>
+			</div>';
+		
+		$message .= $email_wrapper_end;
+		
 	} else {
 		// Default for other statuses - no review link
-		$subject = 'Invoice Status Update - ' . $org->name;
-		$message = "Dear " . $org->name . ",\n\n";
-		$message .= "Your invoice status has been updated.\n\n";
-		$message .= "Order ID: " . $order_id . "\n";
-		$message .= "Status: " . ucfirst($order_status) . "\n\n";
+		$subject = '📢 Invoice Status Update - ' . $org->name;
+		
+		$message = $email_wrapper_start;
+		$message .= '
+			<p style="font-size: 18px; color: #1f2937; margin: 0 0 20px 0;">Dear <strong>' . $org_name . '</strong>,</p>
+			
+			<div style="background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); border-left: 4px solid #6b7280; padding: 20px; margin: 20px 0; border-radius: 8px;">
+				<p style="margin: 0; color: #1f2937; font-size: 16px; line-height: 1.6;">
+					<strong>📢 Your invoice status has been updated.</strong>
+				</p>
+			</div>
+			
+			<!-- Order Details -->
+			<div style="background: #ffffff; border: 2px solid #e5e7eb; padding: 20px; border-radius: 8px; margin: 25px 0;">
+				<p style="margin: 0 0 12px 0; color: #6b7280; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Order Information</p>
+				<table style="width: 100%; border-collapse: collapse;">
+					<tr>
+						<td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Order ID:</td>
+						<td style="padding: 8px 0; color: #1f2937; font-size: 14px; font-weight: 600; text-align: right;">#' . esc_html($order_id) . '</td>
+					</tr>
+					<tr>
+						<td style="padding: 8px 0; border-top: 1px solid #f3f4f6; color: #6b7280; font-size: 14px;">Status:</td>
+						<td style="padding: 8px 0; border-top: 1px solid #f3f4f6; color: #1f2937; font-size: 14px; font-weight: 600; text-align: right;">' . esc_html(ucfirst($order_status)) . '</td>
+					</tr>
+				</table>
+			</div>';
+		
+		$message .= $email_wrapper_end;
 	}
 	
-	$message .= "Best regards,\n";
-	$message .= get_bloginfo('name');
-	
-	$headers = array('Content-Type: text/plain; charset=UTF-8');
+	$headers = array('Content-Type: text/html; charset=UTF-8');
 	
 	return wp_mail($to, $subject, $message, $headers);
 }

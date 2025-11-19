@@ -7056,3 +7056,19 @@ function iipm_remove_file_dashboard_menu() {
     }
 }
 add_action('admin_menu', 'iipm_remove_file_dashboard_menu', 999);
+
+/**
+ * Set custom FROM email address for all WordPress emails
+ */
+function iipm_custom_wp_mail_from($original_email_address) {
+    return 'info@iipm.ie';
+}
+add_filter('wp_mail_from', 'iipm_custom_wp_mail_from');
+
+/**
+ * Set custom FROM name for all WordPress emails
+ */
+function iipm_custom_wp_mail_from_name($original_email_from) {
+    return 'Irish Institute of Pensions Management';
+}
+add_filter('wp_mail_from_name', 'iipm_custom_wp_mail_from_name');
