@@ -42,7 +42,7 @@ get_header();
                 <div class="stat-icon"><i class="fas fa-bullseye"></i></div>
                 <div class="stat-content">
                     <div class="stat-label">Total Target</div>
-                    <div class="stat-value" id="stat-total-target">$0.00</div>
+                    <div class="stat-value" id="stat-total-target">€0.00</div>
                     <div class="stat-sub" id="stat-total-orders">0 orders</div>
                 </div>
             </div>
@@ -50,7 +50,7 @@ get_header();
                 <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
                 <div class="stat-content">
                     <div class="stat-label">Total Earnings</div>
-                    <div class="stat-value" id="stat-total-paid">$0.00</div>
+                    <div class="stat-value" id="stat-total-paid">€0.00</div>
                     <div class="stat-sub">Completed</div>
                 </div>
             </div>
@@ -58,7 +58,7 @@ get_header();
                 <div class="stat-icon"><i class="fas fa-building"></i></div>
                 <div class="stat-content">
                     <div class="stat-label">Organizations</div>
-                    <div class="stat-value" id="stat-org-paid">$0.00</div>
+                    <div class="stat-value" id="stat-org-paid">€0.00</div>
                     <div class="stat-sub">Paid</div>
                 </div>
             </div>
@@ -66,7 +66,7 @@ get_header();
                 <div class="stat-icon"><i class="fas fa-user"></i></div>
                 <div class="stat-content">
                     <div class="stat-label">Individuals</div>
-                    <div class="stat-value" id="stat-individual-paid">$0.00</div>
+                    <div class="stat-value" id="stat-individual-paid">€0.00</div>
                     <div class="stat-sub">Paid</div>
                 </div>
             </div>
@@ -158,6 +158,30 @@ get_header();
     </div>
 </main>
 
+<!-- Decline Reason Modal -->
+<div id="decline-reason-modal" class="modal" style="display: none;">
+    <div class="modal-content" style="max-width: 600px;">
+        <div class="modal-header" style="border-bottom: 2px solid #e5e7eb; padding-bottom: 15px; margin-bottom: 20px;">
+            <h3 style="margin: 0; color: #ef4444;"><i class="fas fa-times-circle"></i> Invoice Declined</h3>
+            <button class="modal-close" style="position: absolute; top: 20px; right: 20px; background: none; border: none; font-size: 24px; color: #6b7280; cursor: pointer;">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div style="margin-bottom: 15px;">
+                <strong style="color: #374151;">Order ID:</strong>
+                <span id="decline-order-id" style="color: #6b7280;"></span>
+            </div>
+            <div style="margin-bottom: 15px;">
+                <strong style="color: #374151;">Declined At:</strong>
+                <span id="decline-timestamp" style="color: #6b7280;"></span>
+            </div>
+            <div>
+                <strong style="color: #374151; display: block; margin-bottom: 8px;">Reason:</strong>
+                <div id="decline-reason-text" style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 15px; color: #7f1d1d; line-height: 1.6; white-space: pre-wrap;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 jQuery(function($) {
     const state = {
@@ -203,15 +227,22 @@ jQuery(function($) {
         }).done(function(response) {
             if (response.success) {
                 const data = response.data;
-                $('#stat-total-target').text('$' + parseFloat(data.total_target).toFixed(2));
-                $('#stat-total-paid').text('$' + parseFloat(data.total_paid).toFixed(2));
-                $('#stat-org-paid').text('$' + parseFloat(data.org_paid).toFixed(2));
-                $('#stat-individual-paid').text('$' + parseFloat(data.individual_paid).toFixed(2));
+                $('#stat-total-target').text(formatCurrency(data.total_target));
+                $('#stat-total-paid').text(formatCurrency(data.total_paid));
+                $('#stat-org-paid').text(formatCurrency(data.org_paid));
+                $('#stat-individual-paid').text(formatCurrency(data.individual_paid));
                 $('#stat-total-orders').text(data.total_orders + ' orders');
             }
         }).fail(function() {
             console.error('Failed to load stats');
         });
+    }
+
+    function formatCurrency(amount) {
+        const num = parseFloat(amount).toFixed(2);
+        const parts = num.split('.');
+        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        return '€' + parts.join('.');
     }
 
     function notify(message, type = 'info') {
@@ -285,18 +316,35 @@ jQuery(function($) {
             // Check if at least one address field exists
             const hasAddress = (user.Address_1 && user.Address_1.trim() !== '') || 
                               (user.Address_2 && user.Address_2.trim() !== '');
-            const shouldDisable = !hasAddress;
+            
+            // Disable if no address OR if user already has completed order for this year
+            const shouldDisable = !hasAddress || user.has_processing_order;
             
             // Add status badge styling (remove wc- prefix for matching)
             let statusClass = 'status-badge';
+            let isCancelled = false;
             if (user.order_status) {
                 const cleanStatus = user.order_status.replace('wc-', '');
                 if (cleanStatus === 'completed') statusClass += ' status-completed';
                 else if (cleanStatus === 'pending') statusClass += ' status-pending';
                 else if (cleanStatus === 'processing') statusClass += ' status-processing';
                 else if (cleanStatus === 'on-hold') statusClass += ' status-hold';
-                else if (cleanStatus === 'cancelled' || cleanStatus === 'refunded') statusClass += ' status-cancelled';
-                else if (cleanStatus === 'failed') statusClass += ' status-cancelled';
+                else if (cleanStatus === 'cancelled' || cleanStatus === 'refunded') {
+                    statusClass += ' status-cancelled';
+                    isCancelled = true;
+                }
+                else if (cleanStatus === 'failed') {
+                    statusClass += ' status-cancelled';
+                    isCancelled = true;
+                }
+            }
+            
+            // Make cancelled badge clickable if order_id exists
+            let statusBadge = '';
+            if (isCancelled && user.order_id) {
+                statusBadge = '<span class="' + statusClass + ' clickable-status" data-order-id="' + user.order_id + '" title="Click to view decline reason" style="cursor: pointer;"><i class="fas fa-info-circle"></i> ' + statusLabel + '</span>';
+            } else {
+                statusBadge = '<span class="' + statusClass + '">' + statusLabel + '</span>';
             }
             
             const buttonDisabled = shouldDisable ? ' disabled' : '';
@@ -306,12 +354,15 @@ jQuery(function($) {
                 '<td><strong>' + fullName + '</strong><br></td>' +
                 '<td>' + user.user_email + '</td>' +
                 '<td>' + designation + '</td>' +
-                '<td>$' + parseFloat(user.membership_fee || 0).toFixed(2) + '</td>' +
-                '<td><span class="' + statusClass + '">' + statusLabel + '</span></td>' +
+                '<td>' + formatCurrency(user.membership_fee || 0) + '</td>' +
+                '<td>' + statusBadge + '</td>' +
                 '<td>' + lastInvoiced + '</td>' +
                 '<td>' +
-                    '<button class="btn-icon-action send-invoice-btn' + (shouldDisable ? ' disabled' : '') + '" data-user-id="' + user.id + '"' + buttonDisabled + ' title="Send Invoice">' +
+                    '<button class="btn-icon-action send-invoice-btn' + (shouldDisable ? ' disabled' : '') + '" data-user-id="' + user.id + '"' + buttonDisabled + ' title="Send Invoice" style="margin-right: 5px;">' +
                         '<i class="fas fa-paper-plane"></i>' +
+                    '</button>' +
+                    '<button class="btn-icon-action view-orders-btn" data-user-id="' + user.id + '" data-name="' + fullName + '" title="View Orders">' +
+                        '<i class="fas fa-list-alt"></i>' +
                     '</button>' +
                 '</td>' +
             '</tr>';
@@ -327,7 +378,7 @@ jQuery(function($) {
         $next.prop('disabled', pagination.current_page >= state.totalPages);
     }
 
-    function sendInvoice(userId, $button) {
+    function sendInvoice(userId, $button, forceCreate = false) {
         if (!window.iipm_ajax || !iipm_ajax.payment_nonce) {
             notify('Missing security token. Please refresh the page.', 'error');
             return;
@@ -336,8 +387,9 @@ jQuery(function($) {
         // Use the global year selector value
         const invoiceYear = state.selectedYear;
 
-        const originalText = $button.text();
-        $button.prop('disabled', true).text('Sending...');
+        // Store original icon and show spinner
+        const originalHtml = $button.html();
+        $button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
 
         $.ajax({
             url: iipm_ajax.ajax_url,
@@ -347,20 +399,31 @@ jQuery(function($) {
                 action: 'iipm_send_payment_invoice',
                 nonce: iipm_ajax.payment_nonce,
                 user_id: userId,
-                invoice_year: invoiceYear
+                invoice_year: invoiceYear,
+                force_create: forceCreate ? 'true' : 'false'
             }
         }).done(function(response) {
             if (response.success) {
                 notify(response.data.message || 'Invoice sent.', 'success');
                 // Reload users to show updated status
                 loadUsers();
+            } else if (response.needs_confirmation) {
+                // Show confirmation dialog for processing orders
+                $button.prop('disabled', false).html(originalHtml);
+                if (confirm(response.message)) {
+                    // User confirmed, resend with force_create flag
+                    sendInvoice(userId, $button, true);
+                }
+                return; // Don't execute the always block yet
             } else {
                 notify(response.data || 'Failed to send invoice.', 'error');
             }
         }).fail(function() {
             notify('Server error while sending invoice.', 'error');
         }).always(function() {
-            $button.prop('disabled', false).text(originalText);
+            if (!arguments[0] || !arguments[0].needs_confirmation) {
+                $button.prop('disabled', false).html(originalHtml);
+            }
         });
     }
 
@@ -415,18 +478,35 @@ jQuery(function($) {
             const hasEmail = org.contact_email && org.contact_email.trim() !== '';
             const hasAddress = (org.address_line1 && org.address_line1.trim() !== '') || 
                               (org.address_line2 && org.address_line2.trim() !== '');
-            const shouldDisable = !hasEmail || !hasAddress;
+            
+            // Disable if no email/address OR if org already has completed order for this year
+            const shouldDisable = !hasEmail || !hasAddress || org.has_processing_order;
             
             // Add status badge styling
             let statusClass = 'status-badge';
+            let isCancelled = false;
             if (org.order_status) {
                 const cleanStatus = org.order_status.replace('wc-', '');
                 if (cleanStatus === 'completed') statusClass += ' status-completed';
                 else if (cleanStatus === 'pending') statusClass += ' status-pending';
                 else if (cleanStatus === 'processing') statusClass += ' status-processing';
                 else if (cleanStatus === 'on-hold') statusClass += ' status-hold';
-                else if (cleanStatus === 'cancelled' || cleanStatus === 'refunded') statusClass += ' status-cancelled';
-                else if (cleanStatus === 'failed') statusClass += ' status-cancelled';
+                else if (cleanStatus === 'cancelled' || cleanStatus === 'refunded') {
+                    statusClass += ' status-cancelled';
+                    isCancelled = true;
+                }
+                else if (cleanStatus === 'failed') {
+                    statusClass += ' status-cancelled';
+                    isCancelled = true;
+                }
+            }
+            
+            // Make cancelled badge clickable if order_id exists
+            let statusBadge = '';
+            if (isCancelled && org.order_id) {
+                statusBadge = '<span class="' + statusClass + ' clickable-status" data-order-id="' + org.order_id + '" title="Click to view decline reason" style="cursor: pointer;"><i class="fas fa-info-circle"></i> ' + statusLabel + '</span>';
+            } else {
+                statusBadge = '<span class="' + statusClass + '">' + statusLabel + '</span>';
             }
             
             const buttonDisabled = shouldDisable ? ' disabled' : '';
@@ -436,12 +516,15 @@ jQuery(function($) {
                 '<td><strong>' + (org.organisation_name || '—') + '</strong></td>' +
                 '<td>' + (org.contact_email || '—') + '</td>' +
                 '<td>' + org.member_count + '</td>' +
-                '<td>$' + parseFloat(org.total_fees).toFixed(2) + '</td>' +
-                '<td><span class="' + statusClass + '">' + statusLabel + '</span></td>' +
+                '<td>' + formatCurrency(org.total_fees) + '</td>' +
+                '<td>' + statusBadge + '</td>' +
                 '<td>' + lastInvoiced + '</td>' +
                 '<td>' +
-                    '<button class="btn-icon-action send-org-invoice-btn' + (shouldDisable ? ' disabled' : '') + '" data-org-id="' + org.id + '"' + buttonDisabled + ' title="Send Invoice">' +
+                    '<button class="btn-icon-action send-org-invoice-btn' + (shouldDisable ? ' disabled' : '') + '" data-org-id="' + org.id + '"' + buttonDisabled + ' title="Send Invoice" style="margin-right: 5px;">' +
                         '<i class="fas fa-paper-plane"></i>' +
+                    '</button>' +
+                    '<button class="btn-icon-action view-orders-btn" data-org-id="' + org.id + '" data-name="' + (org.organisation_name || '—') + '" title="View Orders">' +
+                        '<i class="fas fa-list-alt"></i>' +
                     '</button>' +
                 '</td>' +
             '</tr>';
@@ -457,15 +540,16 @@ jQuery(function($) {
         $orgNext.prop('disabled', pagination.current_page >= orgState.totalPages);
     }
 
-    function sendOrgInvoice(orgId, $button) {
+    function sendOrgInvoice(orgId, $button, forceCreate = false) {
         if (!window.iipm_ajax || !iipm_ajax.payment_nonce) {
             notify('Missing security token. Please refresh the page.', 'error');
             return;
         }
 
         const invoiceYear = orgState.selectedYear;
-        const originalText = $button.text();
-        $button.prop('disabled', true).text('Sending...');
+        // Store original icon and show spinner
+        const originalHtml = $button.html();
+        $button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
 
         $.ajax({
             url: iipm_ajax.ajax_url,
@@ -475,19 +559,30 @@ jQuery(function($) {
                 action: 'iipm_send_payment_invoice',
                 nonce: iipm_ajax.payment_nonce,
                 org_id: orgId,
-                invoice_year: invoiceYear
+                invoice_year: invoiceYear,
+                force_create: forceCreate ? 'true' : 'false'
             }
         }).done(function(response) {
             if (response.success) {
                 notify(response.data.message || 'Invoice sent.', 'success');
                 loadOrganizations();
+            } else if (response.needs_confirmation) {
+                // Show confirmation dialog for processing orders
+                $button.prop('disabled', false).html(originalHtml);
+                if (confirm(response.message)) {
+                    // User confirmed, resend with force_create flag
+                    sendOrgInvoice(orgId, $button, true);
+                }
+                return; // Don't execute the always block yet
             } else {
                 notify(response.data || 'Failed to send invoice.', 'error');
             }
         }).fail(function() {
             notify('Server error while sending invoice.', 'error');
         }).always(function() {
-            $button.prop('disabled', false).text(originalText);
+            if (!arguments[0] || !arguments[0].needs_confirmation) {
+                $button.prop('disabled', false).html(originalHtml);
+            }
         });
     }
 
@@ -590,6 +685,197 @@ jQuery(function($) {
     $(document).on('mouseenter', '[title]', function() {
         $(this).attr('data-title', $(this).attr('title'));
         $(this).removeAttr('title');
+    });
+
+    // Handle decline reason modal
+    function showDeclineReason(orderId) {
+        $.ajax({
+            url: '<?php echo admin_url('admin-ajax.php'); ?>',
+            method: 'POST',
+            data: {
+                action: 'iipm_get_decline_reason',
+                nonce: iipm_ajax.payment_nonce,
+                order_id: orderId
+            },
+            beforeSend: function() {
+                $('#decline-order-id').text('Loading...');
+                $('#decline-timestamp').text('Loading...');
+                $('#decline-reason-text').text('Loading...');
+                $('#decline-reason-modal').fadeIn(200);
+            },
+            success: function(response) {
+                if (response.success) {
+                    $('#decline-order-id').text('#' + orderId);
+                    $('#decline-timestamp').text(response.data.declined_at);
+                    $('#decline-reason-text').text(response.data.reason);
+                } else {
+                    $('#decline-order-id').text('#' + orderId);
+                    $('#decline-timestamp').text('N/A');
+                    $('#decline-reason-text').text('No decline reason available for this order.');
+                }
+            },
+            error: function() {
+                $('#decline-order-id').text('#' + orderId);
+                $('#decline-timestamp').text('Error');
+                $('#decline-reason-text').text('Failed to load decline reason. Please try again.');
+            }
+        });
+    }
+
+    // Handle View Orders button - for individual users
+    $tbody.on('click', '.view-orders-btn', function() {
+        const userId = $(this).data('user-id');
+        const name = $(this).data('name');
+        showOrdersModal(userId, 0, name);
+    });
+
+    // Handle View Orders button - for organizations
+    $orgTbody.on('click', '.view-orders-btn', function() {
+        const orgId = $(this).data('org-id');
+        const name = $(this).data('name');
+        showOrdersModal(0, orgId, name);
+    });
+
+    // Show orders modal
+    function showOrdersModal(userId, orgId, entityName) {
+        $('#orders-entity-name').text(entityName);
+        $('#orders-loading').show();
+        $('#orders-content').hide();
+        $('#orders-modal').fadeIn(200);
+
+        $.ajax({
+            url: '<?php echo admin_url('admin-ajax.php'); ?>',
+            method: 'POST',
+            data: {
+                action: 'iipm_get_orders',
+                user_id: userId,
+                org_id: orgId,
+                year: state.selectedYear
+            },
+            success: function(response) {
+                $('#orders-loading').hide();
+                if (response.success && response.data.orders && response.data.orders.length > 0) {
+                    renderOrdersTable(response.data.orders);
+                    $('#orders-content').show();
+                    $('#orders-empty').hide();
+                } else {
+                    $('#orders-content').show();
+                    $('#orders-empty').show();
+                    $('#orders-tbody').empty();
+                }
+            },
+            error: function() {
+                $('#orders-loading').hide();
+                $('#orders-content').show();
+                $('#orders-empty').show();
+                $('#orders-tbody').html('<tr><td colspan="5" style="text-align: center; color: #ef4444;">Error loading orders</td></tr>');
+            }
+        });
+    }
+
+    // Render orders table
+    function renderOrdersTable(orders) {
+        const rows = orders.map(order => {
+            const date = new Date(order.date_created_gmt);
+            const formattedDate = date.toLocaleDateString('en-GB', {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric'
+            });
+
+            // Map status
+            let statusClass = 'status-badge';
+            if (order.status.includes('processing')) {
+                statusClass += ' status-processing';
+            } else if (order.status.includes('completed')) {
+                statusClass += ' status-completed';
+            } else if (order.status.includes('pending')) {
+                statusClass += ' status-pending';
+            } else if (order.status.includes('cancelled')) {
+                statusClass += ' status-cancelled';
+            }
+
+            const statusLabel = order.status.replace('wc-', '').replace('-', ' ').toUpperCase();
+
+            return '<tr>' +
+                '<td><strong>#' + order.id + '</strong></td>' +
+                '<td>' + formattedDate + '</td>' +
+                '<td><strong>' + formatCurrency(order.total_amount) + '</strong></td>' +
+                '<td><span class="' + statusClass + '">' + statusLabel + '</span></td>' +
+                '<td>' +
+                    '<button class="btn-resend-email" data-order-id="' + order.id + '" title="Resend Invoice Email">' +
+                        '<i class="fas fa-envelope"></i>' +
+                    '</button>' +
+                '</td>' +
+            '</tr>';
+        }).join('');
+
+        $('#orders-tbody').html(rows);
+    }
+
+    // Handle resend email button
+    $(document).on('click', '.btn-resend-email', function() {
+        const orderId = $(this).data('order-id');
+        const $btn = $(this);
+        
+        if (confirm('Resend invoice email for Order #' + orderId + '?')) {
+            $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
+            
+            $.ajax({
+                url: '<?php echo admin_url('admin-ajax.php'); ?>',
+                method: 'POST',
+                data: {
+                    action: 'iipm_resend_invoice_email',
+                    nonce: iipm_ajax.payment_nonce,
+                    order_id: orderId
+                },
+                success: function(response) {
+                    if (response.success) {
+                        notify('Invoice email sent successfully', 'success');
+                    } else {
+                        notify('Failed to send email: ' + (response.data || 'Unknown error'), 'error');
+                    }
+                },
+                error: function() {
+                    notify('Error sending email', 'error');
+                },
+                complete: function() {
+                    $btn.prop('disabled', false).html('<i class="fas fa-envelope"></i>');
+                }
+            });
+        }
+    });
+
+    // Close orders modal
+    $('#orders-modal .modal-close').on('click', function() {
+        $('#orders-modal').fadeOut(200);
+    });
+
+    // Close modal on background click
+    $('#orders-modal').on('click', function(e) {
+        if (e.target.id === 'orders-modal') {
+            $('#orders-modal').fadeOut(200);
+        }
+    });
+
+    // Click event for cancelled status badges
+    $(document).on('click', '.clickable-status', function() {
+        const orderId = $(this).data('order-id');
+        if (orderId) {
+            showDeclineReason(orderId);
+        }
+    });
+
+    // Close modal
+    $(document).on('click', '.modal-close, #decline-reason-modal', function(e) {
+        if (e.target === this) {
+            $('#decline-reason-modal').fadeOut(200);
+        }
+    });
+
+    // Prevent modal content clicks from closing modal
+    $(document).on('click', '#decline-reason-modal .modal-content', function(e) {
+        e.stopPropagation();
     });
 
     // Load stats and tables on page load
@@ -829,6 +1115,18 @@ jQuery(function($) {
     color: #9ca3af !important;
 }
 
+/* Loading state for icon buttons */
+.btn-icon-action:disabled:not(.disabled) {
+    background: #7c3aed;
+    cursor: wait;
+    opacity: 0.8;
+    transform: none !important;
+}
+
+.btn-icon-action:disabled:not(.disabled) i {
+    color: #fff !important;
+}
+
 /* Tooltip */
 .btn-icon-action[title]:hover::after {
     content: attr(title);
@@ -1059,7 +1357,149 @@ jQuery(function($) {
     background: #fee2e2;
     color: #991b1b;
 }
+
+/* Clickable Status Badge */
+.clickable-status {
+    transition: all 0.2s ease;
+}
+
+.clickable-status:hover {
+    background: #fecaca !important;
+    transform: scale(1.05);
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+}
+
+.clickable-status i {
+    margin-right: 4px;
+}
+
+/* Modal Styles */
+.modal {
+    position: fixed;
+    z-index: 9999;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(2px);
+}
+
+.modal-content {
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    max-width: 600px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    position: relative;
+    animation: modalSlideIn 0.3s ease;
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-50px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.modal-close:hover {
+    color: #ef4444;
+    transform: scale(1.1);
+}
+
+/* Orders Modal Specific Styles */
+#orders-modal .modal-content {
+    max-width: 900px;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.orders-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+.orders-table th {
+    background: #f9fafb;
+    padding: 12px;
+    text-align: left;
+    font-weight: 600;
+    border-bottom: 2px solid #e5e7eb;
+}
+
+.orders-table td {
+    padding: 12px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.orders-table tr:hover {
+    background: #f9fafb;
+}
+
+.btn-resend-email {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white !important;
+    border: none;
+    padding: 6px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.btn-resend-email:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.btn-resend-email i {
+    color: white !important;
+}
 </style>
+
+<!-- Orders Modal -->
+<div id="orders-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 style="margin: 0;"><i class="fas fa-list-alt"></i> Orders for <span id="orders-entity-name"></span></h3>
+            <button class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div id="orders-loading" style="text-align: center; padding: 40px;">
+                <i class="fas fa-spinner fa-spin" style="font-size: 32px; color: #7c3aed;"></i>
+                <p>Loading orders...</p>
+            </div>
+            <div id="orders-content" style="display: none;">
+                <table class="orders-table">
+                    <thead>
+                        <tr>
+                            <th>Order #</th>
+                            <th>Date</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="orders-tbody"></tbody>
+                </table>
+                <div id="orders-empty" style="display: none; text-align: center; padding: 40px; color: #6b7280;">
+                    <i class="fas fa-inbox" style="font-size: 48px; margin-bottom: 16px;"></i>
+                    <p>No orders found</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 <?php get_footer(); ?>
 

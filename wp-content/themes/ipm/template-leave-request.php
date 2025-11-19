@@ -1589,18 +1589,14 @@ function renderCalendar() {
         // Check if date has approved leave request
         const hasExistingLeave = isDateInExistingLeave(day);
         
-        // In non-admin mode, disable past dates
-        // In admin mode, only disable dates with approved leave requests
-        const isPastDate = day < new Date().setHours(0, 0, 0, 0);
-        const shouldDisable = hasExistingLeave || (!isAdminMode && isPastDate);
+        // Only disable dates with existing approved leave requests
+        const shouldDisable = hasExistingLeave;
         
         if (shouldDisable) {
             dayElement.style.opacity = '0.3';
             dayElement.style.cursor = 'not-allowed';
-            if (hasExistingLeave) {
-                dayElement.style.background = '#ffebee';
-                dayElement.title = 'Date already has approved leave';
-            }
+            dayElement.style.background = '#ffebee';
+            dayElement.title = 'Date already has approved leave';
         } else {
             dayElement.addEventListener('click', function() {
                 selectDate(day);
@@ -1686,9 +1682,6 @@ function isDateInExistingLeave(date) {
 }
 
 function selectDate(date) {
-    // In admin mode, allow past dates; otherwise, block them
-    if (!isAdminMode && date < new Date().setHours(0, 0, 0, 0)) return;
-    
     // Check if date has existing leave
     if (isDateInExistingLeave(date)) return;
     
