@@ -381,28 +381,32 @@ function iipm_update_user() {
         $user_id
     ));
     
-    $was_org_admin = null; // Initialize variable
+    $was_org_admin = false; // Initialize variable
     
     // If employer is being changed, check if user was admin of original organisation
     if ($current_employer != $employer_id) {
         // Check if user was admin of the original organisation
-        $was_org_admin = $wpdb->get_var($wpdb->prepare(
-            "SELECT admin_user_id FROM {$wpdb->prefix}test_iipm_organisations WHERE id = %d",
-            $current_employer
-        ));
-        
-        // If user was admin of original organisation, remove admin role
-        if ($was_org_admin == $user_id) {
-            $wpdb->update(
-                $wpdb->prefix . 'test_iipm_organisations',
-                array('admin_user_id' => null),
-                array('id' => $current_employer),
-                array('%s'),
-                array('%d')
-            );
+        $user = get_user_by('id', $user_id);
+        if ($user) {
+            $org_admin_email = $wpdb->get_var($wpdb->prepare(
+                "SELECT admin_email FROM {$wpdb->prefix}test_iipm_organisations WHERE id = %d AND admin_name IS NOT NULL AND admin_email IS NOT NULL",
+                $current_employer
+            ));
             
-            // Log the admin role removal
-            error_log("IIPM: Removed admin role from organisation ID {$current_employer} for user ID {$user_id} due to employer change");
+            // If user was admin of original organisation, remove admin role
+            if ($org_admin_email && $org_admin_email === $user->user_email) {
+                $was_org_admin = true;
+                $wpdb->update(
+                    $wpdb->prefix . 'test_iipm_organisations',
+                    array('admin_name' => null, 'admin_email' => null),
+                    array('id' => $current_employer),
+                    array('%s', '%s'),
+                    array('%d')
+                );
+                
+                // Log the admin role removal
+                error_log("IIPM: Removed admin role from organisation ID {$current_employer} for user ID {$user_id} due to employer change");
+            }
         }
     }
     

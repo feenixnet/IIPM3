@@ -32,7 +32,6 @@ class IIPM_Navigation_Manager {
                 'Course Management' => home_url('/course-management/'),
                 'Payment Management' => home_url('/payment-management/'),
                 'Leave Administration' => home_url('/leave-admin/'),
-                'File Dashboard' => home_url('/file-dashboard/'),
                 'Logout' => wp_logout_url(home_url())
             );
         }
@@ -47,7 +46,6 @@ class IIPM_Navigation_Manager {
                 'Leave Management' => home_url('/leave-admin/'),
                 'My Leave Requests' => home_url('/leave-request/'),
                 'My Profile' => home_url('/profile/'),
-                'File Dashboard' => home_url('/file-dashboard/'),
                 'Logout' => wp_logout_url(home_url())
             );
         }
@@ -61,7 +59,6 @@ class IIPM_Navigation_Manager {
                 'CPD Reports' => home_url('/cpd-reports/'),
                 'Leave Requests' => home_url('/leave-request/'),
                 'My Profile' => home_url('/profile/'),
-                'File Dashboard' => home_url('/file-dashboard/'),
                 'Logout' => wp_logout_url(home_url())
             );
         }

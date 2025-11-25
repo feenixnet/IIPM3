@@ -42,7 +42,7 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
                 <?php
                 global $wpdb;
                 $total_orgs = $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}test_iipm_organisations WHERE is_active = 1");
-                $orgs_with_admins = $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}test_iipm_organisations WHERE admin_user_id IS NOT NULL AND is_active = 1");
+                $orgs_with_admins = $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}test_iipm_organisations WHERE admin_name IS NOT NULL AND admin_email IS NOT NULL AND is_active = 1");
                 $total_org_members = $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}test_iipm_members WHERE member_type = 'organisation'");
                 $pending_setups = $total_orgs - $orgs_with_admins;
                 ?>
@@ -141,11 +141,8 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
                             <?php
                             $organisations = $wpdb->get_results("
                                 SELECT o.*, 
-                                    u.display_name as admin_name,
-                                    u.user_email as admin_email,
                                     COUNT(mp.id) as member_count
                                 FROM {$wpdb->prefix}test_iipm_organisations o
-                                LEFT JOIN {$wpdb->users} u ON o.admin_user_id = u.ID
                                 LEFT JOIN {$wpdb->prefix}test_iipm_member_profiles mp ON o.id = mp.employer_id
                                 WHERE o.is_active = 1
                                 GROUP BY o.id
@@ -156,9 +153,10 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
                                 echo "<tr><td colspan='6' class='no-data'>No organisations found</td></tr>";
                             } else {
                                 foreach ($organisations as $org) {
-                                    $admin_status = $org->admin_user_id ? 'setup' : 'pending';
-                                    $admin_status_text = $org->admin_user_id ? 'Setup Complete' : 'Pending Setup';
-                                    $admin_status_class = $org->admin_user_id ? 'status-complete' : 'status-pending';
+                                    $hasAdmin = !empty($org->admin_name) && !empty($org->admin_email);
+                                    $admin_status = $hasAdmin ? 'setup' : 'pending';
+                                    $admin_status_text = $hasAdmin ? 'Setup Complete' : 'Pending Setup';
+                                    $admin_status_class = $hasAdmin ? 'status-complete' : 'status-pending';
                                     
                                     echo "<tr data-org-id='{$org->id}' data-status='{$admin_status}'>";
                                     echo "<td style='width: 150px;'>";
@@ -190,15 +188,18 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
                                     echo "<td class='member-count'>" . $org->member_count . "</td>";
                                     echo "<td>" . date('M j, Y', strtotime($org->created_at)) . "</td>";
                                     
-                                    echo "<td style='width: 220px;'>";
+                                    echo "<td style='width: 250px;'>";
                                     echo "<div class='action-buttons-cell'>";
                                     echo "<button class='btn-small edit-org' data-org-id='{$org->id}' title='Edit Organisation'><i class='fas fa-edit'></i></button>";
                                     
-                                    if (!$org->admin_user_id) {
+                                    // Check if admin exists (admin_name and admin_email are not null)
+                                    $hasAdmin = !empty($org->admin_name) && !empty($org->admin_email);
+                                    
+                                    if (!$hasAdmin) {
                                         echo "<button class='btn-small setup-admin' data-org-id='{$org->id}' title='Setup Admin'><i class='fas fa-user-cog'></i></button>";
-                                        echo "<button class='btn-small direct-assign-admin' data-org-id='{$org->id}' data-org-name='" . esc_attr($org->name) . "' title='Direct Assign Admin'><i class='fas fa-user-plus'></i></button>";
                                     } else {
                                         echo "<a href='" . home_url('/organisation-members?employer_id=' . $org->id) . "' class='btn-small view-members' data-org-id='{$org->id}' title='View Members'><i class='fas fa-users'></i></a>";
+                                        echo "<button class='btn-small btn-warning remove-admin' data-org-id='{$org->id}' data-org-name='" . esc_attr($org->name) . "' data-admin-name='" . esc_attr($org->admin_name) . "' data-admin-email='" . esc_attr($org->admin_email) . "' title='Remove Admin'><i class='fas fa-user-times'></i></button>";
                                     }
                                     
                                     echo "<button class='btn-small btn-danger deactivate-org' data-org-id='{$org->id}' title='Deactivate organisation'><i class='fas fa-pause'></i></button>";
@@ -288,12 +289,18 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
                 
                 <div class="form-section">
                     <h4><i class="fas fa-user-cog"></i> Member Administrator Setup</h4>
+                    
                     <div class="form-group">
-                        <label for="admin-email">Admin Email Address</label>
-                        <input type="email" id="admin-email" name="admin_email">
-                        <small>If provided, an invitation will be sent to this email address</small>
+                        <label for="admin-name">Admin Name</label>
+                        <input type="text" id="admin-name" name="admin_name" placeholder="Enter administrator's full name">
+                        <small>Full name of the organisation administrator</small>
                     </div>
                     
+                    <div class="form-group">
+                        <label for="admin-email">Admin Email Address</label>
+                        <input type="email" id="admin-email" name="admin_email" placeholder="admin@organisation.com">
+                        <small>If provided, an invitation will be sent to this email address</small>
+                    </div>
                     
                 </div>
                 
@@ -339,14 +346,15 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
                 </div>
                 
                 <div class="form-group">
-                    <label for="setup-admin-email">Administrator Email Address *</label>
-                    <input type="email" id="setup-admin-email" name="admin_email" required>
-                    <small>This person will become the organisation administrator</small>
+                    <label for="setup-admin-name">Administrator Name *</label>
+                    <input type="text" id="setup-admin-name" name="admin_name" placeholder="Enter administrator's full name" required>
+                    <small>Full name of the person who will manage this organisation</small>
                 </div>
                 
                 <div class="form-group">
-                    <label for="setup-admin-name">Administrator Name</label>
-                    <input type="text" id="setup-admin-name" name="admin_name" placeholder="Optional: Admin's full name">
+                    <label for="setup-admin-email">Administrator Email Address *</label>
+                    <input type="email" id="setup-admin-email" name="admin_email" placeholder="admin@organisation.com" required>
+                    <small>This person will become the organisation administrator</small>
                 </div>
                 
                 <div class="form-group">
@@ -377,49 +385,6 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
     </div>
 </div>
 
-<!-- Direct Admin Assignment Modal -->
-<div id="direct-assign-modal" class="modal" style="display:none;">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3>Direct Admin Assignment</h3>
-            <button class="modal-close">&times;</button>
-        </div>
-        <div class="modal-body">
-            <div class="local-dev-notice">
-                <div class="notice-icon"><i class="fas fa-exclamation-triangle"></i></div>
-                <div class="notice-content">
-                    <strong>Local Development Mode</strong>
-                    <p>This feature allows you to directly assign an existing member as an organisation admin without sending emails. Use this for testing in local environments.</p>
-                </div>
-            </div>
-            
-            <form id="direct-assign-form">
-                <input type="hidden" id="direct-assign-org-id" name="org_id">
-                <?php wp_nonce_field('iipm_portal_nonce', 'nonce'); ?>
-                
-                <div class="org-info-display">
-                    <h4 id="direct-assign-org-name">Organisation Name</h4>
-                </div>
-                
-                <div class="form-group">
-                    <label for="direct-assign-user">Select Existing Member *</label>
-                    <select id="direct-assign-user" name="user_id" class="user-select" required>
-                        <option value="">Loading members...</option>
-                    </select>
-                    <small>This member will be assigned as the organisation administrator</small>
-                </div>
-                
-                <div class="form-actions">
-                    <button type="submit" class="btn btn-primary">
-                        <span class="btn-text">Assign Administrator</span>
-                        <span class="btn-loading" style="display:none;">Assigning...</span>
-                    </button>
-                    <button type="button" class="btn btn-secondary modal-close">Cancel</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
 
 <!-- View Members Modal -->
 <div id="view-members-modal" class="modal" style="display:none;">
@@ -738,6 +703,15 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
 
 .btn-danger:hover {
     background: #dc2626;
+}
+
+.btn-warning {
+    background: #f59e0b;
+    color: white;
+}
+
+.btn-warning:hover {
+    background: #d97706;
 }
 
 /* Enhanced Modal Styles */
@@ -1266,6 +1240,25 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
     margin-bottom: 4px;
 }
 
+/* Email Validation Styles */
+.form-group input.error-input {
+    border-color: #ef4444 !important;
+    background-color: #fef2f2 !important;
+    box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.1) !important;
+}
+
+.email-validation-error {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    animation: slideIn 0.3s ease;
+}
+
+.email-validation-error::before {
+    content: "⚠️";
+    font-size: 14px;
+}
+
 /* Organisation Name Validation Styles */
 .form-group input.duplicate-name {
     border-color: #f59e0b !important;
@@ -1322,11 +1315,18 @@ jQuery(document).ready(function($) {
         $('#modal-title').text('Add New Organisation');
         $('#organisation-form')[0].reset();
         $('#org-id').val('');
+        
+        // Reset original admin values
+        originalAdminEmail = '';
+        originalAdminName = '';
+        
         $('#organisation-modal').addClass('show');
         
         // Clear any existing validation states
         $('#org-name').removeClass('error duplicate-name');
         $('#org-name').next('.validation-message').remove();
+        $('#admin-email').removeClass('error-input');
+        $('.email-validation-error').remove();
     });
     
     // Edit Organisation
@@ -1349,53 +1349,6 @@ jQuery(document).ready(function($) {
         $('#setup-admin-modal').addClass('show');
     });
     
-    // Direct Assign Admin
-    $(document).on('click', '.direct-assign-admin', function() {
-        console.log('Direct assign clicked');
-        const orgId = $(this).data('org-id');
-        const orgName = $(this).data('org-name');
-        
-        $('#direct-assign-org-id').val(orgId);
-        $('#direct-assign-org-name').text(orgName);
-        $('#direct-assign-modal').addClass('show');
-        
-        // Load users for the dropdown
-        loadUsersForAssignment();
-    });
-
-    // Function to load users for assignment
-    function loadUsersForAssignment() {
-        console.log('Loading users for assignment...');
-        $.ajax({
-            url: iipm_ajax.ajax_url,
-            type: 'POST',
-            data: {
-                action: 'iipm_get_all_users_for_assignment',
-                nonce: iipm_ajax.nonce
-            },
-            success: function(response) {
-                console.log('Users response:', response);
-                if (response.success) {
-                    const users = response.data;
-                    let options = '<option value="">Select a member...</option>';
-                    
-                    users.forEach(function(user) {
-                        options += `<option value="${user.id}">${user.text}</option>`;
-                    });
-                    
-                    $('#direct-assign-user').html(options);
-                } else {
-                    $('#direct-assign-user').html('<option value="">Error loading members</option>');
-                    console.error('Error loading users:', response.data);
-                }
-            },
-            error: function(xhr, status, error) {
-                $('#direct-assign-user').html('<option value="">Error loading members</option>');
-                console.error('AJAX error:', error);
-                console.error('Response:', xhr.responseText);
-            }
-        });
-    }
     
     // View Members
     // $(document).on('click', '.view-members', function() {
@@ -1407,14 +1360,67 @@ jQuery(document).ready(function($) {
     //     $('#view-members-modal').addClass('show');
     // });
     
+    // Email validation function
+    function isValidEmail(email) {
+        const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return re.test(email);
+    }
+    
+    // Real-time email validation
+    $('#admin-email').on('blur', function() {
+        const $input = $(this);
+        const email = $input.val().trim();
+        
+        // Remove previous validation messages
+        $input.removeClass('error-input');
+        $input.next('.email-validation-error').remove();
+        
+        if (email && !isValidEmail(email)) {
+            $input.addClass('error-input');
+            $input.after('<div class="email-validation-error" style="color: #ef4444; font-size: 0.875rem; margin-top: 6px;">Please enter a valid email address</div>');
+        }
+    });
+    
     // Organisation Form Submit
     $('#organisation-form').submit(function(e) {
         e.preventDefault();
         
         const $form = $(this);
         const $submitBtn = $form.find('button[type="submit"]');
+        const adminEmail = $('#admin-email').val().trim();
+        const adminName = $('#admin-name').val().trim();
+        
+        // Validate admin email if provided
+        if (adminEmail && !isValidEmail(adminEmail)) {
+            if (window.notifications) {
+                notifications.error('Invalid Email', 'Please enter a valid admin email address');
+            }
+            $('#admin-email').focus();
+            return false;
+        }
+        
+        // If admin email is provided, admin name should also be provided
+        if (adminEmail && !adminName) {
+            if (window.notifications) {
+                notifications.error('Missing Admin Name', 'Please enter the administrator name along with email');
+            }
+            $('#admin-name').focus();
+            return false;
+        }
+        
         const formData = new FormData(this);
         formData.append('action', 'iipm_save_organisation');
+        
+        // Check if admin email was changed
+        const currentAdminEmail = $('#admin-email').val().trim();
+        const currentAdminName = $('#admin-name').val().trim();
+        const isEditing = $('#org-id').val() !== '';
+        
+        if (isEditing && originalAdminEmail && currentAdminEmail && 
+            (originalAdminEmail !== currentAdminEmail || originalAdminName !== currentAdminName)) {
+            formData.append('admin_email_changed', '1');
+            formData.append('old_admin_email', originalAdminEmail);
+        }
         
         $submitBtn.addClass('loading');
         
@@ -1509,6 +1515,27 @@ jQuery(document).ready(function($) {
         
         const $form = $(this);
         const $submitBtn = $form.find('button[type="submit"]');
+        const adminEmail = $('#setup-admin-email').val().trim();
+        const adminName = $('#setup-admin-name').val().trim();
+        
+        // Validate email
+        if (!isValidEmail(adminEmail)) {
+            if (window.notifications) {
+                notifications.error('Invalid Email', 'Please enter a valid admin email address');
+            }
+            $('#setup-admin-email').focus();
+            return false;
+        }
+        
+        // Validate name
+        if (!adminName || adminName.length < 2) {
+            if (window.notifications) {
+                notifications.error('Invalid Name', 'Please enter the administrator\'s full name');
+            }
+            $('#setup-admin-name').focus();
+            return false;
+        }
+        
         const formData = $form.serialize() + '&action=iipm_setup_organisation_admin';
         
         $submitBtn.addClass('loading');
@@ -1544,53 +1571,6 @@ jQuery(document).ready(function($) {
         });
     });
     
-    // Direct Admin Assignment Form Submit - FIXED TYPO HERE
-    $('#direct-assign-form').submit(function(e) {
-        e.preventDefault();
-        
-        console.log('Direct assign form submitted');
-        
-        const $form = $(this);
-        const $submitBtn = $form.find('button[type="submit"]');
-        const formData = $form.serialize() + '&action=iipm_direct_admin_assignment'; // FIXED: was 'iimp_direct_admin_assignment'
-        
-        console.log('Form data:', formData);
-        
-        $submitBtn.addClass('loading');
-        
-        $.ajax({
-            url: iipm_ajax.ajax_url,
-            type: 'POST',
-            data: formData,
-            success: function(response) {
-                console.log('Assignment response:', response);
-                if (response.success) {
-                    // Show success notification
-                    if (window.notifications) {
-                        notifications.success('Admin Assigned', "Admin assigned successfully!");
-                    }
-                    $('#direct-assign-modal').removeClass('show');
-                    // location.reload();
-                } else {
-                    // Show error notification
-                    if (window.notifications) {
-                        notifications.error('Assignment Failed', 'Error: ' + response.data);
-                    }
-                }
-            },
-            error: function(xhr, status, error) {
-                console.error('Assignment error:', error);
-                console.error('Response:', xhr.responseText);
-                // Show error notification
-                if (window.notifications) {
-                    notifications.error('Assignment Failed', 'An error occurred. Please try again.');
-                }
-            },
-            complete: function() {
-                $submitBtn.removeClass('loading');
-            }
-        });
-    });
     
     // Search and Filter
     $('#org-search').on('input', function() {
@@ -1626,6 +1606,10 @@ jQuery(document).ready(function($) {
         });
     }
     
+    // Store original admin email for comparison
+    let originalAdminEmail = '';
+    let originalAdminName = '';
+    
     // Load Organisation Data for Editing
     function loadOrganisationData(orgId) {
         $.ajax({
@@ -1651,6 +1635,12 @@ jQuery(document).ready(function($) {
                     $('#city').val(org.city);
                     $('#county').val(org.county);
                     $('#eircode').val(org.eircode);
+                    $('#admin-name').val(org.admin_name || '');
+                    $('#admin-email').val(org.admin_email || '');
+                    
+                    // Store original values for comparison
+                    originalAdminEmail = org.admin_email || '';
+                    originalAdminName = org.admin_name || '';
                     
                     $('#organisation-modal').addClass('show');
                 } else {
@@ -1705,6 +1695,46 @@ jQuery(document).ready(function($) {
     }
     
     // Close modals - handled by document event delegation below
+    
+    // Remove Admin
+    $(document).on('click', '.remove-admin', function() {
+        const orgId = $(this).data('org-id');
+        const orgName = $(this).data('org-name');
+        const adminName = $(this).data('admin-name');
+        const adminEmail = $(this).data('admin-email');
+        
+        if (confirm(`Are you sure you want to remove "${adminName}" (${adminEmail}) as administrator of "${orgName}"?\n\nThis will remove the admin assignment but will not delete the user account.`)) {
+            $.ajax({
+                url: iipm_ajax.ajax_url,
+                type: 'POST',
+                data: {
+                    action: 'iipm_remove_organisation_admin',
+                    org_id: orgId,
+                    nonce: iipm_ajax.nonce
+                },
+                success: function(response) {
+                    if (response.success) {
+                        // Show success notification
+                        if (window.notifications) {
+                            notifications.success('Admin Removed', 'Administrator has been removed successfully');
+                        }
+                        location.reload();
+                    } else {
+                        // Show error notification
+                        if (window.notifications) {
+                            notifications.error('Removal Failed', 'Error: ' + response.data);
+                        }
+                    }
+                },
+                error: function() {
+                    // Show error notification
+                    if (window.notifications) {
+                        notifications.error('Removal Failed', 'An error occurred.');
+                    }
+                }
+            });
+        }
+    });
     
     // Deactivate Organisation
     $(document).on('click', '.deactivate-org', function() {

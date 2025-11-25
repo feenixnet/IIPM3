@@ -29,7 +29,8 @@ function iipm_save_organisation() {
     $city = sanitize_text_field($_POST['city']);
     $county = sanitize_text_field($_POST['county']);
     $eircode = sanitize_text_field($_POST['eircode']);
-    $admin_email = sanitize_email($_POST['admin_email']);
+    $admin_name = isset($_POST['admin_name']) ? sanitize_text_field($_POST['admin_name']) : '';
+    $admin_email = isset($_POST['admin_email']) ? sanitize_email($_POST['admin_email']) : '';
     $send_invitation = isset($_POST['send_invitation']);
     
     // Validate required fields
@@ -43,8 +44,15 @@ function iipm_save_organisation() {
         return;
     }
     
+    // Validate admin email if provided
     if ($admin_email && !is_email($admin_email)) {
         wp_send_json_error('Invalid admin email address');
+        return;
+    }
+    
+    // If admin email is provided, admin name is required
+    if ($admin_email && empty($admin_name)) {
+        wp_send_json_error('Administrator name is required when providing admin email');
         return;
     }
     
@@ -75,6 +83,14 @@ function iipm_save_organisation() {
     );
     
     $formats = array('%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s');
+    
+    // Add admin fields if provided
+    if ($admin_email && $admin_name) {
+        $data['admin_name'] = $admin_name;
+        $data['admin_email'] = $admin_email;
+        $formats[] = '%s';
+        $formats[] = '%s';
+    }
     
     if ($org_id > 0) {
         // Update existing organisation
@@ -112,12 +128,30 @@ function iipm_save_organisation() {
         $action = 'created';
     }
     
-    // Send admin invitation if email provided and checkbox checked
-    if ($admin_email && $send_invitation) {
-        $invitation_result = iipm_send_organisation_admin_invitation($admin_email, $org_id);
+    // Check if admin email was changed
+    $admin_email_changed = isset($_POST['admin_email_changed']);
+    $old_admin_email = isset($_POST['old_admin_email']) ? sanitize_email($_POST['old_admin_email']) : '';
+    
+    // Send admin invitation if email and name provided
+    if ($admin_email && $admin_name && ($action === 'created' || $send_invitation)) {
+        $invitation_result = iipm_send_organisation_admin_invitation($admin_email, $org_id, $admin_name);
         if (!$invitation_result['success']) {
             // Log the error but don't fail the organisation creation
             error_log('IIPM: Failed to send admin invitation: ' . $invitation_result['error']);
+        }
+    }
+    
+    // Send notification if admin email was changed
+    if ($admin_email_changed && $old_admin_email && $admin_email && $old_admin_email !== $admin_email) {
+        // Notify old admin
+        iipm_send_admin_removed_notification($old_admin_email, $name);
+        
+        // Send invitation to new admin
+        if ($admin_name) {
+            $invitation_result = iipm_send_organisation_admin_invitation($admin_email, $org_id, $admin_name);
+            if (!$invitation_result['success']) {
+                error_log('IIPM: Failed to send admin change invitation: ' . $invitation_result['error']);
+            }
         }
     }
     
@@ -231,8 +265,8 @@ function iipm_setup_organisation_admin() {
     $admin_name = sanitize_text_field($_POST['admin_name']);
     $send_invitation = isset($_POST['send_invitation']);
     
-    if (!$org_id || !is_email($admin_email)) {
-        wp_send_json_error('Organisation ID and valid admin email are required');
+    if (!$org_id || !is_email($admin_email) || empty($admin_name)) {
+        wp_send_json_error('Organisation ID, valid admin email, and admin name are required');
         return;
     }
     
@@ -249,32 +283,46 @@ function iipm_setup_organisation_admin() {
         return;
     }
     
-    // Check if email already exists
-    if (email_exists($admin_email)) {
-        wp_send_json_error('Email address already exists in the system');
+    // Store admin_name and admin_email directly in the organisation table
+    $result = $wpdb->update(
+        $wpdb->prefix . 'test_iipm_organisations',
+        array(
+            'admin_name' => $admin_name,
+            'admin_email' => $admin_email,
+            'updated_at' => current_time('mysql')
+        ),
+        array('id' => $org_id),
+        array('%s', '%s', '%s'),
+        array('%d')
+    );
+    
+    if ($result === false) {
+        wp_send_json_error('Failed to update organisation: ' . $wpdb->last_error);
         return;
     }
     
-    // Send invitation
+    // Send invitation email if requested
     if ($send_invitation) {
         $invitation_result = iipm_send_organisation_admin_invitation($admin_email, $org_id, $admin_name);
         
         if (!$invitation_result['success']) {
-            wp_send_json_error('Failed to send invitation: ' . $invitation_result['error']);
-            return;
+            error_log('IIPM: Failed to send admin invitation: ' . $invitation_result['error']);
+            // Don't fail the whole operation if email fails
         }
     }
     
     // Log activity
     iipm_log_user_activity(
         get_current_user_id(),
-        'admin_setup_initiated',
-        "Admin setup initiated for organisation '{$organisation->name}' with email '{$admin_email}'"
+        'admin_setup_completed',
+        "Admin '{$admin_name}' ({$admin_email}) set for organisation '{$organisation->name}'"
     );
     
     wp_send_json_success(array(
-        'invitation_sent' => $send_invitation,
-        'admin_email' => $admin_email
+        'message' => 'Administrator setup successfully',
+        'admin_name' => $admin_name,
+        'admin_email' => $admin_email,
+        'invitation_sent' => $send_invitation
     ));
 }
 add_action('wp_ajax_iipm_setup_organisation_admin', 'iipm_setup_organisation_admin');
@@ -312,9 +360,10 @@ function iipm_get_organisation_members() {
     
     if ($is_org_admin && !$is_site_admin) {
         global $wpdb;
+        $current_user = wp_get_current_user();
         $user_org = $wpdb->get_row($wpdb->prepare(
-            "SELECT id FROM {$wpdb->prefix}test_iipm_organisations WHERE admin_user_id = %d",
-            $current_user_id
+            "SELECT id FROM {$wpdb->prefix}test_iipm_organisations WHERE admin_email = %s AND admin_name IS NOT NULL AND admin_email IS NOT NULL",
+            $current_user->user_email
         ));
         
         if (!$user_org || $user_org->id != $org_id) {
@@ -674,11 +723,8 @@ function iipm_export_organisations() {
     global $wpdb;
     $organisations = $wpdb->get_results("
         SELECT o.*, 
-               u.display_name as admin_name,
-               u.user_email as admin_email,
                COUNT(mp.id) as member_count
         FROM {$wpdb->prefix}test_iipm_organisations o
-        LEFT JOIN {$wpdb->users} u ON o.admin_user_id = u.ID
         LEFT JOIN {$wpdb->prefix}test_iipm_member_profiles mp ON o.id = mp.employer_id
         WHERE o.is_active = 1
         GROUP BY o.id
@@ -750,9 +796,10 @@ function iipm_clear_organisation_invitations() {
     
     if ($is_org_admin && !$is_site_admin) {
         global $wpdb;
+        $current_user = wp_get_current_user();
         $user_org = $wpdb->get_row($wpdb->prepare(
-            "SELECT id FROM {$wpdb->prefix}test_iipm_organisations WHERE admin_user_id = %d",
-            $current_user_id
+            "SELECT id FROM {$wpdb->prefix}test_iipm_organisations WHERE admin_email = %s AND admin_name IS NOT NULL AND admin_email IS NOT NULL",
+            $current_user->user_email
         ));
         
         if (!$user_org || $user_org->id != $org_id) {
@@ -838,9 +885,10 @@ function iipm_get_organisation_invitations() {
     
     if ($is_org_admin && !$is_site_admin) {
         global $wpdb;
+        $current_user = wp_get_current_user();
         $user_org = $wpdb->get_row($wpdb->prepare(
-            "SELECT id FROM {$wpdb->prefix}test_iipm_organisations WHERE admin_user_id = %d",
-            $current_user_id
+            "SELECT id FROM {$wpdb->prefix}test_iipm_organisations WHERE admin_email = %s AND admin_name IS NOT NULL AND admin_email IS NOT NULL",
+            $current_user->user_email
         ));
         
         if (!$user_org || $user_org->id != $org_id) {
@@ -934,35 +982,77 @@ function iipm_send_organisation_admin_invitation($email, $organisation_id, $admi
         
         $greeting = $admin_name ? "Dear {$admin_name}," : "Dear Colleague,";
         
+        $location = array_filter([$organisation->city, $organisation->county]);
+        $location_str = !empty($location) ? implode(', ', $location) : 'Not specified';
+        
         $message = "
-{$greeting}
-
-You have been invited to become the administrator for {$organisation->name} on the Irish Institute of Pensions Management (IIPM) platform.
-
-As an organisation administrator, you will be able to:
-• Manage your organisation's member accounts
-• Bulk import employees as IIPM members
-• View organisation-wide reports and statistics
-• Process group payments and invoicing
-
-To accept this invitation and set up your administrator account, please click the link below:
-{$registration_url}
-
-This invitation will expire in 14 days.
-
-Organisation Details:
-- Name: {$organisation->name}
-- Contact: {$organisation->contact_email}
-- Location: {$organisation->city}, {$organisation->county}
-
-If you have any questions about this invitation or the IIPM platform, please contact us at info@iipm.ie or +353 (0)1 613 0874.
-
-Best regards,
-IIPM Administration Team
-
----
-Irish Institute of Pensions Management
-www.iipm.ie
+<html>
+<head>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #8b5a96 0%, #6b4c93 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+        .content { background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; }
+        .button { display: inline-block; background: #8b5a96; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; margin: 20px 0; }
+        .info-box { background: #f8fafc; border-left: 4px solid #8b5a96; padding: 15px; margin: 20px 0; }
+        .footer { background: #f8fafc; padding: 20px; text-align: center; color: #6b7280; border-radius: 0 0 8px 8px; }
+        ul { padding-left: 20px; }
+        ul li { margin-bottom: 8px; }
+    </style>
+</head>
+<body>
+    <div class='container'>
+        <div class='header'>
+            <h1 style='margin: 0; font-size: 24px;'>IIPM Organisation Administrator Invitation</h1>
+        </div>
+        
+        <div class='content'>
+            <p><strong>{$greeting}</strong></p>
+            
+            <p>You have been invited to become the administrator for <strong>{$organisation->name}</strong> on the Irish Institute of Pensions Management (IIPM) platform.</p>
+            
+            <p><strong>As an organisation administrator, you will be able to:</strong></p>
+            <ul>
+                <li>Manage your organisation's member accounts</li>
+                <li>Bulk import employees as IIPM members</li>
+                <li>View organisation-wide reports and statistics</li>
+                <li>Process group payments and invoicing</li>
+            </ul>
+            
+            <p>To accept this invitation and set up your administrator account, please click the button below:</p>
+            
+            <p style='text-align: center;'>
+                <a href='{$registration_url}' class='button' style='color: white;'>Accept Invitation & Register</a>
+            </p>
+            
+            <p style='font-size: 12px; color: #6b7280;'><em>Or copy this link: {$registration_url}</em></p>
+            
+            <p style='color: #ef4444; font-weight: 600;'>⏰ This invitation will expire in 14 days.</p>
+            
+            <div class='info-box'>
+                <p style='margin: 0 0 10px 0;'><strong>📋 Organisation Details:</strong></p>
+                <p style='margin: 5px 0;'><strong>Name:</strong> {$organisation->name}</p>
+                <p style='margin: 5px 0;'><strong>Contact:</strong> {$organisation->contact_email}</p>
+                <p style='margin: 5px 0;'><strong>Location:</strong> {$location_str}</p>
+            </div>
+            
+            <p>If you have any questions about this invitation or the IIPM platform, please contact us:</p>
+            <p>
+                <strong>📧 Email:</strong> info@iipm.ie<br>
+                <strong>📞 Phone:</strong> +353 (0)1 613 0874
+            </p>
+            
+            <p>Best regards,<br>
+            <strong>IIPM Administration Team</strong></p>
+        </div>
+        
+        <div class='footer'>
+            <p style='margin: 0; font-size: 14px;'><strong>Irish Institute of Pensions Management</strong></p>
+            <p style='margin: 5px 0 0 0;'><a href='https://www.iipm.ie' style='color: #8b5a96;'>www.iipm.ie</a></p>
+        </div>
+    </div>
+</body>
+</html>
         ";
         
         // Add headers for better email delivery
@@ -1005,6 +1095,16 @@ function iipm_process_organisation_admin_registration($data, $invitation) {
     $password = $data['password'];
     $organisation_id = $invitation->organisation_id;
     
+    // Verify that the email matches the admin_email in the organisation
+    $organisation = $wpdb->get_row($wpdb->prepare(
+        "SELECT * FROM {$wpdb->prefix}test_iipm_organisations WHERE id = %d",
+        $organisation_id
+    ));
+    
+    if (!$organisation || $organisation->admin_email !== $email) {
+        return array('success' => false, 'error' => 'Email does not match the organisation administrator email');
+    }
+    
     // Create user account
     $user_id = wp_create_user($email, $password, $email);
     
@@ -1023,15 +1123,6 @@ function iipm_process_organisation_admin_registration($data, $invitation) {
     // Set user role to corporate admin
     $user = new WP_User($user_id);
     $user->set_role('iipm_corporate_admin');
-    
-    // Update organisation with admin user ID
-    $wpdb->update(
-        $wpdb->prefix . 'test_iipm_organisations',
-        array('admin_user_id' => $user_id, 'updated_at' => current_time('mysql')),
-        array('id' => $organisation_id),
-        array('%d', '%s'),
-        array('%d')
-    );
     
     // Create member record
     $wpdb->insert(
@@ -1122,34 +1213,73 @@ function iipm_send_admin_welcome_email($user_id, $email, $first_name, $organisat
     $subject = 'Welcome to IIPM - Organisation Administrator Access';
     
     $message = "
-Dear {$first_name},
-
-Welcome to the Irish Institute of Pensions Management! Your administrator account for {$organisation->name} has been successfully created.
-
-As an organisation administrator, you now have access to:
-
-<i class='fas fa-building'></i> Organisation Dashboard: {$portal_url}
-<i class='fas fa-chart-bar'></i> Bulk Member Import: {$bulk_import_url}
-<i class='fas fa-users'></i> Member Management Tools
-<i class='fas fa-chart-line'></i> Reporting and Analytics
-<i class='fas fa-credit-card'></i> Payment and Billing Management
-
-Getting Started:
-1. Log in to your dashboard: {$portal_url}
-2. Complete your profile information
-3. Review your organisation settings
-4. Start importing your team members
-
-Need help getting started? Our support team is here to assist:
-<i class='fas fa-envelope'></i> Email: info@iipm.ie
-📞 Phone: +353 (0)1 613 0874
-
-Best regards,
-IIPM Administration Team
-
----
-Irish Institute of Pensions Management
-www.iipm.ie
+<html>
+<head>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+        .content { background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; }
+        .button { display: inline-block; background: #8b5a96; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; margin: 20px 0; }
+        .feature-box { background: #f0fdf4; border-left: 4px solid #10b981; padding: 15px; margin: 15px 0; }
+        .steps { background: #f8fafc; padding: 15px; border-radius: 6px; margin: 20px 0; }
+        .footer { background: #f8fafc; padding: 20px; text-align: center; color: #6b7280; border-radius: 0 0 8px 8px; }
+    </style>
+</head>
+<body>
+    <div class='container'>
+        <div class='header'>
+            <h1 style='margin: 0; font-size: 24px;'>🎉 Welcome to IIPM!</h1>
+        </div>
+        
+        <div class='content'>
+            <p><strong>Dear {$first_name},</strong></p>
+            
+            <p>Welcome to the Irish Institute of Pensions Management! Your administrator account for <strong>{$organisation->name}</strong> has been successfully created.</p>
+            
+            <div class='feature-box'>
+                <p style='margin: 0 0 10px 0;'><strong>✨ As an organisation administrator, you now have access to:</strong></p>
+                <ul style='margin: 10px 0; padding-left: 20px;'>
+                    <li>🏢 Organisation Dashboard</li>
+                    <li>📊 Bulk Member Import</li>
+                    <li>👥 Member Management Tools</li>
+                    <li>📈 Reporting and Analytics</li>
+                    <li>💳 Payment and Billing Management</li>
+                </ul>
+            </div>
+            
+            <p style='text-align: center;'>
+                <a href='{$portal_url}' class='button' style='color: white;'>Access Your Dashboard</a>
+            </p>
+            
+            <div class='steps'>
+                <p style='margin: 0 0 10px 0;'><strong>🚀 Getting Started:</strong></p>
+                <ol style='margin: 10px 0; padding-left: 20px;'>
+                    <li>Log in to your dashboard</li>
+                    <li>Complete your profile information</li>
+                    <li>Review your organisation settings</li>
+                    <li>Start importing your team members</li>
+                </ol>
+            </div>
+            
+            <p><strong>Need help getting started?</strong><br>
+            Our support team is here to assist:</p>
+            <p>
+                📧 <strong>Email:</strong> info@iipm.ie<br>
+                📞 <strong>Phone:</strong> +353 (0)1 613 0874
+            </p>
+            
+            <p>Best regards,<br>
+            <strong>IIPM Administration Team</strong></p>
+        </div>
+        
+        <div class='footer'>
+            <p style='margin: 0; font-size: 14px;'><strong>Irish Institute of Pensions Management</strong></p>
+            <p style='margin: 5px 0 0 0;'><a href='https://www.iipm.ie' style='color: #8b5a96;'>www.iipm.ie</a></p>
+        </div>
+    </div>
+</body>
+</html>
     ";
     
     $headers = array(
@@ -1193,9 +1323,10 @@ function iipm_handle_bulk_import_enhanced() {
     
     if ($is_org_admin && !$is_site_admin) {
         global $wpdb;
+        $current_user = wp_get_current_user();
         $user_org = $wpdb->get_row($wpdb->prepare(
-            "SELECT id FROM {$wpdb->prefix}test_iipm_organisations WHERE admin_user_id = %d",
-            $current_user_id
+            "SELECT id FROM {$wpdb->prefix}test_iipm_organisations WHERE admin_email = %s AND admin_name IS NOT NULL AND admin_email IS NOT NULL",
+            $current_user->user_email
         ));
         
         if (!$user_org || $user_org->id != $organisation_id) {
@@ -1789,5 +1920,139 @@ function iipm_get_all_organisations_for_import() {
     wp_send_json_success($organizations);
 }
 add_action('wp_ajax_iipm_get_all_organisations_for_import', 'iipm_get_all_organisations_for_import');
+
+// Remove Organisation Admin
+function iipm_remove_organisation_admin() {
+    if (!current_user_can('manage_iipm_members') && !current_user_can('administrator')) {
+        wp_send_json_error('Insufficient permissions');
+        return;
+    }
+    
+    if (!wp_verify_nonce($_POST['nonce'], 'iipm_portal_nonce')) {
+        wp_send_json_error('Security check failed');
+        return;
+    }
+    
+    $org_id = intval($_POST['org_id']);
+    
+    if (!$org_id) {
+        wp_send_json_error('Invalid organisation ID');
+        return;
+    }
+    
+    global $wpdb;
+    
+    // Get organisation details before removing admin
+    $organisation = $wpdb->get_row($wpdb->prepare(
+        "SELECT name, admin_name, admin_email FROM {$wpdb->prefix}test_iipm_organisations WHERE id = %d",
+        $org_id
+    ));
+    
+    if (!$organisation) {
+        wp_send_json_error('Organisation not found');
+        return;
+    }
+    
+    $old_admin_email = $organisation->admin_email;
+    $old_admin_name = $organisation->admin_name;
+    
+    // Remove admin by setting fields to null
+    $result = $wpdb->update(
+        $wpdb->prefix . 'test_iipm_organisations',
+        array(
+            'admin_name' => null,
+            'admin_email' => null,
+            'updated_at' => current_time('mysql')
+        ),
+        array('id' => $org_id),
+        array('%s', '%s', '%s'),
+        array('%d')
+    );
+    
+    if ($result === false) {
+        wp_send_json_error('Failed to remove admin: ' . $wpdb->last_error);
+        return;
+    }
+    
+    // Send notification to removed admin
+    if ($old_admin_email) {
+        iipm_send_admin_removed_notification($old_admin_email, $organisation->name, $old_admin_name);
+    }
+    
+    // Log activity
+    iipm_log_user_activity(
+        get_current_user_id(),
+        'admin_removed',
+        "Admin '{$old_admin_name}' removed from organisation '{$organisation->name}'"
+    );
+    
+    wp_send_json_success(array(
+        'message' => 'Administrator removed successfully',
+        'org_name' => $organisation->name
+    ));
+}
+add_action('wp_ajax_iipm_remove_organisation_admin', 'iipm_remove_organisation_admin');
+
+/**
+ * Send notification when admin is removed from organisation
+ */
+function iipm_send_admin_removed_notification($email, $org_name, $admin_name = '') {
+    $greeting = $admin_name ? "Dear {$admin_name}," : "Dear Colleague,";
+    $subject = 'IIPM Organisation Administrator Status Update';
+    
+    $message = "
+<html>
+<head>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+        .content { background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; }
+        .info-box { background: #fffbeb; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0; }
+        .footer { background: #f8fafc; padding: 20px; text-align: center; color: #6b7280; border-radius: 0 0 8px 8px; }
+    </style>
+</head>
+<body>
+    <div class='container'>
+        <div class='header'>
+            <h1 style='margin: 0; font-size: 24px;'>Administrator Status Update</h1>
+        </div>
+        
+        <div class='content'>
+            <p><strong>{$greeting}</strong></p>
+            
+            <p>This is to inform you that your administrator status for <strong>{$org_name}</strong> has been updated in the IIPM system.</p>
+            
+            <div class='info-box'>
+                <p style='margin: 0;'><strong>⚠️ Change Notice:</strong></p>
+                <p style='margin: 10px 0 0 0;'>You are no longer listed as the administrator for this organisation.</p>
+            </div>
+            
+            <p>If you have any questions about this change, please contact:</p>
+            <p>
+                📧 <strong>Email:</strong> info@iipm.ie<br>
+                📞 <strong>Phone:</strong> +353 (0)1 613 0874
+            </p>
+            
+            <p>Thank you,<br>
+            <strong>IIPM Administration Team</strong></p>
+        </div>
+        
+        <div class='footer'>
+            <p style='margin: 0; font-size: 14px;'><strong>Irish Institute of Pensions Management</strong></p>
+            <p style='margin: 5px 0 0 0;'><a href='https://www.iipm.ie' style='color: #8b5a96;'>www.iipm.ie</a></p>
+        </div>
+    </div>
+</body>
+</html>
+    ";
+    
+    $headers = array(
+        'Content-Type: text/html; charset=UTF-8',
+        'From: IIPM Portal <' . (defined('SMTP_FROM') ? SMTP_FROM : get_option('admin_email')) . '>'
+    );
+    
+    wp_mail($email, $subject, $message, $headers);
+}
 
 ?>

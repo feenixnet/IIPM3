@@ -20,7 +20,12 @@ get_header();
     <div class="container" style="position: relative; z-index: 2;">
         <div class="page-header" style="text-align: center; margin-bottom: 20px;">
             <div>
-                <h1 style="color: white; font-size: 2.5rem; margin-bottom: 10px;">Payment Management</h1>
+                <div style="display: flex; justify-content: center; align-items: center; gap: 15px; margin-bottom: 10px;">
+                    <h1 style="color: white; font-size: 2.5rem; margin: 0;">Payment Management</h1>
+                    <a href="<?php echo admin_url('admin.php?page=wc-orders'); ?>" class="btn-wc-orders-link" title="View WooCommerce Orders" target="_blank">
+                        <i class="fas fa-external-link-alt"></i>
+                    </a>
+                </div>
                 <div class="year-selector-main" style="display: flex; justify-content: center; align-items: center; gap: 12px; margin-top: 15px;">
                     <select id="year-selector" class="year-select-main">
                         <?php
@@ -310,7 +315,7 @@ jQuery(function($) {
         const rows = users.map(user => {
             const designation = user.designation ? user.designation : '—';
             const fullName = user.full_name || 'Unknown';
-            const statusLabel = user.status_label || '—';
+            let statusLabel = user.status_label || '—';
             const lastInvoiced = user.last_invoiced || '—';
             
             // Check if at least one address field exists
@@ -336,6 +341,10 @@ jQuery(function($) {
                 else if (cleanStatus === 'failed') {
                     statusClass += ' status-cancelled';
                     isCancelled = true;
+                }
+                else if (cleanStatus === 'trash') {
+                    statusClass += ' status-trash';
+                    statusLabel = 'Trash';
                 }
             }
             
@@ -471,15 +480,15 @@ jQuery(function($) {
         }
 
         const rows = orgs.map(org => {
-            const statusLabel = org.status_label || '—';
+            let statusLabel = org.status_label || '—';
             const lastInvoiced = org.last_invoiced || '—';
             
-            // Check if email is empty OR if both address fields don't exist
-            const hasEmail = org.contact_email && org.contact_email.trim() !== '';
+            // Check if admin email exists
+            const hasEmail = org.admin_email && org.admin_email.trim() !== '';
             const hasAddress = (org.address_line1 && org.address_line1.trim() !== '') || 
                               (org.address_line2 && org.address_line2.trim() !== '');
             
-            // Disable if no email/address OR if org already has completed order for this year
+            // Disable if no admin email/address OR if org already has completed order for this year
             const shouldDisable = !hasEmail || !hasAddress || org.has_processing_order;
             
             // Add status badge styling
@@ -499,6 +508,10 @@ jQuery(function($) {
                     statusClass += ' status-cancelled';
                     isCancelled = true;
                 }
+                else if (cleanStatus === 'trash') {
+                    statusClass += ' status-trash';
+                    statusLabel = 'Trash';
+                }
             }
             
             // Make cancelled badge clickable if order_id exists
@@ -514,7 +527,7 @@ jQuery(function($) {
             
             return '<tr>' +
                 '<td><strong>' + (org.organisation_name || '—') + '</strong></td>' +
-                '<td>' + (org.contact_email || '—') + '</td>' +
+                '<td>' + (org.admin_email || '—') + '</td>' +
                 '<td>' + org.member_count + '</td>' +
                 '<td>' + formatCurrency(org.total_fees) + '</td>' +
                 '<td>' + statusBadge + '</td>' +
@@ -775,6 +788,8 @@ jQuery(function($) {
 
     // Render orders table
     function renderOrdersTable(orders) {
+        const adminUrl = '<?php echo admin_url("admin.php?page=wc-orders&action=edit&id="); ?>';
+        
         const rows = orders.map(order => {
             const date = new Date(order.date_created_gmt);
             const formattedDate = date.toLocaleDateString('en-GB', {
@@ -793,16 +808,21 @@ jQuery(function($) {
                 statusClass += ' status-pending';
             } else if (order.status.includes('cancelled')) {
                 statusClass += ' status-cancelled';
+            } else if (order.status.includes('trash')) {
+                statusClass += ' status-trash';
             }
 
             const statusLabel = order.status.replace('wc-', '').replace('-', ' ').toUpperCase();
-
+            
             return '<tr>' +
                 '<td><strong>#' + order.id + '</strong></td>' +
                 '<td>' + formattedDate + '</td>' +
                 '<td><strong>' + formatCurrency(order.total_amount) + '</strong></td>' +
                 '<td><span class="' + statusClass + '">' + statusLabel + '</span></td>' +
                 '<td>' +
+                    '<a href="' + adminUrl + order.id + '" class="btn-order-link" title="View Order in WooCommerce" target="_blank">' +
+                        '<i class="fas fa-link"></i>' +
+                    '</a>' +
                     '<button class="btn-resend-email" data-order-id="' + order.id + '" title="Resend Invoice Email">' +
                         '<i class="fas fa-envelope"></i>' +
                     '</button>' +
@@ -1358,6 +1378,13 @@ jQuery(function($) {
     color: #991b1b;
 }
 
+.status-trash {
+    background: #f3f4f6;
+    color: #6b7280;
+    text-decoration: line-through;
+    opacity: 0.7;
+}
+
 /* Clickable Status Badge */
 .clickable-status {
     transition: all 0.2s ease;
@@ -1463,6 +1490,59 @@ jQuery(function($) {
 }
 
 .btn-resend-email i {
+    color: white !important;
+}
+
+/* WooCommerce Orders Link Button */
+.btn-wc-orders-link {
+    background: rgba(255, 255, 255, 0.2);
+    color: white !important;
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    padding: 10px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(10px);
+}
+
+.btn-wc-orders-link:hover {
+    background: rgba(255, 255, 255, 0.95);
+    color: #7c3aed !important;
+    border-color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 255, 255, 0.3);
+}
+
+.btn-wc-orders-link i {
+    color: inherit !important;
+}
+
+/* Order Link Button in Modal */
+.btn-order-link {
+    background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+    color: white !important;
+    border: none;
+    padding: 6px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    text-decoration: none;
+    display: inline-block;
+    margin-right: 8px;
+    transition: all 0.2s ease;
+}
+
+.btn-order-link:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+}
+
+.btn-order-link i {
     color: white !important;
 }
 </style>

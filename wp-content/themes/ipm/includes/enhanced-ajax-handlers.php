@@ -57,11 +57,12 @@ function iipm_get_admin_dashboard_data() {
     }
     
     $user_id = get_current_user_id();
+    $current_user = wp_get_current_user();
     
     global $wpdb;
     $organisation = $wpdb->get_row($wpdb->prepare(
-        "SELECT * FROM {$wpdb->prefix}test_iipm_organisations WHERE admin_user_id = %d",
-        $user_id
+        "SELECT * FROM {$wpdb->prefix}test_iipm_organisations WHERE admin_email = %s AND admin_name IS NOT NULL AND admin_email IS NOT NULL",
+        $current_user->user_email
     ));
     
     if (!$organisation) {
@@ -132,12 +133,15 @@ function iipm_quick_organisation_setup() {
     
     global $wpdb;
     
-    // Update organisation with admin user ID
+    // Update organisation with admin name and email
+    $admin_name = $user->display_name;
+    $admin_email = $user->user_email;
+    
     $result = $wpdb->update(
         $wpdb->prefix . 'test_iipm_organisations',
-        array('admin_user_id' => $user->ID, 'updated_at' => current_time('mysql')),
+        array('admin_name' => $admin_name, 'admin_email' => $admin_email, 'updated_at' => current_time('mysql')),
         array('id' => $org_id),
-        array('%d', '%s'),
+        array('%s', '%s', '%s'),
         array('%d')
     );
     

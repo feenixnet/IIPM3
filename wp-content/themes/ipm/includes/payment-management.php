@@ -28,7 +28,8 @@ function iipm_pm_get_order_statuses() {
 		'wc-completed'  => __('Completed', 'iipm'),
 		'wc-cancelled'  => __('Cancelled', 'iipm'),
 		'wc-refunded'   => __('Refunded', 'iipm'),
-		'wc-failed'     => __('Failed', 'iipm')
+		'wc-failed'     => __('Failed', 'iipm'),
+		'wc-trash'      => __('Trash', 'iipm')
 	);
 }
 
@@ -431,7 +432,7 @@ function iipm_get_payment_organizations() {
 	$params = array();
 
 	if (!empty($search)) {
-		$where_clauses[] = "(org.name LIKE %s OR org.contact_email LIKE %s)";
+		$where_clauses[] = "(org.name LIKE %s OR org.admin_email LIKE %s)";
 		$like = '%' . $wpdb->esc_like($search) . '%';
 		$params[] = $like;
 		$params[] = $like;
@@ -449,7 +450,7 @@ function iipm_get_payment_organizations() {
 
 	$orgs_sql = "
 		SELECT org.id, org.name, org.contact_email, org.contact_phone,
-			   org.address_line1, org.address_line2, org.admin_user_id
+			   org.address_line1, org.address_line2, org.admin_name, org.admin_email
 		FROM {$wpdb->prefix}test_iipm_organisations org
 		{$where_sql}
 		ORDER BY org.name ASC
@@ -564,17 +565,18 @@ function iipm_get_payment_organizations() {
 
 		$organizations[] = array(
 			'id' => intval($row->id),
-			'organisation_name' => $row->name ?? '',
-			'contact_email' => $row->contact_email ?? '',
-			'contact_phone' => $row->contact_phone ?? '',
-			'address_line1' => $row->address_line1 ?? '',
-			'address_line2' => $row->address_line2 ?? '',
-			'admin_user_id' => intval($row->admin_user_id),
-			'member_count' => intval($member_count),
-			'total_fees' => floatval($total_fees),
-			'order_status' => $order_status,
-			'status_label' => $status_label,
-			'order_id' => $order_id,
+		'organisation_name' => $row->name ?? '',
+		'contact_email' => $row->contact_email ?? '',
+		'contact_phone' => $row->contact_phone ?? '',
+		'address_line1' => $row->address_line1 ?? '',
+		'address_line2' => $row->address_line2 ?? '',
+		'admin_name' => $row->admin_name ?? '',
+		'admin_email' => $row->admin_email ?? '',
+		'member_count' => intval($member_count),
+		'total_fees' => floatval($total_fees),
+		'order_status' => $order_status,
+		'status_label' => $status_label,
+		'order_id' => $order_id,
 			'last_invoiced' => $last_invoiced,
 			'has_processing_order' => $has_processing_order
 		);
@@ -681,7 +683,7 @@ function iipm_send_payment_invoice() {
 	if ($is_organization) {
 		// Handle organization invoice
 		$org = $wpdb->get_row($wpdb->prepare(
-			"SELECT id, name, contact_email, contact_phone, address_line1, address_line2, admin_user_id FROM {$wpdb->prefix}test_iipm_organisations WHERE id = %d",
+			"SELECT id, name, contact_email, contact_phone, address_line1, address_line2, admin_name, admin_email FROM {$wpdb->prefix}test_iipm_organisations WHERE id = %d",
 			$org_id
 		));
 
@@ -1334,7 +1336,7 @@ function iipm_check_user_org_payment($user_id) {
 	global $wpdb;
 	
 	$org = $wpdb->get_row($wpdb->prepare(
-		"SELECT org.id, org.name, org.contact_email, org.admin_user_id
+		"SELECT org.id, org.name, org.contact_email, org.admin_name, org.admin_email
 		FROM {$wpdb->prefix}test_iipm_organisations org
 		INNER JOIN {$wpdb->prefix}test_iipm_member_profiles mp ON mp.employer_id = org.id
 		WHERE mp.user_id = %d

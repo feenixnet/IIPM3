@@ -144,6 +144,13 @@ $user_org_payment = iipm_check_user_org_payment($user_id);
     color: #991b1b;
 }
 
+.status-trash {
+    background: #f3f4f6;
+    color: #6b7280;
+    text-decoration: line-through;
+    opacity: 0.7;
+}
+
 .download-link {
     color: #7c3aed;
     text-decoration: none;
@@ -333,6 +340,9 @@ jQuery(document).ready(function($) {
             } else if (order.status.includes('cancelled')) {
                 statusClass = 'status-cancelled';
                 statusLabel = 'Cancelled';
+            } else if (order.status.includes('trash')) {
+                statusClass = 'status-trash';
+                statusLabel = 'Trash';
             }
             
             // Action buttons

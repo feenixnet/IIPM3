@@ -35,11 +35,11 @@ CacheKeyModify -qs:_ga
 <IfModule mod_rewrite.c>
 RewriteEngine On
 RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
-RewriteBase /new-iipm/
+RewriteBase /
 RewriteRule ^index\.php$ - [L]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule . /new-iipm/index.php [L]
+RewriteRule . /index.php [L]
 
 # Protect wp-import-export-lite uploads
 RewriteCond %{REQUEST_FILENAME} -s
@@ -50,3 +50,4 @@ RewriteRule wp-content/uploads/wp-import-export-lite(\/[A-Za-z0-9_@.\/&+-]+)+\.(
 </IfModule>
 
 # END WordPress
+

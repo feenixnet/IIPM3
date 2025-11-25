@@ -633,14 +633,15 @@ function iipm_create_enhanced_tables() {
 		county varchar(100) NULL,
 		eircode varchar(20) NULL,
 		country varchar(100) DEFAULT 'Ireland',
-		admin_user_id bigint(20) NULL,
+		admin_name varchar(255) NULL,
+		admin_email varchar(255) NULL,
 		billing_contact varchar(255) NULL,
 		payment_method enum('invoice','card','bank_transfer') DEFAULT 'invoice',
 		is_active tinyint(1) DEFAULT 1,
 		created_at timestamp DEFAULT CURRENT_TIMESTAMP,
 		updated_at timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 		PRIMARY KEY (id),
-		KEY admin_user_id (admin_user_id),
+		KEY admin_email (admin_email),
 		KEY name (name)
 	) $charset_collate;";
 
@@ -963,15 +964,19 @@ function iipm_is_organisation_admin($user_id = null) {
     
     // Check if user has the corporate admin role
     $user = get_user_by('id', $user_id);
-    if ($user && in_array('iipm_corporate_admin', $user->roles)) {
+    if (!$user) {
+        return false;
+    }
+    
+    if (in_array('iipm_corporate_admin', $user->roles)) {
         return true;
     }
     
-    // Check if user is set as admin_user_id in any organization
+    // Check if user's email is set as admin_email in any organization
     global $wpdb;
     $org = $wpdb->get_row($wpdb->prepare(
-        "SELECT id FROM {$wpdb->prefix}test_iipm_organisations WHERE admin_user_id = %d",
-        $user_id
+        "SELECT id FROM {$wpdb->prefix}test_iipm_organisations WHERE admin_email = %s AND admin_name IS NOT NULL AND admin_email IS NOT NULL",
+        $user->user_email
     ));
     
     return !empty($org);
@@ -3998,9 +4003,10 @@ function iipm_load_invitations() {
     // Build query based on user permissions
     if ($is_org_admin && !$is_site_admin) {
         // Get the organization ID for org admin
+        $current_user = wp_get_current_user();
         $user_org = $wpdb->get_row($wpdb->prepare(
-            "SELECT * FROM {$wpdb->prefix}test_iipm_organisations WHERE admin_user_id = %d",
-            $current_user_id
+            "SELECT * FROM {$wpdb->prefix}test_iipm_organisations WHERE admin_email = %s AND admin_name IS NOT NULL AND admin_email IS NOT NULL",
+            $current_user->user_email
         ));
         
         if (!$user_org) {
@@ -4094,9 +4100,10 @@ function iipm_send_individual_invitation_enhanced() {
         global $wpdb;
         
         // First try to get organization where user is admin
+        $current_user = wp_get_current_user();
         $user_org = $wpdb->get_row($wpdb->prepare(
-            "SELECT * FROM {$wpdb->prefix}test_iipm_organisations WHERE admin_user_id = %d",
-            $current_user_id
+            "SELECT * FROM {$wpdb->prefix}test_iipm_organisations WHERE admin_email = %s AND admin_name IS NOT NULL AND admin_email IS NOT NULL",
+            $current_user->user_email
         ));
         
         // If not found, try to get organization where user is a member
@@ -6115,100 +6122,10 @@ function iipm_handle_save_organisation() {
 }
 add_action('wp_ajax_iipm_save_organisation', 'iipm_handle_save_organisation');
 
-// AJAX handler for setup organisation admin
-function iipm_handle_setup_organisation_admin() {
-    // Verify nonce
-    if (!wp_verify_nonce($_POST['nonce'], 'iipm_setup_admin_nonce')) {
-        wp_send_json_error('Security check failed');
-        return;
-    }
-    
-    // Check permissions
-    if (!current_user_can('manage_iipm_members') && !current_user_can('administrator')) {
-        wp_send_json_error('Insufficient permissions');
-        return;
-    }
-    
-    $org_id = intval($_POST['org_id']);
-    $admin_email = sanitize_email($_POST['admin_email']);
-    $admin_name = sanitize_text_field($_POST['admin_name']);
-    $send_invitation = isset($_POST['send_invitation']);
-    
-    if (empty($admin_email)) {
-        wp_send_json_error('Administrator email is required');
-        return;
-    }
-    
-    // Check if user already exists
-    $existing_user = get_user_by('email', $admin_email);
-    
-    if ($existing_user) {
-        // User exists, assign as admin
-        global $wpdb;
-        $table_name = $wpdb->prefix . 'test_iipm_organisations';
-        
-        $result = $wpdb->update(
-            $table_name,
-            array('admin_user_id' => $existing_user->ID),
-            array('id' => $org_id)
-        );
-        
-        if ($result !== false) {
-            wp_send_json_success('Administrator assigned successfully');
-        } else {
-            wp_send_json_error('Failed to assign administrator');
-        }
-    } else {
-        // Send invitation
-        $result = iipm_send_invitation($admin_email, 'organisation_admin', $org_id);
-        
-        if ($result['success']) {
-            wp_send_json_success('Invitation sent successfully');
-        } else {
-            wp_send_json_error($result['error']);
-        }
-    }
-}
-add_action('wp_ajax_iipm_setup_organisation_admin', 'iipm_handle_setup_organisation_admin');
+// NOTE: This function is deprecated and replaced by the one in organisation-management-handlers.php
+// Keeping it here temporarily for backward compatibility
 
-// AJAX handler for direct admin assignment
-function iipm_handle_direct_admin_assignment() {
-    // Verify nonce
-    if (!wp_verify_nonce($_POST['nonce'], 'iipm_portal_nonce')) {
-        wp_send_json_error('Security check failed');
-        return;
-    }
-    
-    // Check permissions
-    if (!current_user_can('manage_iipm_members') && !current_user_can('administrator')) {
-        wp_send_json_error('Insufficient permissions');
-        return;
-    }
-    
-    $org_id = intval($_POST['org_id']);
-    $user_id = intval($_POST['user_id']);
-    
-    if (empty($org_id) || empty($user_id)) {
-        wp_send_json_error('Organisation ID and User ID are required');
-        return;
-    }
-    
-    global $wpdb;
-    $table_name = $wpdb->prefix . 'test_iipm_organisations';
-    
-    $result = $wpdb->update(
-        $table_name,
-        array('admin_user_id' => $user_id),
-        array('id' => $org_id)
-    );
-    
-    if ($result !== false) {
-        wp_send_json_success('Administrator assigned successfully');
-    } else {
-        wp_send_json_error('Failed to assign administrator');
-    }
-}
-add_action('wp_ajax_iipm_direct_admin_assignment', 'iipm_handle_direct_admin_assignment');
+// NOTE: Direct admin assignment function removed - feature deprecated
 
 // AJAX handler for deactivating organisation
 function iipm_handle_deactivate_organisation() {
@@ -6632,6 +6549,9 @@ add_action('wp_ajax_iipm_delete_course_v1', 'iipm_handle_delete_course_v1');
 require_once get_template_directory() . '/includes/cpd-certificate-functions.php';
 require_once get_template_directory() . '/includes/cpd-submission-functions.php';
 require_once get_template_directory() . '/includes/payment-management.php';
+
+// Database migration script (for admin_user_id to admin_name/admin_email)
+require_once get_template_directory() . '/includes/migrate-admin-fields.php';
 
 // Include qualification handlers
 require_once get_template_directory() . '/includes/qualification-handlers.php';
