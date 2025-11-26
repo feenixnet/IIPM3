@@ -3099,6 +3099,7 @@ jQuery(document).ready(function($) {
             course_category: $('#course-category').val(),
             course_provider: $('#course-provider').val(),
             course_cpd_mins: $('#course-duration').val(),
+            is_duplicate: $('#duplicate-course').prop('checked') ? 1 : 0,
             course_date: formattedDate,
             nonce: iipm_ajax.nonce
         };

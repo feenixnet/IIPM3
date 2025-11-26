@@ -219,6 +219,22 @@ function iipm_ajax_submit_course_request() {
         wp_send_json_error('At least one category is required');
     }
 
+    // Check for duplicate LIA_Code with different course name
+    if (!empty($lia_code)) {
+        $courses_table = $wpdb->prefix . 'coursesbyadminbku';
+        $existing_course = $wpdb->get_row($wpdb->prepare(
+            "SELECT course_name FROM {$courses_table} WHERE LIA_Code = %s LIMIT 1",
+            $lia_code
+        ));
+        
+        // If course exists with same LIA_Code but different name, reject
+        if ($existing_course && $existing_course->course_name !== $course_name) {
+            wp_send_json_error('This LIA Code already exists with a different course name. Please use a different LIA Code.');
+        }
+        
+        // If course exists with same name, it's a duplicate (multiple categories) - allow
+    }
+
     // Convert hours to minutes (rounded to 0.5h)
     $course_cpd_hours = round($course_cpd_hours * 2) / 2;
     $course_cpd_mins = (int) round($course_cpd_hours * 60);
@@ -1130,6 +1146,23 @@ function iipm_ajax_add_course() {
         return;
     }
     
+    // Check if this is duplicate mode (from frontend)
+    $is_duplicate_mode = isset($_POST['is_duplicate']) && $_POST['is_duplicate'] == 1;
+    
+    // Check for duplicate LIA_Code before adding (skip in duplicate mode)
+    if (!$is_duplicate_mode && !empty($course_data['LIA_Code'])) {
+        $table_name = $wpdb->prefix . 'coursesbyadminbku';
+        $existing_course = $wpdb->get_var($wpdb->prepare(
+            "SELECT id FROM {$table_name} WHERE LIA_Code = %s",
+            $course_data['LIA_Code']
+        ));
+        
+        if ($existing_course) {
+            wp_send_json_error('This LIA Code already exists. Please use a different LIA Code.');
+            return;
+        }
+    }
+    
     $result = iipm_add_course_management($course_data);
     
     if ($result) {
@@ -1144,6 +1177,7 @@ function iipm_ajax_add_course() {
  */
 function iipm_ajax_update_course() {
     // Check if user is admin
+    global $wpdb;
     if (!current_user_can('administrator')) {
         wp_send_json_error('Unauthorized access');
         return;
@@ -1177,6 +1211,42 @@ function iipm_ajax_update_course() {
         empty($course_data['provider']) || empty($course_data['duration'])) {
         wp_send_json_error('Required fields are missing');
         return;
+    }
+    
+    // Check for duplicate LIA_Code before updating (exclude current course)
+    if (!empty($course_data['LIA_Code'])) {
+        $table_name = $wpdb->prefix . 'coursesbyadminbku';
+        
+        // Get current course details
+        $current_course = $wpdb->get_row($wpdb->prepare(
+            "SELECT course_name, course_date FROM {$table_name} WHERE id = %d",
+            $course_id
+        ));
+        
+        // Find other courses with the same LIA_Code
+        $existing_courses = $wpdb->get_results($wpdb->prepare(
+            "SELECT id, course_name FROM {$table_name} WHERE LIA_Code = %s AND id != %d",
+            $course_data['LIA_Code'],
+            $course_id
+        ));
+        
+        if ($existing_courses) {
+            // Check if any existing course has different name or date
+            $is_duplicate_group = false;
+            foreach ($existing_courses as $existing) {
+                // If name and date match, they were created together (duplicate mode)
+                if ($existing->course_name === $current_course->course_name) {
+                    $is_duplicate_group = true;
+                    break;
+                }
+            }
+            
+            // If not part of duplicate group, reject the update
+            if (!$is_duplicate_group) {
+                wp_send_json_error('This LIA Code already exists. Please use a different LIA Code.');
+                return;
+            }
+        }
     }
     
     $result = iipm_update_course_management($course_id, $course_data);
