@@ -68,9 +68,8 @@ if ($is_admin) {
 // Include the CPD courses API
 require_once get_template_directory() . '/includes/cpd-courses-api.php';
 
-// Check logging period status from URL parameter
-$logging_available = isset($_GET['logging_available']) ? (int)$_GET['logging_available'] : 1;
-$is_logging_period_active = ($logging_available === 1);
+// Always allow logging on the CPD courses page (no logging period toggle)
+$is_logging_period_active = true;
 
 // Check if CPD is already submitted for current year
 global $wpdb;
@@ -107,21 +106,6 @@ get_header();
         </div>
 
         <div>
-            <?php if (!$is_logging_period_active): ?>
-            <!-- Logging Period Closed Banner -->
-            <div class="logging-period-banner">
-                <div class="banner-content">
-                    <div class="banner-icon">
-                        <i class="fas fa-lock"></i>
-                    </div>
-                    <div class="banner-text">
-                        <h3>Logging Period Closed</h3>
-                        <p>Course logging is currently disabled. You cannot add new courses to your learning path at this time.</p>
-                    </div>
-                </div>
-            </div>
-            <?php endif; ?>
-            
             <div class="cpd-courses-layout">
                 <!-- Left Sidebar -->
                 <div class="cpd-sidebar">

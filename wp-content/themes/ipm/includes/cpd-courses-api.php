@@ -158,6 +158,7 @@ function iipm_ajax_submit_course_request() {
     $membership_level = sanitize_text_field($_POST['membership_level'] ?? '');
     $organisation = sanitize_text_field($_POST['organisation'] ?? '');
     $course_name = sanitize_text_field($_POST['course_name'] ?? '');
+    $crs_provider = sanitize_text_field($_POST['crs_provider'] ?? '');
     
     // Get selected categories data
     $selected_categories_data = isset($_POST['selected_categories_data']) ? json_decode(stripslashes($_POST['selected_categories_data']), true) : [];
@@ -177,6 +178,9 @@ function iipm_ajax_submit_course_request() {
 
     if (empty($course_name)) {
         wp_send_json_error('Course title is required');
+    }
+    if (empty($crs_provider)) {
+        wp_send_json_error('Course provider is required');
     }
 
     // Check if we have categories (new multi-select) or old single select
@@ -260,12 +264,17 @@ function iipm_ajax_submit_course_request() {
             'created_at' => current_time('mysql'),
             'course_id' => iipm_generate_course_id(),
             'user_id' => get_current_user_id() ?: 0,
+            'crs_provider' => $crs_provider,
         );
 
-        $result = $wpdb->insert($table_requests, $insert_data);
-        if ($result !== false) {
-            $inserted_count++;
-        } else {
+        try {
+            $result = $wpdb->insert($table_requests, $insert_data);
+            if ($result !== false) {
+                $inserted_count++;
+            } else {
+                $error_messages[] = "Failed to submit for category: {$category['name']}";
+            }
+        } catch (Exception $e) {
             $error_messages[] = "Failed to submit for category: {$category['name']}";
         }
     }
@@ -368,8 +377,8 @@ function iipm_ajax_approve_course_request() {
     // Insert into coursesbyadminbku as user-originated course (is_by_admin = 0)
     $courses_table = $wpdb->prefix . 'coursesbyadminbku';
     
-    // Build full name from requester
-    $provider_name = trim($request->first_name . ' ' . $request->sur_name);
+    // Use submitted course provider; fallback to requester name
+    $provider_name = !empty($request->crs_provider) ? $request->crs_provider : trim($request->first_name . ' ' . $request->sur_name);
     if (empty($provider_name)) {
         $provider_name = 'external';
     }
@@ -612,9 +621,14 @@ function iipm_ajax_update_course_request() {
     $course_date = sanitize_text_field($_POST['course_date'] ?? '');
     $course_cpd_hours = floatval($_POST['course_cpd_hours'] ?? 0);
     $course_category_id = intval($_POST['course_category'] ?? 0);
+    $crs_provider = sanitize_text_field($_POST['crs_provider'] ?? '');
     
     if (empty($course_name)) {
         wp_send_json_error('Course name is required');
+    }
+    
+    if (empty($crs_provider)) {
+        wp_send_json_error('Course provider is required');
     }
     
     if ($course_cpd_hours <= 0) {
@@ -652,14 +666,15 @@ function iipm_ajax_update_course_request() {
         'course_category' => $course_category_name,
         'LIA_Code' => $lia_code,
         'course_cpd_mins' => $course_cpd_mins,
-        'course_date' => $course_date ?: date('d/m/Y')
+        'course_date' => $course_date ?: date('d/m/Y'),
+        'crs_provider' => $crs_provider
     );
     
     $result = $wpdb->update(
         $table,
         $update_data,
         array('id' => $request_id),
-        array('%s', '%s', '%s', '%d', '%s'),
+        array('%s', '%s', '%s', '%d', '%s', '%s'),
         array('%d')
     );
     

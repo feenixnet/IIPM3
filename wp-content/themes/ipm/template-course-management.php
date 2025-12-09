@@ -240,9 +240,8 @@ if (!function_exists('add_success_notification')) {
                     <table class="courses-table requests-table" id="requests-table">
                         <thead>
                             <tr>
-                                <th>First Name</th>
-                                <th>Surname</th>
-                                <th>Email</th>
+                                <th>Requester</th>
+                                <th>Provider</th>
                                 <th>Info</th>
                                 <th>Course</th>
                                 <th>Category</th>
@@ -254,7 +253,7 @@ if (!function_exists('add_success_notification')) {
                         </thead>
                         <tbody id="requests-table-body">
                             <tr>
-                                <td colspan="10" style="text-align: center; padding: 40px;">
+                                <td colspan="9" style="text-align: center; padding: 40px;">
                                     <div class="loading-spinner"></div>
                                     <p style="margin-top: 15px; color: #6b7280;">Loading requests...</p>
                                 </td>
@@ -568,6 +567,11 @@ if (!function_exists('add_success_notification')) {
                 <div class="form-group">
                     <label for="edit-course-name">Course Name *</label>
                     <input type="text" id="edit-course-name" class="form-control" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="edit-course-provider">Provider *</label>
+                    <input type="text" id="edit-course-provider" class="form-control" required>
                 </div>
                 
                 <div class="form-group">
@@ -2319,11 +2323,11 @@ jQuery(document).ready(function($) {
                 per_page: 10 
             },
             beforeSend: function() {
-                $('#requests-table-body').html('<tr><td colspan="10" style="text-align:center; padding:40px;"><div class="loading-spinner"></div><p style="margin-top:15px; color:#6b7280;">Loading requests...</p></td></tr>');
+                $('#requests-table-body').html('<tr><td colspan="9" style="text-align:center; padding:40px;"><div class="loading-spinner"></div><p style="margin-top:15px; color:#6b7280;">Loading requests...</p></td></tr>');
             },
             success: function(res){
                 if(!res.success){ 
-                    $('#requests-table-body').html('<tr><td colspan="10" style="text-align:center; padding:20px; color:#ef4444;">Failed to load requests</td></tr>');
+                    $('#requests-table-body').html('<tr><td colspan="9" style="text-align:center; padding:20px; color:#ef4444;">Failed to load requests</td></tr>');
                     return; 
                 }
                 const data = res.data;
@@ -2367,7 +2371,7 @@ jQuery(document).ready(function($) {
         const $tbody = $('#requests-table-body');
         $tbody.empty();
         if (!rows.length){
-            $tbody.html('<tr><td colspan="10" style="text-align:center; padding:40px;"><i class="fas fa-inbox" style="font-size:48px; color:#d1d5db; margin-bottom:15px;"></i><p style="color:#6b7280; margin:0;">No requests found</p></td></tr>');
+            $tbody.html('<tr><td colspan="9" style="text-align:center; padding:40px;"><i class="fas fa-inbox" style="font-size:48px; color:#d1d5db; margin-bottom:15px;"></i><p style="color:#6b7280; margin:0;">No requests found</p></td></tr>');
             return;
         }
         rows.forEach(function(r){
@@ -2388,9 +2392,13 @@ jQuery(document).ready(function($) {
             
             const tr = $(`
                 <tr>
-                    <td>${escapeHtml(r.first_name||'')}</td>
-                    <td>${escapeHtml(r.sur_name||'')}</td>
-                    <td>${escapeHtml(r.email_address||'')}</td>
+                    <td>
+                        <div style="display:flex; flex-direction:column; gap:4px;">
+                            <span style="font-weight:600; color:#111827;">${escapeHtml([r.first_name, r.sur_name].filter(Boolean).join(' ') || '')}</span>
+                            <span style="color:#6b7280; font-size:12px;">${escapeHtml(r.email_address||'')}</span>
+                        </div>
+                    </td>
+                    <td>${escapeHtml(r.crs_provider||'')}</td>
                     <td>${infoBtn}</td>
                     <td>${escapeHtml(r.course_name||'')}</td>
                     <td>${escapeHtml(r.course_category||'')}</td>
@@ -2543,6 +2551,7 @@ jQuery(document).ready(function($) {
         // Populate form fields
         $('#edit-request-id').val(request.id);
         $('#edit-course-name').val(request.course_name || '');
+        $('#edit-course-provider').val(request.crs_provider || '');
         $('#edit-lia-code').val(request.LIA_Code || '');
         $('#edit-course-hours').val((parseFloat(request.course_cpd_mins || 0) / 60).toFixed(1));
         
@@ -2584,6 +2593,7 @@ jQuery(document).ready(function($) {
     $('#edit-request-save').on('click', function(){
         const id = $('#edit-request-id').val();
         const courseName = $('#edit-course-name').val().trim();
+        const courseProvider = $('#edit-course-provider').val().trim();
         const categoryId = $('#edit-course-category').val();
         const liaCode = $('#edit-lia-code').val().trim();
         const courseDate = $('#edit-course-date').val();
@@ -2591,6 +2601,11 @@ jQuery(document).ready(function($) {
         
         if (!courseName) {
             notifications && notifications.error ? notifications.error('Validation Error', 'Course name is required') : alert('Course name is required');
+            return;
+        }
+
+        if (!courseProvider) {
+            notifications && notifications.error ? notifications.error('Validation Error', 'Course provider is required') : alert('Course provider is required');
             return;
         }
         
@@ -2613,6 +2628,7 @@ jQuery(document).ready(function($) {
             action: 'iipm_update_course_request',
             request_id: id,
             course_name: courseName,
+            crs_provider: courseProvider,
             course_category: categoryId,
             lia_code: liaCode,
             course_date: courseDate,
@@ -2933,7 +2949,7 @@ jQuery(document).ready(function($) {
                             <span><strong>Category:</strong> ${categoryName}</span>
                             <span><strong>Provider:</strong> ${course.crs_provider}</span>
                             <span><strong>Date:</strong> ${formatCourseDate(course.course_date)}</span>
-                            <span><strong>Duration:</strong> ${course.course_cpd_mins} hours</span>
+                            <span><strong>Duration:</strong> ${course.course_cpd_mins} hrs</span>
                         </div>
                     </div>
                     <div class="course-actions">
@@ -2961,7 +2977,7 @@ jQuery(document).ready(function($) {
                     <td>${categoryName}</td>
                     <td>${course.crs_provider}</td>
                     <td>${formatCourseDate(course.course_date)}</td>
-                    <td>${course.course_cpd_mins} mins</td>
+                    <td>${course.course_cpd_mins} hrs</td>
                     <td>
                         <div class="table-actions">
                             <button class="btn btn-outline edit-course" data-course-id="${course.id}">

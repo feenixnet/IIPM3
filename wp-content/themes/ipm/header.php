@@ -88,18 +88,28 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 				
 				/* Mobile Menu Styles */
 				@media (max-width: 768px) {
-					.mobile-menu {
-						display: block;
+					/* Hide legacy white slide-out menu */
+					.mobile-menu,
+					.mobile-menu-header {
+						display: none !important;
 					}
 				}
 				
 				@media (min-width: 769px) {
 					.mobile-menu {
-						display: none;
+						display: none !important;
 					}
 					.overlay {
 						display: none;
 					}
+				}
+
+				/* Fully disable the overlay (no dimming above the menu bar) */
+				.overlay {
+					display: none !important;
+					visibility: hidden !important;
+					opacity: 0 !important;
+					pointer-events: none !important;
 				}
 				
 				/* Header wrapper transition for smooth height changes */
@@ -183,6 +193,30 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 					justify-content: center !important;
 					padding: 12px 16px !important;
 					margin-bottom: 8px !important;
+				}
+
+				/* Mobile menu: keep desktop look, center items horizontally */
+				@media (max-width: 767px) {
+					.header.open .header__menu ul {
+						display: flex !important;
+						flex-direction: column !important;
+						align-items: center !important;
+						justify-content: center !important;
+						gap: 14px !important;
+					}
+
+					.header.open .header__menu ul li {
+						width: auto !important;
+						margin-bottom: 0 !important;
+						text-align: center !important;
+					}
+
+					.header.open .header__menu ul li a {
+						text-align: center !important;
+						display: inline-flex !important;
+						align-items: center !important;
+						justify-content: center !important;
+					}
 				}
 				
 				/* Ensure no conflicting styles */

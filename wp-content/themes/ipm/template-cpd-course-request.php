@@ -97,6 +97,12 @@ get_header();
                         <input type="text" id="course_name" name="course_name" placeholder="Enter course title" required>
                     </div>
 
+                    <!-- Course provider (required) -->
+                    <div class="form-group">
+                        <label for="crs_provider">Course Provider <span class="required-asterisk">*</span></label>
+                        <input type="text" id="crs_provider" name="crs_provider" placeholder="Enter course provider" required>
+                    </div>
+
                     <!-- Seventh row: Course code -->
                     <div class="form-group">
                         <label for="LIA_Code">Course Code</label>
@@ -120,8 +126,8 @@ get_header();
                             <input type="checkbox" id="declaration_agree" name="declaration_agree" required>
                             <p>
                                 I understand and accept that any CPD credit awarded for the above event/training programme will be based on the information I have submitted in relation to the duration of the presentation(s) and the content. Should either of these criteria change at any stage 
-                                (e.g. presentations are shortened, content is altered, refreshment breaks incorporated etc.), I will advise IOB and re-apply for CPD credit. I also understand and accept that IOB will not stand over CPD hours awarded, where such changes have occurred after the 
-                                award was given, and that IOB reserves the right to refuse CPD claims made by individuals attending an event that has been subject to such changes. We may disclose information about events to our trusted education partners and/or their representatives e.g. LIA, 
+                                (e.g. presentations are shortened, content is altered, refreshment breaks incorporated etc.), I will advise IIPM and re-apply for CPD credit. I also understand and accept that IIPM will not stand over CPD hours awarded, where such changes have occurred after the 
+                                award was given, and that IIPM reserves the right to refuse CPD claims made by individuals attending an event that has been subject to such changes. We may disclose information about events to our trusted education partners and/or their representatives e.g. LIA, 
                                 Insurance Institute, Compliance Institute etc. for joint accreditation or relevancy of event purposes.
                             </p>
                         </div>
@@ -404,6 +410,7 @@ document.addEventListener('DOMContentLoaded', function() {
             first_name: (document.getElementById('first_name')?.value || '').trim(),
             sur_name: (document.getElementById('sur_name')?.value || '').trim(),
             organisation: (document.getElementById('organisation')?.value || document.getElementById('organization')?.value || '').trim(),
+            crs_provider: (document.getElementById('crs_provider')?.value || '').trim(),
             selected_categories_data: document.getElementById('selected_categories_data')?.value,
             course_name: (document.getElementById('course_name')?.value || document.getElementById('course_title')?.value || '').trim(),
             LIA_Code: (document.getElementById('LIA_Code')?.value || document.getElementById('course_code')?.value || '').trim(),
@@ -413,8 +420,8 @@ document.addEventListener('DOMContentLoaded', function() {
         };
 
         // Basic validation for key fields (with notification system)
-        if (!payload.email_address || !payload.course_name || !payload.selected_categories_data) {
-            notifications.error('Missing required fields', 'Please fill in Email Address, Course Category and Course Title.');
+        if (!payload.email_address || !payload.course_name || !payload.selected_categories_data || !payload.crs_provider) {
+            notifications.error('Missing required fields', 'Please fill in Email Address, Course Category, Course Title, and Course Provider.');
             return;
         }
         if (!payload.course_cpd_mins) {

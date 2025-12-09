@@ -66,11 +66,8 @@ if ($member_status === 'active') {
     $is_user_assigned = isset($cpd_stats['is_user_assigned']) ? $cpd_stats['is_user_assigned'] : false;
 }
 
-// Check if logging period is currently active
-$is_logging_period_active = false;
-if ($is_user_assigned && isset($cpd_stats['is_logging_period_available'])) {
-    $is_logging_period_active = $cpd_stats['is_logging_period_available'];
-}
+// Always allow logging actions (logging period not enforced)
+$is_logging_period_active = true;
 
 global $wpdb;
 $is_submitted = false;
@@ -266,15 +263,13 @@ get_header();
                 <div class="cpd-course-card">
                     <h3>My CPD Course</h3>
                     
-                    <button class="btn btn-primary" id="log-training-btn" <?php echo (!$is_logging_period_active || $is_submitted) ? 'disabled' : ''; ?>>
+                    <button class="btn btn-primary" id="log-training-btn" <?php echo $is_submitted ? 'disabled' : ''; ?>>
                         <?php 
                         if ($is_submitted) {
                             echo 'Training Logging Disabled';
-                        } elseif ($is_logging_period_active) {
-                            echo 'Log Training';
                         } else {
-                            echo 'Logging Period Closed';
-                        }
+                            echo 'Log Training';
+                        } 
                         ?>
                     </button>
                     
@@ -343,7 +338,7 @@ get_header();
                         <?php if ($is_submitted): ?>
                             <span class="card-link disabled" style="color: #9ca3af; cursor: not-allowed;">Disabled <i class="fas fa-lock"></i></span>
                         <?php else: ?>
-                            <a href="<?php echo home_url('/cpd-courses/?logging_available=' . ($is_logging_period_active ? '1' : '0')); ?>" class="card-link">Browse courses <i class="fas fa-arrow-right"></i></a>
+                            <a href="<?php echo home_url('/cpd-courses/'); ?>" class="card-link">Browse courses <i class="fas fa-arrow-right"></i></a>
                         <?php endif; ?>
                     </div>
                     
@@ -367,15 +362,13 @@ get_header();
                             <div class="no-training-icon">💻</div>
                             <h4>No training history yet</h4>
                             <p>Start your CPD journey by logging your first training session</p>
-                            <button class="btn btn-primary" id="log-first-training-btn" <?php echo (!$is_logging_period_active || $is_submitted) ? 'disabled' : ''; ?>>
+                            <button class="btn btn-primary" id="log-first-training-btn" <?php echo $is_submitted ? 'disabled' : ''; ?>>
                                 <?php 
                                 if ($is_submitted) {
                                     echo 'Training Logging Disabled';
-                                } elseif ($is_logging_period_active) {
-                                    echo 'Log your first training';
                                 } else {
-                                    echo 'Logging Period Closed';
-                                }
+                                    echo 'Log your first training';
+                                } 
                                 ?>
                             </button>
                         </div>
@@ -2643,21 +2636,9 @@ get_header();
             const submitBtn = document.getElementById('submit-cpd-btn');
             
 
-            const isLoggingPeriod = data.is_logging_period_available;
+            const isLoggingPeriod = true;
             const isSubmissionPeriod = data.is_submission_period_available;
             const isUserAssigned = data.is_user_assigned;
-
-            // If user is not assigned, update logging period info
-            if (!isUserAssigned) {
-                // Update logging period info
-                updateLoggingPeriodInfo(data.cpd_dates);
-                
-                // Show alert if logging period expired
-                if (!isLoggingPeriod) {
-                    showCpdAlert('Logging period has already expired. You are not assigned to this CPD cycle.');
-                }
-                return;
-            }
 
             console.log('CPDACTIONBUTTONS', cpdActionButtons);
             console.log('SUBMITBTN', submitBtn);
@@ -2843,24 +2824,6 @@ get_header();
             const alertDiv = document.createElement('div');
             alertDiv.innerHTML = alertHTML;
             container.insertBefore(alertDiv.firstElementChild, portalLayout);
-        }
-        
-        /**
-         * Update logging period information for unassigned users
-         */
-        function updateLoggingPeriodInfo(cpdDates) {
-            console.log('Updating logging period information:', cpdDates);
-            const loggingPeriodText = document.getElementById('logging-period-text');
-            if (!loggingPeriodText || !cpdDates) return;
-            
-            if (cpdDates.start_logging && cpdDates.end_logging) {
-                const startDate = formatDate(cpdDates.start_logging);
-                const endDate = formatDate(cpdDates.end_logging);
-
-                loggingPeriodText.textContent = `${startDate} - ${endDate}`;
-            } else {
-                loggingPeriodText.textContent = 'Dates not available';
-            }
         }
         
         /**
@@ -3600,9 +3563,8 @@ get_header();
          */
         function selectPreApprovedTraining() {
             hideLogTrainingModal();
-            // Redirect to CPD courses page with logging period status
-            const loggingAvailable = <?php echo $is_logging_period_active ? '1' : '0'; ?>;
-            window.location.href = '<?php echo home_url('/cpd-courses/'); ?>?logging_available=' + loggingAvailable;
+            // Redirect to CPD courses page
+            window.location.href = '<?php echo home_url('/cpd-courses/'); ?>';
         }
         
         /**
