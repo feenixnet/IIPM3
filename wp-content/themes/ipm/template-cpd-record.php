@@ -798,6 +798,28 @@ get_header();
 </style>
 
 <script>
+    /**
+     * Get the current CPD year based on date logic
+     * If current date is before January 31st, return previous year
+     * Otherwise return current year
+     * This matches the PHP function iipm_get_cpd_logging_year()
+     * 
+     * @return {number} The CPD year
+     */
+    function getCpdYear() {
+        const now = new Date();
+        const currentMonth = now.getMonth() + 1; // JavaScript months are 0-indexed
+        const currentDay = now.getDate();
+        const currentYear = now.getFullYear();
+        
+        // If we're in January (month 1) and day is <= 31, use previous year
+        if (currentMonth === 1 && currentDay <= 31) {
+            return currentYear - 1;
+        }
+        
+        return currentYear;
+    }
+    
     // Define ajaxurl for AJAX calls
     var ajaxurl = '<?php echo admin_url('admin-ajax.php'); ?>';
     
@@ -845,7 +867,7 @@ get_header();
          * Load CPD stats from API
          */
         function loadCpdStats() {
-            const selectedYear = yearSelect ? yearSelect.value : new Date().getFullYear();
+            const selectedYear = yearSelect ? yearSelect.value : getCpdYear();
             
             // Show loading
             summaryContent.innerHTML = `

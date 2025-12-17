@@ -9,6 +9,9 @@ if (!current_user_can('manage_iipm_members') && !current_user_can('administrator
     exit;
 }
 
+// Include the CPD record API for CPD year calculation
+require_once get_template_directory() . '/includes/cpd-record-api.php';
+
 get_header();
 ?>
 
@@ -58,8 +61,10 @@ get_header();
                         <select id="submission-year">
                             <option value="">All Years</option>
                             <?php 
-                            $current_year = date('Y');
-                            for ($i = $current_year; $i >= $current_year - 5; $i--): 
+                            // Use CPD logging year - this returns previous year if we're in January (before Jan 31 deadline)
+                            $current_year = iipm_get_cpd_logging_year();
+                            $actual_year = date('Y');
+                            for ($i = $actual_year; $i >= $actual_year - 5; $i--): 
                             ?>
                                 <option value="<?php echo $i; ?>" <?php echo $i == $current_year ? 'selected' : ''; ?>><?php echo $i; ?></option>
                             <?php endfor; ?>
@@ -118,8 +123,10 @@ get_header();
                         <select id="cert-year-filter">
                             <option value="">All Years</option>
                             <?php 
-                            $current_year = date('Y');
-                            for ($i = $current_year; $i >= $current_year - 5; $i--): 
+                            // Use CPD logging year - this returns previous year if we're in January (before Jan 31 deadline)
+                            $current_year = iipm_get_cpd_logging_year();
+                            $actual_year = date('Y');
+                            for ($i = $actual_year; $i >= $actual_year - 5; $i--): 
                             ?>
                                 <option value="<?php echo $i; ?>" <?php echo $i == $current_year ? 'selected' : ''; ?>><?php echo $i; ?></option>
                             <?php endfor; ?>
@@ -157,7 +164,7 @@ get_header();
                                     </div>
                                     <div class="form-group">
                                         <label for="cert-year">Year</label>
-                                        <input type="text" id="cert-year" name="year" class="form-control" value="<?php echo date('Y'); ?>" readonly>
+                                        <input type="text" id="cert-year" name="year" class="form-control" value="<?php echo iipm_get_cpd_logging_year(); ?>" readonly>
                                     </div>
                                 </div>
                                 <div>

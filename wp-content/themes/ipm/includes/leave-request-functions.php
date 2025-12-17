@@ -146,7 +146,7 @@ function iipm_get_user_leave_requests_for_year($user_id, $year) {
     
     $table_name = $wpdb->prefix . 'test_iipm_leave_requests';
     
-    // First try with STR_TO_DATE approach
+    // Extract year from leave_start_date using STR_TO_DATE
     $sql = "SELECT * FROM {$table_name} 
             WHERE user_id = {$user_id}
             AND YEAR(STR_TO_DATE(leave_start_date, '%d-%m-%Y')) = {$year}

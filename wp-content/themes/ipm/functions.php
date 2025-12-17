@@ -9,6 +9,24 @@ if ( ! defined( '_S_VERSION' ) ) {
 	define( '_S_VERSION', '1.0.1' );
 }
 
+/**
+ * Membership Expiry Deadline Dates
+ * These dates control when memberships expire and become inactive
+ * Change these values to adjust the annual membership renewal deadlines
+ */
+if ( ! defined( 'IIPM_MEMBERSHIP_EXPIRY_MONTH' ) ) {
+	define( 'IIPM_MEMBERSHIP_EXPIRY_MONTH', 1 ); // January
+}
+if ( ! defined( 'IIPM_MEMBERSHIP_EXPIRY_DAY' ) ) {
+	define( 'IIPM_MEMBERSHIP_EXPIRY_DAY', 31 ); // 31st
+}
+if ( ! defined( 'IIPM_MEMBERSHIP_INACTIVE_MONTH' ) ) {
+	define( 'IIPM_MEMBERSHIP_INACTIVE_MONTH', 2 ); // February
+}
+if ( ! defined( 'IIPM_MEMBERSHIP_INACTIVE_DAY' ) ) {
+	define( 'IIPM_MEMBERSHIP_INACTIVE_DAY', 5 ); // 5th
+}
+
 // Include global functions (without notification system to avoid header issues)
 require_once get_template_directory() . '/includes/global-functions.php';
 
@@ -2078,11 +2096,8 @@ function iipm_handle_submit_leave_request() {
         return;
     }
     
-    // Only check past dates if not in admin mode
-    if (!$is_admin_mode && strtotime($start_db) < strtotime('today')) {
-        wp_send_json_error('Start date cannot be in the past');
-        return;
-    }
+    // Allow past dates for leave requests (removed restriction)
+    // Users can now submit leave requests with start dates in the past
     
     // Calculate duration using helper function
     $duration_days = iipm_calculate_duration_days($leave_start_date_formatted, $leave_end_date_formatted);
@@ -3429,10 +3444,250 @@ if (!wp_next_scheduled('iipm_daily_cleanup')) {
 add_action('iipm_daily_cleanup', 'iipm_cleanup_expired_invitations');
 
 /**
+ * Membership Status Management System
+ * Uses global constants for deadline dates (see top of functions.php)
+ */
+
+/**
+ * Check if user has a completed order for the current year
+ * Handles both individual members and organization members
+ * 
+ * @param int $user_id User ID
+ * @param int $year Year to check (default: current year)
+ * @return bool True if user has completed order, false otherwise
+ */
+function iipm_has_completed_order_for_year($user_id, $year = null) {
+	if (!$year) {
+		$year = date('Y');
+	}
+	
+	global $wpdb;
+	
+	// First, get member info to determine if individual or organization member
+	$member_info = $wpdb->get_row($wpdb->prepare(
+		"SELECT employer_id FROM {$wpdb->prefix}test_iipm_member_profiles WHERE user_id = %d",
+		$user_id
+	));
+	
+	if (!$member_info) {
+		error_log("IIPM: User $user_id not found in members table");
+		return false;
+	}
+	
+	$customer_id = null;
+	
+	if ($member_info->employer_id && $member_info->employer_id > 0) {
+		// Organization member - get customer_id using org_id
+		$customer_id = $wpdb->get_var($wpdb->prepare(
+			"SELECT customer_id FROM {$wpdb->prefix}wc_customer_lookup 
+			 WHERE org_id = %d 
+			 LIMIT 1",
+			$member_info->employer_id
+		));
+		
+		error_log("IIPM: Organization member - User: $user_id, Org: {$member_info->organisation_id}, Customer: $customer_id");
+	} else {
+		// Individual member - get customer_id using user_id
+		$customer_id = $wpdb->get_var($wpdb->prepare(
+			"SELECT customer_id FROM {$wpdb->prefix}wc_customer_lookup 
+			 WHERE user_id = %d 
+			 LIMIT 1",
+			$user_id
+		));
+		
+		error_log("IIPM: Individual member - User: $user_id, Customer: $customer_id");
+	}
+	
+	if (!$customer_id) {
+		error_log("IIPM: No customer_id found for user $user_id");
+		return false;
+	}
+	
+	// Query WooCommerce orders table for completed orders using customer_id
+	$order_count = $wpdb->get_var($wpdb->prepare(
+		"SELECT COUNT(*)
+		 FROM {$wpdb->prefix}wc_orders o
+		 LEFT JOIN {$wpdb->prefix}wc_orders_meta m ON o.id = m.order_id
+		 WHERE o.customer_id = %d
+		 AND o.status = 'wc-completed'
+		 AND YEAR(o.date_created_gmt) = %d
+		 AND m.meta_key = '_iipm_designation'
+		 LIMIT 1",
+		$customer_id,
+		$year
+	));
+
+	error_log("IIPM: Order check - User: $user_id, Customer: $customer_id, Year: $year, Orders: $order_count");
+	
+	return $order_count > 0;
+}
+
+/**
+ * Check and update membership statuses daily
+ */
+function iipm_check_membership_statuses() {
+	global $wpdb;
+	
+	$current_date = current_time('Y-m-d');
+	$current_month = intval(date('n')); // 1-12
+	$current_day = intval(date('j')); // 1-31
+	$current_year = intval(date('Y'));
+	
+	// Determine if we're after the expiry deadline
+	$expiry_passed = ($current_month > IIPM_MEMBERSHIP_EXPIRY_MONTH) || 
+	                 ($current_month === IIPM_MEMBERSHIP_EXPIRY_MONTH && $current_day > IIPM_MEMBERSHIP_EXPIRY_DAY);
+	
+	// Determine if we're after the inactive deadline
+	$inactive_passed = ($current_month > IIPM_MEMBERSHIP_INACTIVE_MONTH) || 
+	                   ($current_month === IIPM_MEMBERSHIP_INACTIVE_MONTH && $current_day >= IIPM_MEMBERSHIP_INACTIVE_DAY);
+	
+	if ($expiry_passed) {
+		// Get all members
+		$members = $wpdb->get_results("SELECT user_id, membership_status FROM {$wpdb->prefix}test_iipm_members");
+		
+		$updated_active = 0;
+		$updated_expired = 0;
+		$updated_inactive = 0;
+		
+		foreach ($members as $member) {
+			$has_paid = iipm_has_completed_order_for_year($member->user_id, $current_year);
+			$new_status = null;
+			
+			if ($has_paid) {
+				// Member has paid - should be active
+				if ($member->membership_status !== 'active') {
+					$new_status = 'active';
+					$updated_active++;
+				}
+			} else {
+				// Member has NOT paid
+				if ($inactive_passed) {
+					// After Feb 5 - should be inactive
+					if ($member->membership_status !== 'inactive') {
+						$new_status = 'inactive';
+						$updated_inactive++;
+					}
+				} else {
+					// Between Jan 31 - Feb 5 - should be expired
+					if ($member->membership_status !== 'expired') {
+						$new_status = 'expired';
+						$updated_expired++;
+					}
+				}
+			}
+			
+			// Update status if needed
+			if ($new_status) {
+				$wpdb->update(
+					$wpdb->prefix . 'test_iipm_members',
+					array('membership_status' => $new_status),
+					array('user_id' => $member->user_id),
+					array('%s'),
+					array('%d')
+				);
+			}
+		}
+		
+		// Log results
+		if ($updated_active > 0) {
+			error_log("IIPM: Set $updated_active memberships to active (have completed orders)");
+		}
+		if ($updated_expired > 0) {
+			$month_name = date('F', mktime(0, 0, 0, IIPM_MEMBERSHIP_EXPIRY_MONTH, 1));
+			error_log("IIPM: Set $updated_expired memberships to expired (no payment, grace period)");
+		}
+		if ($updated_inactive > 0) {
+			$month_name = date('F', mktime(0, 0, 0, IIPM_MEMBERSHIP_INACTIVE_MONTH, 1));
+			error_log("IIPM: Set $updated_inactive memberships to inactive (no payment by $month_name " . IIPM_MEMBERSHIP_INACTIVE_DAY . ")");
+		}
+	}
+}
+
+// Schedule membership status check
+if (!wp_next_scheduled('iipm_membership_status_check')) {
+	wp_schedule_event(time(), 'daily', 'iipm_membership_status_check');
+}
+add_action('iipm_membership_status_check', 'iipm_check_membership_statuses');
+
+/**
+ * Reactivate member after payment
+ * Called when payment is successful
+ */
+function iipm_reactivate_member_after_payment($user_id) {
+	global $wpdb;
+	
+	$table_name = $wpdb->prefix . 'test_iipm_members';
+	
+	// Get current status
+	$current_status = $wpdb->get_var($wpdb->prepare(
+		"SELECT membership_status FROM {$table_name} WHERE user_id = %d",
+		$user_id
+	));
+	
+	// Only update if status is expired or inactive
+	if (in_array($current_status, ['expired', 'inactive'])) {
+		$result = $wpdb->update(
+			$table_name,
+			array('membership_status' => 'active'),
+			array('user_id' => $user_id),
+			array('%s'),
+			array('%d')
+		);
+		
+		if ($result !== false) {
+			error_log("IIPM: Reactivated membership for user $user_id (was: $current_status)");
+			return true;
+		}
+	}
+	
+	return false;
+}
+
+/**
+ * Reactivate all organization members after org payment
+ */
+function iipm_reactivate_org_members_after_payment($org_id) {
+	global $wpdb;
+	
+	$table_name = $wpdb->prefix . 'test_iipm_members';
+	
+	// Get all members of this organization
+	$members = $wpdb->get_results($wpdb->prepare(
+		"SELECT user_id, membership_status FROM {$table_name} WHERE organisation_id = %d",
+		$org_id
+	));
+	
+	$reactivated_count = 0;
+	foreach ($members as $member) {
+		// Only update if status is expired or inactive
+		if (in_array($member->membership_status, ['expired', 'inactive'])) {
+			$result = $wpdb->update(
+				$table_name,
+				array('membership_status' => 'active'),
+				array('user_id' => $member->user_id),
+				array('%s'),
+				array('%d')
+			);
+			
+			if ($result !== false) {
+				$reactivated_count++;
+			}
+		}
+	}
+	
+	if ($reactivated_count > 0) {
+		error_log("IIPM: Reactivated $reactivated_count members for organization $org_id");
+	}
+	
+	return $reactivated_count;
+}
+
+/**
  * IIPM Deactivation Cleanup
  */
 function iipm_deactivation_cleanup() {
 	wp_clear_scheduled_hook('iipm_daily_cleanup');
+	wp_clear_scheduled_hook('iipm_membership_status_check');
 }
 register_deactivation_hook(__FILE__, 'iipm_deactivation_cleanup');
 

@@ -196,12 +196,19 @@
 <div style="margin-top: 30px; padding: 20px; border: 2px solid #000; background-color: #f9f9f9;">
 	<h2 style="margin: 0 0 15px 0; font-size: 16pt; font-weight: bold; text-transform: uppercase; border-bottom: 2px solid #000; padding-bottom: 10px;">PAYMENT METHODS</h2>
 	
+	<?php 
+	// Get the Stripe Checkout URL (direct Stripe payment page)
+	$stripe_checkout_url = $this->order->get_meta('_stripe_checkout_url');
+	// Fallback to WooCommerce checkout payment URL if Stripe URL not available
+	$payment_url = !empty($stripe_checkout_url) ? $stripe_checkout_url : $this->order->get_checkout_payment_url(false);
+	?>
+	
 	<div style="margin-bottom: 15px;">
-		<strong>Preferred Method:</strong>
+		<strong>Preferred Method - Pay Online (Stripe):</strong>
 	</div>
 	
 	<div style="margin-bottom: 15px;">
-		Please log into <a href="https://iipmcpd.ie" style="color: #0066cc; text-decoration: underline;">iipmcpd.ie</a> for secure payment through PayPal
+		Click <a href="<?php echo esc_url($payment_url); ?>" style="color: #0066cc; text-decoration: underline;">here</a> to pay with Stripe.
 	</div>
 	
 	<div style="text-align: center; margin: 15px 0; font-weight: bold;">

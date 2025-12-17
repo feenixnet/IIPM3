@@ -8,6 +8,7 @@
 // Include required functions
 include_once get_template_directory() . '/includes/global-functions.php';
 include_once get_template_directory() . '/includes/leave-request-functions.php';
+include_once get_template_directory() . '/includes/cpd-record-api.php';
 
 // Redirect if not logged in
 if (!is_user_logged_in()) {
@@ -62,7 +63,8 @@ if ($is_admin) {
 } else {
     // Regular user access - use their own ID and current/requested year
     $target_user_id = $user_id;
-    $target_year = isset($_GET['tYear']) ? intval($_GET['tYear']) : date('Y');
+    // Use CPD logging year - this returns previous year if we're in January (before Jan 31 deadline)
+    $target_year = isset($_GET['tYear']) ? intval($_GET['tYear']) : iipm_get_cpd_logging_year();
     $is_admin_mode = false;
     $target_user = $current_user;
     
@@ -1332,12 +1334,10 @@ const enrollmentYear = <?php echo $user_registration_year; ?>;
 let existingLeaveRequests = <?php echo json_encode($leave_requests); ?>;
 
 // Calendar functionality - Initialize calendar date
-// If target year is current year, show current month; otherwise show January
+// Always show current year and current month initially
 const currentYear = new Date().getFullYear();
 const currentMonth = new Date().getMonth();
-let currentDate = targetYear === currentYear 
-    ? new Date(targetYear, currentMonth, 1) 
-    : new Date(targetYear, 0, 1);
+let currentDate = new Date(currentYear, currentMonth, 1);
     
 let selectedStartDate = null;
 let selectedEndDate = null;

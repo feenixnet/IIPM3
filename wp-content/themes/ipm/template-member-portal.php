@@ -16,7 +16,9 @@ require_once get_template_directory() . '/includes/cpd-record-api.php';
 
 // Get current user ID and year
 $current_user_id = get_current_user_id();
-$current_year = date('Y');
+// Use CPD logging year - this returns previous year if we're in January (before Jan 31 deadline)
+// This allows CPD logging for the previous year until January 31st of the next year
+$current_year = iipm_get_cpd_logging_year();
 
 // Check if user is admin based on user_is_admin field in member profiles
 global $wpdb;
@@ -38,6 +40,85 @@ $member_status = $wpdb->get_var($wpdb->prepare(
     $current_user_id
 ));
 
+// Auto-update membership status based on current date and payment status
+// Uses global deadline constants defined in functions.php
+$current_month = intval(date('n')); // 1-12
+$current_day = intval(date('j')); // 1-31
+$current_year = intval(date('Y'));
+$status_updated = false;
+
+// Check if user has completed order for current year
+$has_paid_current_year = false;
+if (function_exists('iipm_has_completed_order_for_year')) {
+    $has_paid_current_year = iipm_has_completed_order_for_year($current_user_id, $current_year);
+}
+
+// Determine if we're in the expiry period (after Jan 31)
+$expiry_passed = ($current_month > IIPM_MEMBERSHIP_EXPIRY_MONTH) || 
+                 ($current_month === IIPM_MEMBERSHIP_EXPIRY_MONTH && $current_day > IIPM_MEMBERSHIP_EXPIRY_DAY);
+
+// Determine if we're in the inactive period (after Feb 5)
+$inactive_passed = ($current_month > IIPM_MEMBERSHIP_INACTIVE_MONTH) || 
+                   ($current_month === IIPM_MEMBERSHIP_INACTIVE_MONTH && $current_day >= IIPM_MEMBERSHIP_INACTIVE_DAY);
+
+
+error_log("HAS_PAID_CURRENT_YEAR: " . $has_paid_current_year);
+
+// Logic for membership status updates
+if ($expiry_passed) {
+    // After Jan 31: Check payment status
+    
+    if ($has_paid_current_year) {
+        // User has paid for current year - set to active
+        if ($member_status !== 'active') {
+            $wpdb->update(
+                $wpdb->prefix . 'test_iipm_members',
+                array('membership_status' => 'active'),
+                array('user_id' => $current_user_id),
+                array('%s'),
+                array('%d')
+            );
+            $member_status = 'active';
+            $status_updated = true;
+            error_log("IIPM: Set membership to active for user $current_user_id (has completed order for $current_year)");
+        }
+    } else {
+        // User has NOT paid for current year
+        
+        if ($inactive_passed) {
+            // After Feb 5: Set to inactive if not paid
+            if ($member_status !== 'inactive') {
+                $wpdb->update(
+                    $wpdb->prefix . 'test_iipm_members',
+                    array('membership_status' => 'inactive'),
+                    array('user_id' => $current_user_id),
+                    array('%s'),
+                    array('%d')
+                );
+                $member_status = 'inactive';
+                $status_updated = true;
+                $month_name = date('F', mktime(0, 0, 0, IIPM_MEMBERSHIP_INACTIVE_MONTH, 1));
+                error_log("IIPM: Auto-inactivated membership for user $current_user_id (no payment by $month_name " . IIPM_MEMBERSHIP_INACTIVE_DAY . ")");
+            }
+        } else {
+            // Between Jan 31 - Feb 5: Set to expired if not paid
+            if ($member_status !== 'expired') {
+                $wpdb->update(
+                    $wpdb->prefix . 'test_iipm_members',
+                    array('membership_status' => 'expired'),
+                    array('user_id' => $current_user_id),
+                    array('%s'),
+                    array('%d')
+                );
+                $member_status = 'expired';
+                $status_updated = true;
+                $month_name = date('F', mktime(0, 0, 0, IIPM_MEMBERSHIP_EXPIRY_MONTH, 1));
+                error_log("IIPM: Auto-expired membership for user $current_user_id (no payment, grace period until Feb 5)");
+            }
+        }
+    }
+}
+
 // Check subscription status and update membership status if needed
 if (function_exists('iipm_check_subscription_status')) {
     $updated_status = iipm_check_subscription_status($current_user_id);
@@ -46,13 +127,14 @@ if (function_exists('iipm_check_subscription_status')) {
     }
 }
 
-// Auto-assign to 2025 CPD if user has active membership and is not already assigned
-if ($member_status === 'active') {
+// Auto-assign to CPD if user has active or expired membership (but not inactive)
+// Note: Expired members can still do CPD training until Feb 5th when they become inactive
+if ($member_status === 'active' || $member_status === 'expired') {
     $cpd_stats = iipm_get_cpd_stats($current_user_id, $current_year);
     $is_user_assigned = isset($cpd_stats['is_user_assigned']) ? $cpd_stats['is_user_assigned'] : false;
     
     // If not assigned, automatically assign to CPD
-    if (!$is_user_assigned) {
+    if (!$is_user_assigned && $member_status === 'active') {
         $assignment_result = iipm_assign_user_to_cpd($current_user_id);
         if ($assignment_result) {
             // Refresh CPD stats after assignment
@@ -66,8 +148,9 @@ if ($member_status === 'active') {
     $is_user_assigned = isset($cpd_stats['is_user_assigned']) ? $cpd_stats['is_user_assigned'] : false;
 }
 
-// Always allow logging actions (logging period not enforced)
-$is_logging_period_active = true;
+// Allow logging actions for active and expired members (but not inactive)
+// Inactive members cannot log CPD training
+$is_logging_period_active = ($member_status !== 'inactive');
 
 global $wpdb;
 $is_submitted = false;
@@ -91,6 +174,53 @@ get_header();
                 </p>
             </div>
         </div>
+        
+        <!-- Inactive Membership Alert -->
+        <?php if ($member_status === 'inactive'): 
+            $inactive_deadline = date('F j', mktime(0, 0, 0, IIPM_MEMBERSHIP_INACTIVE_MONTH, IIPM_MEMBERSHIP_INACTIVE_DAY));
+        ?>
+        <div class="membership-inactive-alert" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); border-radius: 16px; padding: 30px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(239, 68, 68, 0.3);">
+            <div class="alert-content" style="display: flex; align-items: center; gap: 20px;">
+                <div class="alert-icon" style="font-size: 48px; flex-shrink: 0;">⚠️</div>
+                <div class="alert-message" style="flex: 1;">
+                    <h3 style="color: white; margin: 0 0 10px 0; font-size: 1.5rem;">Membership Inactive</h3>
+                    <p style="color: rgba(255,255,255,0.95); margin: 0 0 15px 0; font-size: 1.05rem;">
+                        Your membership is currently inactive. You need to renew your membership to access CPD training and other member benefits.
+                    </p>
+                    <p style="color: rgba(255,255,255,0.9); margin: 0 0 20px 0;">
+                        The annual membership renewal deadline is <strong style="color: white;"><?php echo $inactive_deadline; ?></strong> each year.
+                    </p>
+                    <a href="<?php echo home_url('/profile/?tab=payment'); ?>" 
+                       style="display: inline-block; background: white; color: #ef4444; padding: 12px 30px; border-radius: 8px; text-decoration: none; font-weight: 600; transition: transform 0.2s;">
+                        Renew Membership Now
+                    </a>
+                </div>
+            </div>
+        </div>
+        <?php elseif ($member_status === 'expired'): 
+            $inactive_deadline = date('F j', mktime(0, 0, 0, IIPM_MEMBERSHIP_INACTIVE_MONTH, IIPM_MEMBERSHIP_INACTIVE_DAY));
+        ?>
+        <!-- Expired Membership Notice -->
+        <div class="membership-expired-notice" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border-radius: 16px; padding: 25px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(245, 158, 11, 0.3);">
+            <div class="alert-content" style="display: flex; align-items: center; gap: 20px;">
+                <div class="alert-icon" style="font-size: 40px; flex-shrink: 0;">📋</div>
+                <div class="alert-message" style="flex: 1;">
+                    <h4 style="color: white; margin: 0 0 8px 0; font-size: 1.3rem;">Membership Renewal Required</h4>
+                    <p style="color: rgba(255,255,255,0.95); margin: 0 0 12px 0;">
+                        Your membership has expired. Please renew by <strong style="color: white;"><?php echo $inactive_deadline; ?></strong> to avoid service interruption.
+                    </p>
+                    <p style="color: rgba(255,255,255,0.9); margin: 0 0 15px 0; font-size: 0.95rem;">
+                        Note: You can still log CPD training during the grace period until <?php echo $inactive_deadline; ?>.
+                    </p>
+                    <a href="<?php echo home_url('/profile/?tab=payment'); ?>" 
+                       style="display: inline-block; background: white; color: #d97706; padding: 10px 25px; border-radius: 8px; text-decoration: none; font-weight: 600; transition: transform 0.2s;">
+                        Renew Now
+                    </a>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
+        
         <!-- Success Alert for Completed CPD -->
         <?php if ($is_user_assigned && !empty($cpd_stats['courses_summary'])): 
             $has_minimum_time = $cpd_stats['completion_percentage'] >= 100;
@@ -116,6 +246,14 @@ get_header();
             </div>
             <?php endif; ?>
         <?php endif; ?>
+        
+        <?php if ($member_status === 'inactive'): ?>
+            <!-- For inactive members, show only the alert above and hide all other content -->
+            <div style="text-align: center; padding: 50px 20px; color: rgba(255,255,255,0.7);">
+                <p style="font-size: 1.1rem;">Please renew your membership to access the member portal.</p>
+            </div>
+        <?php else: ?>
+        <!-- Show all content for active and expired members -->
         
         <!-- Statistics Blocks Section -->
         <?php if ($is_submitted): ?>
@@ -263,13 +401,15 @@ get_header();
                 <div class="cpd-course-card">
                     <h3>My CPD Course</h3>
                     
-                    <button class="btn btn-primary" id="log-training-btn" <?php echo $is_submitted ? 'disabled' : ''; ?>>
+                    <button class="btn btn-primary" id="log-training-btn" <?php echo ($is_submitted || $member_status === 'inactive') ? 'disabled' : ''; ?>>
                         <?php 
-                        if ($is_submitted) {
+                        if ($member_status === 'inactive') {
+                            echo 'Membership Inactive';
+                        } elseif ($is_submitted) {
                             echo 'Training Logging Disabled';
                         } else {
                             echo 'Log Training';
-                        } 
+                        }
                         ?>
                     </button>
                     
@@ -362,9 +502,11 @@ get_header();
                             <div class="no-training-icon">💻</div>
                             <h4>No training history yet</h4>
                             <p>Start your CPD journey by logging your first training session</p>
-                            <button class="btn btn-primary" id="log-first-training-btn" <?php echo $is_submitted ? 'disabled' : ''; ?>>
+                            <button class="btn btn-primary" id="log-first-training-btn" <?php echo ($is_submitted || $member_status === 'inactive') ? 'disabled' : ''; ?>>
                                 <?php 
-                                if ($is_submitted) {
+                                if ($member_status === 'inactive') {
+                                    echo 'Membership Inactive';
+                                } elseif ($is_submitted) {
                                     echo 'Training Logging Disabled';
                                 } else {
                                     echo 'Log your first training';
@@ -395,6 +537,8 @@ get_header();
             <?php endif; ?>
         </div>
         <?php endif; ?>
+        
+        <?php endif; // End check for inactive membership status ?>
     </div>
 </div>
 
@@ -2247,11 +2391,35 @@ get_header();
 </style>
 
 <script>
+    /**
+     * Get the current CPD year based on date logic
+     * If current date is before January 31st, return previous year
+     * Otherwise return current year
+     * This matches the PHP function iipm_get_cpd_logging_year()
+     * 
+     * @return {number} The CPD year
+     */
+    function getCpdYear() {
+        const now = new Date();
+        const currentMonth = now.getMonth() + 1; // JavaScript months are 0-indexed
+        const currentDay = now.getDate();
+        const currentYear = now.getFullYear();
+        
+        // If we're in January (month 1) and day is <= 31, use previous year
+        if (currentMonth === 1 && currentDay <= 31) {
+            return currentYear - 1;
+        }
+        
+        return currentYear;
+    }
+    
     // Define ajaxurl for AJAX calls
     var ajaxurl = '<?php echo admin_url('admin-ajax.php'); ?>';
     var isUserAssigned = <?php echo $is_user_assigned ? 'true' : 'false'; ?>;
     var isTrainingCompleted = <?php echo $cpd_stats['completion_percentage'] >= 100 ? 'true' : 'false'; ?> == 'true' ? true : false;
     var statData = null;
+    // CPD logging year - uses previous year if in January (before Jan 31 deadline)
+    var cpdLoggingYear = getCpdYear();
     
     document.addEventListener('DOMContentLoaded', function() {
         // Get DOM elements
@@ -2399,7 +2567,7 @@ get_header();
             
             const formData = new FormData();
             formData.append('action', 'iipm_submission_save');
-            formData.append('year', new Date().getFullYear());
+            formData.append('year', cpdLoggingYear);
             formData.append('details', JSON.stringify(statData));
             
             jQuery.ajax({
@@ -2490,12 +2658,12 @@ get_header();
          * Load completed CPD stats
          */
         function loadCompletedCpdStats() {
-            const currentYear = new Date().getFullYear();
-            console.log('Loading CPD stats for year:', currentYear);
+            // Use cpdLoggingYear which accounts for January deadline extension
+            console.log('Loading CPD stats for year:', cpdLoggingYear);
             
             const formData = new FormData();
             formData.append('action', 'iipm_get_cpd_stats');
-            formData.append('year', currentYear);
+            formData.append('year', cpdLoggingYear);
             
             jQuery.ajax({
                 url: ajaxurl,
@@ -2620,6 +2788,7 @@ get_header();
             const isSubmitted = data.is_submitted;
             
             if (isUserAssigned && isSubmissionPeriod && !isSubmitted && data.cpd_dates && data.cpd_dates.end_submission) {
+                // Calculate next year's January 31st deadline
                 const deadlineDate = formatDate(data.cpd_dates.end_submission);
                 submissionDeadlineText.textContent = `Submit your CPD return before ${deadlineDate}`;
                 submissionAlert.style.display = 'block';
@@ -2805,14 +2974,14 @@ get_header();
          * Show success alert dynamically
          */
         function showSuccessAlert() {
-            const currentYear = new Date().getFullYear();
+            const currentCpdYear = getCpdYear();
             const alertHTML = `
                 <div class="cpd-success-alert" id="cpd-success-alert">
                     <div class="alert-content">
                         <div class="alert-icon">🎉</div>
                         <div class="alert-message">
                             <h4>Congratulations!</h4>
-                            <p>You have successfully completed all required CPD courses for ${currentYear}. Your professional development is up to date!</p>
+                            <p>You have successfully completed all required CPD courses for ${currentCpdYear}. Your professional development is up to date!</p>
                         </div>
                         <button class="alert-close" onclick="closeSuccessAlert()">×</button>
                     </div>
@@ -3005,7 +3174,7 @@ get_header();
         function loadRecentlyLoggedTraining() {
             const formData = new FormData();
             formData.append('action', 'iipm_get_recently_logged_training');
-            formData.append('year', new Date().getFullYear());
+            formData.append('year', cpdLoggingYear);
             
             jQuery.ajax({
                 url: ajaxurl,
@@ -3246,7 +3415,7 @@ get_header();
                             font-size: 1.1rem;
                             margin: 0 0 25px 0;
                             line-height: 1.6;
-                        ">You have successfully submitted your CPD training for ${new Date().getFullYear()}!</p>
+                        ">You have successfully submitted your CPD training for ${cpdLoggingYear}!</p>
                         <button onclick="closeCongratulationsAlert()" style="
                             background: linear-gradient(135deg, #8b5a96, #6b4c93);
                             color: white;
@@ -3301,7 +3470,7 @@ get_header();
                 type: 'POST',
                 data: {
                     action: 'iipm_get_user_submission_status',
-                    year: new Date().getFullYear()
+                    year: cpdLoggingYear
                 },
                 success: function(response) {
                     if (response.success) {

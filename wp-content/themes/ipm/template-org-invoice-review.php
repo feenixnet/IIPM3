@@ -189,21 +189,6 @@ get_header();
     box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
 }
 
-.btn-decline {
-    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-    color: white !important;
-}
-
-.btn-decline i {
-    color: white !important;
-}
-
-.btn-decline:hover {
-    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
-}
-
 .btn-download {
     background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%);
     color: white !important;
@@ -241,62 +226,6 @@ get_header();
     padding: 20px;
     border-radius: 8px;
     text-align: center;
-}
-
-.modal {
-    display: none;
-    position: fixed;
-    z-index: 1000;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0,0,0,0.5);
-}
-
-.modal.active {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.modal-content {
-    background: white;
-    padding: 30px;
-    border-radius: 12px;
-    max-width: 500px;
-    width: 90%;
-}
-
-.modal-content h3 {
-    margin-top: 0;
-    color: #1f2937;
-}
-
-.modal-content textarea {
-    width: 100%;
-    min-height: 120px;
-    padding: 12px;
-    border: 1px solid #d1d5db;
-    border-radius: 6px;
-    font-family: inherit;
-    font-size: 14px;
-    margin-bottom: 20px;
-}
-
-.modal-buttons {
-    display: flex;
-    gap: 12px;
-    justify-content: flex-end;
-}
-
-.btn-cancel {
-    background: #6b7280;
-    color: white;
-}
-
-.btn-cancel:hover {
-    background: #4b5563;
 }
 
 .status-badge {
@@ -345,20 +274,21 @@ get_header();
         
         // Map WooCommerce status
         $status_class = 'status-pending';
-        $status_label = 'Pending Review';
+        $status_label = 'Pending Payment';
         $is_actionable = true;
         
-        if (strpos($order->status, 'processing') !== false) {
-            $status_class = 'status-processing';
-            $status_label = 'Approved';
-            $is_actionable = false;
-        } elseif (strpos($order->status, 'completed') !== false) {
+        if (strpos($order->status, 'completed') !== false) {
             $status_class = 'status-completed';
-            $status_label = 'Completed';
+            $status_label = 'Paid';
             $is_actionable = false;
         } elseif (strpos($order->status, 'cancelled') !== false) {
             $status_class = 'status-cancelled';
-            $status_label = 'Declined';
+            $status_label = 'Cancelled';
+            $is_actionable = false;
+        } elseif (strpos($order->status, 'processing') !== false) {
+            // Processing status shouldn't occur, but handle it just in case
+            $status_class = 'status-processing';
+            $status_label = 'Processing';
             $is_actionable = false;
         }
         ?>
@@ -416,10 +346,28 @@ get_header();
                 </table>
             </div>
             
+            <?php 
+            // Get Stripe checkout URL from order meta
+            global $wpdb;
+            $stripe_checkout_url = $wpdb->get_var($wpdb->prepare(
+                "SELECT meta_value FROM {$wpdb->prefix}wc_orders_meta 
+                WHERE order_id = %d AND meta_key = '_stripe_checkout_url'",
+                $order->id
+            ));
+            
+            // If no stored URL, generate a new one
+            if (empty($stripe_checkout_url) && $is_actionable) {
+                $wc_order = wc_get_order($order->id);
+                if ($wc_order) {
+                    $stripe_checkout_url = iipm_create_stripe_checkout_session($wc_order);
+                }
+            }
+            ?>
+            
             <?php if ($is_actionable): ?>
                 <div class="actions-section">
-                    <h3>Review Invoice</h3>
-                    <p style="color: #6b7280; margin-bottom: 20px;">Please review the member list and fees above. You can approve or decline this invoice.</p>
+                    <h3>Pay Invoice</h3>
+                    <p style="color: #6b7280; margin-bottom: 20px;">Please review the member list and fees above, then proceed to payment.</p>
                     <div class="action-buttons">
                         <a href="<?php echo content_url('/uploads/wpo-wcpdf-temp/invoice-' . $order->id . '.pdf'); ?>" 
                            class="btn btn-download" 
@@ -427,12 +375,15 @@ get_header();
                            target="_blank">
                             <i class="fas fa-download"></i> Download Invoice
                         </a>
-                        <button class="btn btn-approve" id="approve-btn">
-                            <i class="fas fa-check-circle"></i> Approve Invoice
-                        </button>
-                        <button class="btn btn-decline" id="decline-btn">
-                            <i class="fas fa-times-circle"></i> Decline Invoice
-                        </button>
+                        <?php if (!empty($stripe_checkout_url)): ?>
+                            <a href="<?php echo esc_url($stripe_checkout_url); ?>" class="btn btn-approve" id="pay-btn">
+                                <i class="fas fa-credit-card"></i> Pay Now
+                            </a>
+                        <?php else: ?>
+                            <button class="btn btn-approve" disabled title="Payment link unavailable">
+                                <i class="fas fa-credit-card"></i> Pay Now
+                            </button>
+                        <?php endif; ?>
                     </div>
                 </div>
             <?php else: ?>
@@ -441,6 +392,14 @@ get_header();
                         <h3><?php echo $status_label; ?></h3>
                         <p>This invoice has already been <?php echo strtolower($status_label); ?>.</p>
                     </div>
+                    <div class="action-buttons" style="margin-top: 20px;">
+                        <a href="<?php echo content_url('/uploads/wpo-wcpdf-temp/invoice-' . $order->id . '.pdf'); ?>" 
+                           class="btn btn-download" 
+                           download="invoice-<?php echo $order->id; ?>.pdf"
+                           target="_blank">
+                            <i class="fas fa-download"></i> Download Invoice
+                        </a>
+                    </div>
                 </div>
             <?php endif; ?>
             <?php endif; ?>
@@ -448,111 +407,6 @@ get_header();
     </div>
 </main>
 
-<!-- Decline Modal -->
-<div id="decline-modal" class="modal">
-    <div class="modal-content">
-        <h3>Decline Invoice</h3>
-        <p>Please provide a reason for declining this invoice:</p>
-        <textarea id="decline-reason" placeholder="Enter your reason here..."></textarea>
-        <div class="modal-buttons">
-            <button class="btn btn-cancel" id="cancel-decline">Cancel</button>
-            <button class="btn btn-decline" id="confirm-decline">Submit Decline</button>
-        </div>
-    </div>
-</div>
-
-<script>
-jQuery(document).ready(function($) {
-    const token = '<?php echo esc_js($token); ?>';
-    
-    // Approve invoice
-    $('#approve-btn').on('click', function() {
-        if (!confirm('Are you sure you want to approve this invoice?')) {
-            return;
-        }
-        
-        const $btn = $(this);
-        $btn.prop('disabled', true).text('Approving...');
-        
-        $.ajax({
-            url: '<?php echo admin_url('admin-ajax.php'); ?>',
-            method: 'POST',
-            data: {
-                action: 'iipm_approve_org_invoice',
-                token: token
-            },
-            success: function(response) {
-                if (response.success) {
-                    alert(response.data.message);
-                    location.reload();
-                } else {
-                    alert('Error: ' + response.data);
-                    $btn.prop('disabled', false).text('Approve Invoice');
-                }
-            },
-            error: function() {
-                alert('An error occurred. Please try again.');
-                $btn.prop('disabled', false).text('Approve Invoice');
-            }
-        });
-    });
-    
-    // Show decline modal
-    $('#decline-btn').on('click', function() {
-        $('#decline-modal').addClass('active');
-    });
-    
-    // Cancel decline
-    $('#cancel-decline').on('click', function() {
-        $('#decline-modal').removeClass('active');
-        $('#decline-reason').val('');
-    });
-    
-    // Confirm decline
-    $('#confirm-decline').on('click', function() {
-        const reason = $('#decline-reason').val().trim();
-        
-        if (!reason) {
-            alert('Please provide a reason for declining.');
-            return;
-        }
-        
-        const $btn = $(this);
-        $btn.prop('disabled', true).text('Submitting...');
-        
-        $.ajax({
-            url: '<?php echo admin_url('admin-ajax.php'); ?>',
-            method: 'POST',
-            data: {
-                action: 'iipm_decline_org_invoice',
-                token: token,
-                reason: reason
-            },
-            success: function(response) {
-                if (response.success) {
-                    alert(response.data.message);
-                    location.reload();
-                } else {
-                    alert('Error: ' + response.data);
-                    $btn.prop('disabled', false).text('Submit Decline');
-                }
-            },
-            error: function() {
-                alert('An error occurred. Please try again.');
-                $btn.prop('disabled', false).text('Submit Decline');
-            }
-        });
-    });
-    
-    // Close modal on background click
-    $('#decline-modal').on('click', function(e) {
-        if (e.target === this) {
-            $(this).removeClass('active');
-            $('#decline-reason').val('');
-        }
-    });
-});
-</script>
 
 <?php get_footer(); ?>
 

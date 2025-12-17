@@ -57,12 +57,16 @@ if ($is_admin) {
     $is_admin_mode = true;
     $current_year = $target_year;
 } else {
-    // Regular user access - use their own ID and current year
+    // Regular user access - use their own ID and CPD logging year
+    // CPD logging year returns previous year if we're in January (before Jan 31 deadline)
     $target_user_id = $user_id;
-    $target_year = date('Y');
     $is_admin_mode = false;
     $target_user = $current_user;
-    $current_year = date('Y');
+    
+    // Include CPD record API to use iipm_get_cpd_logging_year()
+    require_once get_template_directory() . '/includes/cpd-record-api.php';
+    $current_year = iipm_get_cpd_logging_year();
+    $target_year = $current_year;
 }
 
 // Include the CPD courses API
@@ -956,8 +960,32 @@ get_header();
 </style>
 
 <script>
+    /**
+     * Get the current CPD year based on date logic
+     * If current date is before January 31st, return previous year
+     * Otherwise return current year
+     * This matches the PHP function iipm_get_cpd_logging_year()
+     * 
+     * @return {number} The CPD year
+     */
+    function getCpdYear() {
+        const now = new Date();
+        const currentMonth = now.getMonth() + 1; // JavaScript months are 0-indexed
+        const currentDay = now.getDate();
+        const currentYear = now.getFullYear();
+        
+        // If we're in January (month 1) and day is <= 31, use previous year
+        if (currentMonth === 1 && currentDay <= 31) {
+            return currentYear - 1;
+        }
+        
+        return currentYear;
+    }
+    
     // Define ajaxurl for AJAX calls
     var ajaxurl = '<?php echo admin_url('admin-ajax.php'); ?>';
+    // CPD logging year - uses previous year if in January (before Jan 31 deadline)
+    var cpdLoggingYear = getCpdYear();
     
     // Global variables for pagination
     let currentPage = 1;
@@ -1308,6 +1336,7 @@ get_header();
             formData.append('course_cpd_mins', course.course_cpd_mins);
             formData.append('crs_provider', course.crs_provider);
             formData.append('user_id', userIdForCourses);
+            formData.append('year', cpdLoggingYear);
             
             jQuery.ajax({
                 url: ajaxurl,
@@ -1544,7 +1573,8 @@ get_header();
                 type: 'POST',
                 data: {
                     action: 'iipm_get_courses_in_learning_path',
-                    user_id: userIdForCourses
+                    user_id: userIdForCourses,
+                    year: cpdLoggingYear
                 },
                 success: function(response) {
                     if (response.success && response.data.courses) {

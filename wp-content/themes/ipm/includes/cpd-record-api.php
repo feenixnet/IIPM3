@@ -14,6 +14,28 @@ add_action('wp_ajax_iipm_get_certificate_data', 'iipm_ajax_get_certificate_data'
 add_action('wp_ajax_iipm_check_certificate_availability', 'iipm_ajax_check_certificate_availability');
 
 /**
+ * Get the CPD logging year based on current date.
+ * CPD logging for the previous year is available until January 31st.
+ * For example, if current date is January 15, 2026, the CPD logging year should be 2025.
+ * If current date is February 1, 2026, the CPD logging year should be 2026.
+ * 
+ * @return int The CPD logging year
+ */
+function iipm_get_cpd_logging_year() {
+    $current_month = intval(date('n')); // 1-12
+    $current_day = intval(date('j')); // 1-31
+    $current_year = intval(date('Y'));
+    
+    // If we're in January (month 1) and day is <= 31, use previous year
+    // This allows CPD logging for the previous year until January 31st
+    if ($current_month === 1 && $current_day <= 31) {
+        return $current_year - 1;
+    }
+    
+    return $current_year;
+}
+
+/**
  * Parse date from various formats (dd/mm/yyyy or Y-m-d H:i:s)
  */
 function iipm_parse_cpd_date($date_string) {
@@ -418,8 +440,10 @@ function iipm_ajax_add_cpd_confirmation() {
     // Normalize user_id and year
     $user_id = isset($_POST['user_id']) ? intval($_POST['user_id']) : get_current_user_id();
     if ($user_id <= 0) { $user_id = get_current_user_id(); }
-    $tYear = isset($_POST['year']) ? intval($_POST['year']) : intval(date('Y'));
-    if ($tYear <= 0) { $tYear = intval(date('Y')); }
+    
+    // Use CPD logging year if no year is explicitly provided
+    // This ensures courses are logged to previous year if we're in January (before Jan 31 deadline)
+    $tYear = isset($_POST['year']) && intval($_POST['year']) > 0 ? intval($_POST['year']) : iipm_get_cpd_logging_year();
     
     if (!$user_id) {
         wp_send_json_error('User not logged in');

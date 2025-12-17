@@ -18,6 +18,348 @@ define('IIPM_PM_CURRENCY_SYMBOL', '$');
 // add_action('after_setup_theme', 'iipm_pm_maybe_create_tables');
 
 /**
+ * Create a Stripe Checkout Session for an order and return the checkout URL.
+ * 
+ * @param WC_Order $order WooCommerce order object
+ * @return string|false Stripe Checkout URL on success, false on failure
+ */
+function iipm_create_stripe_checkout_session($order) {
+	// Check if WC_Stripe_API class exists
+	if (!class_exists('WC_Stripe_API')) {
+		error_log('IIPM Stripe: WC_Stripe_API class not found');
+		return false;
+	}
+
+	try {
+		// Build line items from order items
+		$line_items = array();
+		foreach ($order->get_items() as $item) {
+			$line_items[] = array(
+				'price_data' => array(
+					'currency' => strtolower($order->get_currency()),
+					'product_data' => array(
+						'name' => $item->get_name(),
+					),
+					'unit_amount' => intval($item->get_total() * 100), // Amount in cents
+				),
+				'quantity' => $item->get_quantity(),
+			);
+		}
+
+		// If no line items, create one from total
+		if (empty($line_items)) {
+			$line_items[] = array(
+				'price_data' => array(
+					'currency' => strtolower($order->get_currency()),
+					'product_data' => array(
+						'name' => 'Invoice #' . $order->get_order_number(),
+					),
+					'unit_amount' => intval($order->get_total() * 100),
+				),
+				'quantity' => 1,
+			);
+		}
+
+		// Success URL - use a redirect handler that will check current user role
+		$success_url = add_query_arg(array(
+			'iipm_payment_complete' => '1',
+			'order_id' => $order->get_id(),
+			'key' => $order->get_order_key(),
+		), home_url('/'));
+
+		// Cancel URL - use the same handler for cancellation
+		$cancel_url = add_query_arg(array(
+			'iipm_payment_cancelled' => '1',
+			'order_id' => $order->get_id(),
+		), home_url('/'));
+
+		// Prepare Stripe Checkout Session request
+		$request = array(
+			'payment_method_types' => array('card'),
+			'line_items' => $line_items,
+			'mode' => 'payment',
+			'success_url' => $success_url,
+			'cancel_url' => $cancel_url,
+			'customer_email' => $order->get_billing_email(),
+			'client_reference_id' => (string) $order->get_id(),
+			'metadata' => array(
+				'order_id' => $order->get_id(),
+				'order_number' => $order->get_order_number(),
+				'site' => get_bloginfo('name'),
+			),
+		);
+
+		// Make request to Stripe API
+		$response = WC_Stripe_API::request($request, 'checkout/sessions', 'POST');
+
+		if (is_wp_error($response)) {
+			error_log('IIPM Stripe Checkout Session Error: ' . $response->get_error_message());
+			return false;
+		}
+
+		if (!empty($response->error)) {
+			error_log('IIPM Stripe Checkout Session Error: ' . $response->error->message);
+			return false;
+		}
+
+		if (!empty($response->url)) {
+			// Store the checkout URL in order meta
+			$order->update_meta_data('_stripe_checkout_session_id', $response->id);
+			$order->update_meta_data('_stripe_checkout_url', $response->url);
+			$order->save();
+
+			error_log('IIPM Stripe: Checkout session created successfully - ' . $response->url);
+			return $response->url;
+		}
+
+		error_log('IIPM Stripe: No URL in checkout session response');
+		return false;
+
+	} catch (Exception $e) {
+		error_log('IIPM Stripe Checkout Session Exception: ' . $e->getMessage());
+		return false;
+	}
+}
+
+/**
+ * Handle Stripe payment redirect based on current user role.
+ * Admins go to payment management, regular users go to profile payment tab.
+ */
+function iipm_handle_stripe_payment_redirect() {
+	// Handle successful payment redirect
+	if (isset($_GET['iipm_payment_complete']) && $_GET['iipm_payment_complete'] === '1') {
+		$order_id = isset($_GET['order_id']) ? intval($_GET['order_id']) : 0;
+		$order_key = isset($_GET['key']) ? sanitize_text_field($_GET['key']) : '';
+		
+		// Verify order exists and key matches
+		if ($order_id > 0) {
+			$order = wc_get_order($order_id);
+			if ($order && $order->get_order_key() === $order_key) {
+				// Update order status to completed (not processing - these are virtual products)
+				if ($order->get_status() === 'pending' || $order->get_status() === 'processing') {
+					$order->update_status('completed', __('Payment completed via Stripe Checkout.', 'iipm'));
+				}
+			}
+		}
+		
+		// Redirect based on current user role
+		if (current_user_can('administrator') || current_user_can('manage_iipm_members')) {
+			// Admin or payment manager - redirect to payment management page
+			wp_redirect(home_url('/payment-management/'));
+			exit;
+		} else {
+			// Regular user - redirect to profile payment tab
+			wp_redirect(home_url('/profile/?tab=payment'));
+			exit;
+		}
+	}
+	
+	// Handle cancelled payment redirect
+	if (isset($_GET['iipm_payment_cancelled']) && $_GET['iipm_payment_cancelled'] === '1') {
+		$order_id = isset($_GET['order_id']) ? intval($_GET['order_id']) : 0;
+		
+		// Redirect based on current user role
+		if (current_user_can('manage_options') || current_user_can('iipm_payment_manager')) {
+			// Admin - redirect to payment management page
+			wp_redirect(add_query_arg(array(
+				'payment_cancelled' => '1',
+				'order_id' => $order_id,
+			), admin_url('admin.php?page=payment-management')));
+			exit;
+		} else {
+			// Regular user - redirect to profile payment tab
+			wp_redirect(add_query_arg(array(
+				'payment_cancelled' => '1',
+				'order_id' => $order_id,
+			), home_url('/profile/?tab=payment')));
+			exit;
+		}
+	}
+}
+add_action('template_redirect', 'iipm_handle_stripe_payment_redirect');
+
+/**
+ * Filter to set order status to 'completed' instead of 'processing' when Stripe payment is complete.
+ * This handles the webhook from Stripe that calls $order->payment_complete().
+ * 
+ * @param string $status Default status
+ * @param int $order_id Order ID
+ * @param WC_Order $order Order object
+ * @return string Modified status
+ */
+function iipm_stripe_payment_complete_order_status($status, $order_id, $order = null) {
+	// Get the order if not provided
+	if (!$order) {
+		$order = wc_get_order($order_id);
+	}
+	
+	if (!$order) {
+		return $status;
+	}
+	
+	// Check if this is a Stripe payment (has Stripe checkout session ID or payment method is stripe)
+	$stripe_session_id = $order->get_meta('_stripe_checkout_session_id');
+	$payment_method = $order->get_payment_method();
+	
+	// If payment was made via Stripe Checkout or Stripe gateway, set to completed
+	if (!empty($stripe_session_id) || strpos($payment_method, 'stripe') !== false) {
+		return 'completed';
+	}
+	
+	// For all IIPM invoices (virtual products), set to completed
+	$iipm_designation = $order->get_meta('_iipm_designation');
+	if (!empty($iipm_designation)) {
+		return 'completed';
+	}
+	
+	return $status;
+}
+add_filter('woocommerce_payment_complete_order_status', 'iipm_stripe_payment_complete_order_status', 10, 3);
+
+/**
+ * Action hook when Stripe webhook processes a successful payment.
+ * Ensures order status is set to 'completed' for IIPM orders.
+ * 
+ * @param WC_Order $order Order object
+ * @param array $intent Payment intent or checkout session data
+ */
+function iipm_stripe_webhook_order_completed($order, $intent = null) {
+	if (!$order) {
+		return;
+	}
+	
+	// Only process IIPM orders (they have _iipm_designation meta)
+	$iipm_designation = $order->get_meta('_iipm_designation');
+	
+	if (!empty($iipm_designation)) {
+		// If order is in processing status, update to completed
+		if ($order->get_status() === 'processing') {
+			$order->update_status('completed', __('Payment confirmed via Stripe webhook - auto completed for virtual product.', 'iipm'));
+		}
+	}
+}
+add_action('woocommerce_order_status_processing', 'iipm_stripe_webhook_order_completed', 20, 1);
+
+/**
+ * Send confirmation email when order status changes to completed.
+ * This is triggered when payment is confirmed via Stripe webhook.
+ * 
+ * @param int $order_id Order ID
+ * @param WC_Order $order Order object
+ */
+function iipm_send_order_completed_email($order_id, $order = null) {
+	if (!$order) {
+		$order = wc_get_order($order_id);
+	}
+	
+	if (!$order) {
+		return;
+	}
+	
+	// Only process IIPM orders (they have _iipm_designation meta)
+	$iipm_designation = $order->get_meta('_iipm_designation');
+	
+	if (empty($iipm_designation)) {
+		return;
+	}
+	
+	global $wpdb;
+	
+	// Get customer information
+	$customer_id = $order->get_customer_id();
+	$customer_lookup = $wpdb->get_row($wpdb->prepare(
+		"SELECT user_id, org_id, email, first_name FROM {$wpdb->prefix}wc_customer_lookup 
+		WHERE customer_id = %d",
+		$customer_id
+	));
+	
+	if (!$customer_lookup) {
+		error_log('IIPM: No customer found for completed order #' . $order_id);
+		return;
+	}
+	
+	$email = $order->get_billing_email() ?: $customer_lookup->email;
+	$first_name = $order->get_billing_first_name() ?: $customer_lookup->first_name;
+	
+	// Check if it's an organization or individual
+	$is_organization = !empty($customer_lookup->org_id);
+	
+	if ($is_organization) {
+		// For organizations: send organization email
+		$token = $order->get_meta('_iipm_org_review_token');
+		if (empty($token)) {
+			$token = '';
+		}
+		
+		$email_sent = iipm_send_org_invoice_email($order_id, $customer_lookup->org_id, $token, 'completed');
+		
+		if ($email_sent) {
+			error_log('IIPM: Completed order email sent to organization for order #' . $order_id);
+		} else {
+			error_log('IIPM: Failed to send completed order email to organization for order #' . $order_id);
+		}
+	} else {
+		// For individuals: send individual invoice email
+		$email_sent = iipm_pm_send_wc_invoice_email($order, $email, $first_name, 'completed');
+		
+		if (is_wp_error($email_sent)) {
+			error_log('IIPM: Failed to send completed order email: ' . $email_sent->get_error_message());
+		} else {
+			error_log('IIPM: Completed order email sent to ' . $email . ' for order #' . $order_id);
+		}
+	}
+}
+add_action('woocommerce_order_status_completed', 'iipm_send_order_completed_email', 10, 2);
+
+/**
+ * Reactivate memberships when payment is completed
+ * 
+ * @param int $order_id Order ID
+ * @param WC_Order $order Order object
+ */
+function iipm_reactivate_membership_on_payment_completed($order_id, $order = null) {
+	if (!$order) {
+		$order = wc_get_order($order_id);
+	}
+	
+	if (!$order) {
+		return;
+	}
+	
+	// Get order metadata to determine if it's org or individual payment
+	$iipm_designation = $order->get_meta('_iipm_designation');
+	
+	if (empty($iipm_designation)) {
+		return; // Not an IIPM invoice
+	}
+	
+	// Check if this is an organization invoice
+	$org_id = $order->get_meta('_iipm_org_id');
+	
+	if (!empty($org_id) && $org_id > 0) {
+		// Organization payment - reactivate all org members
+		if (function_exists('iipm_reactivate_org_members_after_payment')) {
+			$reactivated = iipm_reactivate_org_members_after_payment($org_id);
+			error_log("IIPM: Organization payment completed - reactivated $reactivated members for org $org_id");
+		}
+	} else {
+		// Individual payment - reactivate this user
+		$user_id = $order->get_meta('_iipm_user_id');
+		if (empty($user_id)) {
+			$user_id = $order->get_customer_id();
+		}
+		
+		if ($user_id > 0 && function_exists('iipm_reactivate_member_after_payment')) {
+			$success = iipm_reactivate_member_after_payment($user_id);
+			if ($success) {
+				error_log("IIPM: Individual payment completed - reactivated membership for user $user_id");
+			}
+		}
+	}
+}
+add_action('woocommerce_order_status_completed', 'iipm_reactivate_membership_on_payment_completed', 20, 2);
+
+/**
  * Get available payment order statuses (WooCommerce format with wc- prefix).
  */
 function iipm_pm_get_order_statuses() {
@@ -946,6 +1288,12 @@ function iipm_send_payment_invoice() {
 		$order->update_meta_data('_iipm_invoice_year', $invoice_year);
 		$order->save();
 
+		// Generate Stripe Checkout Session URL for payment
+		$stripe_checkout_url = iipm_create_stripe_checkout_session($order);
+		if (!$stripe_checkout_url) {
+			error_log('IIPM: Failed to create Stripe checkout session for order #' . $wc_order_id);
+		}
+
 		// Handle organization invoice differently - generate PDF and send review link email
 		if ($is_organization) {
 			// Generate PDF invoice for download (without emailing it)
@@ -1223,27 +1571,28 @@ function iipm_pm_send_wc_invoice_email($order, $email, $first_name, $order_statu
 		$profile_url = home_url('/profile/?tab=payment');
 		
 		// Customize subject and message based on status
+		// Only two email types: pending (new invoice) and completed (payment confirmed)
 		if ($order_status === 'pending') {
 			$subject = sprintf('New Invoice Generated - Order #%s', $order->get_order_number());
-			$status_message = '<p><strong>Your invoice has been generated successfully.</strong> Please review and accept or decline the invoice from your profile page.</p>';
-			$button_text = 'Review Invoice';
+			$status_message = '<p><strong>Your invoice has been generated successfully.</strong> Please review and download the invoice from your profile page.</p>';
+			$button_text = 'View Invoice';
 			$button_color = '#667eea 0%, #764ba2 100%';
-		} elseif ($order_status === 'processing') {
-			$subject = sprintf('Invoice Processing - Order #%s', $order->get_order_number());
-			$status_message = '<p><strong>Your invoice is currently being processed.</strong> We will notify you once the payment is completed.</p>';
-			$button_text = 'View Invoice Details';
-			$button_color = '#3b82f6 0%, #2563eb 100%';
+			$status_display = 'Pending';
+		} elseif ($order_status === 'completed') {
+			$subject = sprintf('✅ Payment Confirmed - Order #%s', $order->get_order_number());
+			$status_message = '<p><strong>🎉 Thank you! Your payment has been received and your order is now complete.</strong></p><p>Your membership has been confirmed. You can download your invoice from your profile page for your records.</p>';
+			$button_text = 'View Invoice';
+			$button_color = '#10b981 0%, #059669 100%';
+			$status_display = 'Paid';
 		} elseif ($order_status === 'cancelled') {
-			$subject = sprintf('Invoice Declined - Order #%s', $order->get_order_number());
-			$status_message = '<p><strong>Your invoice has been declined successfully.</strong> If you have any questions, please contact us or check your profile for more details.</p>';
+			$subject = sprintf('Invoice Cancelled - Order #%s', $order->get_order_number());
+			$status_message = '<p><strong>Your invoice has been cancelled.</strong> If you have any questions, please contact us or check your profile for more details.</p>';
 			$button_text = 'View Invoice History';
 			$button_color = '#ef4444 0%, #dc2626 100%';
+			$status_display = 'Cancelled';
 		} else {
-			// Default for other statuses
-			$subject = sprintf('Invoice Update - Order #%s', $order->get_order_number());
-			$status_message = '<p>Your invoice status has been updated. Please check your profile for details.</p>';
-			$button_text = 'View My Invoices';
-			$button_color = '#667eea 0%, #764ba2 100%';
+			// For any other status (including processing), don't send email
+			return true; // Return success but don't send
 		}
 		
 		$message = sprintf(
@@ -1266,7 +1615,7 @@ function iipm_pm_send_wc_invoice_email($order, $email, $first_name, $order_statu
 			$status_message,
 			esc_html($order->get_order_number()),
 			wp_kses_post($order->get_formatted_order_total()),
-			esc_html(ucfirst($order_status)),
+			esc_html($status_display),
 			esc_url($profile_url),
 			$button_color,
 			esc_html($button_text),
@@ -1540,12 +1889,12 @@ function iipm_send_org_invoice_email($order_id, $org_id, $token, $order_status =
 		$org_id
 	));
 	
-	if (!$org || empty($org->contact_email)) {
+	if (!$org || empty($org->admin_email)) {
 		return false;
 	}
 	
 	// Customize email content based on order status
-	$to = $org->contact_email;
+	$to = $org->admin_email;
 	$org_name = esc_html($org->name);
 	
 	// Email template styles
@@ -1595,7 +1944,7 @@ function iipm_send_org_invoice_email($order_id, $org_id, $token, $order_status =
 			</div>
 			
 			<p style="color: #374151; font-size: 15px; line-height: 1.7; margin: 20px 0;">
-				Please review and approve or decline the invoice by clicking the button below:
+				Please review and pay for this invoice by clicking the button below:
 			</p>
 			
 			<!-- CTA Button -->
@@ -1636,22 +1985,22 @@ function iipm_send_org_invoice_email($order_id, $org_id, $token, $order_status =
 		
 		$message .= $email_wrapper_end;
 		
-	} elseif ($order_status === 'processing') {
-		// Processing status - no review link
-		$subject = '⏳ Invoice Processing - ' . $org->name;
+	} elseif ($order_status === 'completed') {
+		// Completed/Paid status
+		$subject = '✅ Payment Confirmed - ' . $org->name;
 		
 		$message = $email_wrapper_start;
 		$message .= '
 			<p style="font-size: 18px; color: #1f2937; margin: 0 0 20px 0;">Dear <strong>' . $org_name . '</strong>,</p>
 			
-			<div style="background: linear-gradient(135deg, #dbeafe 0%, #ddd6fe 100%); border-left: 4px solid #3b82f6; padding: 20px; margin: 20px 0; border-radius: 8px;">
+			<div style="background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); border-left: 4px solid #10b981; padding: 20px; margin: 20px 0; border-radius: 8px;">
 				<p style="margin: 0; color: #1f2937; font-size: 16px; line-height: 1.6;">
-					<strong style="color: #3b82f6;">⏳ Your invoice is currently being processed.</strong>
+					<strong style="color: #059669;">✅ Thank you! Your payment has been received and your order is now complete.</strong>
 				</p>
 			</div>
 			
 			<p style="color: #374151; font-size: 15px; line-height: 1.7; margin: 20px 0;">
-				We will notify you once the payment is completed.
+				🎉 Your organization\'s membership has been confirmed. Thank you for your continued support of IIPM.
 			</p>
 			
 			<!-- Order Details -->
@@ -1665,17 +2014,21 @@ function iipm_send_org_invoice_email($order_id, $org_id, $token, $order_status =
 					<tr>
 						<td style="padding: 8px 0; border-top: 1px solid #f3f4f6; color: #6b7280; font-size: 14px;">Status:</td>
 						<td style="padding: 8px 0; border-top: 1px solid #f3f4f6; text-align: right;">
-							<span style="background: #dbeafe; color: #1e40af; padding: 4px 12px; border-radius: 12px; font-size: 13px; font-weight: 600;">Processing</span>
+							<span style="background: #d1fae5; color: #065f46; padding: 4px 12px; border-radius: 12px; font-size: 13px; font-weight: 600;">Paid</span>
 						</td>
 					</tr>
 				</table>
-			</div>';
+			</div>
+			
+			<p style="color: #374151; font-size: 15px; line-height: 1.7; margin: 20px 0;">
+				If you need any assistance or have questions about your membership, please don\'t hesitate to contact us at <a href="mailto:info@iipm.ie" style="color: #667eea; text-decoration: none; font-weight: 600;">info@iipm.ie</a>
+			</p>';
 		
 		$message .= $email_wrapper_end;
 		
 	} elseif ($order_status === 'cancelled') {
-		// Declined/Cancelled status - no review link
-		$subject = '❌ Invoice Declined - ' . $org->name;
+		// Cancelled status
+		$subject = '❌ Invoice Cancelled - ' . $org->name;
 		
 		$message = $email_wrapper_start;
 		$message .= '
@@ -1683,12 +2036,12 @@ function iipm_send_org_invoice_email($order_id, $org_id, $token, $order_status =
 			
 			<div style="background: linear-gradient(135deg, #fee2e2 0%, #fce7f3 100%); border-left: 4px solid #ef4444; padding: 20px; margin: 20px 0; border-radius: 8px;">
 				<p style="margin: 0; color: #1f2937; font-size: 16px; line-height: 1.6;">
-					<strong style="color: #dc2626;">❌ Your invoice has been declined successfully.</strong>
+					<strong style="color: #dc2626;">❌ Your invoice has been cancelled.</strong>
 				</p>
 			</div>
 			
 			<p style="color: #374151; font-size: 15px; line-height: 1.7; margin: 20px 0;">
-				If you have any questions or would like to request adjustments, please contact us at <a href="mailto:info@iipm.ie" style="color: #667eea; text-decoration: none; font-weight: 600;">info@iipm.ie</a>
+				If you have any questions or would like to request a new invoice, please contact us at <a href="mailto:info@iipm.ie" style="color: #667eea; text-decoration: none; font-weight: 600;">info@iipm.ie</a>
 			</p>
 			
 			<!-- Order Details -->
@@ -1702,7 +2055,7 @@ function iipm_send_org_invoice_email($order_id, $org_id, $token, $order_status =
 					<tr>
 						<td style="padding: 8px 0; border-top: 1px solid #f3f4f6; color: #6b7280; font-size: 14px;">Status:</td>
 						<td style="padding: 8px 0; border-top: 1px solid #f3f4f6; text-align: right;">
-							<span style="background: #fee2e2; color: #991b1b; padding: 4px 12px; border-radius: 12px; font-size: 13px; font-weight: 600;">Declined</span>
+							<span style="background: #fee2e2; color: #991b1b; padding: 4px 12px; border-radius: 12px; font-size: 13px; font-weight: 600;">Cancelled</span>
 						</td>
 					</tr>
 				</table>
@@ -1711,35 +2064,8 @@ function iipm_send_org_invoice_email($order_id, $org_id, $token, $order_status =
 		$message .= $email_wrapper_end;
 		
 	} else {
-		// Default for other statuses - no review link
-		$subject = '📢 Invoice Status Update - ' . $org->name;
-		
-		$message = $email_wrapper_start;
-		$message .= '
-			<p style="font-size: 18px; color: #1f2937; margin: 0 0 20px 0;">Dear <strong>' . $org_name . '</strong>,</p>
-			
-			<div style="background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%); border-left: 4px solid #6b7280; padding: 20px; margin: 20px 0; border-radius: 8px;">
-				<p style="margin: 0; color: #1f2937; font-size: 16px; line-height: 1.6;">
-					<strong>📢 Your invoice status has been updated.</strong>
-				</p>
-			</div>
-			
-			<!-- Order Details -->
-			<div style="background: #ffffff; border: 2px solid #e5e7eb; padding: 20px; border-radius: 8px; margin: 25px 0;">
-				<p style="margin: 0 0 12px 0; color: #6b7280; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Order Information</p>
-				<table style="width: 100%; border-collapse: collapse;">
-					<tr>
-						<td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Order ID:</td>
-						<td style="padding: 8px 0; color: #1f2937; font-size: 14px; font-weight: 600; text-align: right;">#' . esc_html($order_id) . '</td>
-					</tr>
-					<tr>
-						<td style="padding: 8px 0; border-top: 1px solid #f3f4f6; color: #6b7280; font-size: 14px;">Status:</td>
-						<td style="padding: 8px 0; border-top: 1px solid #f3f4f6; color: #1f2937; font-size: 14px; font-weight: 600; text-align: right;">' . esc_html(ucfirst($order_status)) . '</td>
-					</tr>
-				</table>
-			</div>';
-		
-		$message .= $email_wrapper_end;
+		// For any other status (including processing), don't send email
+		return true; // Return success but don't send
 	}
 	
 	$headers = array('Content-Type: text/html; charset=UTF-8');

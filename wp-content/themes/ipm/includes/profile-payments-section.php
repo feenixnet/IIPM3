@@ -331,10 +331,7 @@ jQuery(document).ready(function($) {
             let statusClass = 'status-pending';
             let statusLabel = 'Pending';
             
-            if (order.status.includes('processing')) {
-                statusClass = 'status-processing';
-                statusLabel = 'Processing';
-            } else if (order.status.includes('completed')) {
+            if (order.status.includes('completed')) {
                 statusClass = 'status-completed';
                 statusLabel = 'Paid';
             } else if (order.status.includes('cancelled')) {
@@ -343,20 +340,14 @@ jQuery(document).ready(function($) {
             } else if (order.status.includes('trash')) {
                 statusClass = 'status-trash';
                 statusLabel = 'Trash';
+            } else if (order.status.includes('processing')) {
+                // Processing status shouldn't occur, but handle just in case
+                statusClass = 'status-processing';
+                statusLabel = 'Processing';
             }
             
-            // Action buttons
+            // Action buttons - only download button
             let actionButtons = '';
-            
-            // Accept button (only for pending orders)
-            if (order.status.includes('pending')) {
-                actionButtons += '<button class="action-icon-btn accept-btn" onclick="acceptInvoice(' + order.id + ')" title="Accept Invoice" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; margin-right: 5px;"><i class="fas fa-check"></i></button>';
-            }
-            
-            // Deny button (only for pending orders)
-            if (order.status.includes('pending')) {
-                actionButtons += '<button class="action-icon-btn deny-btn" onclick="denyInvoice(' + order.id + ')" title="Deny Invoice" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; margin-right: 5px;"><i class="fas fa-times"></i></button>';
-            }
             
             // Download button (always visible)
             actionButtons += '<button class="action-icon-btn download-btn" onclick="downloadInvoice(' + order.id + ')" title="Download Invoice" style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer;"><i class="fas fa-download"></i></button>';
@@ -394,70 +385,6 @@ jQuery(document).ready(function($) {
         loadUserInvoices(new Date().getFullYear());
     }
 });
-
-// Accept invoice function
-function acceptInvoice(orderId) {
-    if (!confirm('Are you sure you want to accept this invoice?')) {
-        return;
-    }
-    
-    jQuery.ajax({
-        url: '<?php echo admin_url('admin-ajax.php'); ?>',
-        method: 'POST',
-        data: {
-            action: 'iipm_user_accept_invoice',
-            order_id: orderId
-        },
-        success: function(response) {
-            if (response.success) {
-                alert('Invoice accepted successfully!');
-                // Reload the invoices
-                if (typeof window.loadUserPaymentInvoices === 'function') {
-                    window.loadUserPaymentInvoices();
-                }
-            } else {
-                alert('Failed to accept invoice: ' + (response.data || 'Unknown error'));
-            }
-        },
-        error: function() {
-            alert('Error accepting invoice. Please try again.');
-        }
-    });
-}
-
-// Deny invoice function
-function denyInvoice(orderId) {
-    const reason = prompt('Please provide a reason for denying this invoice:');
-    
-    if (!reason || reason.trim() === '') {
-        alert('You must provide a reason to deny an invoice.');
-        return;
-    }
-    
-    jQuery.ajax({
-        url: '<?php echo admin_url('admin-ajax.php'); ?>',
-        method: 'POST',
-        data: {
-            action: 'iipm_user_deny_invoice',
-            order_id: orderId,
-            reason: reason
-        },
-        success: function(response) {
-            if (response.success) {
-                alert('Invoice denied successfully!');
-                // Reload the invoices
-                if (typeof window.loadUserPaymentInvoices === 'function') {
-                    window.loadUserPaymentInvoices();
-                }
-            } else {
-                alert('Failed to deny invoice: ' + (response.data || 'Unknown error'));
-            }
-        },
-        error: function() {
-            alert('Error denying invoice. Please try again.');
-        }
-    });
-}
 
 // Download invoice function
 function downloadInvoice(orderId) {

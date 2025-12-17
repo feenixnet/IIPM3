@@ -11,12 +11,15 @@ if (!is_user_logged_in() || !current_user_can('administrator')) {
 
 // Include the CPD reporting functions for admin functions
 require_once get_template_directory() . '/includes/cpd-reporting-functions.php';
+// Include the CPD record API for CPD year calculation
+require_once get_template_directory() . '/includes/cpd-record-api.php';
 
 get_header();
 
 // Get reporting data
 global $wpdb;
-$current_year = date('Y');
+// Use CPD logging year - this returns previous year if we're in January (before Jan 31 deadline)
+$current_year = iipm_get_cpd_logging_year();
 
 // Get current year from CPD types table
 $cpd_types = $wpdb->get_results("SELECT * FROM {$wpdb->prefix}cpd_types ORDER BY id ASC");
