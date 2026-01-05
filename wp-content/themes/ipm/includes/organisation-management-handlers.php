@@ -20,17 +20,17 @@ function iipm_save_organisation() {
     global $wpdb;
     
     $org_id = isset($_POST['org_id']) ? intval($_POST['org_id']) : 0;
-    $name = sanitize_text_field($_POST['name']);
-    $contact_email = sanitize_email($_POST['contact_email']);
-    $contact_phone = sanitize_text_field($_POST['contact_phone']);
-    $billing_contact = sanitize_text_field($_POST['billing_contact']);
-    $address_line1 = sanitize_text_field($_POST['address_line1']);
-    $address_line2 = sanitize_text_field($_POST['address_line2']);
-    $city = sanitize_text_field($_POST['city']);
-    $county = sanitize_text_field($_POST['county']);
-    $eircode = sanitize_text_field($_POST['eircode']);
-    $admin_name = isset($_POST['admin_name']) ? sanitize_text_field($_POST['admin_name']) : '';
-    $admin_email = isset($_POST['admin_email']) ? sanitize_email($_POST['admin_email']) : '';
+    $name = sanitize_text_field(wp_unslash($_POST['name']));
+    $contact_email = sanitize_email(wp_unslash($_POST['contact_email']));
+    $contact_phone = sanitize_text_field(wp_unslash($_POST['contact_phone']));
+    $billing_contact = sanitize_text_field(wp_unslash($_POST['billing_contact']));
+    $address_line1 = sanitize_text_field(wp_unslash($_POST['address_line1']));
+    $address_line2 = sanitize_text_field(wp_unslash($_POST['address_line2']));
+    $city = sanitize_text_field(wp_unslash($_POST['city']));
+    $county = sanitize_text_field(wp_unslash($_POST['county']));
+    $eircode = sanitize_text_field(wp_unslash($_POST['eircode']));
+    $admin_name = isset($_POST['admin_name']) ? sanitize_text_field(wp_unslash($_POST['admin_name'])) : '';
+    $admin_email = isset($_POST['admin_email']) ? sanitize_email(wp_unslash($_POST['admin_email'])) : '';
     $send_invitation = isset($_POST['send_invitation']);
     
     // Validate required fields
@@ -242,6 +242,17 @@ function iipm_get_organisation() {
     if (!$organisation) {
         wp_send_json_error('Organisation not found');
         return;
+    }
+    
+    // Strip slashes from text fields (fix for data saved with escaped quotes)
+    $organisation->name = stripslashes($organisation->name ?? '');
+    $organisation->billing_contact = stripslashes($organisation->billing_contact ?? '');
+    $organisation->address_line1 = stripslashes($organisation->address_line1 ?? '');
+    $organisation->address_line2 = stripslashes($organisation->address_line2 ?? '');
+    $organisation->city = stripslashes($organisation->city ?? '');
+    $organisation->county = stripslashes($organisation->county ?? '');
+    if (isset($organisation->admin_name)) {
+        $organisation->admin_name = stripslashes($organisation->admin_name);
     }
     
     wp_send_json_success($organisation);

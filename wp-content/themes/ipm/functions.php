@@ -6205,6 +6205,18 @@ function iipm_handle_update_user_details() {
     }
     
     try {
+        // Normalize email addresses - trim whitespace and convert smart quotes to ASCII
+        $email_fields = array('user_email', 'email_address', 'email_address_pers', 'correspondence_email');
+        foreach ($email_fields as $field) {
+            if (isset($_POST[$field]) && !empty($_POST[$field])) {
+                $_POST[$field] = trim($_POST[$field]);
+                // Replace Unicode smart/curly single quotes with ASCII apostrophe
+                $_POST[$field] = preg_replace('/[\x{2018}\x{2019}\x{201A}\x{2032}\x{0060}\x{00B4}]/u', "'", $_POST[$field]);
+                // Replace Unicode smart/curly double quotes with ASCII quote
+                $_POST[$field] = preg_replace('/[\x{201C}\x{201D}\x{201E}\x{2033}]/u', '"', $_POST[$field]);
+            }
+        }
+        
         // Update wp_users table
         if (isset($_POST['user_email']) && !empty($_POST['user_email'])) {
             $user_email = sanitize_email($_POST['user_email']);
@@ -6307,14 +6319,14 @@ function iipm_handle_save_organisation() {
     global $wpdb;
     
     $org_id = intval($_POST['org_id']);
-    $name = sanitize_text_field($_POST['name']);
-    $description = sanitize_textarea_field($_POST['description']);
-    $address = sanitize_textarea_field($_POST['address']);
-    $phone = sanitize_text_field($_POST['phone']);
-    $email = sanitize_email($_POST['email']);
-    $website = esc_url_raw($_POST['website']);
-    $industry = sanitize_text_field($_POST['industry']);
-    $size = sanitize_text_field($_POST['size']);
+    $name = sanitize_text_field(wp_unslash($_POST['name']));
+    $description = sanitize_textarea_field(wp_unslash($_POST['description']));
+    $address = sanitize_textarea_field(wp_unslash($_POST['address']));
+    $phone = sanitize_text_field(wp_unslash($_POST['phone']));
+    $email = sanitize_email(wp_unslash($_POST['email']));
+    $website = esc_url_raw(wp_unslash($_POST['website']));
+    $industry = sanitize_text_field(wp_unslash($_POST['industry']));
+    $size = sanitize_text_field(wp_unslash($_POST['size']));
     $is_active = isset($_POST['is_active']) ? 1 : 0;
     
     // Validate required fields
@@ -6585,6 +6597,7 @@ function iipm_handle_bulk_import_courses() {
             'course_date' => $course_date,
             'course_enteredBy' => get_current_user_id(),
             'is_by_admin' => 1,
+            'is_duplicated' => 0, // Bulk imports are not duplicated
             'status' => 'active',
             'TimeStamp' => current_time('mysql')
         )
@@ -6986,11 +6999,17 @@ function iipm_admin_update_user_details() {
             }
         }
         
-        // Email validation
+        // Email validation - very permissive: just check for @ symbol with content on both sides
+        // This allows apostrophes and other RFC 5322 valid characters like ciara.o'brien@zurich.com
         if (isset($data['user_email']) && !empty($data['user_email'])) {
-            if (!is_email($data['user_email'])) {
-                $errors[] = 'Email address is not valid';
+            $email = trim($data['user_email']);
+            // Only reject if email doesn't contain @ or @ is first/last character
+            $at_pos = strpos($email, '@');
+            if ($at_pos === false || $at_pos === 0 || $at_pos === strlen($email) - 1) {
+                $errors[] = 'Email address is not valid - must contain @ with text before and after';
             }
+            // Log that we accepted this email
+            error_log('IIPM: Email validation PASSED for: ' . $email);
         }
         
         // At least one address required
@@ -7016,9 +7035,31 @@ function iipm_admin_update_user_details() {
         return $errors;
     }
     
+    // Debug: Log received email with timestamp to confirm new code is running
+    error_log('IIPM DEBUG [' . date('Y-m-d H:i:s') . '] CODE VERSION 2 - Raw user_email received: ' . ($_POST['user_email'] ?? 'NOT SET'));
+    error_log('IIPM DEBUG - Raw user_email hex: ' . bin2hex($_POST['user_email'] ?? ''));
+    
+    // Normalize email addresses - trim whitespace and convert smart quotes to ASCII
+    $email_fields = array('user_email', 'email_address', 'email_address_pers', 'correspondence_email');
+    foreach ($email_fields as $field) {
+        if (isset($_POST[$field]) && !empty($_POST[$field])) {
+            $_POST[$field] = trim($_POST[$field]);
+            // Replace Unicode smart/curly single quotes with ASCII apostrophe
+            $_POST[$field] = preg_replace('/[\x{2018}\x{2019}\x{201A}\x{2032}\x{0060}\x{00B4}]/u', "'", $_POST[$field]);
+            // Replace Unicode smart/curly double quotes with ASCII quote
+            $_POST[$field] = preg_replace('/[\x{201C}\x{201D}\x{201E}\x{2033}]/u', '"', $_POST[$field]);
+        }
+    }
+    
+    // Debug: Log normalized email
+    error_log('IIPM DEBUG - Normalized user_email: ' . ($_POST['user_email'] ?? 'NOT SET'));
+    
     // Validate the submitted data
     $validation_errors = validate_user_details($_POST);
     if (!empty($validation_errors)) {
+        // Debug: Log the email and validation result
+        error_log('IIPM Email Validation Debug - Email: ' . ($_POST['user_email'] ?? 'not set'));
+        error_log('IIPM Email Validation Debug - Errors: ' . print_r($validation_errors, true));
         wp_send_json_error('Validation failed: ' . implode(', ', $validation_errors));
         return;
     }

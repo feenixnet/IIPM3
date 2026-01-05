@@ -83,7 +83,7 @@ if (!function_exists('add_success_notification')) {
             </div>
             <div class="filter-group">
                 <div class="search-input-group">
-                    <input type="text" id="search-courses" class="form-control" placeholder="Search courses...">
+                    <input type="text" id="search-courses" class="form-control" placeholder="Search by course name or LIA code...">
                     <button class="btn btn-primary" id="search-button" type="button">
                         <span class="btn-icon"><i class="fas fa-search"></i></span>
                         Search

@@ -101,7 +101,7 @@ if (!function_exists('add_success_notification')) {
                             </div>
                             <div class="form-group">
                                 <label>Email:</label>
-                                <input type="email" name="user_email" id="user_email_edit" disabled>
+                                <input type="text" name="user_email" id="user_email_edit" disabled>
                             </div>
                             <div class="form-group">
                                 <label>First Name:</label>
@@ -187,7 +187,7 @@ if (!function_exists('add_success_notification')) {
                         <div class="form-grid">
                             <div class="form-group">
                                 <label>Email:</label>
-                                <input type="email" name="email_address" id="email_address_edit" disabled>
+                                <input type="text" name="email_address" id="email_address_edit" disabled>
                             </div>
                             <div class="form-group">
                                 <label>Phone:</label>
@@ -248,7 +248,7 @@ if (!function_exists('add_success_notification')) {
                         <div class="form-grid">
                             <div class="form-group">
                                 <label>Personal Email:</label>
-                                <input type="email" name="email_address_pers" id="email_address_pers_edit" disabled>
+                                <input type="text" name="email_address_pers" id="email_address_pers_edit" disabled>
                             </div>
                             <div class="form-group">
                                 <label>Personal Phone:</label>
@@ -260,7 +260,7 @@ if (!function_exists('add_success_notification')) {
                             </div>
                             <div class="form-group">
                                 <label>Correspondence Email:</label>
-                                <input type="email" name="correspondence_email" id="correspondence_email_edit" disabled>
+                                <input type="text" name="correspondence_email" id="correspondence_email_edit" disabled>
                             </div>
                             <div class="form-group full-width">
                                 <label>Personal Address Line 1:</label>
