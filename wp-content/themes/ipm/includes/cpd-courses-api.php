@@ -28,6 +28,11 @@ function iipm_ajax_get_course_for_duplication() {
         return;
     }
     
+    // Remove slashes from course_name to prevent double-escaping when displayed in form
+    if (isset($course->course_name)) {
+        $course->course_name = stripslashes($course->course_name);
+    }
+    
     // Convert minutes to hours for frontend display
     if (isset($course->course_cpd_mins)) {
         $hours = $course->course_cpd_mins / 60;
@@ -1147,8 +1152,13 @@ function iipm_ajax_add_course() {
     // Handle course date - if provided, use it; otherwise use current date
     $course_date = !empty($_POST['course_date']) ? sanitize_text_field($_POST['course_date']) : date('d/m/Y');
     
+    // Remove slashes from course_name to prevent double-escaping (e.g., \' becomes ')
+    // $wpdb->insert() will handle proper escaping
+    $course_name = isset($_POST['course_name']) ? stripslashes($_POST['course_name']) : '';
+    $course_name = sanitize_text_field($course_name);
+    
     $course_data = array(
-        'course_name' => sanitize_text_field($_POST['course_name']),
+        'course_name' => $course_name,
         'LIA_Code' => sanitize_text_field($_POST['course_code']),
         'category_id' => intval($_POST['course_category']),
         'provider' => sanitize_text_field($_POST['course_provider']),
@@ -1206,8 +1216,13 @@ function iipm_ajax_update_course() {
     // Handle course date - if provided, use it; otherwise keep existing
     $course_date = !empty($_POST['course_date']) ? sanitize_text_field($_POST['course_date']) : null;
     
+    // Remove slashes from course_name to prevent double-escaping (e.g., \' becomes ')
+    // $wpdb->update() will handle proper escaping
+    $course_name = isset($_POST['course_name']) ? stripslashes($_POST['course_name']) : '';
+    $course_name = sanitize_text_field($course_name);
+    
     $course_data = array(
-        'course_name' => sanitize_text_field($_POST['course_name']),
+        'course_name' => $course_name,
         'LIA_Code' => sanitize_text_field($_POST['course_code']),
         'category_id' => intval($_POST['course_category']),
         'provider' => sanitize_text_field($_POST['course_provider']),
