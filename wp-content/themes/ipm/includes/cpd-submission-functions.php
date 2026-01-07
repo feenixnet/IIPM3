@@ -579,10 +579,10 @@ function generate_certificate_pdf($cpd_stats, $certificate, $user_name, $user_em
     $pdf->SetFont('helvetica', '', 11);
     $is_current_period = (strval(date('Y')) === strval($submission_year));
 
-    // Get member's forgoable category IDs and names
+    // Get member's forgoable category IDs and names for this CPD year
     $forgo_category_names = array();
     if (function_exists('iipm_get_member_forgo_category_ids')) {
-        $forgo_category_ids = iipm_get_member_forgo_category_ids($user_id);
+        $forgo_category_ids = iipm_get_member_forgo_category_ids($user_id, intval($submission_year));
         if (!empty($forgo_category_ids)) {
             global $wpdb;
             $forgo_ids_escaped = array_map('intval', $forgo_category_ids);
@@ -593,14 +593,17 @@ function generate_certificate_pdf($cpd_stats, $certificate, $user_name, $user_em
         }
     }
     
-    // First table: stats summary across categories (excluding forgoable ones)
+    // First table: stats summary across categories
+    // Initialize cat_hours for ALL categories (including forgoable ones for display)
     $all_categories_order = array('Savings & Investments', 'Pensions', 'Ethics', 'Life Assurance');
-    $categories_order = array_diff($all_categories_order, $forgo_category_names);
+    $categories_order = array_diff($all_categories_order, $forgo_category_names); // Only for requirement checks
     $cat_hours = array();
-    foreach ($categories_order as $label) {
+    // Initialize all categories with 0
+    foreach ($all_categories_order as $label) {
         $cat_hours[$label] = 0;
     }
     
+    // Populate hours from courses_summary for ALL categories
     if (!empty($cpd_stats['courses_summary'])) {
         foreach ($cpd_stats['courses_summary'] as $row) {
             $name = $row['category'];
@@ -609,7 +612,15 @@ function generate_certificate_pdf($cpd_stats, $certificate, $user_name, $user_em
             }
         }
     }
+    
+    // Calculate total from ALL categories (for display)
     $completed_total = array_sum($cat_hours);
+    
+    // Calculate total from only non-forgoable categories (for requirement check)
+    $completed_total_for_requirement = 0;
+    foreach ($categories_order as $label) {
+        $completed_total_for_requirement += $cat_hours[$label];
+    }
 
     // Calculate Pro Rata Deduction by summing hours_deduct from approved leave requests
     // Use existing function from leave-request-functions.php
@@ -632,7 +643,16 @@ function generate_certificate_pdf($cpd_stats, $certificate, $user_name, $user_em
     // Requirement met checks (only for non-forgoable categories)
     $checks = array();
     foreach ($categories_order as $label) { $checks[$label] = ($cat_hours[$label] >= 1); }
-    $total_ok = ($completed_total >= $required_total);
+    // Use completed_total_for_requirement for requirement check (excludes forgoable categories)
+    $total_ok = ($completed_total_for_requirement >= $required_total);
+    
+    // Initialize checks for all categories (for display in PDF table)
+    foreach ($all_categories_order as $label) {
+        if (!isset($checks[$label])) {
+            // For forgoable categories, always show as met (they're waived)
+            $checks[$label] = true;
+        }
+    }
 
     // Load check/cross images and convert to base64
     $checkmark_path = get_template_directory() . '/assets/img/check.jpg';

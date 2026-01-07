@@ -231,11 +231,11 @@ function iipm_get_cpd_stats($user_id, $year) {
     // Get all available categories from the courses table
     $categories = iipm_get_course_categories();
     
-    // Get member's forgoable category IDs and names
+    // Get member's forgoable category IDs and names for this CPD year
     $forgo_category_ids = array();
     $forgo_category_names = array();
     if (function_exists('iipm_get_member_forgo_category_ids')) {
-        $forgo_category_ids = iipm_get_member_forgo_category_ids($user_id);
+        $forgo_category_ids = iipm_get_member_forgo_category_ids($user_id, $year);
         if (!empty($forgo_category_ids)) {
             // Get category names for forgoable IDs
             foreach ($categories as $category) {
@@ -246,21 +246,19 @@ function iipm_get_cpd_stats($user_id, $year) {
         }
     }
     
-    // Initialize category arrays with completion status (excluding forgoable categories)
+    // Initialize category arrays with completion status (INCLUDING forgoable categories for display)
     $category_data = array();
     foreach ($categories as $category) {
-        // Skip forgoable categories
-        if (in_array($category->name, $forgo_category_names)) {
-            continue;
-        }
+        $is_forgoable = in_array($category->name, $forgo_category_names);
         $category_data[$category->name] = array(
             'courses' => array(),
             'total_minutes' => 0,
             'total_hours' => 0,
             'count' => 0,
-            'required' => 1, // Each category requires 1 course per year
+            'required' => $is_forgoable ? 0 : 1, // Forgoable categories have 0 requirement
             'completed' => false,
-            'status' => '0/1' // Default: 0 completed out of 1 required
+            'status' => '0/1', // Default: 0 completed out of 1 required
+            'is_forgoable' => $is_forgoable // Flag to identify forgoable categories
         );
     }
     
@@ -286,7 +284,7 @@ function iipm_get_cpd_stats($user_id, $year) {
         $total_minutes += $minutes;
         $total_hours += $hours;
         
-        // Add to category data
+        // Add to category data (including forgoable categories)
         if (isset($category_data[$category_name])) {
             $category_data[$category_name]['courses'][] = array(
                 'id' => $course->id,
@@ -342,7 +340,8 @@ function iipm_get_cpd_stats($user_id, $year) {
             'required' => $data['required'],
             'completed' => $data['completed'],
             'status' => $data['status'],
-            'courses' => $data['courses'] // Include full course data
+            'courses' => $data['courses'], // Include full course data
+            'is_forgoable' => $data['is_forgoable'] // Include forgoable flag
         );
         
         // Add individual courses to all courses data

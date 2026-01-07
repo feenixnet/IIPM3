@@ -528,8 +528,15 @@ if (!function_exists('add_success_notification')) {
                         <i class="fas fa-clipboard-check"></i> CPD Category Requirements
                     </h3>
                     <p style="color: #6b7280; margin-bottom: 25px; font-size: 0.95rem;">
-                        Select the CPD categories that this member is allowed to forgo. Categories marked here will not be required for CPD submission.
+                        All categories are required by default. Uncheck a category to mark it as forgoable (not required) for this CPD year.
                     </p>
+                    
+                    <!-- Year Selector -->
+                    <div style="margin-bottom: 25px;">
+                        <select id="cpd-requirement-year" style="padding: 10px 16px; border: 2px solid #e5e7eb; border-radius: 8px; font-size: 14px; min-width: 200px; background: white; cursor: pointer;">
+                            <!-- Populated by JavaScript -->
+                        </select>
+                    </div>
                     
                     <div id="cpd-requirement-loading" style="text-align: center; padding: 40px; color: #6b7280;">
                         <div class="loading-spinner" style="display: inline-block; width: 24px; height: 24px; border: 3px solid #e5e7eb; border-top: 3px solid #667eea; border-radius: 50%; animation: spin 1s linear infinite;"></div>
@@ -2290,14 +2297,69 @@ jQuery(document).ready(function($) {
     }
     
     /**
-     * Load CPD requirement data
+     * Get current CPD year (Feb 1 to Jan 31 logic)
      */
-    function loadCPDRequirementData() {
+    function getCurrentCpdYear() {
+        const now = new Date();
+        const currentMonth = now.getMonth() + 1; // JavaScript months are 0-indexed
+        const currentDay = now.getDate();
+        const currentYear = now.getFullYear();
+        
+        // If we're in January (month 1) and day is <= 31, use previous year
+        if (currentMonth === 1 && currentDay <= 31) {
+            return currentYear - 1;
+        }
+        
+        return currentYear;
+    }
+    
+    /**
+     * Populate CPD requirement year selector
+     */
+    function populateCPDRequirementYearSelector() {
+        const $yearSelect = $('#cpd-requirement-year');
+        $yearSelect.empty();
+        
+        // Get user's created_at year
+        const userCreatedAt = userDetails.basic_info.created_at || userDetails.basic_info.user_registered;
+        let startYear = new Date().getFullYear();
+        if (userCreatedAt) {
+            const createdDate = new Date(userCreatedAt);
+            if (!isNaN(createdDate.getTime())) {
+                startYear = createdDate.getFullYear();
+            }
+        }
+        
+        // Get current CPD year (this will be the maximum)
+        const currentCpdYear = getCurrentCpdYear();
+        
+        // Generate years from current CPD year down to user's created year
+        for (let year = currentCpdYear; year >= startYear; year--) {
+            $yearSelect.append(`<option value="${year}">${year}</option>`);
+        }
+        
+        // Set current CPD year as default
+        $yearSelect.val(currentCpdYear);
+        
+        // Year change handler
+        $yearSelect.off('change').on('change', function() {
+            loadCPDRequirementDataForYear($(this).val());
+        });
+    }
+    
+    /**
+     * Load CPD requirement data for a specific year
+     */
+    function loadCPDRequirementDataForYear(cpdYear) {
         $('#cpd-requirement-loading').show();
         $('#cpd-requirement-content').hide();
         $('#cpd-requirement-error').hide();
         
         const userId = userDetails.basic_info.user_id;
+        
+        if (!cpdYear) {
+            cpdYear = getCurrentCpdYear();
+        }
         
         // First, get all mandatory CPD categories
         $.ajax({
@@ -2313,21 +2375,22 @@ jQuery(document).ready(function($) {
                     return;
                 }
                 
-                // Get member's forgo_items
+                // Get member's forgo requirements for this CPD year
                 $.ajax({
                     url: '<?php echo admin_url('admin-ajax.php'); ?>',
                     type: 'POST',
                     data: {
-                        action: 'iipm_get_member_forgo_items',
+                        action: 'iipm_get_member_forgo_requirements',
                         nonce: '<?php echo wp_create_nonce('iipm_portal_nonce'); ?>',
-                        user_id: userId
+                        user_id: userId,
+                        cpd_year: cpdYear
                     },
                     success: function(forgoResponse) {
                         $('#cpd-requirement-loading').hide();
                         
                         if (forgoResponse.success) {
-                            const forgoItems = forgoResponse.data.forgo_items || '';
-                            const forgoArray = forgoItems ? forgoItems.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id)) : [];
+                            const categoryIds = forgoResponse.data.category_ids || '';
+                            const forgoArray = categoryIds ? categoryIds.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id)) : [];
                             
                             displayCPDRequirementCategories(categoriesResponse.data, forgoArray);
                             $('#cpd-requirement-content').show();
@@ -2349,6 +2412,15 @@ jQuery(document).ready(function($) {
     }
     
     /**
+     * Load CPD requirement data (uses current CPD year)
+     */
+    function loadCPDRequirementData() {
+        const currentCpdYear = getCurrentCpdYear();
+        populateCPDRequirementYearSelector();
+        loadCPDRequirementDataForYear(currentCpdYear);
+    }
+    
+    /**
      * Display CPD requirement categories with checkboxes
      */
     function displayCPDRequirementCategories(categories, forgoArray) {
@@ -2364,7 +2436,9 @@ jQuery(document).ready(function($) {
         }
         
         mandatoryCategories.forEach(function(category) {
-            const isChecked = forgoArray.includes(parseInt(category.id));
+            // Checked = required (not forgoable), Unchecked = forgoable
+            // So check if category is NOT in forgo array (meaning it's required)
+            const isChecked = !forgoArray.includes(parseInt(category.id));
             const checkboxHtml = `
                 <div style="display: flex; align-items: center; padding: 15px; background: #f8fafc; border: 2px solid ${isChecked ? '#667eea' : '#e5e7eb'}; border-radius: 8px; transition: all 0.2s;">
                     <input type="checkbox" 
@@ -2374,9 +2448,6 @@ jQuery(document).ready(function($) {
                            style="width: 20px; height: 20px; margin-right: 12px; cursor: pointer; accent-color: #667eea;">
                     <label for="forgo-category-${category.id}" style="cursor: pointer; flex: 1; color: #374151; font-weight: 500;">
                         ${category.name}
-                        <span style="display: block; font-size: 0.875rem; color: #6b7280; font-weight: normal; margin-top: 4px;">
-                            ${category.description || 'No description'}
-                        </span>
                     </label>
                 </div>
             `;
@@ -2389,8 +2460,15 @@ jQuery(document).ready(function($) {
      */
     function saveCPDRequirement() {
         const userId = userDetails.basic_info.user_id;
-        const checkedBoxes = $('#cpd-category-checkboxes input[type="checkbox"]:checked');
-        const forgoItems = Array.from(checkedBoxes).map(cb => $(cb).val()).join(',');
+        const cpdYear = $('#cpd-requirement-year').val();
+        // Get UNCHECKED boxes (these are the forgoable categories)
+        const uncheckedBoxes = $('#cpd-category-checkboxes input[type="checkbox"]:not(:checked)');
+        const categoryIds = Array.from(uncheckedBoxes).map(cb => $(cb).val()).join(',');
+        
+        if (!cpdYear) {
+            showCPDRequirementError('Please select a CPD year');
+            return;
+        }
         
         $('#save-cpd-requirement').prop('disabled', true).text('Saving...');
         
@@ -2398,10 +2476,11 @@ jQuery(document).ready(function($) {
             url: '<?php echo admin_url('admin-ajax.php'); ?>',
             type: 'POST',
             data: {
-                action: 'iipm_save_member_forgo_items',
+                action: 'iipm_save_member_forgo_requirements',
                 nonce: '<?php echo wp_create_nonce('iipm_portal_nonce'); ?>',
                 user_id: userId,
-                forgo_items: forgoItems
+                cpd_year: cpdYear,
+                category_ids: categoryIds
             },
             success: function(response) {
                 $('#save-cpd-requirement').prop('disabled', false).text('Save Changes');
@@ -2447,8 +2526,9 @@ jQuery(document).ready(function($) {
     });
     
     $(document).on('click', '#cancel-cpd-requirement', function() {
-        // Reload the data to reset changes
-        loadCPDRequirementData();
+        // Reload the data to reset changes for current year
+        const currentYear = $('#cpd-requirement-year').val();
+        loadCPDRequirementDataForYear(currentYear);
     });
     
     /**

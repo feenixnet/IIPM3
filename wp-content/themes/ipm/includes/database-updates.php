@@ -37,34 +37,45 @@ function iipm_update_invitations_table() {
 }
 
 /**
- * Update members table to add forgo_items column
+ * Create forgo_requirements table
  */
-function iipm_update_members_table_forgo_items() {
+function iipm_create_forgo_requirements_table() {
     global $wpdb;
     
-    $table_name = $wpdb->prefix . 'test_iipm_members';
+    $table_name = $wpdb->prefix . 'test_iipm_forgo_requirements';
     
-    // Check if forgo_items column exists
-    $column_exists = $wpdb->get_results($wpdb->prepare(
-        "SHOW COLUMNS FROM `{$table_name}` LIKE %s",
-        'forgo_items'
+    // Check if table exists
+    $table_exists = $wpdb->get_var($wpdb->prepare(
+        "SHOW TABLES LIKE %s",
+        $table_name
     ));
     
-    if (empty($column_exists)) {
-        // Add the missing column
-        $sql = "ALTER TABLE `{$table_name}` ADD COLUMN `forgo_items` VARCHAR(255) NULL DEFAULT NULL AFTER `cpd_prorata_adjustment`";
-        
-        $result = $wpdb->query($sql);
-        
-        if ($result === false) {
-            error_log('IIPM: Failed to add forgo_items column: ' . $wpdb->last_error);
-            return false;
-        } else {
-            error_log('IIPM: Successfully added forgo_items column to members table');
-            return true;
-        }
+    if ($table_exists) {
+        error_log('IIPM: forgo_requirements table already exists');
+        return true;
+    }
+    
+    $charset_collate = $wpdb->get_charset_collate();
+    
+    $sql = "CREATE TABLE `{$table_name}` (
+        `id` int(11) NOT NULL AUTO_INCREMENT,
+        `user_id` int(11) NOT NULL,
+        `category_ids` varchar(255) NULL DEFAULT NULL,
+        `cpd_year` int(11) NOT NULL,
+        PRIMARY KEY (`id`),
+        UNIQUE KEY `user_year` (`user_id`, `cpd_year`),
+        KEY `user_id` (`user_id`),
+        KEY `cpd_year` (`cpd_year`)
+    ) $charset_collate;";
+    
+    require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+    dbDelta($sql);
+    
+    if ($wpdb->last_error) {
+        error_log('IIPM: Failed to create forgo_requirements table: ' . $wpdb->last_error);
+        return false;
     } else {
-        error_log('IIPM: forgo_items column already exists');
+        error_log('IIPM: Successfully created forgo_requirements table');
         return true;
     }
 }
@@ -76,13 +87,13 @@ function iipm_run_database_updates() {
     // Update invitations table
     iipm_update_invitations_table();
     
-    // Update members table to add forgo_items column
-    iipm_update_members_table_forgo_items();
+    // Create forgo_requirements table
+    iipm_create_forgo_requirements_table();
     
     // You can add more database updates here in the future
     
     // Update the database version
-    update_option('iipm_db_version', '1.2');
+    update_option('iipm_db_version', '1.3');
 }
 
 /**
@@ -90,7 +101,7 @@ function iipm_run_database_updates() {
  */
 function iipm_check_database_updates() {
     $current_version = get_option('iipm_db_version', '1.0');
-    $required_version = '1.2';
+    $required_version = '1.3';
     
     if (version_compare($current_version, $required_version, '<')) {
         iipm_run_database_updates();

@@ -1252,11 +1252,6 @@ function iipm_ajax_get_cpd_categories() {
         return;
     }
     
-    if (!current_user_can('view_cpd_records')) {
-        wp_send_json_error('Insufficient permissions');
-        return;
-    }
-    
     $categories = iipm_get_cpd_categories(true);
     
     wp_send_json_success($categories);
