@@ -26,6 +26,7 @@ function iipm_save_organisation() {
     $billing_contact = sanitize_text_field(wp_unslash($_POST['billing_contact']));
     $address_line1 = sanitize_text_field(wp_unslash($_POST['address_line1']));
     $address_line2 = sanitize_text_field(wp_unslash($_POST['address_line2']));
+    $address_line3 = sanitize_text_field(wp_unslash($_POST['address_line3'] ?? ''));
     $city = sanitize_text_field(wp_unslash($_POST['city']));
     $county = sanitize_text_field(wp_unslash($_POST['county']));
     $eircode = sanitize_text_field(wp_unslash($_POST['eircode']));
@@ -76,13 +77,14 @@ function iipm_save_organisation() {
         'billing_contact' => $billing_contact,
         'address_line1' => $address_line1,
         'address_line2' => $address_line2,
+        'address_line3' => $address_line3,
         'city' => $city,
         'county' => $county,
         'eircode' => $eircode,
         'updated_at' => current_time('mysql')
     );
     
-    $formats = array('%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s');
+    $formats = array('%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s');
     
     // Add admin fields if provided
     if ($admin_email && $admin_name) {
@@ -249,6 +251,7 @@ function iipm_get_organisation() {
     $organisation->billing_contact = stripslashes($organisation->billing_contact ?? '');
     $organisation->address_line1 = stripslashes($organisation->address_line1 ?? '');
     $organisation->address_line2 = stripslashes($organisation->address_line2 ?? '');
+    $organisation->address_line3 = stripslashes($organisation->address_line3 ?? '');
     $organisation->city = stripslashes($organisation->city ?? '');
     $organisation->county = stripslashes($organisation->county ?? '');
     if (isset($organisation->admin_name)) {
@@ -2065,5 +2068,135 @@ function iipm_send_admin_removed_notification($email, $org_name, $admin_name = '
     
     wp_mail($email, $subject, $message, $headers);
 }
+
+/**
+ * Get Organisation Payment History
+ * Fetches orders by customer_id where customer lookup table has org_id matching organisation id
+ */
+function iipm_get_organisation_payment_history() {
+    if (!current_user_can('manage_iipm_members') && !current_user_can('administrator')) {
+        wp_send_json_error('Insufficient permissions');
+        return;
+    }
+    
+    if (!wp_verify_nonce($_POST['nonce'], 'iipm_portal_nonce')) {
+        wp_send_json_error('Security check failed');
+        return;
+    }
+    
+    $org_id = intval($_POST['org_id'] ?? 0);
+    $year = intval($_POST['year'] ?? date('Y'));
+    
+    if (!$org_id) {
+        wp_send_json_error('Invalid organisation ID');
+        return;
+    }
+    
+    global $wpdb;
+    
+    // Get customer_id from wc_customer_lookup where org_id matches
+    $customer_id = $wpdb->get_var($wpdb->prepare(
+        "SELECT customer_id FROM {$wpdb->prefix}wc_customer_lookup WHERE org_id = %d LIMIT 1",
+        $org_id
+    ));
+    
+    if (!$customer_id) {
+        wp_send_json_success(array('orders' => array()));
+        return;
+    }
+    
+    // Get orders for this customer in the specified year
+    $orders = $wpdb->get_results($wpdb->prepare(
+        "SELECT o.id, o.status, o.total_amount, o.date_created_gmt, o.date_updated_gmt,
+                om_designation.meta_value as designation,
+                om_total_fee.meta_value as total_fee,
+                om_year.meta_value as invoice_year
+         FROM {$wpdb->prefix}wc_orders o
+         LEFT JOIN {$wpdb->prefix}wc_orders_meta om_designation ON om_designation.order_id = o.id AND om_designation.meta_key = '_iipm_designation'
+         LEFT JOIN {$wpdb->prefix}wc_orders_meta om_total_fee ON om_total_fee.order_id = o.id AND om_total_fee.meta_key = '_iipm_total_fee'
+         LEFT JOIN {$wpdb->prefix}wc_orders_meta om_year ON om_year.order_id = o.id AND om_year.meta_key = '_iipm_invoice_year'
+         WHERE o.customer_id = %d
+           AND o.type = 'shop_order'
+           AND (om_year.meta_value = %d OR YEAR(o.date_created_gmt) = %d)
+         ORDER BY o.date_created_gmt DESC",
+        $customer_id,
+        $year,
+        $year
+    ));
+    
+    // Format orders for response
+    $formatted_orders = array();
+    foreach ($orders as $order) {
+        // Get status label
+        $status = $order->status;
+        $status_label = ucfirst(str_replace('wc-', '', $status));
+        
+        // Get members for this organisation with their designations and fees
+        $members = $wpdb->get_results($wpdb->prepare(
+            "SELECT mp.user_id as ID, u.user_login, u.user_email,
+                    mp.first_name, mp.sur_name, mp.user_designation
+            FROM {$wpdb->prefix}test_iipm_member_profiles mp
+            LEFT JOIN {$wpdb->users} u ON u.ID = mp.user_id
+            WHERE mp.employer_id = %d 
+              AND mp.user_designation IS NOT NULL 
+              AND mp.user_designation != ''",
+            $org_id
+        ));
+        
+        // Get designation fees (from products)
+        $designation_fees = array();
+        $members_with_fees = array();
+        
+        foreach ($members as $member) {
+            if (!isset($designation_fees[$member->user_designation])) {
+                // Find product matching this designation name
+                $products = get_posts(array(
+                    'post_type' => 'product',
+                    'posts_per_page' => 1,
+                    'post_status' => 'publish',
+                    'title' => $member->user_designation,
+                    's' => $member->user_designation
+                ));
+                
+                if (!empty($products)) {
+                    $product = wc_get_product($products[0]->ID);
+                    $designation_fees[$member->user_designation] = $product ? floatval($product->get_price()) : 0;
+                } else {
+                    $designation_fees[$member->user_designation] = 0;
+                }
+            }
+            
+            $members_with_fees[] = array(
+                'ID' => intval($member->ID),
+                'user_email' => $member->user_email,
+                'first_name' => $member->first_name,
+                'sur_name' => $member->sur_name,
+                'user_designation' => $member->user_designation,
+                'designation' => $member->user_designation,
+                'fee' => $designation_fees[$member->user_designation]
+            );
+        }
+        
+        // Calculate membership fees (total_fee or total_amount)
+        $membership_fees = $order->total_fee ? floatval($order->total_fee) : floatval($order->total_amount);
+        
+        $formatted_orders[] = array(
+            'id' => intval($order->id),
+            'order_number' => intval($order->id),
+            'status' => $status,
+            'status_label' => $status_label,
+            'total_amount' => floatval($order->total_amount),
+            'membership_fees' => number_format($membership_fees, 2),
+            'date_created' => $order->date_created_gmt,
+            'date_created_formatted' => $order->date_created_gmt ? date('M j, Y', strtotime($order->date_created_gmt)) : 'N/A',
+            'designation' => $order->designation ?? '',
+            'invoice_year' => $order->invoice_year ?? $year,
+            'members' => $members_with_fees
+        );
+    }
+    
+    wp_send_json_success(array('orders' => $formatted_orders));
+}
+add_action('wp_ajax_iipm_get_organisation_payment_history', 'iipm_get_organisation_payment_history');
 
 ?>

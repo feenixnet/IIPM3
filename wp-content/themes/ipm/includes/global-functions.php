@@ -324,4 +324,129 @@ if (!function_exists('iipm_calculate_adjusted_target_points')) {
         return iipm_round_to_nearest_half($adjusted_target);
     }
 }
+
+/**
+ * Get and update membership status for a user
+ * This function checks the current membership status and auto-updates it based on payment and dates
+ * 
+ * @param int $user_id User ID (default: current user)
+ * @param bool $auto_update Whether to auto-update status based on payment and dates (default: true)
+ * @return string Membership status: 'active', 'expired', 'inactive', or 'pending'
+ */
+if (!function_exists('iipm_get_membership_status')) {
+    function iipm_get_membership_status($user_id = null, $auto_update = true) {
+        global $wpdb;
+        
+        // Use current user if no user_id provided
+        if (!$user_id) {
+            $user_id = get_current_user_id();
+        }
+        
+        if (!$user_id) {
+            return 'inactive';
+        }
+        
+        // Get current membership status from database
+        $member_status = $wpdb->get_var($wpdb->prepare(
+            "SELECT membership_status FROM {$wpdb->prefix}test_iipm_members WHERE user_id = %d",
+            $user_id
+        ));
+        
+        // If no status found, default to inactive
+        if (!$member_status) {
+            return 'inactive';
+        }
+        
+        // Auto-update membership status based on current date and payment status
+        if ($auto_update) {
+            // Use global deadline constants defined in functions.php
+            $current_month = intval(date('n')); // 1-12
+            $current_day = intval(date('j')); // 1-31
+            $current_year = intval(date('Y'));
+            
+            // Check if user has completed order for current year
+            $has_paid_current_year = false;
+            if (function_exists('iipm_has_completed_order_for_year')) {
+                $has_paid_current_year = iipm_has_completed_order_for_year($user_id, $current_year);
+            }
+            
+            // Determine if we're in the expiry period (after Jan 31)
+            $expiry_passed = ($current_month > IIPM_MEMBERSHIP_EXPIRY_MONTH) || 
+                             ($current_month === IIPM_MEMBERSHIP_EXPIRY_MONTH && $current_day > IIPM_MEMBERSHIP_EXPIRY_DAY);
+            
+            // Determine if we're in the inactive period (after Feb 5)
+            $inactive_passed = ($current_month > IIPM_MEMBERSHIP_INACTIVE_MONTH) || 
+                               ($current_month === IIPM_MEMBERSHIP_INACTIVE_MONTH && $current_day >= IIPM_MEMBERSHIP_INACTIVE_DAY);
+            
+            // Logic for membership status updates
+            if ($expiry_passed) {
+                // After Jan 31: Check payment status
+                if ($has_paid_current_year) {
+                    // User has paid for current year - set to active
+                    if ($member_status !== 'active') {
+                        $wpdb->update(
+                            $wpdb->prefix . 'test_iipm_members',
+                            array('membership_status' => 'active'),
+                            array('user_id' => $user_id),
+                            array('%s'),
+                            array('%d')
+                        );
+                        $member_status = 'active';
+                    }
+                } else {
+                    // User has NOT paid for current year
+                    if ($inactive_passed) {
+                        // After Feb 5: Set to inactive if not paid
+                        if ($member_status !== 'inactive') {
+                            $wpdb->update(
+                                $wpdb->prefix . 'test_iipm_members',
+                                array('membership_status' => 'inactive'),
+                                array('user_id' => $user_id),
+                                array('%s'),
+                                array('%d')
+                            );
+                            $member_status = 'inactive';
+                        }
+                    } else {
+                        // Between Jan 31 - Feb 5: Set to expired if not paid
+                        if ($member_status !== 'expired') {
+                            $wpdb->update(
+                                $wpdb->prefix . 'test_iipm_members',
+                                array('membership_status' => 'expired'),
+                                array('user_id' => $user_id),
+                                array('%s'),
+                                array('%d')
+                            );
+                            $member_status = 'expired';
+                        }
+                    }
+                }
+            }
+        }
+        
+        return $member_status;
+    }
+}
+
+/**
+ * Check if current user is admin based on user_is_admin field
+ * 
+ * @param int $user_id User ID (default: current user)
+ * @return bool True if user is admin, false otherwise
+ */
+if (!function_exists('iipm_is_user_admin')) {
+    function iipm_is_user_admin($user_id = null) {
+        if (!$user_id) {
+            $user_id = get_current_user_id();
+        }
+        
+        global $wpdb;
+        $user_is_admin = $wpdb->get_var($wpdb->prepare(
+            "SELECT user_is_admin FROM {$wpdb->prefix}test_iipm_member_profiles WHERE user_id = %d",
+            $user_id
+        ));
+        
+        return $user_is_admin == 1;
+    }
+}
 ?>

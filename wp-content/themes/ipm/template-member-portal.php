@@ -33,99 +33,8 @@ if ($user_is_admin != 0) {
     exit;
 }
 
-// Check if user has active membership status
-global $wpdb;
-$member_status = $wpdb->get_var($wpdb->prepare(
-    "SELECT membership_status FROM {$wpdb->prefix}test_iipm_members WHERE user_id = %d",
-    $current_user_id
-));
-
-// Auto-update membership status based on current date and payment status
-// Uses global deadline constants defined in functions.php
-$current_month = intval(date('n')); // 1-12
-$current_day = intval(date('j')); // 1-31
-$current_year = intval(date('Y'));
-$status_updated = false;
-
-// Check if user has completed order for current year
-$has_paid_current_year = false;
-if (function_exists('iipm_has_completed_order_for_year')) {
-    $has_paid_current_year = iipm_has_completed_order_for_year($current_user_id, $current_year);
-}
-
-// Determine if we're in the expiry period (after Jan 31)
-$expiry_passed = ($current_month > IIPM_MEMBERSHIP_EXPIRY_MONTH) || 
-                 ($current_month === IIPM_MEMBERSHIP_EXPIRY_MONTH && $current_day > IIPM_MEMBERSHIP_EXPIRY_DAY);
-
-// Determine if we're in the inactive period (after Feb 5)
-$inactive_passed = ($current_month > IIPM_MEMBERSHIP_INACTIVE_MONTH) || 
-                   ($current_month === IIPM_MEMBERSHIP_INACTIVE_MONTH && $current_day >= IIPM_MEMBERSHIP_INACTIVE_DAY);
-
-
-error_log("HAS_PAID_CURRENT_YEAR: " . $has_paid_current_year);
-
-// Logic for membership status updates
-if ($expiry_passed) {
-    // After Jan 31: Check payment status
-    
-    if ($has_paid_current_year) {
-        // User has paid for current year - set to active
-        if ($member_status !== 'active') {
-            $wpdb->update(
-                $wpdb->prefix . 'test_iipm_members',
-                array('membership_status' => 'active'),
-                array('user_id' => $current_user_id),
-                array('%s'),
-                array('%d')
-            );
-            $member_status = 'active';
-            $status_updated = true;
-            error_log("IIPM: Set membership to active for user $current_user_id (has completed order for $current_year)");
-        }
-    } else {
-        // User has NOT paid for current year
-        
-        if ($inactive_passed) {
-            // After Feb 5: Set to inactive if not paid
-            if ($member_status !== 'inactive') {
-                $wpdb->update(
-                    $wpdb->prefix . 'test_iipm_members',
-                    array('membership_status' => 'inactive'),
-                    array('user_id' => $current_user_id),
-                    array('%s'),
-                    array('%d')
-                );
-                $member_status = 'inactive';
-                $status_updated = true;
-                $month_name = date('F', mktime(0, 0, 0, IIPM_MEMBERSHIP_INACTIVE_MONTH, 1));
-                error_log("IIPM: Auto-inactivated membership for user $current_user_id (no payment by $month_name " . IIPM_MEMBERSHIP_INACTIVE_DAY . ")");
-            }
-        } else {
-            // Between Jan 31 - Feb 5: Set to expired if not paid
-            if ($member_status !== 'expired') {
-                $wpdb->update(
-                    $wpdb->prefix . 'test_iipm_members',
-                    array('membership_status' => 'expired'),
-                    array('user_id' => $current_user_id),
-                    array('%s'),
-                    array('%d')
-                );
-                $member_status = 'expired';
-                $status_updated = true;
-                $month_name = date('F', mktime(0, 0, 0, IIPM_MEMBERSHIP_EXPIRY_MONTH, 1));
-                error_log("IIPM: Auto-expired membership for user $current_user_id (no payment, grace period until Feb 5)");
-            }
-        }
-    }
-}
-
-// Check subscription status and update membership status if needed
-if (function_exists('iipm_check_subscription_status')) {
-    $updated_status = iipm_check_subscription_status($current_user_id);
-    if ($updated_status !== $member_status) {
-        $member_status = $updated_status;
-    }
-}
+// Get membership status using global function (auto-updates based on payment and dates)
+$member_status = iipm_get_membership_status($current_user_id, true);
 
 // Auto-assign to CPD if user has active or expired membership (but not inactive)
 // Note: Expired members can still do CPD training until Feb 5th when they become inactive
@@ -172,27 +81,25 @@ get_header();
                 <p style="color: rgba(255,255,255,0.9); font-size: 1.1rem;">
                     Your CPD overview.
                 </p>
+                <?php IIPM_Navigation_Manager::display_breadcrumbs(); ?>
             </div>
         </div>
         
         <!-- Inactive Membership Alert -->
-        <?php if ($member_status === 'inactive'): 
-            $inactive_deadline = date('F j', mktime(0, 0, 0, IIPM_MEMBERSHIP_INACTIVE_MONTH, IIPM_MEMBERSHIP_INACTIVE_DAY));
-        ?>
-        <div class="membership-inactive-alert" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); border-radius: 16px; padding: 30px; margin-bottom: 30px; box-shadow: 0 10px 30px rgba(239, 68, 68, 0.3);">
-            <div class="alert-content" style="display: flex; align-items: center; gap: 20px;">
-                <div class="alert-icon" style="font-size: 48px; flex-shrink: 0;">⚠️</div>
-                <div class="alert-message" style="flex: 1;">
-                    <h3 style="color: white; margin: 0 0 10px 0; font-size: 1.5rem;">Membership Inactive</h3>
-                    <p style="color: rgba(255,255,255,0.95); margin: 0 0 15px 0; font-size: 1.05rem;">
-                        Your membership is currently inactive. You need to renew your membership to access CPD training and other member benefits.
-                    </p>
-                    <p style="color: rgba(255,255,255,0.9); margin: 0 0 20px 0;">
-                        The annual membership renewal deadline is <strong style="color: white;"><?php echo $inactive_deadline; ?></strong> each year.
+        <?php if ($member_status === 'inactive'): ?>
+        <div class="membership-inactive-alert" style="background: #ffffff; border-left: 4px solid #ef4444; border-radius: 8px; padding: 24px; margin-bottom: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+            <div style="display: flex; align-items: flex-start; gap: 16px;">
+                <div style="flex-shrink: 0; width: 40px; height: 40px; background: #fee2e2; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                    <i class="fas fa-exclamation-circle" style="color: #ef4444; font-size: 20px;"></i>
+                </div>
+                <div style="flex: 1;">
+                    <h3 style="color: #1f2937; margin: 0 0 8px 0; font-size: 1.25rem; font-weight: 600;">Membership Inactive</h3>
+                    <p style="color: #6b7280; margin: 0 0 16px 0; font-size: 0.95rem; line-height: 1.5;">
+                        Your membership is currently inactive. Please renew your membership to access CPD training and member benefits.
                     </p>
                     <a href="<?php echo home_url('/profile/?tab=payment'); ?>" 
-                       style="display: inline-block; background: white; color: #ef4444; padding: 12px 30px; border-radius: 8px; text-decoration: none; font-weight: 600; transition: transform 0.2s;">
-                        Renew Membership Now
+                       style="display: inline-block; background: #ef4444; color: white; padding: 10px 24px; border-radius: 6px; text-decoration: none; font-weight: 500; font-size: 0.9rem; transition: background 0.2s;">
+                        Renew Membership
                     </a>
                 </div>
             </div>
@@ -256,7 +163,7 @@ get_header();
         <!-- Show all content for active and expired members -->
         
         <!-- Statistics Blocks Section -->
-        <?php if ($is_submitted): ?>
+        <?php if (false && $is_submitted): // Hide statistics blocks when submitted ?>
         <div class="statistics-blocks-section">
             <?php
             // Get CPD statistics
@@ -368,7 +275,7 @@ get_header();
         <?php endif; ?>
         
         <!-- Submission Status Section -->
-        <?php if ($is_submitted): ?>
+        <?php if (false && $is_submitted): // Hide submission status section when submitted ?>
         <div class="submission-status-section">
             <div class="submission-status-card">
                 <div class="status-header">
@@ -393,13 +300,38 @@ get_header();
         </div>
         <?php endif; ?>
         
-        <?php if (!$is_submitted): ?>
         <div class="portal-layout">
             <?php if ($is_user_assigned): ?>
             <!-- Left Side - My CPD Course (for assigned users) -->
-            <div class="cpd-course-panel">
+            <div class="cpd-course-panel" id="cpd-course-panel">
                 <div class="cpd-course-card">
-                    <h3>My CPD Course</h3>
+                    <div class="cpd-card-header" style="display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 16px;">
+                        <h3 style="margin: 0;">My CPD Course</h3>
+                        <div class="cpd-year-selector" style="display: flex; align-items: center; gap: 8px;">
+                            <label for="cpd-year-select" style="font-size: 0.9rem; color: #4b5563;">Year:</label>
+                            <select id="cpd-year-select" style="padding: 6px 10px; border-radius: 6px; border: 1px solid #d1d5db; font-size: 0.9rem;">
+                                <?php
+                                $current_year_for_select = $current_year;
+                                $current_user_id_for_select = get_current_user_id();
+                                // Get user's enrollment date
+                                $user_registered_for_select = $wpdb->get_var($wpdb->prepare(
+                                    "SELECT user_registered FROM {$wpdb->users} WHERE ID = %d",
+                                    $current_user_id_for_select
+                                ));
+                                // Extract enrollment year
+                                $enrollment_year_for_select = 2019; // Default fallback
+                                if ($user_registered_for_select) {
+                                    $enrollment_year_for_select = (int) date('Y', strtotime($user_registered_for_select));
+                                }
+                                // Generate years from current year down to enrollment year
+                                for ($year = $current_year_for_select; $year >= $enrollment_year_for_select; $year--) {
+                                    $selected = ($year == $current_year_for_select) ? 'selected' : '';
+                                    echo "<option value='{$year}' {$selected}>{$year}</option>";
+                                }
+                                ?>
+                            </select>
+                        </div>
+                    </div>
                     
                     <button class="btn btn-primary" id="log-training-btn" <?php echo ($is_submitted || $member_status === 'inactive') ? 'disabled' : ''; ?>>
                         <?php 
@@ -453,9 +385,18 @@ get_header();
                         <div class="cpd-validation-message" id="cpd-validation-message" style="display: none;">
                             <!-- Validation messages will be shown here -->
                         </div>
+                    <?php else: ?>
+                        <!-- Download Certificate Button (shown when submitted and certificate is available) -->
+                        <div class="cpd-action-buttons" id="cpd-action-buttons" style="display: none;">
+                            <button class="btn btn-success" id="download-certificate-btn" onclick="directDownloadCertificate()" style="display: none;">
+                                <span class="btn-icon"><i class="fas fa-download"></i></span>
+                                Download Certificate
+                            </button>
+                        </div>
                     <?php endif; ?>
 
                     <!-- Submission Deadline Alert -->
+                    <?php if (!$is_submitted): ?>
                     <div class="submission-alert" id="submission-alert" style="display: none;">
                         <div class="alert-content">
                             <i class="fas fa-calendar-check alert-icon"></i>
@@ -465,11 +406,12 @@ get_header();
                             </div>
                         </div>
                     </div>
+                    <?php endif; ?>
                 </div>
             </div>
 
             <!-- Right Side (for assigned users) -->
-            <div class="portal-right-panel">
+            <div class="portal-right-panel" id="portal-right-panel">
                 <!-- Quick Links -->
                 <div class="quick-links">
                     <div class="quick-link-card" id="all-courses-card">
@@ -478,18 +420,14 @@ get_header();
                         <?php if ($is_submitted): ?>
                             <span class="card-link disabled" style="color: #9ca3af; cursor: not-allowed;">Disabled <i class="fas fa-lock"></i></span>
                         <?php else: ?>
-                            <a href="<?php echo home_url('/cpd-courses/'); ?>" class="card-link">Browse courses <i class="fas fa-arrow-right"></i></a>
+                            <a href="<?php echo home_url('/cpd-courses/'); ?>" class="card-link" id="browse-courses-link">Browse courses <i class="fas fa-arrow-right"></i></a>
                         <?php endif; ?>
                     </div>
                     
                     <div class="quick-link-card">
                         <div class="card-icon"><i class="fas fa-calendar"></i></div>
                         <h4>Submit Leave Request</h4>
-                        <?php if ($is_submitted): ?>
-                            <span class="card-link disabled" style="color: #9ca3af; cursor: not-allowed;">Disabled <i class="fas fa-lock"></i></span>
-                        <?php else: ?>
-                            <a href="<?php echo home_url('/leave-request/') ?>" class="card-link">Submit <i class="fas fa-arrow-right"></i></a>
-                        <?php endif; ?>
+                        <a href="<?php echo home_url('/leave-request/') ?>" class="card-link" id="submit-leave-link">Submit <i class="fas fa-arrow-right"></i></a>
                     </div>
                 </div>
 
@@ -520,24 +458,25 @@ get_header();
             <?php else: ?>
             <!-- Inactive Member Section -->
             <div class="inactive-member-panel">
-                <div class="cpd-course-card">
-                    <div class="inactive-content">
-                        <div class="inactive-icon"><i class="fas fa-user-slash"></i></div>
-                        <h3>Account Inactive</h3>
-                        <p class="inactive-description">
-                            Your membership is currently inactive. Please contact support to reactivate your account and access CPD training.
+                <div class="cpd-course-card" style="background: #ffffff; border-radius: 12px; padding: 40px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    <div style="margin-bottom: 24px;">
+                        <div style="width: 64px; height: 64px; background: #fee2e2; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 16px;">
+                            <i class="fas fa-user-slash" style="color: #ef4444; font-size: 28px;"></i>
+                        </div>
+                        <h3 style="color: #1f2937; margin: 0 0 12px 0; font-size: 1.5rem; font-weight: 600;">Membership Inactive</h3>
+                        <p style="color: #6b7280; margin: 0 0 24px 0; font-size: 1rem; line-height: 1.6; max-width: 500px; margin-left: auto; margin-right: auto;">
+                            Your membership is currently inactive. Please renew your membership to access CPD training and member benefits.
                         </p>
-                        <a href="mailto:info@iipm.ie" class="btn btn-primary">
-                            <span class="btn-icon"><i class="fas fa-envelope"></i></span>
-                            Contact Support
+                        <a href="<?php echo home_url('/profile/?tab=payment'); ?>" 
+                           style="display: inline-block; background: #ef4444; color: white; padding: 12px 32px; border-radius: 8px; text-decoration: none; font-weight: 500; font-size: 0.95rem; transition: background 0.2s;">
+                            <i class="fas fa-credit-card" style="margin-right: 8px;"></i>
+                            Renew Membership
                         </a>
                     </div>
                 </div>
             </div>
             <?php endif; ?>
         </div>
-        <?php endif; ?>
-        
         <?php endif; // End check for inactive membership status ?>
     </div>
 </div>
@@ -2417,9 +2356,12 @@ get_header();
     var ajaxurl = '<?php echo admin_url('admin-ajax.php'); ?>';
     var isUserAssigned = <?php echo $is_user_assigned ? 'true' : 'false'; ?>;
     var isTrainingCompleted = <?php echo $cpd_stats['completion_percentage'] >= 100 ? 'true' : 'false'; ?> == 'true' ? true : false;
+    var isSubmitted = <?php echo $is_submitted ? 'true' : 'false'; ?>;
     var statData = null;
     // CPD logging year - uses previous year if in January (before Jan 31 deadline)
     var cpdLoggingYear = getCpdYear();
+    // Base CPD year (current logging year) - used to detect non-current views
+    var baseCpdYear = cpdLoggingYear;
     
     document.addEventListener('DOMContentLoaded', function() {
         // Get DOM elements
@@ -2445,12 +2387,20 @@ get_header();
         // Load submission details if user has submitted
         <?php if ($is_submitted): ?>
         loadSubmissionDetails();
+        // Check certificate availability on page load
+        checkCertificateAvailability();
         <?php endif; ?>
         
         /**
          * Initialize the page
          */
         function initializePage() {
+            // Sync selector with current CPD year if it exists
+            const cpdYearSelect = document.getElementById('cpd-year-select');
+            if (cpdYearSelect) {
+                cpdYearSelect.value = cpdLoggingYear.toString();
+            }
+            
             // Load initial data
             loadCompletedCpdStats();
             
@@ -2464,6 +2414,9 @@ get_header();
             
             // Set up CPD button event listeners
             setupCpdButtonListeners();
+            
+            // Apply initial year-based UI state
+            updateYearDependentUI();
             
             // Debug: Log the current year being used
             console.log('Current year:', new Date().getFullYear());
@@ -2652,6 +2605,25 @@ get_header();
             if (courseConfirmationModal) courseConfirmationModal.addEventListener('click', function(e) {
                 if (e.target === courseConfirmationModal) hideCourseConfirmationModal();
             });
+
+            // Year selector change
+            const cpdYearSelect = document.getElementById('cpd-year-select');
+            if (cpdYearSelect) {
+                cpdYearSelect.addEventListener('change', function() {
+                    const selected = parseInt(this.value, 10);
+                    if (!isNaN(selected)) {
+                        cpdLoggingYear = selected;
+                        console.log('Changed CPD year to:', cpdLoggingYear);
+                        updateYearDependentUI();
+                        loadCompletedCpdStats();
+                        if (isUserAssigned) {
+                            loadRecentlyLoggedTraining();
+                        }
+                        // Check certificate availability when year changes
+                        checkCertificateAvailability();
+                    }
+                });
+            }
         }
         
         /**
@@ -2696,6 +2668,10 @@ get_header();
          */
         function updateCpdProgress(data) {
             console.log('CPD Data received:', data); // Debug log
+            
+            // Update high-level requirement/hours stats
+            updateCpdStats(data);
+            updateCourseSummary(data);
             
             // Update category progress
             const categories = ['pensions', 'savings', 'ethics', 'life'];
@@ -2770,7 +2746,54 @@ get_header();
             // Update CPD action buttons based on period and assignment status
             updateCpdActionButtons(data);
             
+            // Check certificate availability and update download button
+            checkCertificateAvailability();
+            
             console.log(`Total completed: ${totalCompleted}/4`); // Debug log
+        }
+        
+        /**
+         * Check certificate availability and show/hide download button
+         */
+        function checkCertificateAvailability() {
+            const downloadBtn = document.getElementById('download-certificate-btn');
+            const cpdActionButtons = document.getElementById('cpd-action-buttons');
+            
+            if (!downloadBtn || !cpdActionButtons) return;
+            
+            const yearSelect = document.getElementById('cpd-year-select');
+            const selectedYear = yearSelect ? yearSelect.value : getCpdYear();
+            
+            // Check if certificate is available for the selected year
+            fetch(ajaxurl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    action: 'iipm_check_certificate_availability',
+                    year: selectedYear,
+                    nonce: '<?php echo wp_create_nonce("iipm_certificate_nonce"); ?>'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.data.has_certificate) {
+                    // Certificate is available, show the button
+                    downloadBtn.style.display = 'block';
+                    cpdActionButtons.style.display = 'flex';
+                } else {
+                    // No certificate available, hide the button
+                    downloadBtn.style.display = 'none';
+                    cpdActionButtons.style.display = 'none';
+                }
+            })
+            .catch(error => {
+                console.error('Error checking certificate availability:', error);
+                // On error, hide the button to be safe
+                downloadBtn.style.display = 'none';
+                cpdActionButtons.style.display = 'none';
+            });
         }
         
         /**
@@ -3172,6 +3195,7 @@ get_header();
          * Load recently logged training
          */
         function loadRecentlyLoggedTraining() {
+            console.log('Loading recently logged training for year:', cpdLoggingYear);
             const formData = new FormData();
             formData.append('action', 'iipm_get_recently_logged_training');
             formData.append('year', cpdLoggingYear);
@@ -3183,12 +3207,27 @@ get_header();
                 processData: false,
                 contentType: false,
                 success: function(response) {
+                    console.log('Training data response:', response);
                     if (response.success) {
                         updateTrainingDisplay(response.data);
+                    } else {
+                        console.error('Failed to load training:', response.data);
+                        // Show error message in training content
+                        const trainingContentEl = document.getElementById('training-content');
+                        if (trainingContentEl) {
+                            trainingContentEl.innerHTML = '<div class="no-training-message"><p style="color: #ef4444;">Error loading training data. Please try again.</p></div>';
+                        }
                     }
                 },
                 error: function(xhr, status, error) {
-                    console.error('Error loading training:', error);
+                    console.error('AJAX Error loading training:', error);
+                    console.error('Status:', status);
+                    console.error('Response:', xhr.responseText);
+                    // Show error message in training content
+                    const trainingContentEl = document.getElementById('training-content');
+                    if (trainingContentEl) {
+                        trainingContentEl.innerHTML = '<div class="no-training-message"><p style="color: #ef4444;">Error loading training data. Please try again.</p></div>';
+                    }
                 }
             });
         }
@@ -3197,14 +3236,60 @@ get_header();
          * Update training display
          */
         function updateTrainingDisplay(training) {
-            // Check if user has submitted - if so, render as table under certificate section
-            <?php if ($is_submitted): ?>
-                renderTrainingAsTable(training);
-                return;
-            <?php endif; ?>
-            
-            // For non-submitted users, render in portal
+            console.log('Updating training display with data:', training);
+            // Always render in portal (even when submitted, but without delete buttons)
             renderTrainingInPortal(training);
+        }
+
+        /**
+         * Enable/disable UI elements based on selected CPD year
+         * - If viewing a year other than the current logging year, disable:
+         *   - Log Training buttons
+         *   - Browse Courses link
+         *   - Submit Leave Request link
+         *   - Training delete buttons (handled in renderTrainingInPortal)
+         */
+        function updateYearDependentUI() {
+            const isCurrentYearView = (cpdLoggingYear === baseCpdYear);
+            // If submitted, always disable actions regardless of year
+            const shouldDisableActions = isSubmitted || !isCurrentYearView;
+            
+            // Log Training main button
+            if (logTrainingBtn) {
+                if (shouldDisableActions) {
+                    logTrainingBtn.disabled = true;
+                    logTrainingBtn.classList.add('disabled');
+                } else {
+                    // Only enable if not inactive (check PHP condition)
+                    const isInactive = <?php echo $member_status === 'inactive' ? 'true' : 'false'; ?>;
+                    if (!isInactive) {
+                        logTrainingBtn.disabled = false;
+                        logTrainingBtn.classList.remove('disabled');
+                    }
+                }
+            }
+            
+            // "Log your first training" button (when no training yet) will be handled when rendering cards
+            
+            // Browse courses link
+            const browseCoursesLink = document.getElementById('browse-courses-link');
+            if (browseCoursesLink) {
+                if (!browseCoursesLink.dataset.originalHref) {
+                    browseCoursesLink.dataset.originalHref = browseCoursesLink.getAttribute('href') || '';
+                }
+                if (shouldDisableActions) {
+                    browseCoursesLink.classList.add('disabled');
+                    browseCoursesLink.setAttribute('href', 'javascript:void(0)');
+                } else {
+                    browseCoursesLink.classList.remove('disabled');
+                    if (browseCoursesLink.dataset.originalHref) {
+                        browseCoursesLink.setAttribute('href', browseCoursesLink.dataset.originalHref);
+                    }
+                }
+            }
+            
+            // Submit leave request link - Always enabled (not disabled by year or submission status)
+            // Removed disabling logic as per user request
         }
         
         /**
@@ -3289,19 +3374,24 @@ get_header();
          * Render training data in portal (for non-submitted users)
          */
         function renderTrainingInPortal(training) {
-            // Check if trainingContent element exists (it might not exist if user has submitted)
-            if (!trainingContent) {
-                console.log('Training content element not found - user may have submitted CPD');
+            // Get training content element dynamically (in case it wasn't available at page load)
+            const trainingContentEl = document.getElementById('training-content');
+            if (!trainingContentEl) {
+                console.error('Training content element not found');
                 return;
             }
             
+            const isCurrentYearView = (cpdLoggingYear === baseCpdYear);
+            // Don't show delete buttons if submitted or not current year
+            const canDelete = !isSubmitted && isCurrentYearView;
+            
             if (!training || training.length === 0) {
-                trainingContent.innerHTML = `
+                trainingContentEl.innerHTML = `
                     <div class="no-training-message">
                         <div class="no-training-icon">💻</div>
                         <h4>No training history yet</h4>
                         <p>Start your CPD journey by logging your first training session</p>
-                        <button class="btn btn-primary" id="log-first-training-btn">Log your first training</button>
+                        ${canDelete ? '<button class="btn btn-primary" id="log-first-training-btn">Log your first training</button>' : ''}
                     </div>
                 `;
                 
@@ -3322,9 +3412,10 @@ get_header();
                     <div class="training-item">
                         <div class="training-header">
                             <h4 class="training-title">${item.courseName.charAt(0).toUpperCase() + item.courseName.slice(1)}</h4>
+                            ${canDelete ? `
                             <div class="training-actions">
                                 <button class="action-btn delete-btn" onclick="deleteCourse(${item.id})" title="Remove"><i class="fas fa-trash-alt"></i></button>
-                            </div>
+                            </div>` : ''}
                         </div>
                         
                         <div class="training-meta">
@@ -3354,10 +3445,8 @@ get_header();
             });
             html += '</div>';
             
-            // Double check that trainingContent exists before setting innerHTML
-            if (trainingContent) {
-                trainingContent.innerHTML = html;
-            }
+            // Set the HTML content
+            trainingContentEl.innerHTML = html;
         }
         
         /**
@@ -3707,6 +3796,83 @@ get_header();
                 downloadBtn.innerHTML = originalText;
                 downloadBtn.disabled = false;
             }, 2000);
+        }
+        
+        /**
+         * Direct download certificate for submitted CPD (uses current year from year selector)
+         */
+        window.directDownloadCertificate = function() {
+            const yearSelect = document.getElementById('cpd-year-select');
+            const selectedYear = yearSelect ? yearSelect.value : getCpdYear();
+            const certificateBtn = document.getElementById('download-certificate-btn');
+            const originalText = certificateBtn ? certificateBtn.innerHTML : '';
+            
+            // Show loading state
+            if (certificateBtn) {
+                certificateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating PDF...';
+                certificateBtn.disabled = true;
+            }
+            
+            // Fetch certificate data
+            fetch(ajaxurl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    action: 'iipm_get_certificate_data',
+                    year: selectedYear,
+                    nonce: '<?php echo wp_create_nonce("iipm_certificate_nonce"); ?>'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.data.certificate) {
+                    const certificate = data.data.certificate;
+                    const user = data.data.user;
+                    
+                    // Directly trigger download
+                    const params = new URLSearchParams({
+                        action: 'iipm_download_certificate_direct',
+                        certificate_id: certificate.id,
+                        user_name: user.name,
+                        user_email: user.email,
+                        contact_address: user.contact_address,
+                        submission_year: data.data.year
+                    });
+                    
+                    const downloadUrl = `${ajaxurl}?${params.toString()}`;
+                    
+                    const link = document.createElement('a');
+                    link.href = downloadUrl;
+                    link.style.display = 'none';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    
+                    // Reset button state
+                    if (certificateBtn) {
+                        setTimeout(() => {
+                            certificateBtn.innerHTML = originalText;
+                            certificateBtn.disabled = false;
+                        }, 2000);
+                    }
+                } else {
+                    alert('Certificate not found for the selected year. Please ensure your CPD has been submitted.');
+                    if (certificateBtn) {
+                        certificateBtn.innerHTML = originalText;
+                        certificateBtn.disabled = false;
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error downloading certificate:', error);
+                alert('Error downloading certificate. Please try again.');
+                if (certificateBtn) {
+                    certificateBtn.innerHTML = originalText;
+                    certificateBtn.disabled = false;
+                }
+            });
         }
 
         /**

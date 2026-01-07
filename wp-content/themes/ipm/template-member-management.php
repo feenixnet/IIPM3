@@ -49,6 +49,7 @@ if (!function_exists('add_success_notification')) {
         <div class="page-header" style="text-align: center; margin-bottom: 40px;">
             <div>
                 <h1 style="color: white; font-size: 2.5rem; margin-bottom: 10px;">Member Management</h1>
+                <?php IIPM_Navigation_Manager::display_breadcrumbs(); ?>
             </div>
         </div>
 

@@ -9,9 +9,6 @@ if (!current_user_can('manage_iipm_members') && !current_user_can('administrator
     exit;
 }
 
-// Include subscription management functions to access admin check
-require_once get_template_directory() . '/includes/subscription-management.php';
-
 // Check IIPM admin status based on user_is_admin field
 if (!iipm_is_user_admin()) {
     wp_redirect(home_url('/member-portal/'));

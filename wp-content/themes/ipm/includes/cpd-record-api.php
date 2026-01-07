@@ -231,9 +231,28 @@ function iipm_get_cpd_stats($user_id, $year) {
     // Get all available categories from the courses table
     $categories = iipm_get_course_categories();
     
-    // Initialize category arrays with completion status
+    // Get member's forgoable category IDs and names
+    $forgo_category_ids = array();
+    $forgo_category_names = array();
+    if (function_exists('iipm_get_member_forgo_category_ids')) {
+        $forgo_category_ids = iipm_get_member_forgo_category_ids($user_id);
+        if (!empty($forgo_category_ids)) {
+            // Get category names for forgoable IDs
+            foreach ($categories as $category) {
+                if (in_array($category->id, $forgo_category_ids)) {
+                    $forgo_category_names[] = $category->name;
+                }
+            }
+        }
+    }
+    
+    // Initialize category arrays with completion status (excluding forgoable categories)
     $category_data = array();
     foreach ($categories as $category) {
+        // Skip forgoable categories
+        if (in_array($category->name, $forgo_category_names)) {
+            continue;
+        }
         $category_data[$category->name] = array(
             'courses' => array(),
             'total_minutes' => 0,

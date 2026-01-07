@@ -24,6 +24,7 @@ get_header();
                 <p style="color: rgba(255,255,255,0.9); font-size: 1.1rem;">
                     Review CPD submissions and manage certificates
                 </p>
+                <?php IIPM_Navigation_Manager::display_breadcrumbs(); ?>
             </div>
         </div>
         <div>

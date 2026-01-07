@@ -33,6 +33,7 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
                 <p style="color: rgba(255,255,255,0.9); font-size: 1.1rem;">
                     Manage member organisations and their administrators
                 </p>
+                <?php IIPM_Navigation_Manager::display_breadcrumbs(); ?>
             </div>
         </div>
         <div class="tab-content main-content">
@@ -190,7 +191,7 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
                                     
                                     echo "<td style='width: 250px;'>";
                                     echo "<div class='action-buttons-cell'>";
-                                    echo "<button class='btn-small edit-org' data-org-id='{$org->id}' title='Edit Organisation'><i class='fas fa-edit'></i></button>";
+                                    echo "<a href='" . home_url('/organisation-details?id=' . $org->id) . "' class='btn-small view-org' data-org-id='{$org->id}' title='View Organisation'><i class='fas fa-eye'></i></a>";
                                     
                                     // Check if admin exists (admin_name and admin_email are not null)
                                     $hasAdmin = !empty($org->admin_name) && !empty($org->admin_email);
@@ -198,7 +199,6 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
                                     if (!$hasAdmin) {
                                         echo "<button class='btn-small setup-admin' data-org-id='{$org->id}' title='Setup Admin'><i class='fas fa-user-cog'></i></button>";
                                     } else {
-                                        echo "<a href='" . home_url('/organisation-members?employer_id=' . $org->id) . "' class='btn-small view-members' data-org-id='{$org->id}' title='View Members'><i class='fas fa-users'></i></a>";
                                         echo "<button class='btn-small btn-warning remove-admin' data-org-id='{$org->id}' data-org-name='" . esc_attr($org->name) . "' data-admin-name='" . esc_attr($org->admin_name) . "' data-admin-email='" . esc_attr($org->admin_email) . "' title='Remove Admin'><i class='fas fa-user-times'></i></button>";
                                     }
                                     
@@ -1329,12 +1329,11 @@ jQuery(document).ready(function($) {
         $('.email-validation-error').remove();
     });
     
-    // Edit Organisation
-    $(document).on('click', '.edit-org', function() {
-        const orgId = $(this).data('org-id');
-        console.log('Edit org clicked', orgId);
-        loadOrganisationData(orgId);
-    });
+    // View Organisation - redirect to details page
+    // $(document).on('click', '.view-org', function() {
+    //     const orgId = $(this).data('org-id');
+    //     window.location.href = '<?php echo home_url('/organisation-details?id='); ?>' + orgId;
+    // });
     
     // Setup Admin
     $(document).on('click', '.setup-admin', function() {

@@ -106,6 +106,7 @@ get_header();
                 }
                 ?>
                 </p>
+                <?php IIPM_Navigation_Manager::display_breadcrumbs(); ?>
             </div>
         </div>
 

@@ -46,6 +46,7 @@ if (!function_exists('add_success_notification')) {
                 <p style="color: rgba(255,255,255,0.9); font-size: 1.1rem;">
                     View and edit comprehensive user information
                 </p>
+                <?php IIPM_Navigation_Manager::display_breadcrumbs(); ?>
             </div>
         </div>
 
@@ -78,6 +79,9 @@ if (!function_exists('add_success_notification')) {
                     </button>
                     <button class="tab-btn" data-tab="leave-requests" style="padding: 12px 24px; background: none; border: none; border-bottom: 2px solid transparent; color: #6b7280; font-weight: 500; cursor: pointer;">
                         <i class="fas fa-calendar-alt"></i> Leave Requests
+                    </button>
+                    <button class="tab-btn" data-tab="cpd-requirement" style="padding: 12px 24px; background: none; border: none; border-bottom: 2px solid transparent; color: #6b7280; font-weight: 500; cursor: pointer;">
+                        <i class="fas fa-clipboard-check"></i> CPD Requirement
                     </button>
                 </div>
             </div>
@@ -514,6 +518,41 @@ if (!function_exists('add_success_notification')) {
                 <div id="leave-requests-error" style="display: none; text-align: center; padding: 40px; color: #dc2626;">
                     <i class="fas fa-exclamation-triangle" style="font-size: 2rem; margin-bottom: 15px;"></i>
                     <p>Error loading leave requests. Please try again.</p>
+                </div>
+            </div>
+            
+            <!-- CPD Requirement Tab -->
+            <div id="cpd-requirement-tab" class="tab-content" style="display: none;">
+                <div style="background: white; border-radius: 12px; padding: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    <h3 style="margin: 0 0 20px 0; color: #374151; font-size: 1.25rem; font-weight: 600;">
+                        <i class="fas fa-clipboard-check"></i> CPD Category Requirements
+                    </h3>
+                    <p style="color: #6b7280; margin-bottom: 25px; font-size: 0.95rem;">
+                        Select the CPD categories that this member is allowed to forgo. Categories marked here will not be required for CPD submission.
+                    </p>
+                    
+                    <div id="cpd-requirement-loading" style="text-align: center; padding: 40px; color: #6b7280;">
+                        <div class="loading-spinner" style="display: inline-block; width: 24px; height: 24px; border: 3px solid #e5e7eb; border-top: 3px solid #667eea; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                        <span style="margin-left: 10px;">Loading categories...</span>
+                    </div>
+                    
+                    <div id="cpd-requirement-content" style="display: none;">
+                        <div style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 25px;">
+                            <div id="cpd-category-checkboxes" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+                                <!-- Populated by JavaScript -->
+                            </div>
+                        </div>
+                        
+                        <div style="display: flex; gap: 10px; justify-content: flex-end; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+                            <button type="button" id="cancel-cpd-requirement" style="padding: 12px 24px; border: 1px solid #d1d5db; background: white; color: #374151; border-radius: 8px; cursor: pointer; font-weight: 500;">Cancel</button>
+                            <button type="button" id="save-cpd-requirement" style="padding: 12px 24px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 500;">Save Changes</button>
+                        </div>
+                    </div>
+                    
+                    <div id="cpd-requirement-error" style="display: none; text-align: center; padding: 20px; color: #dc2626; background: #fef2f2; border-radius: 8px; margin-top: 20px;">
+                        <i class="fas fa-exclamation-triangle" style="margin-right: 8px;"></i>
+                        <span id="cpd-requirement-error-message">Error loading categories. Please try again.</span>
+                    </div>
                 </div>
             </div>
             
@@ -1250,6 +1289,11 @@ jQuery(document).ready(function($) {
             // Load leave requests data if leave-requests tab is selected
             if (tabName === 'leave-requests') {
                 loadLeaveRequestsData();
+            }
+            
+            // Load CPD requirement data if cpd-requirement tab is selected
+            if (tabName === 'cpd-requirement') {
+                loadCPDRequirementData();
             }
         });
     }
@@ -2244,6 +2288,168 @@ jQuery(document).ready(function($) {
         // For now, return a default value - this should be fetched from user's membership data
         return 10; // Default membership constant
     }
+    
+    /**
+     * Load CPD requirement data
+     */
+    function loadCPDRequirementData() {
+        $('#cpd-requirement-loading').show();
+        $('#cpd-requirement-content').hide();
+        $('#cpd-requirement-error').hide();
+        
+        const userId = userDetails.basic_info.user_id;
+        
+        // First, get all mandatory CPD categories
+        $.ajax({
+            url: '<?php echo admin_url('admin-ajax.php'); ?>',
+            type: 'POST',
+            data: {
+                action: 'iipm_get_cpd_categories',
+                nonce: '<?php echo wp_create_nonce('iipm_cpd_nonce'); ?>'
+            },
+            success: function(categoriesResponse) {
+                if (!categoriesResponse.success) {
+                    showCPDRequirementError('Failed to load categories');
+                    return;
+                }
+                
+                // Get member's forgo_items
+                $.ajax({
+                    url: '<?php echo admin_url('admin-ajax.php'); ?>',
+                    type: 'POST',
+                    data: {
+                        action: 'iipm_get_member_forgo_items',
+                        nonce: '<?php echo wp_create_nonce('iipm_portal_nonce'); ?>',
+                        user_id: userId
+                    },
+                    success: function(forgoResponse) {
+                        $('#cpd-requirement-loading').hide();
+                        
+                        if (forgoResponse.success) {
+                            const forgoItems = forgoResponse.data.forgo_items || '';
+                            const forgoArray = forgoItems ? forgoItems.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id)) : [];
+                            
+                            displayCPDRequirementCategories(categoriesResponse.data, forgoArray);
+                            $('#cpd-requirement-content').show();
+                        } else {
+                            showCPDRequirementError(forgoResponse.data || 'Failed to load member data');
+                        }
+                    },
+                    error: function() {
+                        $('#cpd-requirement-loading').hide();
+                        showCPDRequirementError('Network error occurred');
+                    }
+                });
+            },
+            error: function() {
+                $('#cpd-requirement-loading').hide();
+                showCPDRequirementError('Network error occurred');
+            }
+        });
+    }
+    
+    /**
+     * Display CPD requirement categories with checkboxes
+     */
+    function displayCPDRequirementCategories(categories, forgoArray) {
+        const $container = $('#cpd-category-checkboxes');
+        $container.empty();
+        
+        // Filter only mandatory categories
+        const mandatoryCategories = categories.filter(cat => cat.is_mandatory == 1);
+        
+        if (mandatoryCategories.length === 0) {
+            $container.html('<p style="color: #6b7280; font-style: italic; text-align: center; padding: 20px;">No mandatory categories found.</p>');
+            return;
+        }
+        
+        mandatoryCategories.forEach(function(category) {
+            const isChecked = forgoArray.includes(parseInt(category.id));
+            const checkboxHtml = `
+                <div style="display: flex; align-items: center; padding: 15px; background: #f8fafc; border: 2px solid ${isChecked ? '#667eea' : '#e5e7eb'}; border-radius: 8px; transition: all 0.2s;">
+                    <input type="checkbox" 
+                           id="forgo-category-${category.id}" 
+                           value="${category.id}" 
+                           ${isChecked ? 'checked' : ''}
+                           style="width: 20px; height: 20px; margin-right: 12px; cursor: pointer; accent-color: #667eea;">
+                    <label for="forgo-category-${category.id}" style="cursor: pointer; flex: 1; color: #374151; font-weight: 500;">
+                        ${category.name}
+                        <span style="display: block; font-size: 0.875rem; color: #6b7280; font-weight: normal; margin-top: 4px;">
+                            ${category.description || 'No description'}
+                        </span>
+                    </label>
+                </div>
+            `;
+            $container.append(checkboxHtml);
+        });
+    }
+    
+    /**
+     * Save CPD requirement changes
+     */
+    function saveCPDRequirement() {
+        const userId = userDetails.basic_info.user_id;
+        const checkedBoxes = $('#cpd-category-checkboxes input[type="checkbox"]:checked');
+        const forgoItems = Array.from(checkedBoxes).map(cb => $(cb).val()).join(',');
+        
+        $('#save-cpd-requirement').prop('disabled', true).text('Saving...');
+        
+        $.ajax({
+            url: '<?php echo admin_url('admin-ajax.php'); ?>',
+            type: 'POST',
+            data: {
+                action: 'iipm_save_member_forgo_items',
+                nonce: '<?php echo wp_create_nonce('iipm_portal_nonce'); ?>',
+                user_id: userId,
+                forgo_items: forgoItems
+            },
+            success: function(response) {
+                $('#save-cpd-requirement').prop('disabled', false).text('Save Changes');
+                
+                if (response.success) {
+                    // Show success message
+                    const successHtml = `
+                        <div id="cpd-requirement-success" style="display: block; text-align: center; padding: 15px; color: #059669; background: #f0fdf4; border-radius: 8px; margin-bottom: 20px; border: 1px solid #10b981;">
+                            <i class="fas fa-check-circle" style="margin-right: 8px;"></i>
+                            CPD requirements updated successfully!
+                        </div>
+                    `;
+                    $('#cpd-requirement-content').prepend(successHtml);
+                    
+                    // Hide success message after 3 seconds
+                    setTimeout(function() {
+                        $('#cpd-requirement-success').fadeOut(function() {
+                            $(this).remove();
+                        });
+                    }, 3000);
+                } else {
+                    showCPDRequirementError(response.data || 'Failed to save changes');
+                }
+            },
+            error: function() {
+                $('#save-cpd-requirement').prop('disabled', false).text('Save Changes');
+                showCPDRequirementError('Network error occurred');
+            }
+        });
+    }
+    
+    /**
+     * Show CPD requirement error
+     */
+    function showCPDRequirementError(message) {
+        $('#cpd-requirement-error').show();
+        $('#cpd-requirement-error-message').text(message);
+    }
+    
+    // Event handlers for CPD requirement tab
+    $(document).on('click', '#save-cpd-requirement', function() {
+        saveCPDRequirement();
+    });
+    
+    $(document).on('click', '#cancel-cpd-requirement', function() {
+        // Reload the data to reset changes
+        loadCPDRequirementData();
+    });
     
     /**
      * Format date string for display

@@ -463,6 +463,7 @@ if (isset($_POST['add_super_admin']) && isset($_POST['super_admin_email'])) {
                     <span class="role-badge admin">Super Admin</span>
                     <span class="user-email"><?php echo esc_html($current_user->user_email); ?></span>
                 </div>
+                <?php IIPM_Navigation_Manager::display_breadcrumbs(); ?>
             </div>
         </div>
         <div class="tab-content main-content">

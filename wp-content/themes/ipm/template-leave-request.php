@@ -146,6 +146,7 @@ foreach ($all_leave_requests as $request) {
                 }
                 ?>
                 </p>
+                <?php IIPM_Navigation_Manager::display_breadcrumbs(); ?>
             </div>
         </div>
         

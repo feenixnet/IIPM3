@@ -89,6 +89,7 @@ $stats = iipm_get_cpd_compliance_stats($selected_year);
             <p style="color: rgba(255,255,255,0.9); font-size: 1.1rem;">
                 Monitor member compliance and track CPD progress across the organisation
             </p>
+            <?php IIPM_Navigation_Manager::display_breadcrumbs(); ?>
             
             <!-- Year Selector -->
             <div style="margin-top: 20px;">

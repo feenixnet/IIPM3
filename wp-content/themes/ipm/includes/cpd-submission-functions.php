@@ -579,14 +579,28 @@ function generate_certificate_pdf($cpd_stats, $certificate, $user_name, $user_em
     $pdf->SetFont('helvetica', '', 11);
     $is_current_period = (strval(date('Y')) === strval($submission_year));
 
-    // First table: stats summary across categories
-    $categories_order = array('Savings & Investments', 'Pensions', 'Ethics', 'Life Assurance');
-    $cat_hours = array(
-        'Savings & Investments' => 0,
-        'Pensions' => 0,
-        'Ethics' => 0,
-        'Life Assurance' => 0
-    );
+    // Get member's forgoable category IDs and names
+    $forgo_category_names = array();
+    if (function_exists('iipm_get_member_forgo_category_ids')) {
+        $forgo_category_ids = iipm_get_member_forgo_category_ids($user_id);
+        if (!empty($forgo_category_ids)) {
+            global $wpdb;
+            $forgo_ids_escaped = array_map('intval', $forgo_category_ids);
+            $forgo_ids_string = implode(',', $forgo_ids_escaped);
+            $forgo_category_names = $wpdb->get_col(
+                "SELECT name FROM {$wpdb->prefix}test_iipm_cpd_categories WHERE id IN ($forgo_ids_string)"
+            );
+        }
+    }
+    
+    // First table: stats summary across categories (excluding forgoable ones)
+    $all_categories_order = array('Savings & Investments', 'Pensions', 'Ethics', 'Life Assurance');
+    $categories_order = array_diff($all_categories_order, $forgo_category_names);
+    $cat_hours = array();
+    foreach ($categories_order as $label) {
+        $cat_hours[$label] = 0;
+    }
+    
     if (!empty($cpd_stats['courses_summary'])) {
         foreach ($cpd_stats['courses_summary'] as $row) {
             $name = $row['category'];
@@ -615,7 +629,7 @@ function generate_certificate_pdf($cpd_stats, $certificate, $user_name, $user_em
     // Required per category (>=1 each); total equals target hours
     $required_total = isset($cpd_stats['target_minutes']) ? (floatval($cpd_stats['target_minutes']) / 60.0) : 8.0;
 
-    // Requirement met checks
+    // Requirement met checks (only for non-forgoable categories)
     $checks = array();
     foreach ($categories_order as $label) { $checks[$label] = ($cat_hours[$label] >= 1); }
     $total_ok = ($completed_total >= $required_total);

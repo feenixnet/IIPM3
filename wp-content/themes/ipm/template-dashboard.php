@@ -81,6 +81,7 @@ get_header();
                     <?php endif; ?>
                 <?php endif; ?>
             </div>
+            <?php IIPM_Navigation_Manager::display_breadcrumbs(); ?>
         </div>
     </div>
     <!-- <section class="dashboard-hero">

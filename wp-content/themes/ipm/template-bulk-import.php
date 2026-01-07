@@ -60,6 +60,7 @@ get_header();
                         <span class="org-badge">🏢 <?php echo esc_html($user_organisation->name); ?></span>
                     </div>
                 <?php endif; ?>
+                <?php IIPM_Navigation_Manager::display_breadcrumbs(); ?>
             </div>
         </div>
         <div>

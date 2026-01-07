@@ -30,6 +30,7 @@ if (!function_exists('add_success_notification')) {
                 <p style="color: rgba(255,255,255,0.9); font-size: 1.1rem;">
                     You can manage your CPD course database here
                 </p>
+                <?php IIPM_Navigation_Manager::display_breadcrumbs(); ?>
             </div>
         </div>
         <!-- Tab Navigation (like user management) -->

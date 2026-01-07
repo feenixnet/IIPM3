@@ -36,6 +36,14 @@ $member = $wpdb->get_row($wpdb->prepare(
     $user_id
 ));
 
+// Get membership status using global function (ensures consistency with member portal)
+$member_status = iipm_get_membership_status($user_id, true);
+
+// Update member object with current status
+if ($member) {
+    $member->membership_status = $member_status;
+}
+
 // Get profile data
 $profile = $wpdb->get_row($wpdb->prepare(
     "SELECT * FROM {$wpdb->prefix}test_iipm_member_profiles WHERE user_id = %d",
@@ -117,6 +125,7 @@ get_header();
                     </span>
                 </p>
                 <?php endif; ?>
+                <?php IIPM_Navigation_Manager::display_breadcrumbs(); ?>
             </div>
         </div>
 

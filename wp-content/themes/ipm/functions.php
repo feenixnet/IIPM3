@@ -2626,6 +2626,21 @@ function iipm_handle_change_password() {
 }
 add_action('wp_ajax_iipm_change_password', 'iipm_handle_change_password');
 
+// Disable WordPress default password change notification email (we send our own custom email)
+add_filter('send_password_change_email', '__return_false');
+add_filter('wp_password_change_notification_email', '__return_false');
+
+// Prevent any emails from being sent via password_reset or after_password_reset hooks
+add_action('password_reset', function($user, $new_pass) {
+    // Remove any email hooks that might be attached
+    remove_all_actions('password_reset');
+    remove_all_actions('after_password_reset');
+}, 1, 2);
+
+add_action('after_password_reset', function($user, $new_pass) {
+    // Prevent any email sending on this hook
+}, 999, 2);
+
 // AJAX handler for sending password reset email
 function iipm_handle_send_reset_email() {
     // Verify user is logged in
@@ -5344,6 +5359,26 @@ function iipm_get_user_cpd_summary_with_categories($user_id, $year = null) {
  */
 
 /**
+ * Get member's forgoable category IDs
+ */
+function iipm_get_member_forgo_category_ids($user_id) {
+    global $wpdb;
+    
+    $forgo_items = $wpdb->get_var($wpdb->prepare(
+        "SELECT forgo_items FROM {$wpdb->prefix}test_iipm_members WHERE user_id = %d",
+        $user_id
+    ));
+    
+    if (empty($forgo_items)) {
+        return array();
+    }
+    
+    // Parse comma-separated category IDs
+    $category_ids = array_map('intval', array_filter(array_map('trim', explode(',', $forgo_items))));
+    return $category_ids;
+}
+
+/**
  * Check if user can submit CPD return
  */
 function iipm_can_submit_cpd_return($user_id, $year = null) {
@@ -5364,8 +5399,19 @@ function iipm_can_submit_cpd_return($user_id, $year = null) {
         return false; // Already submitted
     }
     
-    // Get user's CPD progress for mandatory categories
-    $cpd_categories = $wpdb->get_results($wpdb->prepare(
+    // Get member's forgoable category IDs
+    $forgo_category_ids = iipm_get_member_forgo_category_ids($user_id);
+    
+    // Build WHERE clause to exclude forgoable categories
+    $where_clause = "WHERE cc.is_active = 1 AND cc.is_mandatory = 1";
+    if (!empty($forgo_category_ids)) {
+        $forgo_ids_escaped = array_map('intval', $forgo_category_ids);
+        $forgo_ids_string = implode(',', $forgo_ids_escaped);
+        $where_clause .= " AND cc.id NOT IN ($forgo_ids_string)";
+    }
+    
+    // Get user's CPD progress for mandatory categories (excluding forgoable ones)
+    $query = $wpdb->prepare(
         "SELECT 
             cc.id,
             cc.name,
@@ -5374,12 +5420,14 @@ function iipm_can_submit_cpd_return($user_id, $year = null) {
         FROM {$wpdb->prefix}test_iipm_cpd_categories cc
         LEFT JOIN {$wpdb->prefix}test_iipm_cpd_records cr ON cc.id = cr.category_id 
             AND cr.user_id = %d AND cr.cpd_year = %d
-        WHERE cc.is_active = 1 AND cc.is_mandatory = 1
+        $where_clause
         GROUP BY cc.id, cc.name, cc.min_points_required
         ORDER BY cc.sort_order ASC",
         $user_id,
         $year
-    ));
+    );
+    
+    $cpd_categories = $wpdb->get_results($query);
     
     // Check if all mandatory categories meet minimum requirements
     foreach ($cpd_categories as $category) {
@@ -5418,8 +5466,19 @@ function iipm_get_cpd_return_status($user_id, $year = null) {
         );
     }
     
-    // Get user's CPD progress for mandatory categories
-    $cpd_categories = $wpdb->get_results($wpdb->prepare(
+    // Get member's forgoable category IDs
+    $forgo_category_ids = iipm_get_member_forgo_category_ids($user_id);
+    
+    // Build WHERE clause to exclude forgoable categories
+    $where_clause = "WHERE cc.is_active = 1 AND cc.is_mandatory = 1";
+    if (!empty($forgo_category_ids)) {
+        $forgo_ids_escaped = array_map('intval', $forgo_category_ids);
+        $forgo_ids_string = implode(',', $forgo_ids_escaped);
+        $where_clause .= " AND cc.id NOT IN ($forgo_ids_string)";
+    }
+    
+    // Get user's CPD progress for mandatory categories (excluding forgoable ones)
+    $query = $wpdb->prepare(
         "SELECT 
             cc.id,
             cc.name,
@@ -5428,12 +5487,14 @@ function iipm_get_cpd_return_status($user_id, $year = null) {
         FROM {$wpdb->prefix}test_iipm_cpd_categories cc
         LEFT JOIN {$wpdb->prefix}test_iipm_cpd_records cr ON cc.id = cr.category_id 
             AND cr.user_id = %d AND cr.cpd_year = %d
-        WHERE cc.is_active = 1 AND cc.is_mandatory = 1
+        $where_clause
         GROUP BY cc.id, cc.name, cc.min_points_required
         ORDER BY cc.sort_order ASC",
         $user_id,
         $year
-    ));
+    );
+    
+    $cpd_categories = $wpdb->get_results($query);
     
     $total_earned = 0;
     $total_required = 0;
@@ -6301,6 +6362,93 @@ function iipm_handle_update_user_details() {
     }
 }
 add_action('wp_ajax_iipm_update_user_details', 'iipm_handle_update_user_details');
+
+/**
+ * AJAX handler for getting member's forgo_items
+ */
+function iipm_ajax_get_member_forgo_items() {
+    if (!current_user_can('administrator') && !current_user_can('manage_organisation_members')) {
+        wp_send_json_error('Insufficient permissions');
+        return;
+    }
+    
+    if (!wp_verify_nonce($_POST['nonce'], 'iipm_portal_nonce')) {
+        wp_send_json_error('Security check failed');
+        return;
+    }
+    
+    $user_id = intval($_POST['user_id']);
+    
+    if (!$user_id) {
+        wp_send_json_error('Invalid user ID');
+        return;
+    }
+    
+    global $wpdb;
+    
+    $forgo_items = $wpdb->get_var($wpdb->prepare(
+        "SELECT forgo_items FROM {$wpdb->prefix}test_iipm_members WHERE user_id = %d",
+        $user_id
+    ));
+    
+    wp_send_json_success(array(
+        'forgo_items' => $forgo_items ? $forgo_items : ''
+    ));
+}
+add_action('wp_ajax_iipm_get_member_forgo_items', 'iipm_ajax_get_member_forgo_items');
+
+/**
+ * AJAX handler for saving member's forgo_items
+ */
+function iipm_ajax_save_member_forgo_items() {
+    if (!current_user_can('administrator') && !current_user_can('manage_organisation_members')) {
+        wp_send_json_error('Insufficient permissions');
+        return;
+    }
+    
+    if (!wp_verify_nonce($_POST['nonce'], 'iipm_portal_nonce')) {
+        wp_send_json_error('Security check failed');
+        return;
+    }
+    
+    $user_id = intval($_POST['user_id']);
+    $forgo_items = sanitize_text_field($_POST['forgo_items'] ?? '');
+    
+    if (!$user_id) {
+        wp_send_json_error('Invalid user ID');
+        return;
+    }
+    
+    // Validate forgo_items format (should be comma-separated category IDs)
+    if (!empty($forgo_items)) {
+        $category_ids = explode(',', $forgo_items);
+        foreach ($category_ids as $cat_id) {
+            $cat_id = trim($cat_id);
+            if (!empty($cat_id) && !is_numeric($cat_id)) {
+                wp_send_json_error('Invalid category ID format');
+                return;
+            }
+        }
+    }
+    
+    global $wpdb;
+    
+    $result = $wpdb->update(
+        $wpdb->prefix . 'test_iipm_members',
+        array('forgo_items' => $forgo_items),
+        array('user_id' => $user_id),
+        array('%s'),
+        array('%d')
+    );
+    
+    if ($result === false) {
+        wp_send_json_error('Failed to update forgo_items');
+        return;
+    }
+    
+    wp_send_json_success('Forgo items updated successfully');
+}
+add_action('wp_ajax_iipm_save_member_forgo_items', 'iipm_ajax_save_member_forgo_items');
 
 // AJAX handler for saving organisation (add/edit)
 function iipm_handle_save_organisation() {
