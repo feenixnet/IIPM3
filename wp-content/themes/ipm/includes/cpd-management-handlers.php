@@ -1327,8 +1327,22 @@ function iipm_ajax_log_cpd_course() {
         return;
     }
     
-    // Insert CPD record
+    // Insert CPD record - use year from completion_date
     $cpd_year = date('Y', strtotime($completion_date));
+    
+    // Check if CPD certificate is already submitted for this year
+    $submissions_table = $wpdb->prefix . 'test_iipm_submissions';
+    $submission = $wpdb->get_row($wpdb->prepare(
+        "SELECT * FROM {$submissions_table} WHERE user_id = %d AND year = %d",
+        $user_id,
+        $cpd_year
+    ));
+    
+    if ($submission) {
+        wp_send_json_error("Can't add a course to your record as you got your CPD certificate already");
+        return;
+    }
+    
     $result = $wpdb->insert(
         $wpdb->prefix . 'test_iipm_cpd_records',
         array(

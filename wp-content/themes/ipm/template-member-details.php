@@ -1140,6 +1140,13 @@ jQuery(document).ready(function($) {
         // Initialize billing addresses
         setBillingAddresses(data.profile_info.user_payment_method, data.organization_info);
         
+        // If payment method is "Employer Invoiced" and organisation is selected, disable address fields
+        if (data.profile_info.user_payment_method === 'Employer Invoiced' && data.profile_info.employer_id) {
+            $('#Address_1_billing_edit').prop('readonly', true);
+            $('#Address_2_billing_edit').prop('readonly', true);
+            $('#Address_3_billing_edit').prop('readonly', true);
+        }
+        
         // Section 4: Personal Information (_pers)
         $('#email_address_pers_edit').val(data.profile_info.email_address_pers || '');
         $('#user_phone_pers_edit').val(data.profile_info.user_phone_pers || '');
@@ -1160,8 +1167,32 @@ jQuery(document).ready(function($) {
         // Show/hide employer section based on member type
         if (data.member_info.member_type === 'organisation') {
             $('[data-section="employer-info"]').show();
+            
+            // Disable payment method field and set to "Employer Invoiced"
+            $('#user_payment_method_edit').prop('disabled', true);
+            if (data.profile_info.user_payment_method !== 'Employer Invoiced') {
+                $('#user_payment_method_edit').val('Employer Invoiced');
+            }
+            
+            // Disable address fields if organisation is selected
+            if (data.profile_info.employer_id) {
+                $('#Address_1_billing_edit').prop('readonly', true);
+                $('#Address_2_billing_edit').prop('readonly', true);
+                $('#Address_3_billing_edit').prop('readonly', true);
+            }
         } else {
             $('[data-section="employer-info"]').hide();
+            
+            // Disable payment method field and set to "Direct Invoiced"
+            $('#user_payment_method_edit').prop('disabled', true);
+            if (data.profile_info.user_payment_method !== 'Direct Invoiced') {
+                $('#user_payment_method_edit').val('Direct Invoiced');
+            }
+            
+            // Enable address fields for individual members
+            $('#Address_1_billing_edit').prop('readonly', false);
+            $('#Address_2_billing_edit').prop('readonly', false);
+            $('#Address_3_billing_edit').prop('readonly', false);
         }
         
         // Hide loading, show content
@@ -1177,6 +1208,9 @@ jQuery(document).ready(function($) {
         
         // Setup member type change handler  
         setupMemberTypeHandler();
+        
+        // Setup organisation change handler
+        setupOrganisationHandler();
         
         // Initialize tabs
         initializeTabs();
@@ -1242,6 +1276,29 @@ jQuery(document).ready(function($) {
     function setupPaymentMethodHandler() {
         $('#user_payment_method_edit').off('change').on('change', function() {
             const paymentMethod = $(this).val();
+            const memberType = $('#member_type_edit').val();
+            
+            // Don't allow payment method changes if member type is organisation or individual
+            // (payment method is disabled for both types)
+            if (memberType === 'organisation' || memberType === 'individual') {
+                return;
+            }
+            
+            // If payment method is changed away from "Employer Invoiced", re-enable address fields
+            if (paymentMethod !== 'Employer Invoiced') {
+                $('#Address_1_billing_edit').prop('readonly', false);
+                $('#Address_2_billing_edit').prop('readonly', false);
+                $('#Address_3_billing_edit').prop('readonly', false);
+            } else {
+                // If changed to "Employer Invoiced" and organisation is selected, keep fields readonly
+                const orgId = $('#employer_id').val();
+                if (orgId && orgId !== '') {
+                    $('#Address_1_billing_edit').prop('readonly', true);
+                    $('#Address_2_billing_edit').prop('readonly', true);
+                    $('#Address_3_billing_edit').prop('readonly', true);
+                }
+            }
+            
             setBillingAddresses(paymentMethod, userDetails.organization_info);
         });
     }
@@ -1250,10 +1307,131 @@ jQuery(document).ready(function($) {
     function setupMemberTypeHandler() {
         $('#member_type_edit').off('change').on('change', function() {
             const memberType = $(this).val();
+            const paymentMethodSelect = $('#user_payment_method_edit');
+            const orgId = $('#employer_id').val();
+            
             if (memberType === 'individual') {
                 $('[data-section="employer-info"]').hide();
+                
+                // Set payment method to "Direct Invoiced" and disable it
+                paymentMethodSelect.val('Direct Invoiced').prop('disabled', true);
+                
+                // Clear the 3 address fields
+                $('#Address_1_billing_edit').val('');
+                $('#Address_2_billing_edit').val('');
+                $('#Address_3_billing_edit').val('');
+                
+                // Enable address fields for admin to set
+                $('#Address_1_billing_edit').prop('readonly', false);
+                $('#Address_2_billing_edit').prop('readonly', false);
+                $('#Address_3_billing_edit').prop('readonly', false);
+                
             } else if (memberType === 'organisation') {
                 $('[data-section="employer-info"]').show();
+                
+                // Set payment method to "Employer Invoiced" and disable it
+                paymentMethodSelect.val('Employer Invoiced').prop('disabled', true);
+                
+                // If organisation is selected, populate addresses from organisation
+                if (orgId && orgId !== '') {
+                    $.ajax({
+                        url: '<?php echo admin_url('admin-ajax.php'); ?>',
+                        type: 'POST',
+                        data: {
+                            action: 'iipm_get_organisation',
+                            nonce: '<?php echo wp_create_nonce('iipm_portal_nonce'); ?>',
+                            org_id: orgId
+                        },
+                        success: function(response) {
+                            if (response.success && response.data) {
+                                const org = response.data;
+                                
+                                // Populate billing address fields with organisation addresses
+                                $('#Address_1_billing_edit').val(org.address_line1 || '');
+                                $('#Address_2_billing_edit').val(org.address_line2 || '');
+                                $('#Address_3_billing_edit').val(org.address_line3 || '');
+                                
+                                // Disable address fields
+                                $('#Address_1_billing_edit').prop('readonly', true);
+                                $('#Address_2_billing_edit').prop('readonly', true);
+                                $('#Address_3_billing_edit').prop('readonly', true);
+                            }
+                        },
+                        error: function() {
+                            console.error('Failed to fetch organisation details');
+                            // Still disable address fields even if fetch fails
+                            $('#Address_1_billing_edit').prop('readonly', true);
+                            $('#Address_2_billing_edit').prop('readonly', true);
+                            $('#Address_3_billing_edit').prop('readonly', true);
+                        }
+                    });
+                } else {
+                    // No organisation selected yet, but still disable address fields
+                    $('#Address_1_billing_edit').prop('readonly', true);
+                    $('#Address_2_billing_edit').prop('readonly', true);
+                    $('#Address_3_billing_edit').prop('readonly', true);
+                }
+            }
+        });
+    }
+    
+    function setupOrganisationHandler() {
+        $('#employer_id').off('change').on('change', function() {
+            const orgId = $(this).val();
+            const memberType = $('#member_type_edit').val();
+            
+            // Only handle organisation change if member type is "organisation"
+            if (memberType !== 'organisation') {
+                return;
+            }
+            
+            if (orgId && orgId !== '') {
+                // Fetch organisation details
+                $.ajax({
+                    url: '<?php echo admin_url('admin-ajax.php'); ?>',
+                    type: 'POST',
+                    data: {
+                        action: 'iipm_get_organisation',
+                        nonce: '<?php echo wp_create_nonce('iipm_portal_nonce'); ?>',
+                        org_id: orgId
+                    },
+                    success: function(response) {
+                        if (response.success && response.data) {
+                            const org = response.data;
+                            
+                            // Populate billing address fields with organisation addresses
+                            $('#Address_1_billing_edit').val(org.address_line1 || '');
+                            $('#Address_2_billing_edit').val(org.address_line2 || '');
+                            $('#Address_3_billing_edit').val(org.address_line3 || '');
+                            
+                            // Ensure payment method is "Employer Invoiced" (should already be set by member type handler)
+                            $('#user_payment_method_edit').val('Employer Invoiced');
+                            
+                            // Disable billing address fields (make them readonly)
+                            $('#Address_1_billing_edit').prop('readonly', true);
+                            $('#Address_2_billing_edit').prop('readonly', true);
+                            $('#Address_3_billing_edit').prop('readonly', true);
+                            
+                            // Update billing addresses display
+                            setBillingAddresses('Employer Invoiced', {
+                                address_line1: org.address_line1,
+                                address_line2: org.address_line2,
+                                address_line3: org.address_line3
+                            });
+                        }
+                    },
+                    error: function() {
+                        console.error('Failed to fetch organisation details');
+                    }
+                });
+            } else {
+                // If organisation is cleared, clear addresses but keep them disabled for organisation members
+                $('#Address_1_billing_edit').val('');
+                $('#Address_2_billing_edit').val('');
+                $('#Address_3_billing_edit').val('');
+                $('#Address_1_billing_edit').prop('readonly', true);
+                $('#Address_2_billing_edit').prop('readonly', true);
+                $('#Address_3_billing_edit').prop('readonly', true);
             }
         });
     }
@@ -1321,22 +1499,16 @@ jQuery(document).ready(function($) {
     }
     
     /**
-     * Get the current CPD year based on date logic
-     * If current date is before January 31st, return previous year
-     * Otherwise return current year
-     * This matches the PHP function iipm_get_cpd_logging_year()
+     * Get the current CPD year based on current date
+     * Member Details: Uses current date year directly (not CPD year logic)
+     * If today is 2026, returns 2026
+     * Note: Payment Management page uses different logic (CPD year N = membership expiration Feb 1, N+1)
      */
     function getCpdYear() {
         const now = new Date();
-        const currentMonth = now.getMonth() + 1; // JavaScript months are 0-indexed
-        const currentDay = now.getDate();
         const currentYear = now.getFullYear();
         
-        // If we're in January (month 1) and day is <= 31, use previous year
-        if (currentMonth === 1 && currentDay <= 31) {
-            return currentYear - 1;
-        }
-        
+        // Member Details: Always use current date year
         return currentYear;
     }
     
@@ -2297,19 +2469,16 @@ jQuery(document).ready(function($) {
     }
     
     /**
-     * Get current CPD year (Feb 1 to Jan 31 logic)
+     * Get current CPD year based on current date
+     * Member Details: Uses current date year directly (not CPD year logic)
+     * If today is 2026, returns 2026
+     * Note: Payment Management page uses different logic (CPD year N = membership expiration Feb 1, N+1)
      */
     function getCurrentCpdYear() {
         const now = new Date();
-        const currentMonth = now.getMonth() + 1; // JavaScript months are 0-indexed
-        const currentDay = now.getDate();
         const currentYear = now.getFullYear();
         
-        // If we're in January (month 1) and day is <= 31, use previous year
-        if (currentMonth === 1 && currentDay <= 31) {
-            return currentYear - 1;
-        }
-        
+        // Member Details: Always use current date year
         return currentYear;
     }
     

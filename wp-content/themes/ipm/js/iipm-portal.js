@@ -11,15 +11,11 @@ console.log("IIPM Portal JS loaded");
  */
 function getCpdYear() {
   const now = new Date();
-  const currentMonth = now.getMonth() + 1; // JavaScript months are 0-indexed
-  const currentDay = now.getDate();
   const currentYear = now.getFullYear();
   
-  // If we're in January (month 1) and day is <= 31, use previous year
-  if (currentMonth === 1 && currentDay <= 31) {
-    return currentYear - 1;
-  }
-  
+  // Always use current date year (not CPD year logic)
+  // If today is 2026, returns 2026
+  // Note: Payment Management page uses different logic (CPD year N = membership expiration Feb 1, N+1)
   return currentYear;
 }
 

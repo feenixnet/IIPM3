@@ -110,6 +110,10 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
                             <button id="refresh-members-filter" style="padding: 12px 20px; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 500;">
                                 Refresh
                             </button>
+                            <button id="export-members-csv" style="padding: 12px 20px; background: #10b981; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 500;">
+                                <i class="fas fa-download" style="margin-right: 6px;"></i>
+                                Export member list
+                            </button>
                         </div>
                     </div>
 
@@ -664,6 +668,47 @@ jQuery(document).ready(function($) {
     // Refresh members
     $('#refresh-members-filter').on('click', function() {
         loadMembers();
+    });
+    
+    // Export members CSV
+    $('#export-members-csv').on('click', function() {
+        const $btn = $(this);
+        const originalText = $btn.html();
+        $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin" style="margin-right: 6px;"></i> Exporting...');
+        
+        // Create a form and submit it to trigger download
+        const form = $('<form>', {
+            method: 'POST',
+            action: iipm_ajax.ajax_url,
+            style: 'display: none;'
+        });
+        
+        form.append($('<input>', {
+            type: 'hidden',
+            name: 'action',
+            value: 'iipm_export_organisation_members_csv'
+        }));
+        
+        form.append($('<input>', {
+            type: 'hidden',
+            name: 'org_id',
+            value: orgId
+        }));
+        
+        form.append($('<input>', {
+            type: 'hidden',
+            name: 'nonce',
+            value: iipm_ajax.nonce
+        }));
+        
+        $('body').append(form);
+        form.submit();
+        form.remove();
+        
+        // Re-enable button after a short delay
+        setTimeout(function() {
+            $btn.prop('disabled', false).html(originalText);
+        }, 2000);
     });
 
     // Populate year selector for payment history

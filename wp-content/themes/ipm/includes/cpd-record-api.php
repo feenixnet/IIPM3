@@ -459,10 +459,6 @@ function iipm_ajax_add_cpd_confirmation() {
     $user_id = isset($_POST['user_id']) ? intval($_POST['user_id']) : get_current_user_id();
     if ($user_id <= 0) { $user_id = get_current_user_id(); }
     
-    // Use CPD logging year if no year is explicitly provided
-    // This ensures courses are logged to previous year if we're in January (before Jan 31 deadline)
-    $tYear = isset($_POST['year']) && intval($_POST['year']) > 0 ? intval($_POST['year']) : iipm_get_cpd_logging_year();
-    
     if (!$user_id) {
         wp_send_json_error('User not logged in');
         return;
@@ -473,13 +469,64 @@ function iipm_ajax_add_cpd_confirmation() {
     $course_category = sanitize_text_field($_POST['course_category'] ?? '');
     $course_cpd_mins = intval($_POST['course_cpd_mins'] ?? 0);
     $crs_provider = sanitize_text_field($_POST['crs_provider'] ?? '');
+    $selected_year = isset($_POST['year']) && intval($_POST['year']) > 0 ? intval($_POST['year']) : null;
     
     if (!$course_id || !$course_name || !$course_category || !$course_cpd_mins) {
         wp_send_json_error('Missing required fields');
         return;
     }
     
-    $result = iipm_add_cpd_confirmation($user_id, $course_id, $course_name, $course_category, $course_cpd_mins, $crs_provider, $tYear);
+    // Get course from database to retrieve course_date
+    global $wpdb;
+    $courses_table = $wpdb->prefix . 'coursesbyadminbku';
+    $course = $wpdb->get_row($wpdb->prepare(
+        "SELECT course_date FROM {$courses_table} WHERE course_id = %d",
+        $course_id
+    ));
+    
+    if (!$course) {
+        wp_send_json_error('Course not found');
+        return;
+    }
+    
+    // Extract year from course_date (format: DD/MM/YYYY)
+    $course_year = null;
+    $course_date = $course->course_date;
+    if (!empty($course_date)) {
+        $date_parts = explode('/', $course_date);
+        if (count($date_parts) === 3) {
+            $course_year = intval($date_parts[2]); // Year is the third part
+        }
+    }
+    
+    // If course_date is not available or invalid, fall back to selected year or current year
+    if (!$course_year) {
+        $course_year = $selected_year ?: iipm_get_cpd_logging_year();
+    }
+    
+    // Validate: If a year was selected, check if it matches the course date year
+    if ($selected_year && $course_year && $selected_year != $course_year) {
+        wp_send_json_error("This course is for {$course_year}, but you selected {$selected_year}. Please select the correct year.");
+        return;
+    }
+    
+    // Check if CPD certificate is already submitted for the course year
+    $submissions_table = $wpdb->prefix . 'test_iipm_submissions';
+    $submission = $wpdb->get_row($wpdb->prepare(
+        "SELECT * FROM {$submissions_table} WHERE user_id = %d AND year = %d",
+        $user_id,
+        $course_year
+    ));
+    
+    if ($submission) {
+        wp_send_json_error("Can't add a course to your record as you got your CPD certificate already");
+        return;
+    }
+    
+    // Use the course date year (not the selected year)
+    $tYear = $course_year;
+    
+    $result = iipm_add_cpd_confirmation($user_id, $course_id, $course_name, $course_category, $course_cpd_mins, $crs_provider, $tYear, $course_date);
     
     if ($result) {
         wp_send_json_success('Course added successfully');
@@ -1216,7 +1263,7 @@ function iipm_get_uncompleted_cpd_stats($user_id, $year) {
 /**
  * Add CPD confirmation to fullcpd_confirmations table
  */
-function iipm_add_cpd_confirmation($user_id, $course_id, $course_name, $course_category, $course_cpd_mins, $crs_provider, $tYear) {
+function iipm_add_cpd_confirmation($user_id, $course_id, $course_name, $course_category, $course_cpd_mins, $crs_provider, $tYear, $course_date = null) {
     global $wpdb;
     
     $table_name = $wpdb->prefix . 'fullcpd_confirmations';
@@ -1227,6 +1274,16 @@ function iipm_add_cpd_confirmation($user_id, $course_id, $course_name, $course_c
     // Format hrsAndCategory as "2hrs: Pensions"
     $hrs_and_category = $hours . 'hrs: ' . $course_category;
     
+    // Convert course_date from DD/MM/YYYY to MySQL date format if provided
+    $date_of_course = current_time('mysql');
+    if ($course_date) {
+        $date_parts = explode('/', $course_date);
+        if (count($date_parts) === 3) {
+            // Convert DD/MM/YYYY to YYYY-MM-DD
+            $date_of_course = $date_parts[2] . '-' . $date_parts[1] . '-' . $date_parts[0];
+        }
+    }
+    
     $result = $wpdb->insert(
         $table_name,
         array(
@@ -1234,9 +1291,9 @@ function iipm_add_cpd_confirmation($user_id, $course_id, $course_name, $course_c
             'courseName' => $course_name,
             'courseType' => 'CPD',
             'hrsAndCategory' => $hrs_and_category,
-            'dateOfCourse' => current_time('mysql'),
-            'dateOfReturn' => current_time('mysql'),
-            'year' =>$tYear,
+            'dateOfCourse' => $date_of_course,
+            'dateOfReturn' => $date_of_course, // Use course date for return date as well
+            'year' => $tYear,
             'crs_provider' => $crs_provider,
             'course_id' => $course_id
         ),

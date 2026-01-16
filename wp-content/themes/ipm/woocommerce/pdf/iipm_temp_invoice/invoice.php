@@ -110,6 +110,33 @@
 						<td><?php $this->payment_method(); ?></td>
 					</tr>
 				<?php endif; ?>
+				<?php 
+				// Get PO Code from order
+				global $wpdb;
+				$order_id = $this->order->get_id();
+				
+				// Try to get PO_Code from wp_wc_orders table
+				$po_code = $wpdb->get_var($wpdb->prepare(
+					"SELECT PO_Code FROM {$wpdb->prefix}wc_orders WHERE id = %d",
+					$order_id
+				));
+				
+				// If PO_Code column doesn't exist or is empty, try alternative column name (case-insensitive)
+				if ( empty($po_code) ) {
+					$po_code = $wpdb->get_var($wpdb->prepare(
+						"SELECT po_code FROM {$wpdb->prefix}wc_orders WHERE id = %d",
+						$order_id
+					));
+				}
+				
+				// Trim and check if PO Code exists
+				$po_code = trim($po_code ?? '');
+				if ( !empty($po_code) ) : ?>
+					<tr class="po-code">
+						<th>PO Code:</th>
+						<td><?php echo esc_html($po_code); ?></td>
+					</tr>
+				<?php endif; ?>
 				<?php do_action( 'wpo_wcpdf_after_order_data', $this->get_type(), $this->order ); ?>
 			</table>
 		</td>

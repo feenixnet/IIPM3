@@ -435,6 +435,24 @@ function iipm_pm_get_designation_fee($designation) {
 }
 
 /**
+ * Convert CPD year to membership expiration year for payment management.
+ * 
+ * CPD year 2025 = membership expiration Feb 1, 2026
+ * CPD year 2024 = membership expiration Feb 1, 2025
+ * Pattern: CPD year N = membership expiration Feb 1, (N+1)
+ * 
+ * This function is ONLY used in payment management page.
+ * Member portal and member details tabs use current date year directly.
+ * 
+ * @param int $cpd_year The CPD year (e.g., 2025)
+ * @return int The membership expiration year (e.g., 2026 for CPD year 2025)
+ */
+function iipm_pm_cpd_year_to_membership_exp_year($cpd_year) {
+	// CPD year N corresponds to membership expiration Feb 1 of year N+1
+	return intval($cpd_year) + 1;
+}
+
+/**
  * AJAX: Get payment statistics for dashboard.
  */
 function iipm_get_payment_stats() {
@@ -453,6 +471,10 @@ function iipm_get_payment_stats() {
 	if ($filter_year < 2019 || $filter_year > date('Y')) {
 		$filter_year = date('Y');
 	}
+	
+	// For payment management: CPD year N = membership expiration Feb 1, (N+1)
+	// The invoice_year stored is the CPD year, so we use it directly
+	// No conversion needed here since _iipm_invoice_year stores the CPD year
 
 	// Get total target - sum of all individual member fees + all organization fees
 	$total_target = 0;
@@ -2619,3 +2641,230 @@ function iipm_resend_invoice_email() {
 }
 add_action('wp_ajax_iipm_resend_invoice_email', 'iipm_resend_invoice_email');
 
+/**
+ * AJAX: Get latest order for organisation
+ */
+function iipm_get_latest_org_order() {
+	$nonce = sanitize_text_field($_POST['nonce'] ?? '');
+	if (!wp_verify_nonce($nonce, 'iipm_payment_nonce')) {
+		wp_send_json_error('Security check failed');
+		return;
+	}
+
+	if (!iipm_pm_user_can_manage()) {
+		wp_send_json_error('Insufficient permissions');
+		return;
+	}
+
+	$org_id = intval($_POST['org_id'] ?? 0);
+	$year = intval($_POST['year'] ?? date('Y'));
+
+	if (!$org_id) {
+		wp_send_json_error('Invalid organisation ID');
+		return;
+	}
+
+	global $wpdb;
+
+	// Get customer_id from wc_customer_lookup
+	$customer_id = $wpdb->get_var($wpdb->prepare(
+		"SELECT customer_id FROM {$wpdb->prefix}wc_customer_lookup WHERE org_id = %d",
+		$org_id
+	));
+
+	if (!$customer_id) {
+		wp_send_json_error('No customer found for this organisation');
+		return;
+	}
+
+	// Get latest order for this customer in the specified year
+	$latest_order = $wpdb->get_row($wpdb->prepare(
+		"SELECT o.id, o.PO_Code
+		FROM {$wpdb->prefix}wc_orders o
+		LEFT JOIN {$wpdb->prefix}wc_orders_meta om_year ON o.id = om_year.order_id AND om_year.meta_key = '_iipm_invoice_year'
+		WHERE o.customer_id = %d
+		  AND o.type = 'shop_order'
+		  AND (om_year.meta_value = %d OR YEAR(o.date_created_gmt) = %d)
+		ORDER BY o.date_created_gmt DESC
+		LIMIT 1",
+		$customer_id,
+		$year,
+		$year
+	));
+
+	if (!$latest_order) {
+		wp_send_json_error('No order found');
+		return;
+	}
+
+	wp_send_json_success(array(
+		'order_id' => intval($latest_order->id),
+		'po_code' => $latest_order->PO_Code ?? ''
+	));
+}
+add_action('wp_ajax_iipm_get_latest_org_order', 'iipm_get_latest_org_order');
+
+/**
+ * AJAX: Get PO Code for an order
+ */
+function iipm_get_order_po_code() {
+	$nonce = sanitize_text_field($_POST['nonce'] ?? '');
+	if (!wp_verify_nonce($nonce, 'iipm_payment_nonce')) {
+		wp_send_json_error('Security check failed');
+		return;
+	}
+
+	if (!iipm_pm_user_can_manage()) {
+		wp_send_json_error('Insufficient permissions');
+		return;
+	}
+
+	$order_id = intval($_POST['order_id'] ?? 0);
+
+	if (!$order_id) {
+		wp_send_json_error('Invalid order ID');
+		return;
+	}
+
+	global $wpdb;
+
+	$po_code = $wpdb->get_var($wpdb->prepare(
+		"SELECT PO_Code FROM {$wpdb->prefix}wc_orders WHERE id = %d",
+		$order_id
+	));
+
+	wp_send_json_success(array(
+		'po_code' => $po_code ?? ''
+	));
+}
+add_action('wp_ajax_iipm_get_order_po_code', 'iipm_get_order_po_code');
+
+/**
+ * AJAX: Save PO Code for an order
+ */
+function iipm_save_po_code() {
+	$nonce = sanitize_text_field($_POST['nonce'] ?? '');
+	if (!wp_verify_nonce($nonce, 'iipm_payment_nonce')) {
+		wp_send_json_error('Security check failed');
+		return;
+	}
+
+	if (!iipm_pm_user_can_manage()) {
+		wp_send_json_error('Insufficient permissions');
+		return;
+	}
+
+	$order_id = intval($_POST['order_id'] ?? 0);
+	$po_code = sanitize_text_field($_POST['po_code'] ?? '');
+
+	if (!$order_id) {
+		wp_send_json_error('Invalid order ID');
+		return;
+	}
+
+	if (empty($po_code)) {
+		wp_send_json_error('PO Code is required');
+		return;
+	}
+
+	global $wpdb;
+
+	// Update PO_Code in wp_wc_orders table
+	$result = $wpdb->update(
+		$wpdb->prefix . 'wc_orders',
+		array('PO_Code' => $po_code),
+		array('id' => $order_id),
+		array('%s'),
+		array('%d')
+	);
+
+	if ($result === false) {
+		wp_send_json_error('Failed to save PO Code');
+		return;
+	}
+
+	wp_send_json_success(array(
+		'message' => 'PO Code saved successfully',
+		'po_code' => $po_code
+	));
+}
+add_action('wp_ajax_iipm_save_po_code', 'iipm_save_po_code');
+
+/**
+ * AJAX: Download invoice PDF for organisation order
+ */
+function iipm_download_org_invoice() {
+	$nonce = sanitize_text_field($_POST['nonce'] ?? '');
+	if (!wp_verify_nonce($nonce, 'iipm_payment_nonce')) {
+		wp_send_json_error('Security check failed');
+		return;
+	}
+
+	if (!iipm_pm_user_can_manage()) {
+		wp_send_json_error('Insufficient permissions');
+		return;
+	}
+
+	$order_id = intval($_POST['order_id'] ?? 0);
+
+	if (!$order_id) {
+		wp_send_json_error('Invalid order ID');
+		return;
+	}
+
+	// Get WooCommerce order
+	$order = wc_get_order($order_id);
+	if (!$order) {
+		wp_send_json_error('Order not found');
+		return;
+	}
+
+	// Check if WooCommerce PDF Invoices plugin is active
+	if (!function_exists('wcpdf_get_document')) {
+		wp_send_json_error('PDF Invoices plugin is not active');
+		return;
+	}
+
+	try {
+		// Get the invoice document
+		$invoice = wcpdf_get_document('invoice', $order);
+		
+		if (!$invoice) {
+			wp_send_json_error('Could not create invoice document');
+			return;
+		}
+
+		// Check if invoice exists, if not create it
+		if (!$invoice->exists()) {
+			// Initialize invoice with date and number
+			$invoice->set_date(current_time('timestamp'));
+			$invoice->init();
+			$invoice->save();
+		}
+
+		// Get the PDF output
+		$pdf_data = $invoice->get_pdf();
+		
+		if (empty($pdf_data)) {
+			wp_send_json_error('Invoice PDF data is empty');
+			return;
+		}
+
+		// Set headers for PDF download
+		header('Content-Type: application/pdf');
+		header('Content-Disposition: attachment; filename="invoice-' . $order_id . '.pdf"');
+		header('Content-Length: ' . strlen($pdf_data));
+		header('Cache-Control: private, max-age=0, must-revalidate');
+		header('Pragma: public');
+
+		// Output PDF data
+		echo $pdf_data;
+		exit;
+
+	} catch (Exception $e) {
+		error_log('IIPM Download invoice error: ' . $e->getMessage());
+		wp_send_json_error('Failed to generate invoice PDF: ' . $e->getMessage());
+		return;
+	}
+}
+add_action('wp_ajax_iipm_download_org_invoice', 'iipm_download_org_invoice');

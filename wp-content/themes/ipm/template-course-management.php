@@ -336,6 +336,10 @@ if (!function_exists('add_success_notification')) {
                 <div class="form-group">
                     <label for="course-code">Course Code</label>
                     <input type="text" id="course-code" name="course_code" class="form-control">
+                    <div id="course-code-alert" style="display: none; margin-top: 8px; padding: 8px 12px; background-color: #fee; border: 1px solid #fcc; border-radius: 4px; color: #c33; font-size: 14px;">
+                        <i class="fas fa-exclamation-triangle" style="margin-right: 6px;"></i>
+                        <span>LIA Code already exists</span>
+                    </div>
                 </div>
                 
                 <div class="form-group">
@@ -424,7 +428,7 @@ if (!function_exists('add_success_notification')) {
                     </div>
                     <div class="structure-item">
                         <span class="field-name">course_duration</span>
-                        <span class="field-desc">Duration in CPD minutes (Required, Number)</span>
+                        <span class="field-desc">Duration in hours (Required, Number)</span>
                     </div>
                     <div class="structure-item">
                         <span class="field-name">course_date</span>
@@ -435,8 +439,8 @@ if (!function_exists('add_success_notification')) {
                 <div class="sample-csv">
                     <h5>Sample CSV Format:</h5>
                     <pre>course_name,course_code,course_category,course_provider,course_duration,course_date
-"Project Management Fundamentals","PM101","Project Management","Training Institute","120","15/01/2024"
-"Leadership Skills","LS201","Leadership","Corporate Academy","90","20/02/2024"</pre>
+"Project Management Fundamentals","PM101","Project Management","Training Institute","2","15/01/2024"
+"Leadership Skills","LS201","Leadership","Corporate Academy","1.5","20/02/2024"</pre>
                 </div>
             </div>
             
@@ -585,6 +589,10 @@ if (!function_exists('add_success_notification')) {
                 <div class="form-group">
                     <label for="edit-lia-code">LIA Code</label>
                     <input type="text" id="edit-lia-code" class="form-control">
+                    <div id="lia-code-alert" style="display: none; margin-top: 8px; padding: 8px 12px; background-color: #fee; border: 1px solid #fcc; border-radius: 4px; color: #c33; font-size: 14px;">
+                        <i class="fas fa-exclamation-triangle" style="margin-right: 6px;"></i>
+                        <span>LIA Code already exists</span>
+                    </div>
                 </div>
                 
                 <div class="form-group">
@@ -2576,12 +2584,52 @@ jQuery(document).ready(function($) {
         
         $('#edit-request-modal').addClass('show').show();
         $('body').addClass('modal-open');
+        
+        // Hide alert when modal opens
+        $('#lia-code-alert').hide();
     }
     
     function closeEditRequestModal() {
         $('#edit-request-modal').removeClass('show').hide();
         $('body').removeClass('modal-open');
+        // Hide alert when modal closes
+        $('#lia-code-alert').hide();
     }
+    
+    // Real-time LIA Code validation
+    let liaCodeCheckTimeout;
+    $('#edit-lia-code').on('input', function() {
+        const liaCode = $(this).val().trim();
+        const requestId = $('#edit-request-id').val();
+        const $alert = $('#lia-code-alert');
+        
+        // Clear previous timeout
+        clearTimeout(liaCodeCheckTimeout);
+        
+        // Hide alert if field is empty
+        if (!liaCode) {
+            $alert.hide();
+            return;
+        }
+        
+        // Debounce: wait 500ms after user stops typing
+        liaCodeCheckTimeout = setTimeout(function() {
+            $.post(ajaxurl, {
+                action: 'iipm_check_lia_code_exists',
+                lia_code: liaCode,
+                exclude_request_id: requestId || 0
+            }, function(response) {
+                if (response.success && response.data && response.data.exists) {
+                    $alert.show();
+                } else {
+                    $alert.hide();
+                }
+            }).fail(function() {
+                // On error, hide alert (don't show false positives)
+                $alert.hide();
+            });
+        }, 500);
+    });
     
     $('#edit-request-close, #edit-request-cancel').on('click', function(){ 
         closeEditRequestModal(); 
@@ -3058,6 +3106,9 @@ jQuery(document).ready(function($) {
         
         $('#course-modal').addClass('show').show();
         $('body').addClass('modal-open');
+        
+        // Hide alert when modal opens
+        $('#course-code-alert').hide();
     }
     
     function closeCourseModal() {
@@ -3065,7 +3116,46 @@ jQuery(document).ready(function($) {
         $('body').removeClass('modal-open');
         currentCourseId = null;
         resetDuplicateForm();
+        
+        // Hide alert when modal closes
+        $('#course-code-alert').hide();
     }
+    
+    // Real-time Course Code (LIA Code) validation
+    let courseCodeCheckTimeout;
+    $('#course-code').on('input', function() {
+        const courseCode = $(this).val().trim();
+        const courseId = currentCourseId || $('#course-id').val();
+        const $alert = $('#course-code-alert');
+        
+        // Clear previous timeout
+        clearTimeout(courseCodeCheckTimeout);
+        
+        // Hide alert if field is empty
+        if (!courseCode) {
+            $alert.hide();
+            return;
+        }
+        
+        // Debounce: wait 500ms after user stops typing
+        courseCodeCheckTimeout = setTimeout(function() {
+            $.post(ajaxurl, {
+                action: 'iipm_check_lia_code_exists',
+                lia_code: courseCode,
+                exclude_course_id: courseId || 0,
+                exclude_request_id: 0
+            }, function(response) {
+                if (response.success && response.data && response.data.exists) {
+                    $alert.show();
+                } else {
+                    $alert.hide();
+                }
+            }).fail(function() {
+                // On error, hide alert (don't show false positives)
+                $alert.hide();
+            });
+        }, 500);
+    });
     
     function loadCourseData(courseId) {
         const course = courses.find(c => c.id == courseId);

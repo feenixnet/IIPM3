@@ -137,48 +137,35 @@ get_header();
             </div>
 
             <div class="profile-layout">
+                <!-- Horizontal Tab Navigation -->
+                <div class="profile-tab-navigation" style="margin-bottom: 30px;">
+                    <div class="tab-buttons-container" style="display: flex; border-bottom: 2px solid #e5e7eb; background: white; border-radius: 12px 12px 0 0; padding: 0 20px; margin-top: 20px;">
+                        <button class="tab-btn active" data-tab="profile" onclick="showSection('profile')" style="padding: 12px 24px; background: none; border: none; border-bottom: 2px solid #667eea; color: #667eea; font-weight: 500; cursor: pointer; font-size: 14px;">
+                            <i class="fas fa-user" style="margin-right: 8px;"></i> Your profile
+                        </button>
+                        <button class="tab-btn" data-tab="payment" onclick="showSection('payment')" style="padding: 12px 24px; background: none; border: none; border-bottom: 2px solid transparent; color: #6b7280; font-weight: 500; cursor: pointer; font-size: 14px;">
+                            <i class="fas fa-credit-card" style="margin-right: 8px;"></i> Payment
+                        </button>
+                        <button class="tab-btn" data-tab="settings" onclick="showSection('settings')" style="padding: 12px 24px; background: none; border: none; border-bottom: 2px solid transparent; color: #6b7280; font-weight: 500; cursor: pointer; font-size: 14px;">
+                            <i class="fas fa-key" style="margin-right: 8px;"></i> Password
+                        </button>
+                        <button class="tab-btn" data-tab="qualifications" onclick="showSection('qualifications')" style="padding: 12px 24px; background: none; border: none; border-bottom: 2px solid transparent; color: #6b7280; font-weight: 500; cursor: pointer; font-size: 14px;">
+                            <i class="fas fa-graduation-cap" style="margin-right: 8px;"></i> Qualifications
+                        </button>
+                        <button class="tab-btn" data-tab="help" onclick="showSection('help')" style="padding: 12px 24px; background: none; border: none; border-bottom: 2px solid transparent; color: #6b7280; font-weight: 500; cursor: pointer; font-size: 14px;">
+                            <i class="fas fa-question-circle" style="margin-right: 8px;"></i> Help
+                        </button>
+                        <div style="margin-left: auto; display: flex; align-items: center;">
+                            <a href="<?php echo wp_logout_url(home_url()); ?>" style="padding: 12px 24px; color: #dc2626; text-decoration: none; font-weight: 600; font-size: 14px;">
+                                <i class="fas fa-sign-out-alt" style="margin-right: 8px;"></i> Log out
+                            </a>
+                        </div>
+                    </div>
+                </div>
 
                 <div class="profile-content">
-                    <!-- Left Sidebar Navigation -->
-                    <div class="profile-sidebar">
-                        <nav class="profile-nav">
-                            <ul>
-                                <li class="nav-item active" data-section="profile">
-                                    <a href="javascript:void(0)" onclick="showSection('profile')">
-                                        Your profile
-                                    </a>
-                                </li>
-                                <li class="nav-item" data-section="payment">
-                                    <a href="javascript:void(0)" onclick="showSection('payment')">
-                                        Payment
-                                    </a>
-                                </li>
-                                <li class="nav-item" data-section="settings">
-                                    <a href="javascript:void(0)" onclick="showSection('settings')">
-                                        Password
-                                    </a>
-                                </li>
-                                <li class="nav-item" data-section="qualifications">
-                                    <a href="javascript:void(0)" onclick="showSection('qualifications')">
-                                        Qualifications
-                                    </a>
-                                </li>
-                                <li class="nav-item" data-section="help">
-                                    <a href="javascript:void(0)" onclick="showSection('help')">
-                                        Help
-                                    </a>
-                                </li>
-                                <li class="logout">
-                                    <a href="<?php echo wp_logout_url(home_url()); ?>">
-                                        Log out
-                                    </a>
-                                </li>
-                            </ul>
-                        </nav>
-                    </div>
-
                     <!-- Main Profile Content -->
-                    <div class="profile-main" id="profile-section">
+                    <div class="profile-main" id="profile-section" style="width: 100%;">
                         <!-- Basic Information -->
                         <div class="profile-section">
                             <div class="section-header">
@@ -355,6 +342,27 @@ get_header();
                             </div>
                         </div>
 
+                        <!-- Employment Details -->
+                        <div class="profile-section">
+                            <div class="section-header">
+                                <h3>Employment Details</h3>
+                            </div>
+                            <div class="section-content" id="employment">
+                                <div class="view-mode">
+                                    <div class="form-group">
+                                        <label>Employer Name*</label>
+                                        <div class="form-value" data-field="employer_name">
+                                            <?php if ($organisation): ?>
+                                                <?php echo esc_html($organisation->name); ?>
+                                            <?php else: ?>
+                                                <span class="placeholder-text">No employer information on file</span>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Address -->
                         <div class="profile-section">
                             <div class="section-header">
@@ -455,30 +463,9 @@ get_header();
                                         </div>
                                     </div>
                                     
-                                    <div class="form-group" style="margin-top: 20px;">
+                                    <div class="form-group" id="city_field_wrapper" style="margin-top: 20px; <?php echo ($user_payment_method === 'Employer Invoiced') ? 'display: none;' : ''; ?>">
                                         <label>City*</label>
                                         <input type="text" class="form-input" name="city_or_town" value="<?php echo esc_attr($city); ?>" />
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Employment Details -->
-                        <div class="profile-section">
-                            <div class="section-header">
-                                <h3>Employment Details</h3>
-                            </div>
-                            <div class="section-content" id="employment">
-                                <div class="view-mode">
-                                    <div class="form-group">
-                                        <label>Employer Name*</label>
-                                        <div class="form-value" data-field="employer_name">
-                                            <?php if ($organisation): ?>
-                                                <?php echo esc_html($organisation->name); ?>
-                                            <?php else: ?>
-                                                <span class="placeholder-text">No employer information on file</span>
-                                            <?php endif; ?>
-                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -1098,73 +1085,50 @@ get_header();
 
 /* Content Layout */
 .profile-content {
-    display: grid;
-    grid-template-columns: 250px 1fr;
+    display: block;
     min-height: 600px;
 }
 
-/* Sidebar Navigation */
-.profile-sidebar {
-    background: #f9fafb;
-    padding: 20px 16px;
+/* Horizontal Tab Navigation */
+.profile-tab-navigation {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-.profile-nav ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
+.tab-buttons-container {
     display: flex;
-    flex-direction: column;
-    gap: 12px;
-    border-radius: 35px;
+    align-items: center;
 }
 
-.profile-nav li {
+.tab-btn {
+    padding: 12px 24px;
+    background: none;
     border: none;
-}
-
-.profile-nav li.logout {
-    border: none;
-    margin-top: 10px;
-}
-
-.profile-nav a {
-    display: block;
-    padding: 16px 20px;
-    color: #1f2937;
-    text-decoration: none;
-    font-size: 14px;
+    border-bottom: 2px solid transparent;
+    color: #6b7280;
     font-weight: 500;
-    transition: all 0.2s;
-    border-radius: 16px;    
-    border: 1px solid #e5e7eb;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
 }
 
-.profile-nav li.active a,
-.profile-nav li.nav-item.active a {
-    background: #d1d5db;
-    color: #1f2937;
-}
-
-.profile-nav a:hover:not(.profile-nav li.logout a) {
+.tab-btn:hover {
+    color: #667eea;
     background: #f3f4f6;
-    border-color: #d1d5db;
 }
 
-.profile-nav li.logout a {
-    background: none;
-    border: none;
-    color: #dc2626;
-    padding: 8px 0;
+.tab-btn.active {
+    border-bottom-color: #667eea;
+    color: #667eea;
     font-weight: 600;
-    font-size: 16px;
-    text-decoration: underline;
 }
 
-.profile-nav li.logout a:hover {
-    background: none;
-    color: #b91c1c;
-    text-decoration: underline;
+.tab-btn i {
+    margin-right: 8px;
+    font-size: 16px;
 }
 
 /* Main Content */
@@ -2343,35 +2307,24 @@ get_header();
         grid-template-columns: 1fr;
     }
     
-    .profile-sidebar {
-        border-right: none;
-        border-bottom: 1px solid #e5e7eb;
+    .profile-tab-navigation {
+        margin-bottom: 20px;
     }
     
-    .profile-sidebar {
-        padding: 16px;
+    .tab-buttons-container {
+        flex-wrap: wrap;
+        padding: 0 10px;
     }
     
-    .profile-nav ul {
-        flex-direction: row;
-        overflow-x: auto;
-        gap: 8px;
-        padding-bottom: 8px;
-    }
-    
-    .profile-nav li {
-        white-space: nowrap;
-        flex-shrink: 0;
-    }
-    
-    .profile-nav a {
-        padding: 12px 16px;
+    .tab-btn {
+        padding: 10px 16px;
         font-size: 13px;
+        flex: 1 1 auto;
+        min-width: 120px;
     }
     
-    .profile-nav li.logout {
-        margin-top: 0;
-        margin-left: 8px;
+    .tab-btn i {
+        font-size: 14px;
     }
     
     .profile-main {
@@ -3219,11 +3172,19 @@ function showSection(sectionName) {
     
     // Update sidebar navigation (only for main sections, not order details)
     if (sectionName !== 'order-details') {
-        const navItems = document.querySelectorAll('.nav-item');
-        navItems.forEach(item => {
-            item.classList.remove('active');
-            if (item.getAttribute('data-section') === sectionName) {
-                item.classList.add('active');
+        // Update active tab button
+        const tabButtons = document.querySelectorAll('.tab-btn');
+        tabButtons.forEach(button => {
+            button.classList.remove('active');
+            button.style.borderBottomColor = 'transparent';
+            button.style.color = '#6b7280';
+            button.style.fontWeight = '500';
+            
+            if (button.getAttribute('data-tab') === sectionName) {
+                button.classList.add('active');
+                button.style.borderBottomColor = '#667eea';
+                button.style.color = '#667eea';
+                button.style.fontWeight = '600';
             }
         });
     }
@@ -3965,14 +3926,21 @@ document.addEventListener('DOMContentLoaded', function() {
             const selectedMethod = this.value;
             const personalAddressFields = document.getElementById('personal_address_fields');
             const orgAddressFields = document.getElementById('org_address_fields');
+            const cityFieldWrapper = document.getElementById('city_field_wrapper');
             
             if (selectedMethod === 'Employer Invoiced') {
                 personalAddressFields.style.display = 'none';
                 orgAddressFields.style.display = 'block';
+                if (cityFieldWrapper) {
+                    cityFieldWrapper.style.display = 'none';
+                }
             } else {
                 // Show personal address for all other payment methods
                 personalAddressFields.style.display = 'block';
                 orgAddressFields.style.display = 'none';
+                if (cityFieldWrapper) {
+                    cityFieldWrapper.style.display = 'block';
+                }
             }
         });
     }

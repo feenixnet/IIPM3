@@ -1904,6 +1904,141 @@ function iipm_export_organisation_members() {
 }
 add_action('wp_ajax_iipm_export_organisation_members', 'iipm_export_organisation_members');
 
+/**
+ * Export organisation members to CSV with Name, Email, Designation, Price per member
+ * File name format: [date]_[organisation name] - member overview.csv
+ */
+function iipm_export_organisation_members_csv() {
+    if (!current_user_can('manage_iipm_members') && !current_user_can('administrator')) {
+        wp_send_json_error('Insufficient permissions');
+        return;
+    }
+    
+    if (!wp_verify_nonce($_POST['nonce'], 'iipm_portal_nonce')) {
+        wp_send_json_error('Security check failed');
+        return;
+    }
+    
+    $org_id = intval($_POST['org_id'] ?? 0);
+    
+    if (!$org_id) {
+        wp_send_json_error('Invalid organisation ID');
+        return;
+    }
+    
+    global $wpdb;
+    
+    // Get organisation name
+    $org = $wpdb->get_row($wpdb->prepare(
+        "SELECT name FROM {$wpdb->prefix}test_iipm_organisations WHERE id = %d",
+        $org_id
+    ));
+    
+    if (!$org) {
+        wp_send_json_error('Organisation not found');
+        return;
+    }
+    
+    // Get all members for this organisation with their designations
+    $members = $wpdb->get_results($wpdb->prepare("
+        SELECT u.ID, u.display_name, u.user_email,
+               mp.user_designation
+        FROM {$wpdb->users} u
+        LEFT JOIN {$wpdb->prefix}test_iipm_member_profiles mp ON u.ID = mp.user_id
+        WHERE mp.employer_id = %d
+        ORDER BY u.display_name ASC
+    ", $org_id));
+    
+    if (empty($members)) {
+        wp_send_json_error('No members found to export');
+        return;
+    }
+    
+    // Cache for designation fees
+    $designation_fees = array();
+    
+    // Get designation fees (from WooCommerce products)
+    foreach ($members as $member) {
+        $designation = $member->user_designation ?? '';
+        
+        if (empty($designation)) {
+            continue;
+        }
+        
+        if (!isset($designation_fees[$designation])) {
+            // Find product matching this designation name
+            // First try using WooCommerce product search
+            $product_args = array(
+                'post_type' => 'product',
+                'posts_per_page' => 10,
+                'post_status' => 'publish',
+                's' => $designation
+            );
+            
+            $products = get_posts($product_args);
+            $found = false;
+            
+            if (!empty($products)) {
+                foreach ($products as $product_post) {
+                    $product = wc_get_product($product_post->ID);
+                    if ($product) {
+                        $product_name = $product->get_name();
+                        // Check for exact match or if designation is in product name
+                        if (strcasecmp($product_name, $designation) === 0 || 
+                            stripos($product_name, $designation) !== false ||
+                            stripos($designation, $product_name) !== false) {
+                            $designation_fees[$designation] = floatval($product->get_price());
+                            $found = true;
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            // If not found, set to 0
+            if (!$found) {
+                $designation_fees[$designation] = 0;
+            }
+        }
+    }
+    
+    // Format filename: [date]_[organisation name] - member overview.csv
+    $date = date('Y-m-d');
+    $org_name = sanitize_file_name($org->name);
+    $filename = $date . '_' . $org_name . ' - member overview.csv';
+    
+    // Set headers for CSV download
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename="' . $filename . '"');
+    header('Pragma: no-cache');
+    header('Expires: 0');
+    
+    // Create CSV output
+    $output = fopen('php://output', 'w');
+    
+    // Add BOM for UTF-8 to help Excel display special characters correctly
+    fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
+    
+    // CSV headers
+    fputcsv($output, array('Name', 'Email', 'Designation', 'Price per member'));
+    
+    // CSV data
+    foreach ($members as $member) {
+        $name = $member->display_name ?: 'N/A';
+        $email = $member->user_email ?: 'N/A';
+        $designation = $member->user_designation ?: 'N/A';
+        $price = isset($designation_fees[$designation]) && $designation_fees[$designation] > 0 
+                 ? '€' . number_format($designation_fees[$designation], 2) 
+                 : 'N/A';
+        
+        fputcsv($output, array($name, $email, $designation, $price));
+    }
+    
+    fclose($output);
+    exit;
+}
+add_action('wp_ajax_iipm_export_organisation_members_csv', 'iipm_export_organisation_members_csv');
+
 // Get all organizations for import filter
 function iipm_get_all_organisations_for_import() {
     // Check permissions

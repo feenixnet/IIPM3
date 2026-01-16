@@ -6745,20 +6745,23 @@ function iipm_handle_bulk_import_courses() {
     $course_code = sanitize_text_field($_POST['course_code']);
     $course_category = sanitize_text_field($_POST['course_category']);
     $course_provider = sanitize_text_field($_POST['course_provider']);
-    $course_duration = intval($_POST['course_duration']);
+    $course_duration_hours = floatval($_POST['course_duration']);
     $course_date_input = sanitize_text_field($_POST['course_date'] ?? '');
     
     // Validate required fields
-    if (empty($course_name) || empty($course_category) || empty($course_provider) || empty($course_duration)) {
+    if (empty($course_name) || empty($course_category) || empty($course_provider) || empty($course_duration_hours)) {
         wp_send_json_error('Required fields are missing');
         return;
     }
     
     // Validate duration is a positive number
-    if ($course_duration <= 0) {
+    if ($course_duration_hours <= 0) {
         wp_send_json_error('Duration must be a positive number');
         return;
     }
+    
+    // Convert hours to minutes (round to nearest minute)
+    $course_duration = (int) round($course_duration_hours * 60);
     
     // Process course_date - convert from dd/mm/yyyy to dd-mm-yyyy format for database
     $course_date = '';

@@ -426,6 +426,7 @@ function iipm_ajax_approve_course_request() {
         $subject = '✅ Your CPD Course Request Was Approved';
         $full_name = esc_html($request->first_name . ' ' . $request->sur_name);
         $courses_url = home_url('/cpd-courses/');
+        $portal_url = home_url('/member-portal/');
         
         $message = '
         <div style="font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, \'Helvetica Neue\', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff;">
@@ -472,14 +473,14 @@ function iipm_ajax_approve_course_request() {
                 
                 <!-- CTA Button -->
                 <div style="text-align: center; margin: 35px 0;">
-                    <a href="' . esc_url($courses_url) . '" style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; padding: 16px 40px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);">
-                        📚 View My Courses
+                    <a href="' . esc_url($portal_url) . '" style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; padding: 16px 40px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);">
+                        📚 Go to Portal Now.
                     </a>
                 </div>
                 
                 <!-- Link fallback -->
                 <div style="background: #f9fafb; padding: 15px; border-radius: 6px; margin: 20px 0;">
-                    <p style="margin: 0 0 8px 0; color: #6b7280; font-size: 13px;">Or copy and paste this link:</p>
+                    <p style="margin: 0 0 8px 0; color: #6b7280; font-size: 13px;">Or go to courses library page to view your courses:</p>
                     <p style="margin: 0; word-break: break-all;">
                         <a href="' . esc_url($courses_url) . '" style="color: #10b981; text-decoration: none; font-size: 14px;">' . esc_html($courses_url) . '</a>
                     </p>
@@ -1945,3 +1946,61 @@ function iipm_ajax_get_user_courses_admin() {
         )
     ));
 }
+
+/**
+ * AJAX callback to check if LIA Code already exists
+ * Used for real-time validation in edit modal
+ */
+function iipm_ajax_check_lia_code_exists() {
+    if (!current_user_can('administrator')) {
+        wp_send_json_error('Unauthorized');
+        return;
+    }
+    
+    global $wpdb;
+    $lia_code = sanitize_text_field($_POST['lia_code'] ?? '');
+    $exclude_course_id = intval($_POST['exclude_course_id'] ?? 0);
+    $exclude_request_id = intval($_POST['exclude_request_id'] ?? 0);
+    
+    if (empty($lia_code)) {
+        wp_send_json_success(array('exists' => false));
+        return;
+    }
+    
+    // Check in coursesbyadminbku table (admin courses)
+    $admin_table = $wpdb->prefix . 'coursesbyadminbku';
+    
+    if ($exclude_course_id > 0) {
+        $exists_in_admin = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$admin_table} WHERE LIA_Code = %s AND id != %d",
+            $lia_code,
+            $exclude_course_id
+        ));
+    } else {
+        $exists_in_admin = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$admin_table} WHERE LIA_Code = %s",
+            $lia_code
+        ));
+    }
+    
+    // Check in coursesbyuserbku table (user course requests)
+    $user_table = $wpdb->prefix . 'coursesbyuserbku';
+    
+    if ($exclude_request_id > 0) {
+        $exists_in_user = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$user_table} WHERE LIA_Code = %s AND id != %d",
+            $lia_code,
+            $exclude_request_id
+        ));
+    } else {
+        $exists_in_user = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$user_table} WHERE LIA_Code = %s",
+            $lia_code
+        ));
+    }
+    
+    $exists = ($exists_in_admin > 0 || $exists_in_user > 0);
+    
+    wp_send_json_success(array('exists' => $exists));
+}
+add_action('wp_ajax_iipm_check_lia_code_exists', 'iipm_ajax_check_lia_code_exists');

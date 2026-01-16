@@ -29,6 +29,10 @@ get_header();
                 <div class="year-selector-main" style="display: flex; justify-content: center; align-items: center; gap: 12px; margin-top: 15px;">
                     <select id="year-selector" class="year-select-main">
                         <?php
+                        // Payment Management: Year selector shows CPD years
+                        // CPD year N corresponds to membership expiration Feb 1, (N+1)
+                        // Example: CPD year 2025 = membership expiration Feb 1, 2026
+                        // Note: Member portal and member details use current date year, not CPD years
                         $current_year = date('Y');
                         for ($year = $current_year; $year >= 2019; $year--) {
                             echo '<option value="' . $year . '">' . $year . '</option>';
@@ -359,6 +363,11 @@ jQuery(function($) {
             const buttonDisabled = shouldDisable ? ' disabled' : '';
             const buttonClass = shouldDisable ? 'btn btn-primary send-invoice-btn disabled' : 'btn btn-primary send-invoice-btn';
             
+            // Enable Download Invoice button only if at least one order exists
+            const hasOrder = user.order_id && user.order_id > 0;
+            const downloadInvoiceButtonDisabled = hasOrder ? '' : ' disabled';
+            const downloadInvoiceButtonClass = hasOrder ? 'btn-icon-action download-invoice-btn' : 'btn-icon-action download-invoice-btn disabled';
+            
             return '<tr>' +
                 '<td><strong>' + fullName + '</strong><br></td>' +
                 '<td>' + user.user_email + '</td>' +
@@ -369,6 +378,9 @@ jQuery(function($) {
                 '<td>' +
                     '<button class="btn-icon-action send-invoice-btn' + (shouldDisable ? ' disabled' : '') + '" data-user-id="' + user.id + '"' + buttonDisabled + ' title="Send Invoice" style="margin-right: 5px;">' +
                         '<i class="fas fa-paper-plane"></i>' +
+                    '</button>' +
+                    '<button class="' + downloadInvoiceButtonClass + '" data-user-id="' + user.id + '" data-order-id="' + (user.order_id || '') + '" data-name="' + fullName + '" title="Download Invoice"' + downloadInvoiceButtonDisabled + ' style="margin-right: 5px;">' +
+                        '<i class="fas fa-download"></i>' +
                     '</button>' +
                     '<button class="btn-icon-action view-orders-btn" data-user-id="' + user.id + '" data-name="' + fullName + '" title="View Orders">' +
                         '<i class="fas fa-list-alt"></i>' +
@@ -525,6 +537,15 @@ jQuery(function($) {
             const buttonDisabled = shouldDisable ? ' disabled' : '';
             const buttonClass = shouldDisable ? 'btn btn-primary send-org-invoice-btn disabled' : 'btn btn-primary send-org-invoice-btn';
             
+            // Enable PO Code button only if at least one order exists
+            const hasOrder = org.order_id && org.order_id > 0;
+            const poCodeButtonDisabled = hasOrder ? '' : ' disabled';
+            const poCodeButtonClass = hasOrder ? 'btn-icon-action set-po-code-btn' : 'btn-icon-action set-po-code-btn disabled';
+            
+            // Enable Download Invoice button only if at least one order exists
+            const downloadInvoiceButtonDisabled = hasOrder ? '' : ' disabled';
+            const downloadInvoiceButtonClass = hasOrder ? 'btn-icon-action download-invoice-btn' : 'btn-icon-action download-invoice-btn disabled';
+            
             return '<tr>' +
                 '<td><strong>' + (org.organisation_name || '—') + '</strong></td>' +
                 '<td>' + (org.admin_email || '—') + '</td>' +
@@ -535,6 +556,12 @@ jQuery(function($) {
                 '<td>' +
                     '<button class="btn-icon-action send-org-invoice-btn' + (shouldDisable ? ' disabled' : '') + '" data-org-id="' + org.id + '"' + buttonDisabled + ' title="Send Invoice" style="margin-right: 5px;">' +
                         '<i class="fas fa-paper-plane"></i>' +
+                    '</button>' +
+                    '<button class="' + downloadInvoiceButtonClass + '" data-org-id="' + org.id + '" data-order-id="' + (org.order_id || '') + '" data-name="' + (org.organisation_name || '—') + '" title="Download Invoice"' + downloadInvoiceButtonDisabled + ' style="margin-right: 5px;">' +
+                        '<i class="fas fa-download"></i>' +
+                    '</button>' +
+                    '<button class="' + poCodeButtonClass + '" data-org-id="' + org.id + '" data-order-id="' + (org.order_id || '') + '" data-name="' + (org.organisation_name || '—') + '" title="Set PO Code"' + poCodeButtonDisabled + ' style="margin-right: 5px;">' +
+                        '<i class="fas fa-file-invoice"></i>' +
                     '</button>' +
                     '<button class="btn-icon-action view-orders-btn" data-org-id="' + org.id + '" data-name="' + (org.organisation_name || '—') + '" title="View Orders">' +
                         '<i class="fas fa-list-alt"></i>' +
@@ -747,6 +774,307 @@ jQuery(function($) {
         const orgId = $(this).data('org-id');
         const name = $(this).data('name');
         showOrdersModal(0, orgId, name);
+    });
+    
+    // Handle PO Code button - for organizations
+    $orgTbody.on('click', '.set-po-code-btn:not(.disabled)', function() {
+        const orgId = $(this).data('org-id');
+        const orgName = $(this).data('name');
+        const orderId = $(this).data('order-id');
+        showPOCodeModal(orgId, orgName, orderId);
+    });
+    
+    // Handle Download Invoice button - for organizations
+    $orgTbody.on('click', '.download-invoice-btn:not(.disabled)', function() {
+        const orderId = $(this).data('order-id');
+        const orgName = $(this).data('name');
+        downloadOrgInvoice(orderId, orgName);
+    });
+    
+    // Handle Download Invoice button - for individual users
+    $tbody.on('click', '.download-invoice-btn:not(.disabled)', function() {
+        const orderId = $(this).data('order-id');
+        const userName = $(this).data('name');
+        downloadUserInvoice(orderId, userName);
+    });
+    
+    // PO Code Modal handlers
+    $('#po-code-modal-close, #po-code-cancel').on('click', function() {
+        $('#po-code-modal').fadeOut(200);
+        $('#po-code-input').val('');
+        $('#po-code-order-id-hidden').val('');
+    });
+    
+    $('#po-code-modal').on('click', function(e) {
+        if ($(e.target).is('#po-code-modal')) {
+            $('#po-code-modal').fadeOut(200);
+            $('#po-code-input').val('');
+            $('#po-code-order-id-hidden').val('');
+        }
+    });
+    
+    // Show PO Code Modal
+    function showPOCodeModal(orgId, orgName, orderId) {
+        $('#po-code-org-name').text(orgName);
+        $('#po-code-input').val('');
+        $('#po-code-order-id-hidden').val('');
+        
+        // If orderId is provided, use it directly
+        if (orderId && orderId > 0) {
+            $('#po-code-order-id').text(orderId);
+            $('#po-code-order-id-hidden').val(orderId);
+            
+            // Get current PO Code for this order
+            $.ajax({
+                url: '<?php echo admin_url('admin-ajax.php'); ?>',
+                method: 'POST',
+                data: {
+                    action: 'iipm_get_order_po_code',
+                    nonce: iipm_ajax.payment_nonce,
+                    order_id: orderId
+                },
+                success: function(response) {
+                    if (response.success) {
+                        const currentPOCode = response.data.po_code || '';
+                        $('#po-code-input').val(currentPOCode);
+                    }
+                },
+                error: function() {
+                    console.error('Failed to load PO Code');
+                }
+            });
+        } else {
+            // Fallback: Get latest order for this organisation
+            $('#po-code-order-id').text('Loading...');
+            $.ajax({
+                url: '<?php echo admin_url('admin-ajax.php'); ?>',
+                method: 'POST',
+                data: {
+                    action: 'iipm_get_latest_org_order',
+                    nonce: iipm_ajax.payment_nonce,
+                    org_id: orgId,
+                    year: state.selectedYear
+                },
+                success: function(response) {
+                    if (response.success && response.data && response.data.order_id) {
+                        const latestOrderId = response.data.order_id;
+                        const currentPOCode = response.data.po_code || '';
+                        
+                        $('#po-code-order-id').text(latestOrderId);
+                        $('#po-code-order-id-hidden').val(latestOrderId);
+                        $('#po-code-input').val(currentPOCode);
+                    } else {
+                        $('#po-code-order-id').text('No order found');
+                        notify('No order found for this organisation in the selected year.', 'warning');
+                    }
+                },
+                error: function() {
+                    $('#po-code-order-id').text('Error');
+                    notify('Failed to load order information.', 'error');
+                }
+            });
+        }
+        
+        $('#po-code-modal').fadeIn(200);
+    }
+    
+    // Download Invoice for Organisation
+    function downloadOrgInvoice(orderId, orgName) {
+        if (!orderId || orderId <= 0) {
+            notify('No order found for this organisation.', 'error');
+            return;
+        }
+        
+        // Show loading notification
+        if (window.notifications) {
+            window.notifications.info('Preparing Invoice', 'Generating invoice PDF...');
+        }
+        
+        // Generate invoice PDF via AJAX
+        $.ajax({
+            url: '<?php echo admin_url('admin-ajax.php'); ?>',
+            method: 'POST',
+            data: {
+                action: 'iipm_download_org_invoice',
+                nonce: iipm_ajax.payment_nonce,
+                order_id: orderId
+            },
+            xhrFields: {
+                responseType: 'blob' // Important for downloading files
+            },
+            success: function(blob, status, xhr) {
+                // Get filename from response header or use default
+                let filename = 'invoice-' + orderId + '.pdf';
+                const contentDisposition = xhr.getResponseHeader('Content-Disposition');
+                if (contentDisposition) {
+                    const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+                    if (filenameMatch && filenameMatch[1]) {
+                        filename = filenameMatch[1].replace(/['"]/g, '');
+                    }
+                }
+                
+                // Create download link
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(url);
+                
+                if (window.notifications) {
+                    window.notifications.success('Download Started', 'Invoice PDF download started.');
+                }
+            },
+            error: function(xhr) {
+                let errorMessage = 'Failed to download invoice.';
+                
+                // Try to parse error response
+                if (xhr.responseType === 'blob' && xhr.response) {
+                    const reader = new FileReader();
+                    reader.onload = function() {
+                        try {
+                            const errorData = JSON.parse(reader.result);
+                            errorMessage = errorData.data || errorMessage;
+                        } catch (e) {
+                            // If not JSON, use default message
+                        }
+                        if (window.notifications) {
+                            window.notifications.error('Download Failed', errorMessage);
+                        }
+                    };
+                    reader.readAsText(xhr.response);
+                } else {
+                    if (window.notifications) {
+                        window.notifications.error('Download Failed', errorMessage);
+                    }
+                }
+            }
+        });
+    }
+    
+    // Download Invoice for Individual User
+    function downloadUserInvoice(orderId, userName) {
+        if (!orderId || orderId <= 0) {
+            notify('No order found for this user.', 'error');
+            return;
+        }
+        
+        // Show loading notification
+        if (window.notifications) {
+            window.notifications.info('Preparing Invoice', 'Generating invoice PDF...');
+        }
+        
+        // Generate invoice PDF via AJAX
+        $.ajax({
+            url: '<?php echo admin_url('admin-ajax.php'); ?>',
+            method: 'POST',
+            data: {
+                action: 'iipm_download_org_invoice',
+                nonce: iipm_ajax.payment_nonce,
+                order_id: orderId
+            },
+            xhrFields: {
+                responseType: 'blob' // Important for downloading files
+            },
+            success: function(blob, status, xhr) {
+                // Get filename from response header or use default
+                let filename = 'invoice-' + orderId + '.pdf';
+                const contentDisposition = xhr.getResponseHeader('Content-Disposition');
+                if (contentDisposition) {
+                    const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+                    if (filenameMatch && filenameMatch[1]) {
+                        filename = filenameMatch[1].replace(/['"]/g, '');
+                    }
+                }
+                
+                // Create download link
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(url);
+                
+                if (window.notifications) {
+                    window.notifications.success('Download Started', 'Invoice PDF download started.');
+                }
+            },
+            error: function(xhr) {
+                let errorMessage = 'Failed to download invoice.';
+                
+                // Try to parse error response
+                if (xhr.responseType === 'blob' && xhr.response) {
+                    const reader = new FileReader();
+                    reader.onload = function() {
+                        try {
+                            const errorData = JSON.parse(reader.result);
+                            errorMessage = errorData.data || errorMessage;
+                        } catch (e) {
+                            // If not JSON, use default message
+                        }
+                        if (window.notifications) {
+                            window.notifications.error('Download Failed', errorMessage);
+                        }
+                    };
+                    reader.readAsText(xhr.response);
+                } else {
+                    if (window.notifications) {
+                        window.notifications.error('Download Failed', errorMessage);
+                    }
+                }
+            }
+        });
+    }
+    
+    // Save PO Code
+    $('#po-code-save').on('click', function() {
+        const orderId = $('#po-code-order-id-hidden').val();
+        const poCode = $('#po-code-input').val().trim();
+        
+        if (!orderId) {
+            notify('No order found. Please ensure an order exists for this organisation.', 'error');
+            return;
+        }
+        
+        if (!poCode) {
+            notify('Please enter a PO Code.', 'error');
+            $('#po-code-input').focus();
+            return;
+        }
+        
+        const $btn = $(this);
+        const originalText = $btn.text();
+        $btn.prop('disabled', true).text('Saving...');
+        
+        $.ajax({
+            url: '<?php echo admin_url('admin-ajax.php'); ?>',
+            method: 'POST',
+            data: {
+                action: 'iipm_save_po_code',
+                nonce: iipm_ajax.payment_nonce,
+                order_id: orderId,
+                po_code: poCode
+            },
+            success: function(response) {
+                $btn.prop('disabled', false).text(originalText);
+                if (response.success) {
+                    notify('PO Code saved successfully.', 'success');
+                    $('#po-code-modal').fadeOut(200);
+                    $('#po-code-input').val('');
+                    $('#po-code-order-id-hidden').val('');
+                } else {
+                    notify(response.data || 'Failed to save PO Code.', 'error');
+                }
+            },
+            error: function() {
+                $btn.prop('disabled', false).text(originalText);
+                notify('Server error while saving PO Code.', 'error');
+            }
+        });
     });
 
     // Show orders modal
@@ -1577,6 +1905,32 @@ jQuery(function($) {
                     <p>No orders found</p>
                 </div>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- PO Code Modal -->
+<div id="po-code-modal" class="modal" style="display: none;">
+    <div class="modal-content" style="max-width: 500px;">
+        <div class="modal-header">
+            <h3 style="margin: 0;"><i class="fas fa-file-invoice"></i> Set PO Code</h3>
+            <button class="modal-close" id="po-code-modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div style="margin-bottom: 15px;">
+                <p style="margin: 0 0 10px 0; color: #6b7280;">Organisation: <strong id="po-code-org-name"></strong></p>
+                <p style="margin: 0; color: #6b7280; font-size: 14px;">Order #: <strong id="po-code-order-id"></strong></p>
+            </div>
+            <div class="form-group">
+                <label for="po-code-input">PO Code *</label>
+                <input type="text" id="po-code-input" class="form-control" placeholder="Enter PO Code" maxlength="100">
+                <small style="color: #6b7280; font-size: 12px; margin-top: 5px; display: block;">This code will be displayed on the invoice PDF</small>
+            </div>
+            <input type="hidden" id="po-code-order-id-hidden" value="">
+        </div>
+        <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+            <button type="button" class="btn btn-secondary" id="po-code-cancel">Cancel</button>
+            <button type="button" class="btn btn-primary" id="po-code-save">Save PO Code</button>
         </div>
     </div>
 </div>

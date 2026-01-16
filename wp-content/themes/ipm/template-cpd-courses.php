@@ -57,16 +57,34 @@ if ($is_admin) {
     $is_admin_mode = true;
     $current_year = $target_year;
 } else {
-    // Regular user access - use their own ID and CPD logging year
-    // CPD logging year returns previous year if we're in January (before Jan 31 deadline)
+    // Regular user access - use their own ID
     $target_user_id = $user_id;
     $is_admin_mode = false;
     $target_user = $current_user;
     
-    // Include CPD record API to use iipm_get_cpd_logging_year()
+    // Include CPD record API
     require_once get_template_directory() . '/includes/cpd-record-api.php';
-    $current_year = iipm_get_cpd_logging_year();
-    $target_year = $current_year;
+    
+    // If tyear is provided in URL, use it; otherwise use current date year
+    // This allows members to access courses page with a specific year from member portal
+    if (isset($_GET['tyear']) && !empty($_GET['tyear'])) {
+        $target_year = intval($_GET['tyear']);
+        
+        // Validate year is >= user's registration year
+        $user_registered = $current_user->user_registered;
+        $user_registration_year = date('Y', strtotime($user_registered));
+        
+        if ($target_year < $user_registration_year) {
+            // If invalid year, fall back to current date year
+            $target_year = date('Y');
+        }
+    } else {
+        // CPD Courses: Use current date year directly (not CPD year logic)
+        // Note: Payment Management page uses different logic (CPD year N = membership expiration Feb 1, N+1)
+        $target_year = date('Y');
+    }
+    
+    $current_year = $target_year;
 }
 
 // Include the CPD courses API
@@ -971,32 +989,30 @@ get_header();
      */
     function getCpdYear() {
         const now = new Date();
-        const currentMonth = now.getMonth() + 1; // JavaScript months are 0-indexed
-        const currentDay = now.getDate();
         const currentYear = now.getFullYear();
         
-        // If we're in January (month 1) and day is <= 31, use previous year
-        if (currentMonth === 1 && currentDay <= 31) {
-            return currentYear - 1;
-        }
-        
+        // CPD Courses: Always use current date year (not CPD year logic)
+        // If today is 2026, returns 2026
+        // Note: Payment Management page uses different logic (CPD year N = membership expiration Feb 1, N+1)
         return currentYear;
     }
     
     // Define ajaxurl for AJAX calls
     var ajaxurl = '<?php echo admin_url('admin-ajax.php'); ?>';
-    // CPD logging year - uses previous year if in January (before Jan 31 deadline)
-    var cpdLoggingYear = getCpdYear();
+    
+    // Extract URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    let userIdForCourses = urlParams.get('user_id') ? parseInt(urlParams.get('user_id')) : null;
+    
+    // CPD logging year - use tyear from URL if provided, otherwise use current date year
+    const tyearFromUrl = urlParams.get('tyear') ? parseInt(urlParams.get('tyear')) : null;
+    var cpdLoggingYear = tyearFromUrl || getCpdYear();
     
     // Global variables for pagination
     let currentPage = 1;
     let totalPages = 1;
     let totalCourses = 0;
     let coursesPerPage = 12;
-    
-    // Extract URL parameters
-    const urlParams = new URLSearchParams(window.location.search);
-    let userIdForCourses = urlParams.get('user_id') ? parseInt(urlParams.get('user_id')) : null;
     
     // Global variable to store all courses in fullcpd_confirmations table (both completed and started)
     let coursesInLearningPath = [];
@@ -1234,7 +1250,7 @@ get_header();
                         </div>
 
                         <div class="course-footer">
-                            <button class="${addButtonClass}" title="${addButtonTitle}" ${isDisabled ? 'disabled' : ''} data-course-id="${course.course_id}" data-confirmation-id="${confirmation_id}">
+                            <button class="${addButtonClass}" title="${addButtonTitle}" ${isDisabled ? 'disabled' : ''} data-course-id="${course.course_id || course.id}" data-course-primary-id="${course.id}" data-confirmation-id="${confirmation_id}">
                                 ${addButtonIcon} ${buttonText}
                             </button>
                         </div>
@@ -1252,9 +1268,19 @@ get_header();
                     const courseId = this.getAttribute('data-course-id');
                     console.log('Clicked course ID:', courseId);
                     
-                    // Find the course by ID
+                    // Find the course by ID - check both course_id and id (primary key)
                     console.log(courses);
-                    const course = courses.find(c => c.course_id == courseId);
+                    const course = courses.find(c => {
+                        // Match by course_id first
+                        if (c.course_id == courseId) {
+                            return true;
+                        }
+                        // Also match by id (primary key) if course_id doesn't match
+                        if (c.id && c.id == courseId) {
+                            return true;
+                        }
+                        return false;
+                    });
                     if (!course) {
                         console.error('Course not found for ID:', courseId);
                         return;
@@ -1309,6 +1335,26 @@ get_header();
             if (isCourseInLearningPath(course)) {
                 showNotification('This course is already in your learning path!', 'error');
                 return;
+            }
+            
+            // Validate course date year matches selected year
+            if (course.course_date) {
+                try {
+                    // Parse course date (format: DD/MM/YYYY or DD-MM-YYYY)
+                    const dateStr = course.course_date.replace(/\//g, '-');
+                    const dateParts = dateStr.split('-');
+                    if (dateParts.length === 3) {
+                        const courseYear = parseInt(dateParts[2]);
+                        const selectedYear = parseInt(cpdLoggingYear);
+                        
+                        if (courseYear && selectedYear && courseYear !== selectedYear) {
+                            showNotification(`This course is for ${courseYear}, but you selected ${selectedYear}. Please select the correct year.`, 'error');
+                            return;
+                        }
+                    }
+                } catch (e) {
+                    console.error('Error parsing course date:', e);
+                }
             }
             
             // Show loading state on the button
@@ -1426,10 +1472,20 @@ get_header();
             }
             
             // Find the course in learning path to get the confirmation ID
+            // Note: course.id is the primary key from coursesbyadminbku table
+            // course.course_id might be different, so check both
             const learningPathCourse = coursesInLearningPath.find(lpCourse => {
+                // First try to match by course_id
                 if (lpCourse.course_id && course.course_id) {
-                    return lpCourse.course_id == course.course_id;
+                    if (lpCourse.course_id == course.course_id) {
+                        return true;
+                    }
                 }
+                // Also try to match by id (primary key) if course_id doesn't match
+                if (lpCourse.course_id && course.id && lpCourse.course_id == course.id) {
+                    return true;
+                }
+                // Fallback: match by name and provider
                 return lpCourse.course_name === course.course_name && 
                        lpCourse.crs_provider === course.crs_provider;
             });
@@ -1491,7 +1547,12 @@ get_header();
                         showNotification('Course removed from your learning path!', 'success');
                         
                         // Refresh the learning path courses list and reload courses to update the UI
-                        loadCoursesInLearningPath();
+                        loadCoursesInLearningPath().then(() => {
+                            // Refresh the page after a short delay to ensure UI is updated
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 1000);
+                        });
                         
                     } else {
                         // Show error state
@@ -1605,10 +1666,24 @@ get_header();
         
         /**
          * Check if a course is in learning path (either completed or started)
+         * Note: course.id is the primary key from coursesbyadminbku table
+         * course.course_id might be different, so check both
          */
         function isCourseInLearningPath(course) {
             return coursesInLearningPath.find(lpCourse => {
-                return lpCourse.course_id == course.course_id;
+                // First try to match by course_id
+                if (lpCourse.course_id && course.course_id) {
+                    if (lpCourse.course_id == course.course_id) {
+                        return true;
+                    }
+                }
+                // Also try to match by id (primary key) if course_id doesn't match
+                if (lpCourse.course_id && course.id && lpCourse.course_id == course.id) {
+                    return true;
+                }
+                // Fallback: match by name and provider
+                return lpCourse.course_name === course.course_name && 
+                       lpCourse.crs_provider === course.crs_provider;
             });
         }
         

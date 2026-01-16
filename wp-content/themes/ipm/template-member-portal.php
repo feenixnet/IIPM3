@@ -16,9 +16,10 @@ require_once get_template_directory() . '/includes/cpd-record-api.php';
 
 // Get current user ID and year
 $current_user_id = get_current_user_id();
-// Use CPD logging year - this returns previous year if we're in January (before Jan 31 deadline)
-// This allows CPD logging for the previous year until January 31st of the next year
-$current_year = iipm_get_cpd_logging_year();
+// Member Portal: Use current date year directly (not CPD year logic)
+// If today is 2026, use 2026
+// Note: Payment Management page uses different logic (CPD year N = membership expiration Feb 1, N+1)
+$current_year = date('Y');
 
 // Check if user is admin based on user_is_admin field in member profiles
 global $wpdb;
@@ -128,31 +129,7 @@ get_header();
         </div>
         <?php endif; ?>
         
-        <!-- Success Alert for Completed CPD -->
-        <?php if ($is_user_assigned && !empty($cpd_stats['courses_summary'])): 
-            $has_minimum_time = $cpd_stats['completion_percentage'] >= 100;
-            $has_all_categories = true;
-            foreach ($cpd_stats['courses_summary'] as $category) {
-                if ($category['required'] > 0 && $category['total_hours'] < 1) {
-                    $has_all_categories = false;
-                    break;
-                }
-            }
-            $is_fully_completed = ($has_minimum_time && $has_all_categories);
-        ?>
-            <?php if ($is_submitted && $submitted_rows[0]->is_notified == 0): ?>
-            <div class="cpd-success-alert" id="cpd-success-alert" data-submission-id="<?php echo $submitted_rows[0]->id; ?>">
-                <div class="alert-content">
-                    <div class="alert-icon">🎉</div>
-                    <div class="alert-message">
-                        <h4>Congratulations!</h4>
-                        <p>You have successfully completed all required CPD courses for <?php echo $current_year; ?>. Your professional development is up to date!</p>
-                    </div>
-                    <button class="alert-close" onclick="closeSuccessAlert()">×</button>
-                </div>
-            </div>
-            <?php endif; ?>
-        <?php endif; ?>
+        <!-- Success Alert for Completed CPD - Hidden at top, will be shown in sidebar instead -->
         
         <?php if ($member_status === 'inactive'): ?>
             <!-- For inactive members, show only the alert above and hide all other content -->
@@ -333,29 +310,40 @@ get_header();
                         </div>
                     </div>
                     
-                    <button class="btn btn-primary" id="log-training-btn" <?php echo ($is_submitted || $member_status === 'inactive') ? 'disabled' : ''; ?>>
-                        <?php 
-                        if ($member_status === 'inactive') {
-                            echo 'Membership Inactive';
-                        } elseif ($is_submitted) {
-                            echo 'Training Logging Disabled';
-                        } else {
-                            echo 'Log Training';
-                        }
-                        ?>
-                    </button>
+                    <!-- Log Training Button or Success Alert (shown dynamically via JavaScript) -->
+                    <div id="sidebar-action-container">
+                        <button class="btn btn-primary" id="log-training-btn" <?php echo ($is_submitted || $member_status === 'inactive') ? 'disabled' : ''; ?>>
+                            <?php 
+                            if ($member_status === 'inactive') {
+                                echo 'Membership Inactive';
+                            } elseif ($is_submitted) {
+                                echo 'Training Logging Disabled';
+                            } else {
+                                echo 'Log Training';
+                            }
+                            ?>
+                        </button>
+                    </div>
                     
                     <!-- CPD Stats Grid -->
                     <div class="cpd-stats-grid">
                         <div class="stat-item">
                             <div class="stat-label">CPD Requirement</div>
                             <div class="stat-value" id="cpd-requirement">0</div>
-                            </div>
+                        </div>
                         <div class="stat-item">
                             <div class="stat-label">CPD hours logged</div>
                             <div class="stat-value" id="cpd-hours-logged">0</div>
-                            </div>
                         </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Start Date</div>
+                            <div class="stat-value" id="cpd-start-date">-</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-label">Completion Date</div>
+                            <div class="stat-value" id="cpd-completion-date">-</div>
+                        </div>
+                    </div>
                         
                     <!-- Course Summary Table -->
                     <div class="course-summary-section">
@@ -373,27 +361,26 @@ get_header();
                     <!-- <button class="btn btn-outline" id="submit-return-btn">Submit my return</button> -->
                     
                     <!-- CPD Assignment and Submission Buttons -->
-                    <?php if (!$is_submitted): ?>
-                        <div class="cpd-action-buttons" id="cpd-action-buttons" style="display: none;">
-                            <button class="btn btn-success" id="submit-cpd-btn">
-                                <span class="btn-icon"><i class="fas fa-check"></i></span>
-                                Submit <?php echo $current_year; ?> CPD return
-                            </button>
-                        </div>
-                        
-                        <!-- Validation Message Area -->
-                        <div class="cpd-validation-message" id="cpd-validation-message" style="display: none;">
-                            <!-- Validation messages will be shown here -->
-                        </div>
-                    <?php else: ?>
-                        <!-- Download Certificate Button (shown when submitted and certificate is available) -->
-                        <div class="cpd-action-buttons" id="cpd-action-buttons" style="display: none;">
-                            <button class="btn btn-success" id="download-certificate-btn" onclick="directDownloadCertificate()" style="display: none;">
-                                <span class="btn-icon"><i class="fas fa-download"></i></span>
-                                Download Certificate
-                            </button>
-                        </div>
-                    <?php endif; ?>
+                    <!-- Submit Button Container (separate from download button) -->
+                    <div class="cpd-action-buttons" id="cpd-action-buttons-submit" style="display: none;">
+                        <button class="btn btn-success" id="submit-cpd-btn">
+                            <span class="btn-icon"><i class="fas fa-check"></i></span>
+                            <span id="submit-btn-text">Submit <?php echo $current_year; ?> CPD return</span>
+                        </button>
+                    </div>
+                    
+                    <!-- Download Certificate Button Container (separate from submit button) -->
+                    <div class="cpd-action-buttons" id="cpd-action-buttons-download" style="display: none;">
+                        <button class="btn btn-success" id="download-certificate-btn" onclick="directDownloadCertificate()" style="display: none;">
+                            <span class="btn-icon"><i class="fas fa-download"></i></span>
+                            Download Certificate
+                        </button>
+                    </div>
+                    
+                    <!-- Validation Message Area -->
+                    <div class="cpd-validation-message" id="cpd-validation-message" style="display: none;">
+                        <!-- Validation messages will be shown here -->
+                    </div>
 
                     <!-- Submission Deadline Alert -->
                     <?php if (!$is_submitted): ?>
@@ -420,7 +407,7 @@ get_header();
                         <?php if ($is_submitted): ?>
                             <span class="card-link disabled" style="color: #9ca3af; cursor: not-allowed;">Disabled <i class="fas fa-lock"></i></span>
                         <?php else: ?>
-                            <a href="<?php echo home_url('/cpd-courses/'); ?>" class="card-link" id="browse-courses-link">Browse courses <i class="fas fa-arrow-right"></i></a>
+                            <a href="<?php echo home_url('/cpd-courses/'); ?>" class="card-link" id="browse-courses-link" data-base-url="<?php echo home_url('/cpd-courses/'); ?>">Browse courses <i class="fas fa-arrow-right"></i></a>
                         <?php endif; ?>
                     </div>
                     
@@ -583,6 +570,25 @@ get_header();
         margin-bottom: 30px;
         box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
         animation: slideDown 0.5s ease-out;
+    }
+    
+    /* CPD Success Alert in Sidebar (compact version) */
+    .cpd-success-alert-sidebar {
+        margin-bottom: 10px;
+        padding: 16px;
+    }
+    
+    .cpd-success-alert-sidebar .alert-message h4 {
+        font-size: 18px;
+        margin-bottom: 6px;
+    }
+    
+    .cpd-success-alert-sidebar .alert-message p {
+        font-size: 14px;
+    }
+    
+    .cpd-success-alert-sidebar .alert-icon {
+        font-size: 28px;
     }
 
     .cpd-success-alert .alert-content {
@@ -894,6 +900,11 @@ get_header();
 
     .status-incomplete {
         color: #ef4444;
+    }
+
+    .status-forgoable {
+        color: #6b7280;
+        font-style: italic;
     }
 
     .completion-status {
@@ -2284,6 +2295,10 @@ get_header();
         background: #fee2e2 !important;
     }
 
+    #sidebar-action-container {
+        margin-bottom: 20px;
+    }
+
     /* Responsive Design */
     @media (max-width: 768px) {
         .stats-grid {
@@ -2340,15 +2355,11 @@ get_header();
      */
     function getCpdYear() {
         const now = new Date();
-        const currentMonth = now.getMonth() + 1; // JavaScript months are 0-indexed
-        const currentDay = now.getDate();
         const currentYear = now.getFullYear();
         
-        // If we're in January (month 1) and day is <= 31, use previous year
-        if (currentMonth === 1 && currentDay <= 31) {
-            return currentYear - 1;
-        }
-        
+        // Member Portal: Always use current date year (not CPD year logic)
+        // If today is 2026, returns 2026
+        // Note: Payment Management page uses different logic (CPD year N = membership expiration Feb 1, N+1)
         return currentYear;
     }
     
@@ -2358,9 +2369,9 @@ get_header();
     var isTrainingCompleted = <?php echo $cpd_stats['completion_percentage'] >= 100 ? 'true' : 'false'; ?> == 'true' ? true : false;
     var isSubmitted = <?php echo $is_submitted ? 'true' : 'false'; ?>;
     var statData = null;
-    // CPD logging year - uses previous year if in January (before Jan 31 deadline)
+    // CPD logging year - uses current date year (Member Portal uses current year, not CPD year logic)
     var cpdLoggingYear = getCpdYear();
-    // Base CPD year (current logging year) - used to detect non-current views
+    // Base CPD year (current year) - used to detect non-current views
     var baseCpdYear = cpdLoggingYear;
     
     document.addEventListener('DOMContentLoaded', function() {
@@ -2388,7 +2399,7 @@ get_header();
         <?php if ($is_submitted): ?>
         loadSubmissionDetails();
         // Check certificate availability on page load
-        checkCertificateAvailability();
+        checkCertificateAvailability(null);
         <?php endif; ?>
         
         /**
@@ -2619,8 +2630,13 @@ get_header();
                         if (isUserAssigned) {
                             loadRecentlyLoggedTraining();
                         }
-                        // Check certificate availability when year changes
-                        checkCertificateAvailability();
+                        // Update submit button text when year changes
+                        const submitBtnText = document.getElementById('submit-btn-text');
+                        if (submitBtnText) {
+                            submitBtnText.textContent = `Submit ${selected} CPD return`;
+                        }
+                        // Note: updateCpdActionButtons and checkCertificateAvailability will be called
+                        // when loadCompletedCpdStats completes and calls updateCpdProgress
                     }
                 });
             }
@@ -2669,12 +2685,27 @@ get_header();
         function updateCpdProgress(data) {
             console.log('CPD Data received:', data); // Debug log
             
+            // Update is_submitted status based on the selected year from the response
+            // submission_data.submitted indicates if CPD is submitted for the selected year
+            if (data.submission_data && typeof data.submission_data.submitted !== 'undefined') {
+                // Update the data object with is_submitted for use in other functions
+                data.is_submitted = data.submission_data.submitted;
+                // Also update the global isSubmitted variable based on the selected year
+                // This ensures functions like updateYearDependentUI and renderTrainingInPortal
+                // use the correct submission status for the selected year
+                isSubmitted = data.submission_data.submitted;
+            } else {
+                // Fallback: if submission_data is not available, assume not submitted
+                data.is_submitted = false;
+                isSubmitted = false;
+            }
+            
             // Update high-level requirement/hours stats
             updateCpdStats(data);
             updateCourseSummary(data);
             
             // Update category progress
-            const categories = ['pensions', 'savings', 'ethics', 'life'];
+            const categories = ['pensions', 'savings & investments', 'ethics', 'life assurance'];
             let totalCompleted = 0;
             
             categories.forEach(category => {
@@ -2743,28 +2774,67 @@ get_header();
             // Update submission deadline alert
             updateSubmissionAlert(data);
             
-            // Update CPD action buttons based on period and assignment status
+            // Update CPD action buttons (submit button) - handles current year submit button
+            // This will also call checkCertificateAvailability when appropriate
             updateCpdActionButtons(data);
             
-            // Check certificate availability and update download button
-            checkCertificateAvailability();
+            // Update year-dependent UI elements (including browse courses link)
+            // This ensures the browse courses link is updated when submission status changes
+            updateYearDependentUI();
+            
+            // Re-render training blocks with updated submission status
+            // This ensures remove buttons show/hide correctly when year changes and isSubmitted is updated
+            if (isUserAssigned && currentTrainingData) {
+                // Re-render existing training data with updated isSubmitted status
+                // This avoids unnecessary API call and ensures immediate update
+                renderTrainingInPortal(currentTrainingData);
+                // Also check if table view exists and re-render it
+                const trainingTableSection = document.getElementById('training-table-section');
+                if (trainingTableSection && trainingTableSection.innerHTML.trim() !== '') {
+                    renderTrainingAsTable(currentTrainingData);
+                }
+            }
             
             console.log(`Total completed: ${totalCompleted}/4`); // Debug log
         }
         
         /**
          * Check certificate availability and show/hide download button
+         * Download button logic:
+         * - For 2025+: Show only if submitted AND all requirements met
+         * - For <=2024: Show if all requirements met (no submission needed)
+         * - Never show together with submit button
          */
-        function checkCertificateAvailability() {
-            const downloadBtn = document.getElementById('download-certificate-btn');
-            const cpdActionButtons = document.getElementById('cpd-action-buttons');
-            
-            if (!downloadBtn || !cpdActionButtons) return;
-            
+        function checkCertificateAvailability(data) {
             const yearSelect = document.getElementById('cpd-year-select');
-            const selectedYear = yearSelect ? yearSelect.value : getCpdYear();
+            const selectedYear = yearSelect ? parseInt(yearSelect.value, 10) : getCpdYear();
             
-            // Check if certificate is available for the selected year
+            // Check if submit container is visible - if so, don't show download button
+            const submitContainer = document.getElementById('cpd-action-buttons-submit');
+            const downloadContainer = document.getElementById('cpd-action-buttons-download');
+            const submitBtn = document.getElementById('submit-cpd-btn');
+            
+            if (submitContainer && submitContainer.style.display !== 'none' && submitContainer.offsetParent !== null) {
+                // Submit button is visible - hide download button and return
+                const downloadBtn = document.getElementById('download-certificate-btn');
+                if (downloadBtn) {
+                    downloadBtn.style.display = 'none';
+                }
+                if (downloadContainer) {
+                    downloadContainer.style.display = 'none';
+                }
+                return;
+            }
+            
+            // Hide submit container when showing download button (they should never show together)
+            if (submitContainer) {
+                submitContainer.style.display = 'none';
+            }
+            if (submitBtn) {
+                submitBtn.style.display = 'none';
+            }
+            
+            // Call backend endpoint - it handles all logic based on year
             fetch(ajaxurl, {
                 method: 'POST',
                 headers: {
@@ -2778,26 +2848,114 @@ get_header();
             })
             .then(response => response.json())
             .then(data => {
+                // Check if submit container is visible - if so, don't show download button
+                const submitContainer = document.getElementById('cpd-action-buttons-submit');
+                const downloadContainer = document.getElementById('cpd-action-buttons-download');
+                
+                if (submitContainer && submitContainer.style.display !== 'none' && submitContainer.offsetParent !== null) {
+                    // Submit button is showing - don't show download button
+                    const downloadBtn = document.getElementById('download-certificate-btn');
+                    if (downloadBtn) {
+                        downloadBtn.style.display = 'none';
+                    }
+                    if (downloadContainer) {
+                        downloadContainer.style.display = 'none';
+                    }
+                    return;
+                }
+                
+                let downloadBtn = document.getElementById('download-certificate-btn');
+                
                 if (data.success && data.data.has_certificate) {
-                    // Certificate is available, show the button
-                    downloadBtn.style.display = 'block';
-                    cpdActionButtons.style.display = 'flex';
+                    // Certificate is available - use the existing download container
+                    if (!downloadContainer) {
+                        // Container doesn't exist - create it
+                        const courseSummarySection = document.querySelector('.course-summary-section');
+                        const cpdCourseCard = document.querySelector('.cpd-course-card');
+                        
+                        // Create the container
+                        const newDownloadContainer = document.createElement('div');
+                        newDownloadContainer.className = 'cpd-action-buttons';
+                        newDownloadContainer.id = 'cpd-action-buttons-download';
+                        newDownloadContainer.style.display = 'flex';
+                        
+                        // Insert in appropriate location (after course summary, before submission alert if exists)
+                        if (courseSummarySection && courseSummarySection.parentNode) {
+                            // Insert after course summary section
+                            const nextSibling = courseSummarySection.nextElementSibling;
+                            if (nextSibling) {
+                                courseSummarySection.parentNode.insertBefore(newDownloadContainer, nextSibling);
+                            } else {
+                                courseSummarySection.parentNode.appendChild(newDownloadContainer);
+                            }
+                        } else if (cpdCourseCard) {
+                            // Insert at the end of cpd-course-card
+                            cpdCourseCard.appendChild(newDownloadContainer);
+                        } else {
+                            // Fallback: find cpd-course-panel
+                            const cpdCoursePanel = document.getElementById('cpd-course-panel');
+                            if (cpdCoursePanel) {
+                                cpdCoursePanel.appendChild(newDownloadContainer);
+                            }
+                        }
+                    }
+                    
+                    // Get the download container (either existing or newly created)
+                    const finalDownloadContainer = document.getElementById('cpd-action-buttons-download');
+                    
+                    if (!downloadBtn && finalDownloadContainer) {
+                        // Create the download button
+                        downloadBtn = document.createElement('button');
+                        downloadBtn.className = 'btn btn-success';
+                        downloadBtn.id = 'download-certificate-btn';
+                        downloadBtn.onclick = directDownloadCertificate;
+                        downloadBtn.innerHTML = '<span class="btn-icon"><i class="fas fa-download"></i></span>Download Certificate';
+                        finalDownloadContainer.appendChild(downloadBtn);
+                    }
+                    
+                    // Ensure submit container is hidden (they should never show together)
+                    if (submitContainer) {
+                        submitContainer.style.display = 'none';
+                    }
+                    const submitBtn = document.getElementById('submit-cpd-btn');
+                    if (submitBtn) {
+                        submitBtn.style.display = 'none';
+                    }
+                    
+                    // Show the download button and container
+                    if (downloadBtn) {
+                        downloadBtn.style.display = 'block';
+                    }
+                    if (finalDownloadContainer) {
+                        finalDownloadContainer.style.display = 'flex';
+                    }
                 } else {
-                    // No certificate available, hide the button
-                    downloadBtn.style.display = 'none';
-                    cpdActionButtons.style.display = 'none';
+                    // No certificate available, hide the download button and container
+                    if (downloadBtn) {
+                        downloadBtn.style.display = 'none';
+                    }
+                    if (downloadContainer) {
+                        downloadContainer.style.display = 'none';
+                    }
                 }
             })
             .catch(error => {
                 console.error('Error checking certificate availability:', error);
-                // On error, hide the button to be safe
-                downloadBtn.style.display = 'none';
-                cpdActionButtons.style.display = 'none';
+                // On error, hide the buttons if they exist
+                const downloadBtn = document.getElementById('download-certificate-btn');
+                const cpdActionButtons = document.getElementById('cpd-action-buttons');
+                if (downloadBtn) {
+                    downloadBtn.style.display = 'none';
+                }
+                if (cpdActionButtons) {
+                    cpdActionButtons.style.display = 'none';
+                }
             });
         }
         
         /**
          * Update submission deadline alert
+         * Members can submit CPD until next year's Jan 30th
          */
         function updateSubmissionAlert(data) {
             const submissionAlert = document.getElementById('submission-alert');
@@ -2807,13 +2965,23 @@ get_header();
             
             // Show alert only if user is assigned and in submission period (not submitted)
             const isUserAssigned = data.is_user_assigned;
-            const isSubmissionPeriod = data.is_submission_period_available;
             const isSubmitted = data.is_submitted;
             
-            if (isUserAssigned && isSubmissionPeriod && !isSubmitted && data.cpd_dates && data.cpd_dates.end_submission) {
-                // Calculate next year's January 31st deadline
-                const deadlineDate = formatDate(data.cpd_dates.end_submission);
-                submissionDeadlineText.textContent = `Submit your CPD return before ${deadlineDate}`;
+            const yearSelect = document.getElementById('cpd-year-select');
+            const selectedYear = yearSelect ? parseInt(yearSelect.value, 10) : getCpdYear();
+            const isInExtendedPeriod = isInExtendedSubmissionPeriod(selectedYear);
+            const isSubmissionPeriod = data.is_submission_period_available || isInExtendedPeriod;
+            
+            if (isUserAssigned && isSubmissionPeriod && !isSubmitted) {
+                // Calculate next year's January 30th deadline
+                const nextYear = selectedYear + 1;
+                const deadlineDate = new Date(nextYear, 0, 30); // Jan 30 of next year
+                const formattedDeadline = deadlineDate.toLocaleDateString('en-GB', {
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric'
+                });
+                submissionDeadlineText.textContent = `Submit your CPD return before ${formattedDeadline}`;
                 submissionAlert.style.display = 'block';
             } else {
                 submissionAlert.style.display = 'none';
@@ -2821,44 +2989,131 @@ get_header();
         }
         
         /**
+         * Check if we're in the submission period for a given year
+         * Submission period formula: X year's submission duration is from X's Jan 1st to X+1's Jan 30th
+         * Example: For CPD year 2025, submission period is Jan 1, 2025 to Jan 30, 2026
+         */
+        function isInExtendedSubmissionPeriod(selectedYear) {
+            const now = new Date();
+            const currentYear = now.getFullYear();
+            const currentMonth = now.getMonth() + 1; // 1-12
+            const currentDay = now.getDate();
+            
+            const yearNum = parseInt(selectedYear, 10);
+            const nextYear = yearNum + 1;
+            
+            // Submission period: Jan 1 of year X to Jan 30 of year X+1
+            // Case 1: We're in the CPD year itself (year X)
+            if (currentYear === yearNum) {
+                // Any date in year X is within submission period
+                return true;
+            }
+            
+            // Case 2: We're in the year after the CPD year (year X+1)
+            if (currentYear === nextYear) {
+                // Check if it's January and on or before the 30th
+                if (currentMonth === 1 && currentDay <= 30) {
+                    return true; // On or before Jan 30
+                }
+                return false; // After Jan 30
+            }
+            
+            // Case 3: We're before the CPD year or after the submission deadline
+            return false;
+        }
+        
+        /**
          * Update CPD action buttons based on period and assignment status
+         * Submit button: Show for any year that's in its submission period (Jan 1 of year X to Jan 30 of year X+1)
+         * Submission period formula: X year's submission duration is from X's Jan 1st to X+1's Jan 30th
          */
         function updateCpdActionButtons(data) {
-            const cpdActionButtons = document.getElementById('cpd-action-buttons');
+            const submitContainer = document.getElementById('cpd-action-buttons-submit');
+            const downloadContainer = document.getElementById('cpd-action-buttons-download');
             const submitBtn = document.getElementById('submit-cpd-btn');
+            const submitBtnText = document.getElementById('submit-btn-text');
+            const downloadBtn = document.getElementById('download-certificate-btn');
             
+            // Hide download container first - we'll show it separately in checkCertificateAvailability
+            if (downloadContainer) {
+                downloadContainer.style.display = 'none';
+            }
+            if (downloadBtn) {
+                downloadBtn.style.display = 'none';
+            }
 
-            const isLoggingPeriod = true;
-            const isSubmissionPeriod = data.is_submission_period_available;
+            const yearSelect = document.getElementById('cpd-year-select');
+            const selectedYear = yearSelect ? parseInt(yearSelect.value, 10) : getCpdYear();
+            
+            // Update submit button text to show selected year
+            if (submitBtnText) {
+                submitBtnText.textContent = `Submit ${selectedYear} CPD return`;
+            }
+            
+            if (!submitContainer || !submitBtn) return;
+            
+            // Check if we're in the submission period for the selected year
+            // Submission period: Jan 1 of year X to Jan 30 of year X+1
+            const isInSubmissionPeriod = isInExtendedSubmissionPeriod(selectedYear);
+            const isSubmissionPeriod = data.is_submission_period_available || isInSubmissionPeriod;
             const isUserAssigned = data.is_user_assigned;
-
-            console.log('CPDACTIONBUTTONS', cpdActionButtons);
-            console.log('SUBMITBTN', submitBtn);
+            const isSubmitted = data.is_submitted || false;
             
+            // If already submitted, hide submit button immediately and check for certificate
+            if (isSubmitted) {
+                submitBtn.style.display = 'none';
+                submitContainer.style.display = 'none';
+                hideValidationMessage();
+                // Check for certificate since it's already submitted
+                checkCertificateAvailability(data);
+                checkAndShowSuccessAlert(data);
+                return;
+            }
             
-            if (!cpdActionButtons || !submitBtn) return;
-
-            console.log('isUserAssigned', isUserAssigned);
-            console.log('isSubmissionPeriod', isSubmissionPeriod);
+            // If not in submission period, hide submit button and check certificate
+            if (!isSubmissionPeriod) {
+                submitBtn.style.display = 'none';
+                submitContainer.style.display = 'none';
+                hideValidationMessage();
+                // Check certificate availability for years outside submission period
+                checkCertificateAvailability(data);
+                checkAndShowSuccessAlert(data);
+                return;
+            }
             
             // Check if user meets all submission requirements
             const meetsSubmissionRequirements = checkSubmissionRequirements(data);
             
-            // User is assigned, show submit button if in submission period AND meets all requirements
-            if (isUserAssigned && isSubmissionPeriod && !isTrainingCompleted && meetsSubmissionRequirements) {
-                cpdActionButtons.style.display = 'flex';
+            // User is assigned, show submit button if:
+            // - In submission period (Jan 1 of year X to Jan 30 of year X+1)
+            // - Meets all requirements
+            // - Not already submitted (checked above)
+            if (isUserAssigned && isSubmissionPeriod && meetsSubmissionRequirements) {
+                // Hide download container - submit and download should never show together
+                if (downloadContainer) {
+                    downloadContainer.style.display = 'none';
+                }
+                if (downloadBtn) {
+                    downloadBtn.style.display = 'none';
+                }
+                // Show submit button and its container
+                submitContainer.style.display = 'flex';
                 submitBtn.style.display = 'block';
                 hideValidationMessage();
             } else {
                 // Hide submit button if requirements not met
-                if (cpdActionButtons) {
-                    cpdActionButtons.style.display = 'none';
-                }
+                submitBtn.style.display = 'none';
+                submitContainer.style.display = 'none';
                 
                 // Show validation message if user is assigned and in submission period but doesn't meet requirements
-                if (isUserAssigned && isSubmissionPeriod && !isTrainingCompleted) {
+                if (isUserAssigned && isSubmissionPeriod) {
                     showValidationMessage(data);
+                } else {
+                    hideValidationMessage();
                 }
+                
+                // If not showing submit button, check for certificate
+                checkCertificateAvailability(data);
             }
             
             // Check if user has completed all CPD requirements and show success alert
@@ -2896,14 +3151,23 @@ get_header();
             }
             
             // Check each category to ensure it has at least 1 hour of completed training
+            // Skip forgoable categories (categories that are not required for this user/year)
             for (let category of data.courses_summary) {
+                // Skip if category is forgoable (not required for this user/year)
+                // Forgoable categories have required = 0 or is_forgoable = true
+                if (category.is_forgoable || category.required === 0) {
+                    console.log(`Category "${category.category}" is forgoable (not required) - skipping requirement check`);
+                    continue;
+                }
+                
+                // Only check categories that are required (required > 0)
                 if (category.required > 0 && category.total_hours < 1) {
                     console.log(`Category "${category.category}" has insufficient training hours (${category.total_hours} hours, required: at least 1 hour)`);
                     return false;
                 }
             }
             
-            console.log('All required categories have at least 1 hour of training');
+            console.log('All required (non-forgoable) categories have at least 1 hour of training');
             return true;
         }
         
@@ -2972,50 +3236,150 @@ get_header();
         }
         
         /**
-         * Check if user has completed all CPD requirements and show success alert
+         * Check if user has completed all CPD requirements and show success alert in sidebar
          */
         function checkAndShowSuccessAlert(data) {
-            if (!data.courses_summary || data.courses_summary.length === 0) return;
+            if (!data.courses_summary || data.courses_summary.length === 0) {
+                // If no courses summary, restore Log Training button
+                restoreLogTrainingButton();
+                return;
+            }
+            
+            // Get the selected year
+            const yearSelect = document.getElementById('cpd-year-select');
+            const selectedYear = yearSelect ? parseInt(yearSelect.value, 10) : getCpdYear();
+            
+            // Check if CPD is submitted for this year
+            const isSubmitted = data.is_submitted || false;
             
             let totalCompleted = 0;
             let totalRequired = 0;
             
             data.courses_summary.forEach(category => {
+                // Skip forgoable categories (not required for this user/year)
+                if (category.is_forgoable || category.required === 0) {
+                    return; // Skip this category
+                }
                 totalCompleted += category.count;
                 totalRequired += category.required;
             });
             
             const isFullyCompleted = (totalCompleted >= totalRequired && data.completion_percentage >= 100);
+            const sidebarActionContainer = document.getElementById('sidebar-action-container');
+            const existingAlert = document.getElementById('cpd-success-alert');
             
-            // Show success alert if fully completed and not already shown
-            if (isFullyCompleted && !document.getElementById('cpd-success-alert')) {
-                showSuccessAlert();
+            // For 2025 and above: Only show congratulations alert when CPD is submitted
+            // For 2024 and below: Show congratulations alert when all requirements are fulfilled (like download certificate button)
+            if (selectedYear >= 2025) {
+                // 2025+: Only show when submitted
+                if (isSubmitted && isFullyCompleted) {
+                    if (!existingAlert) {
+                        showSuccessAlert();
+                    }
+                } else {
+                    // If not submitted or not fully completed, restore Log Training button
+                    if (existingAlert) {
+                        restoreLogTrainingButton();
+                    }
+                }
+            } else {
+                // <=2024: Show when all requirements fulfilled (regardless of submission)
+                if (isFullyCompleted) {
+                    // Show success alert if fully completed and not already shown
+                    if (!existingAlert) {
+                        showSuccessAlert();
+                    }
+                } else {
+                    // If not fully completed, restore Log Training button
+                    if (existingAlert) {
+                        restoreLogTrainingButton();
+                    }
+                }
             }
         }
         
         /**
-         * Show success alert dynamically
+         * Restore Log Training button in sidebar
+         */
+        function restoreLogTrainingButton() {
+            const sidebarActionContainer = document.getElementById('sidebar-action-container');
+            const existingAlert = document.getElementById('cpd-success-alert');
+            
+            if (existingAlert) {
+                existingAlert.remove();
+            }
+            
+            if (sidebarActionContainer) {
+                const memberStatus = <?php echo $member_status === 'inactive' ? "'inactive'" : "false"; ?>;
+                const isSubmitted = <?php echo $is_submitted ? 'true' : 'false'; ?>;
+                
+                let buttonText = 'Log Training';
+                let disabled = '';
+                if (memberStatus === 'inactive') {
+                    buttonText = 'Membership Inactive';
+                    disabled = 'disabled';
+                } else if (isSubmitted) {
+                    buttonText = 'Training Logging Disabled';
+                    disabled = 'disabled';
+                }
+                
+                sidebarActionContainer.innerHTML = `
+                    <button class="btn btn-primary" id="log-training-btn" ${disabled}>
+                        ${buttonText}
+                    </button>
+                `;
+                
+                // Re-attach event listener if needed
+                const newBtn = document.getElementById('log-training-btn');
+                if (newBtn && !disabled) {
+                    newBtn.addEventListener('click', showLogTrainingModal);
+                }
+            }
+        }
+        
+        /**
+         * Show success alert dynamically in sidebar instead of Log Training button
          */
         function showSuccessAlert() {
+            // Check if alert already exists
+            if (document.getElementById('cpd-success-alert')) {
+                return;
+            }
+            
             const currentCpdYear = getCpdYear();
+            const yearSelect = document.getElementById('cpd-year-select');
+            const selectedYear = yearSelect ? parseInt(yearSelect.value, 10) : currentCpdYear;
+            
+            // Find the sidebar action container (where Log Training button is)
+            const sidebarActionContainer = document.getElementById('sidebar-action-container');
+            const logTrainingBtn = document.getElementById('log-training-btn');
+            
+            if (!sidebarActionContainer) {
+                console.error('Sidebar action container not found');
+                return;
+            }
+            
+            // Hide the Log Training button
+            if (logTrainingBtn) {
+                logTrainingBtn.style.display = 'none';
+            }
+            
+            // Create the alert HTML for sidebar (compact version)
             const alertHTML = `
-                <div class="cpd-success-alert" id="cpd-success-alert">
+                <div class="cpd-success-alert cpd-success-alert-sidebar" id="cpd-success-alert">
                     <div class="alert-content">
                         <div class="alert-icon">🎉</div>
                         <div class="alert-message">
                             <h4>Congratulations!</h4>
-                            <p>You have successfully completed all required CPD courses for ${currentCpdYear}. Your professional development is up to date!</p>
+                            <p>You have successfully completed all required CPD courses for ${selectedYear}.</p>
                         </div>
                         <button class="alert-close" onclick="closeSuccessAlert()">×</button>
                     </div>
                 </div>
             `;
             
-            const container = document.querySelector('.container');
-            const portalLayout = document.querySelector('.portal-layout');
-            const alertDiv = document.createElement('div');
-            alertDiv.innerHTML = alertHTML;
-            container.insertBefore(alertDiv.firstElementChild, portalLayout);
+            // Replace the Log Training button with the success alert
+            sidebarActionContainer.innerHTML = alertHTML;
         }
         
         /**
@@ -3056,7 +3420,7 @@ get_header();
         }
         
         /**
-         * Update CPD stats display (Requirement and Hours Logged)
+         * Update CPD stats display (Requirement, Hours Logged, Start Date, Completion Date)
          */
         function updateCpdStats(data) {
             console.log('Updating CPD stats:', data);
@@ -3073,6 +3437,34 @@ get_header();
             if (loggedElement && data.total_cpd_minutes !== undefined) {
                 const loggedHours = Math.round((data.total_cpd_minutes / 60) * 2) / 2; // Round to nearest 0.5
                 loggedElement.textContent = loggedHours.toFixed(1) + ' hours';
+            }
+            
+            // Update Start Date (January 1 of the selected year)
+            const startDateElement = document.getElementById('cpd-start-date');
+            if (startDateElement) {
+                const yearSelect = document.getElementById('cpd-year-select');
+                const selectedYear = yearSelect ? parseInt(yearSelect.value, 10) : getCpdYear();
+                const startDate = new Date(selectedYear, 0, 1); // January 1 of selected year
+                startDateElement.textContent = startDate.toLocaleDateString('en-GB', {
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric'
+                });
+            }
+            
+            // Update Completion Date (submission date if submitted, otherwise show "-")
+            const completionDateElement = document.getElementById('cpd-completion-date');
+            if (completionDateElement) {
+                if (data.submission_data && data.submission_data.submitted && data.submission_data.submission_date) {
+                    const completionDate = new Date(data.submission_data.submission_date);
+                    completionDateElement.textContent = completionDate.toLocaleDateString('en-GB', {
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric'
+                    });
+                } else {
+                    completionDateElement.textContent = '-';
+                }
             }
         }
         
@@ -3104,19 +3496,34 @@ get_header();
             `;
             
             data.courses_summary.forEach(item => {
+                // Check if category is forgoable (not required for this user/year)
+                const isForgoable = item.is_forgoable || item.required === 0;
+                
                 // Calculate hours from minutes and round to nearest 0.5
                 const hours = Math.round((item.total_minutes / 60) * 2) / 2;
-                const progressText = `${hours} / 1`;
-                const isCompleted = hours >= 1;
-                const statusClass = isCompleted ? 'status-completed' : 'status-incomplete';
-                const iconColor = isCompleted ? '#10b981' : '#ef4444';
-                const iconType = isCompleted ? 'check-circle' : 'times-circle';
+                
+                // For forgoable categories, show "Not Required" instead of progress
+                let progressText, statusClass, iconColor, iconType;
+                
+                if (isForgoable) {
+                    progressText = 'Not Required';
+                    statusClass = 'status-forgoable';
+                    iconColor = '#6b7280'; // Gray for forgoable
+                    iconType = 'minus-circle';
+                } else {
+                    progressText = `${hours} / 1`;
+                    const isCompleted = hours >= 1;
+                    statusClass = isCompleted ? 'status-completed' : 'status-incomplete';
+                    iconColor = isCompleted ? '#10b981' : '#ef4444';
+                    iconType = isCompleted ? 'check-circle' : 'times-circle';
+                }
                 
                 html += `
                     <tr>
                         <td class="summary-category">
                             <i class="fas fa-${iconType}" style="font-size: 11px; color: ${iconColor}; margin-right: 6px;"></i>
                             ${item.category}
+                            ${isForgoable ? '<span style="font-size: 10px; color: #6b7280; margin-left: 6px;">(Forgoable)</span>' : ''}
                         </td>
                         <td class="completion-status ${statusClass}">${progressText}</td>
                         <td class="summary-hours">${hours.toFixed(1)}</td>
@@ -3235,8 +3642,13 @@ get_header();
         /**
          * Update training display
          */
+        // Store training data globally so we can re-render it when isSubmitted changes
+        var currentTrainingData = null;
+        
         function updateTrainingDisplay(training) {
             console.log('Updating training display with data:', training);
+            // Store training data for potential re-rendering
+            currentTrainingData = training;
             // Always render in portal (even when submitted, but without delete buttons)
             renderTrainingInPortal(training);
         }
@@ -3251,7 +3663,22 @@ get_header();
          */
         function updateYearDependentUI() {
             const isCurrentYearView = (cpdLoggingYear === baseCpdYear);
-            // If submitted, always disable actions regardless of year
+            const lastYear = baseCpdYear - 1;
+            const isLastYearView = (cpdLoggingYear === lastYear);
+            
+            // Check if we're before last year's deadline (Jan 30 of current year)
+            const now = new Date();
+            const currentYear = now.getFullYear();
+            const currentMonth = now.getMonth() + 1; // 1-12
+            const currentDay = now.getDate();
+            const isBeforeLastYearDeadline = (currentMonth === 1 && currentDay <= 30);
+            
+            // Browse Courses should be enabled for:
+            // 1. Current year
+            // 2. Last year if today is before Jan 30 (last year's submission deadline)
+            const shouldEnableBrowseCourses = isCurrentYearView || (isLastYearView && isBeforeLastYearDeadline);
+            
+            // If submitted, always disable actions regardless of year (except Browse Courses which has its own logic)
             const shouldDisableActions = isSubmitted || !isCurrentYearView;
             
             // Log Training main button
@@ -3271,20 +3698,31 @@ get_header();
             
             // "Log your first training" button (when no training yet) will be handled when rendering cards
             
-            // Browse courses link
+            // Browse courses link - special logic: enabled for current year and last year before deadline
+            // Also disable if the selected year is already submitted
             const browseCoursesLink = document.getElementById('browse-courses-link');
             if (browseCoursesLink) {
-                if (!browseCoursesLink.dataset.originalHref) {
-                    browseCoursesLink.dataset.originalHref = browseCoursesLink.getAttribute('href') || '';
-                }
-                if (shouldDisableActions) {
+                const baseUrl = browseCoursesLink.dataset.baseUrl || browseCoursesLink.getAttribute('href') || '<?php echo home_url('/cpd-courses/'); ?>';
+                
+                // Check if selected year is submitted
+                const yearSelect = document.getElementById('cpd-year-select');
+                const selectedYear = yearSelect ? parseInt(yearSelect.value, 10) : cpdLoggingYear;
+                
+                // Disable if:
+                // 1. Not in allowed years (current year or last year before deadline)
+                // 2. Selected year is already submitted
+                if (!shouldEnableBrowseCourses || isSubmitted) {
                     browseCoursesLink.classList.add('disabled');
                     browseCoursesLink.setAttribute('href', 'javascript:void(0)');
+                    browseCoursesLink.style.cursor = 'not-allowed';
+                    browseCoursesLink.style.color = '#9ca3af';
                 } else {
                     browseCoursesLink.classList.remove('disabled');
-                    if (browseCoursesLink.dataset.originalHref) {
-                        browseCoursesLink.setAttribute('href', browseCoursesLink.dataset.originalHref);
-                    }
+                    // Update URL to include selected year (tyear parameter)
+                    const coursesUrl = `${baseUrl}?tyear=${selectedYear}`;
+                    browseCoursesLink.setAttribute('href', coursesUrl);
+                    browseCoursesLink.style.cursor = 'pointer';
+                    browseCoursesLink.style.color = '';
                 }
             }
             
@@ -3335,6 +3773,7 @@ get_header();
                                     <th>Completed Date</th>
                                     <th>Duration</th>
                                     <th>Status</th>
+                                    <th>Action</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -3345,6 +3784,11 @@ get_header();
                                     // Extract hours from duration string and format it
                                     const durationMatch = durationRaw.match(/(\d+(?:\.\d+)?)/);
                                     const durationFormatted = durationMatch ? formatDuration(parseFloat(durationMatch[1])) : durationRaw;
+                                    
+                                    const yearSelect = document.getElementById('cpd-year-select');
+                                    const selectedYear = yearSelect ? parseInt(yearSelect.value, 10) : getCpdYear();
+                                    // Show remove button only for 2025 and above, and only if the selected CPD year is not submitted
+                                    const canDelete = selectedYear >= 2025 && !isSubmitted;
                                     
                                     return `
                                         <tr>
@@ -3357,6 +3801,12 @@ get_header();
                                                     ${isCompleted ? 'Completed' : 'Pending'}
                                                 </span>
                                             </td>
+                                            ${canDelete ? `
+                                            <td class="action-cell">
+                                                <button class="action-btn delete-btn" onclick="deleteCourse(${item.id}, event)" title="Remove" style="background: #ef4444; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 14px;">
+                                                    <i class="fas fa-trash-alt"></i>
+                                                </button>
+                                            </td>` : '<td class="action-cell"></td>'}
                                         </tr>
                                     `;
                                 }).join('')}
@@ -3381,9 +3831,8 @@ get_header();
                 return;
             }
             
-            const isCurrentYearView = (cpdLoggingYear === baseCpdYear);
-            // Don't show delete buttons if submitted or not current year
-            const canDelete = !isSubmitted && isCurrentYearView;
+            // Show remove button only for 2025 and above, and only if the selected CPD year is not submitted
+            const canDelete = cpdLoggingYear >= 2025 && !isSubmitted;
             
             if (!training || training.length === 0) {
                 trainingContentEl.innerHTML = `
@@ -3879,6 +4328,7 @@ get_header();
          * Show log training modal
          */
         function showLogTrainingModal() {
+            const logTrainingModal = document.getElementById('log-training-modal');
             if (logTrainingModal) {
                 logTrainingModal.style.display = 'flex';
             }
@@ -3888,6 +4338,7 @@ get_header();
          * Hide log training modal
          */
         function hideLogTrainingModal() {
+            const logTrainingModal = document.getElementById('log-training-modal');
             if (logTrainingModal) {
                 logTrainingModal.style.display = 'none';
             }
@@ -3898,8 +4349,11 @@ get_header();
          */
         function selectPreApprovedTraining() {
             hideLogTrainingModal();
-            // Redirect to CPD courses page
-            window.location.href = '<?php echo home_url('/cpd-courses/'); ?>';
+            // Redirect to CPD courses page with selected year
+            const yearSelect = document.getElementById('cpd-year-select');
+            const selectedYear = yearSelect ? parseInt(yearSelect.value, 10) : getCpdYear();
+            const coursesUrl = `<?php echo home_url('/cpd-courses/'); ?>?tyear=${selectedYear}`;
+            window.location.href = coursesUrl;
         }
         
         /**
@@ -3971,10 +4425,39 @@ get_header();
     // Global function to close success alert
     function closeSuccessAlert() {
         const alert = document.getElementById('cpd-success-alert');
+        const sidebarActionContainer = document.getElementById('sidebar-action-container');
+        const logTrainingBtn = document.getElementById('log-training-btn');
+        
         if (alert) {
             alert.style.animation = 'slideUp 0.3s ease-out';
             setTimeout(() => {
+                // Remove the alert and restore the Log Training button
                 alert.remove();
+                
+                // Restore Log Training button in sidebar
+                if (sidebarActionContainer && logTrainingBtn) {
+                    logTrainingBtn.style.display = '';
+                } else if (sidebarActionContainer) {
+                    // If button doesn't exist, recreate it
+                    const memberStatus = <?php echo $member_status === 'inactive' ? "'inactive'" : "false"; ?>;
+                    const isSubmitted = <?php echo $is_submitted ? 'true' : 'false'; ?>;
+                    
+                    let buttonText = 'Log Training';
+                    let disabled = '';
+                    if (memberStatus === 'inactive') {
+                        buttonText = 'Membership Inactive';
+                        disabled = 'disabled';
+                    } else if (isSubmitted) {
+                        buttonText = 'Training Logging Disabled';
+                        disabled = 'disabled';
+                    }
+                    
+                    sidebarActionContainer.innerHTML = `
+                        <button class="btn btn-primary" id="log-training-btn" ${disabled}>
+                            ${buttonText}
+                        </button>
+                    `;
+                }
                 
                 // Mark submission as notified after alert is closed
                 const submissionId = alert.getAttribute('data-submission-id');
@@ -4014,14 +4497,24 @@ get_header();
     // completeCourse function removed - courses are now automatically completed when logged
     // function completeCourse(courseId) { ... } - No longer needed
     
-    function deleteCourse(courseId) {
+    function deleteCourse(courseId, event) {
+        if (event) {
+            event.stopPropagation();
+        }
+        
         if (confirm('Are you sure you want to remove this course from your CPD record?')) {
             // Find the delete button and show loading state
-            const deleteBtn = event.target;
-            const originalText = deleteBtn.textContent;
-            deleteBtn.textContent = 'Deleting...';
+            const deleteBtn = event ? (event.target.closest('.delete-btn') || event.target) : document.querySelector(`[onclick*="deleteCourse(${courseId})"]`);
+            if (!deleteBtn) {
+                console.error('Delete button not found');
+                return;
+            }
+            
+            const originalHtml = deleteBtn.innerHTML;
+            deleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
             deleteBtn.disabled = true;
             deleteBtn.style.background = '#6b7280';
+            deleteBtn.style.cursor = 'not-allowed';
             
             const formData = new FormData();
             formData.append('action', 'iipm_delete_cpd_confirmation');
@@ -4036,29 +4529,31 @@ get_header();
                 success: function(response) {
                     if (response.success) {
                         // Show success state
-                        deleteBtn.textContent = 'Removed!';
+                        deleteBtn.innerHTML = '<i class="fas fa-check"></i>';
                         deleteBtn.style.background = '#10b981';
                         deleteBtn.style.color = 'white';
                         
                         // Reload data after a short delay to show the success state
                         setTimeout(() => {
-                        location.reload();
-                        }, 1500);
+                            loadRecentlyLoggedTraining();
+                            loadCompletedCpdStats();
+                        }, 1000);
                     } else {
                         // Show error state
-                        deleteBtn.textContent = 'Error!';
+                        deleteBtn.innerHTML = '<i class="fas fa-times"></i>';
                         deleteBtn.style.background = '#ef4444';
                         deleteBtn.style.color = 'white';
                         
                         // Revert after 3 seconds
                         setTimeout(() => {
-                            deleteBtn.textContent = originalText;
-                            deleteBtn.style.background = '';
-                            deleteBtn.style.color = '';
+                            deleteBtn.innerHTML = originalHtml;
+                            deleteBtn.style.background = '#ef4444';
+                            deleteBtn.style.color = 'white';
                             deleteBtn.disabled = false;
+                            deleteBtn.style.cursor = 'pointer';
                         }, 3000);
                         
-                        alert('Error: ' + response.data);
+                        alert('Error: ' + (response.data || 'Failed to remove course'));
                     }
                 },
                 error: function(xhr, status, error) {
