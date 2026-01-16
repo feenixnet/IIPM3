@@ -41,21 +41,14 @@ $member_status = iipm_get_membership_status($current_user_id, true);
 // Note: Expired members can still do CPD training until Feb 5th when they become inactive
 if ($member_status === 'active' || $member_status === 'expired') {
     $cpd_stats = iipm_get_cpd_stats($current_user_id, $current_year);
-    $is_user_assigned = isset($cpd_stats['is_user_assigned']) ? $cpd_stats['is_user_assigned'] : false;
     
     // If not assigned, automatically assign to CPD
-    if (!$is_user_assigned && $member_status === 'active') {
+    if ($member_status === 'active') {
         $assignment_result = iipm_assign_user_to_cpd($current_user_id);
-        if ($assignment_result) {
-            // Refresh CPD stats after assignment
-            $cpd_stats = iipm_get_cpd_stats($current_user_id, $current_year);
-            $is_user_assigned = isset($cpd_stats['is_user_assigned']) ? $cpd_stats['is_user_assigned'] : false;
-        }
     }
 } else {
     // For inactive members, still check assignment status but don't auto-assign
     $cpd_stats = iipm_get_cpd_stats($current_user_id, $current_year);
-    $is_user_assigned = isset($cpd_stats['is_user_assigned']) ? $cpd_stats['is_user_assigned'] : false;
 }
 
 // Allow logging actions for active and expired members (but not inactive)
@@ -278,7 +271,6 @@ get_header();
         <?php endif; ?>
         
         <div class="portal-layout">
-            <?php if ($is_user_assigned): ?>
             <!-- Left Side - My CPD Course (for assigned users) -->
             <div class="cpd-course-panel" id="cpd-course-panel">
                 <div class="cpd-course-card">
@@ -442,27 +434,6 @@ get_header();
                     </div>
                 </div>
             </div>
-            <?php else: ?>
-            <!-- Inactive Member Section -->
-            <div class="inactive-member-panel">
-                <div class="cpd-course-card" style="background: #ffffff; border-radius: 12px; padding: 40px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                    <div style="margin-bottom: 24px;">
-                        <div style="width: 64px; height: 64px; background: #fee2e2; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 16px;">
-                            <i class="fas fa-user-slash" style="color: #ef4444; font-size: 28px;"></i>
-                        </div>
-                        <h3 style="color: #1f2937; margin: 0 0 12px 0; font-size: 1.5rem; font-weight: 600;">Membership Inactive</h3>
-                        <p style="color: #6b7280; margin: 0 0 24px 0; font-size: 1rem; line-height: 1.6; max-width: 500px; margin-left: auto; margin-right: auto;">
-                            Your membership is currently inactive. Please renew your membership to access CPD training and member benefits.
-                        </p>
-                        <a href="<?php echo home_url('/profile/?tab=payment'); ?>" 
-                           style="display: inline-block; background: #ef4444; color: white; padding: 12px 32px; border-radius: 8px; text-decoration: none; font-weight: 500; font-size: 0.95rem; transition: background 0.2s;">
-                            <i class="fas fa-credit-card" style="margin-right: 8px;"></i>
-                            Renew Membership
-                        </a>
-                    </div>
-                </div>
-            </div>
-            <?php endif; ?>
         </div>
         <?php endif; // End check for inactive membership status ?>
     </div>
@@ -2365,7 +2336,7 @@ get_header();
     
     // Define ajaxurl for AJAX calls
     var ajaxurl = '<?php echo admin_url('admin-ajax.php'); ?>';
-    var isUserAssigned = <?php echo $is_user_assigned ? 'true' : 'false'; ?>;
+    var isUserAssigned = true;
     var isTrainingCompleted = <?php echo $cpd_stats['completion_percentage'] >= 100 ? 'true' : 'false'; ?> == 'true' ? true : false;
     var isSubmitted = <?php echo $is_submitted ? 'true' : 'false'; ?>;
     var statData = null;
