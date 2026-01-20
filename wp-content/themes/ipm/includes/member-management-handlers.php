@@ -67,9 +67,9 @@ function iipm_get_users() {
         }
     }
     
-    // Search filter
+    // Search filter - case-sensitive using BINARY for exact capital letter matching
     if (!empty($search)) {
-        $where_conditions[] = "(u.display_name LIKE %s OR u.user_email LIKE %s)";
+        $where_conditions[] = "(BINARY u.display_name LIKE %s OR BINARY u.user_email LIKE %s)";
         $where_params[] = '%' . $search . '%';
         $where_params[] = '%' . $search . '%';
     }

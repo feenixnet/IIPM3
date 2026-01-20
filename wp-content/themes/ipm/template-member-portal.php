@@ -57,8 +57,11 @@ $is_logging_period_active = ($member_status !== 'inactive');
 
 global $wpdb;
 $is_submitted = false;
-$submitted_rows = $wpdb->get_results("SELECT * FROM {$wpdb->prefix}test_iipm_submissions WHERE user_id = $current_user_id AND year = $current_year");
-error_log("sssss: " . "SELECT * FROM {$wpdb->prefix}test_iipm_submissions WHERE user_id = $id AND year = $current_year");
+$submitted_rows = $wpdb->get_results($wpdb->prepare(
+    "SELECT * FROM {$wpdb->prefix}test_iipm_submissions WHERE user_id = %d AND year = %d",
+    $current_user_id,
+    $current_year
+));
 if(count($submitted_rows) > 0) {
     $is_submitted = true;
 }
@@ -69,7 +72,7 @@ get_header();
 <div class="member-portal-page main-container">
     <!-- Header -->
     <div class="container" style="position: relative; z-index: 2;">
-        <div class="page-header" style="text-align: center; margin-bottom: 40px;">
+        <div class="page-header" style="text-align: center; margin-bottom: 20px;">
             <div>
                 <h1 style="color: white; font-size: 2.5rem; margin-bottom: 10px;">Member Portal</h1>
                 <p style="color: rgba(255,255,255,0.9); font-size: 1.1rem;">
@@ -78,6 +81,9 @@ get_header();
                 <?php IIPM_Navigation_Manager::display_breadcrumbs(); ?>
             </div>
         </div>
+        
+        <!-- Member Portal Tab Navigation -->
+        <?php IIPM_Navigation_Manager::display_member_tab_bar('member-portal'); ?>
         
         <!-- Inactive Membership Alert -->
         <?php if ($member_status === 'inactive'): ?>
@@ -317,6 +323,26 @@ get_header();
                         </button>
                     </div>
                     
+                    <!-- Yellow Alert for Certificate Already Submitted (shown when CPD is submitted for this year) -->
+                    <?php if ($is_submitted): ?>
+                    <div class="cpd-certificate-warning-alert" id="cpd-certificate-warning">
+                        <div class="alert-content">
+                            <div class="alert-icon">⚠️</div>
+                            <div class="alert-message">
+                                <p>Can't add a course to your record as you got your CPD certificate already.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <?php endif; ?>
+                    
+                    <!-- Download Certificate Button Container (moved above stats when active) -->
+                    <div class="cpd-action-buttons" id="cpd-action-buttons-download" style="display: none;">
+                        <button class="btn btn-success" id="download-certificate-btn" onclick="directDownloadCertificate()" style="display: none;">
+                            <span class="btn-icon"><i class="fas fa-download"></i></span>
+                            Download Certificate
+                        </button>
+                    </div>
+                    
                     <!-- CPD Stats Grid -->
                     <div class="cpd-stats-grid">
                         <div class="stat-item">
@@ -358,14 +384,6 @@ get_header();
                         <button class="btn btn-success" id="submit-cpd-btn">
                             <span class="btn-icon"><i class="fas fa-check"></i></span>
                             <span id="submit-btn-text">Submit <?php echo $current_year; ?> CPD return</span>
-                        </button>
-                    </div>
-                    
-                    <!-- Download Certificate Button Container (separate from submit button) -->
-                    <div class="cpd-action-buttons" id="cpd-action-buttons-download" style="display: none;">
-                        <button class="btn btn-success" id="download-certificate-btn" onclick="directDownloadCertificate()" style="display: none;">
-                            <span class="btn-icon"><i class="fas fa-download"></i></span>
-                            Download Certificate
                         </button>
                     </div>
                     
@@ -436,6 +454,7 @@ get_header();
             </div>
         </div>
         <?php endif; // End check for inactive membership status ?>
+
     </div>
 </div>
 
@@ -560,6 +579,39 @@ get_header();
     
     .cpd-success-alert-sidebar .alert-icon {
         font-size: 28px;
+    }
+    
+    /* Yellow Warning Alert for Certificate Already Submitted */
+    .cpd-certificate-warning-alert {
+        background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+        border: 1px solid #f59e0b;
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 16px;
+        box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);
+    }
+    
+    .cpd-certificate-warning-alert .alert-content {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        color: #78350f;
+    }
+    
+    .cpd-certificate-warning-alert .alert-icon {
+        font-size: 24px;
+        flex-shrink: 0;
+    }
+    
+    .cpd-certificate-warning-alert .alert-message {
+        flex: 1;
+    }
+    
+    .cpd-certificate-warning-alert .alert-message p {
+        margin: 0;
+        font-size: 14px;
+        font-weight: 500;
+        color: #78350f;
     }
 
     .cpd-success-alert .alert-content {
@@ -3335,7 +3387,7 @@ get_header();
                 logTrainingBtn.style.display = 'none';
             }
             
-            // Create the alert HTML for sidebar (compact version)
+            // Create the alert HTML for sidebar (compact version) - X button removed as per requirement
             const alertHTML = `
                 <div class="cpd-success-alert cpd-success-alert-sidebar" id="cpd-success-alert">
                     <div class="alert-content">
@@ -3344,7 +3396,6 @@ get_header();
                             <h4>Congratulations!</h4>
                             <p>You have successfully completed all required CPD courses for ${selectedYear}.</p>
                         </div>
-                        <button class="alert-close" onclick="closeSuccessAlert()">×</button>
                     </div>
                 </div>
             `;

@@ -129,6 +129,9 @@ get_header();
             </div>
         </div>
 
+        <!-- Member Tab Navigation -->
+        <?php IIPM_Navigation_Manager::display_member_tab_bar('profile'); ?>
+
         <div>
             <!-- Validation Error Alert -->
             <div class="validation-alert" id="validation-alert" style="display: none;">

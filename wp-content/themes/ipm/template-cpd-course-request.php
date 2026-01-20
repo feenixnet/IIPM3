@@ -35,6 +35,9 @@ get_header();
             </div>
         </div>
 
+        <!-- Member Tab Navigation -->
+        <?php IIPM_Navigation_Manager::display_member_tab_bar('request-course'); ?>
+
         <div class="cpd-course-request-form">
             <div class="registration-form-container">
                 <div class="notice">
@@ -152,6 +155,10 @@ get_header();
 <style>
     .page-header h1, .page-header p {
         color: white;
+    }
+    .member-portal-tabs-wrapper {
+        max-width: 900px;
+        margin: 0px auto 30px;
     }
     .cpd-course-request-form {
         display: grid;

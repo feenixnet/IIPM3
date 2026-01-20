@@ -596,8 +596,8 @@ add_action('wp_ajax_nopriv_iipm_get_adjusted_cpd_hours', 'iipm_ajax_get_adjusted
 
 function iipm_ajax_get_adjusted_cpd_hours() {
     // Debug: Log the request
-    error_log('CPD AJAX Request - Nonce: ' . ($_POST['nonce'] ?? 'missing'));
     error_log('CPD AJAX Request - Year: ' . ($_POST['year'] ?? 'missing'));
+    error_log('CPD AJAX Request - Manual Duration: ' . ($_POST['manual_duration'] ?? 'missing'));
     
     // Check if admin is requesting for another user
     $current_user_id = get_current_user_id();
@@ -613,24 +613,29 @@ function iipm_ajax_get_adjusted_cpd_hours() {
     
     $year = intval($_POST['year'] ?? date('Y'));
     $manual_duration = intval($_POST['manual_duration'] ?? 0);
+    
+    error_log("CPD Calculation - User: $user_id, Year: $year, Manual Duration: $manual_duration days");
 
-    // Get current target (already affected by existing leave requests)
+    // Get current target (already affected by existing leave requests FOR THIS SPECIFIC YEAR)
     $current_target = iipm_calculate_adjusted_target_points($user_id, $year);
+    error_log("CPD Calculation - Current target for year $year: $current_target");
     
     // Calculate adjusted hours based on manual duration
     if ($manual_duration > 0) {
-        // Get existing leave duration from database
+        // Get existing leave duration from database FOR THIS SPECIFIC YEAR
         $existing_leave_days = iipm_calculate_user_leave_duration($user_id, $year);
+        error_log("CPD Calculation - Existing leave days for year $year: $existing_leave_days");
         
         // Calculate adjusted hours with existing + manual duration
         $total_leave_days = $existing_leave_days + $manual_duration;
         $adjusted_hours = iipm_calculate_adjusted_target_points($user_id, $year, $total_leave_days);
+        error_log("CPD Calculation - Total leave days: $total_leave_days, Adjusted hours: $adjusted_hours");
     } else {
         // If no manual duration, return current hours (no change)
         $adjusted_hours = $current_target;
     }
     
-    // Get the raw original target from database for reference
+    // Get the raw original target from database for reference FOR THIS SPECIFIC YEAR
     global $wpdb;
     $cpd_types_table = $wpdb->prefix . 'cpd_types';
     $original_target = $wpdb->get_var($wpdb->prepare(
@@ -639,8 +644,10 @@ function iipm_ajax_get_adjusted_cpd_hours() {
     ));
 
     if (!$original_target) {
-        $original_target = 8; // Default fallback
+        $original_target = 10; // Default fallback (changed from 8 to 10)
     }
+    
+    error_log("CPD Calculation - Original target for year $year: $original_target");
 
     wp_send_json_success(array(
         'original_hours' => floatval($original_target),

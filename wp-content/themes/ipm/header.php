@@ -326,6 +326,77 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 					padding-left: 24px !important;
 				}
 
+				.user-dropdown-info {
+					padding: 16px 20px !important;
+					background: #f8fafc !important;
+				}
+
+				.user-dropdown-name {
+					font-weight: 600 !important;
+					font-size: 15px !important;
+					color: #1f2937 !important;
+					margin-bottom: 4px !important;
+				}
+
+				.user-dropdown-email {
+					font-size: 13px !important;
+					color: #6b7280 !important;
+				}
+
+				.user-dropdown-divider {
+					height: 1px !important;
+					background: #e5e7eb !important;
+					margin: 0 !important;
+				}
+
+				.user-dropdown-logout {
+					display: flex !important;
+					align-items: center !important;
+					gap: 10px !important;
+					padding: 14px 20px !important;
+					color: #ef4444 !important;
+					text-decoration: none !important;
+					font-weight: 500 !important;
+					font-size: 14px !important;
+					transition: all 0.2s ease !important;
+				}
+
+				.user-dropdown-logout:hover {
+					background: #fef2f2 !important;
+					color: #dc2626 !important;
+					padding-left: 24px !important;
+				}
+
+				.user-dropdown-logout svg {
+					width: 16px !important;
+					height: 16px !important;
+					flex-shrink: 0 !important;
+				}
+
+				.user-dropdown-training {
+					display: flex !important;
+					align-items: center !important;
+					gap: 10px !important;
+					padding: 14px 20px !important;
+					color: #8b5a96 !important;
+					text-decoration: none !important;
+					font-weight: 500 !important;
+					font-size: 14px !important;
+					transition: all 0.2s ease !important;
+				}
+
+				.user-dropdown-training:hover {
+					background: #f5f3f7 !important;
+					color: #6d4576 !important;
+					padding-left: 24px !important;
+				}
+
+				.user-dropdown-training svg {
+					width: 16px !important;
+					height: 16px !important;
+					flex-shrink: 0 !important;
+				}
+
 				/* Navigation Badge Styles */
 				.nav-badge {
 					background: #f59e0b !important;
@@ -396,25 +467,55 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
                             </a>
                             <div class="user-dropdown-menu">
                                  <?php 
-                                 // Get role-based navigation
-                                 $navigation = IIPM_Navigation_Manager::get_role_based_navigation();
-                                 foreach ($navigation as $menu_title => $menu_data): 
-                                     // Handle both string URLs and array with badge
-                                     if (is_array($menu_data)) {
-                                         $menu_url = $menu_data['url'];
-                                         $badge = isset($menu_data['badge']) ? $menu_data['badge'] : '';
-                                     } else {
-                                         $menu_url = $menu_data;
-                                         $badge = '';
-                                     }
+                                 $current_user = wp_get_current_user();
+                                 $full_name = trim($current_user->first_name . ' ' . $current_user->last_name);
+                                 if (empty($full_name)) {
+                                     $full_name = $current_user->display_name;
+                                 }
+                                 
+                                 // Check if user is admin
+                                 $admin_roles = array('administrator', 'iipm_admin', 'iipm_corporate_admin');
+                                 $is_admin_user = !empty(array_intersect($admin_roles, $current_user->roles));
                                  ?>
-                                     <a href="<?php echo esc_url($menu_url); ?>">
-                                         <?php echo esc_html($menu_title); ?>
-                                         <?php if ($badge): ?>
-                                             <span class="nav-badge"><?php echo esc_html($badge); ?></span>
-                                         <?php endif; ?>
+                                 <div class="user-dropdown-info">
+                                     <div class="user-dropdown-name"><?php echo esc_html($full_name); ?></div>
+                                     <div class="user-dropdown-email"><?php echo esc_html($current_user->user_email); ?></div>
+                                 </div>
+                                 <div class="user-dropdown-divider"></div>
+                                 <?php if (!$is_admin_user): ?>
+                                     <a href="<?php echo home_url('/member-portal/'); ?>" class="user-dropdown-training">
+                                         <svg xmlns="http://www.w3.org/2000/svg" class="match-icon-text" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>
+                                         Go to Training
                                      </a>
-                                 <?php endforeach; ?>
+                                     <div class="user-dropdown-divider"></div>
+                                 <?php endif; ?>
+                                 <?php if ($is_admin_user): ?>
+                                     <?php 
+                                     // Get role-based navigation for admins
+                                     $navigation = IIPM_Navigation_Manager::get_role_based_navigation();
+                                     foreach ($navigation as $menu_title => $menu_data): 
+                                         // Handle both string URLs and array with badge
+                                         if (is_array($menu_data)) {
+                                             $menu_url = $menu_data['url'];
+                                             $badge = isset($menu_data['badge']) ? $menu_data['badge'] : '';
+                                         } else {
+                                             $menu_url = $menu_data;
+                                             $badge = '';
+                                         }
+                                     ?>
+                                         <a href="<?php echo esc_url($menu_url); ?>">
+                                             <?php echo esc_html($menu_title); ?>
+                                             <?php if ($badge): ?>
+                                                 <span class="nav-badge"><?php echo esc_html($badge); ?></span>
+                                             <?php endif; ?>
+                                         </a>
+                                     <?php endforeach; ?>
+                                     <div class="user-dropdown-divider"></div>
+                                 <?php endif; ?>
+                                 <a href="<?php echo wp_logout_url(home_url()); ?>" class="user-dropdown-logout">
+                                     <svg xmlns="http://www.w3.org/2000/svg" class="match-icon-text" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                                     Log Out
+                                 </a>
                              </div>
                         </div>
                     </div>
@@ -538,5 +639,11 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
 		.request-course-item {
 			list-style: none;
+		}
+
+		.match-icon-text {
+			position: relative;
+			top: 5px;
+			right: 5px;
 		}
 	</style>

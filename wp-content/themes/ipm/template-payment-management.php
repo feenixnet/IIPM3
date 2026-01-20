@@ -66,7 +66,7 @@ get_header();
             <div class="stat-card stat-org">
                 <div class="stat-icon"><i class="fas fa-building"></i></div>
                 <div class="stat-content">
-                    <div class="stat-label">Organizations</div>
+                    <div class="stat-label">Organisations</div>
                     <div class="stat-value" id="stat-org-paid">€0.00</div>
                     <div class="stat-sub">Paid</div>
                 </div>
@@ -82,13 +82,13 @@ get_header();
         </section>
 
         <section class="payment-card main-content">
-            <!-- Organizations Table -->
+            <!-- Organisations Table -->
             <div class="section-header">
-                <h2>Organizations <span class="count-badge" id="org-total-count">0</span></h2>
+                <h2>Organisations <span class="count-badge" id="org-total-count">0</span></h2>
             </div>
             <div class="header-actions" style="margin-bottom: 20px;">
                 <div class="search-input-wrapper">
-                    <input type="text" id="org-search" placeholder="Search by organization name or email">
+                    <input type="text" id="org-search" placeholder="Search by organisation name or email">
                     <button id="org-search-btn" class="btn-icon-square" title="Search">
                         <i class="fas fa-search"></i>
                     </button>
@@ -101,7 +101,7 @@ get_header();
                 <table class="payment-table">
                     <thead>
                         <tr>
-                            <th>Organization</th>
+                            <th>Organisation</th>
                             <th>Email</th>
                             <th>Members</th>
                             <th>Total Fees</th>

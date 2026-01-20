@@ -32,7 +32,6 @@ class IIPM_Navigation_Manager {
                 'Course Management' => home_url('/course-management/'),
                 'Payment Management' => home_url('/payment-management/'),
                 'Leave Administration' => home_url('/leave-admin/'),
-                'Logout' => wp_logout_url(home_url())
             );
         }
         // Organization Administrator Navigation - NO Member Portal
@@ -357,7 +356,7 @@ class IIPM_Navigation_Manager {
             }
         }
         
-        echo '<div class="iipm-breadcrumbs" style="margin-top: 10px; margin-bottom: 20px;">';
+        echo '<div class="iipm-breadcrumbs" style="margin-top: 30px; margin-bottom: 20px;">';
         echo '<nav aria-label="Breadcrumb" style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 0.9rem;">';
         
         $total = count($breadcrumbs);
@@ -453,5 +452,161 @@ class IIPM_Navigation_Manager {
                 )
             )
         );
+    }
+    
+    /**
+     * Display member tab bar navigation
+     * Shows on all user-facing pages with proper active state
+     * 
+     * @param string $current_page The current page identifier
+     */
+    public static function display_member_tab_bar($current_page = '') {
+        // Only show for logged-in users
+        if (!is_user_logged_in()) {
+            return;
+        }
+        
+        // Don't show for administrators or admin roles
+        $current_user = wp_get_current_user();
+        $admin_roles = array('administrator', 'iipm_admin', 'iipm_corporate_admin');
+        if (array_intersect($admin_roles, $current_user->roles)) {
+            return;
+        }
+        
+        // Define tabs with their URLs and identifiers
+        $tabs = array(
+            'member-portal' => array(
+                'label' => 'Member Portal',
+                'url' => home_url('/member-portal/'),
+                'icon' => 'fa-home'
+            ),
+            'courses' => array(
+                'label' => 'Courses',
+                'url' => home_url('/cpd-courses/'),
+                'icon' => 'fa-book'
+            ),
+            'request-course' => array(
+                'label' => 'Request a Course',
+                'url' => home_url('/cpd-course-request/'),
+                'icon' => 'fa-plus-circle'
+            ),
+            'leave-requests' => array(
+                'label' => 'Leave Requests',
+                'url' => home_url('/leave-request/'),
+                'icon' => 'fa-calendar-alt'
+            ),
+            'profile' => array(
+                'label' => 'My Profile',
+                'url' => home_url('/profile/'),
+                'icon' => 'fa-user'
+            )
+        );
+        
+        // Output tab bar HTML
+        echo '<div class="member-portal-tabs-wrapper">';
+        echo '<nav class="member-portal-tabs">';
+        
+        foreach ($tabs as $tab_id => $tab) {
+            $active_class = ($tab_id === $current_page) ? ' active' : '';
+            echo '<a href="' . esc_url($tab['url']) . '" class="portal-tab' . $active_class . '">';
+            echo '<i class="fas ' . esc_attr($tab['icon']) . '"></i>';
+            echo '<span>' . esc_html($tab['label']) . '</span>';
+            echo '</a>';
+        }
+        
+        echo '</nav>';
+        echo '</div>';
+        
+        // Output styles (only once per page)
+        static $styles_output = false;
+        if (!$styles_output) {
+            $styles_output = true;
+            self::output_tab_bar_styles();
+        }
+    }
+    
+    /**
+     * Output CSS styles for the member tab bar
+     */
+    private static function output_tab_bar_styles() {
+        ?>
+        <style>
+        /* Member Portal Tab Navigation Styles */
+        .member-portal-tabs-wrapper {
+            margin-bottom: 30px;
+        }
+
+        .member-portal-tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 8px;
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+        }
+
+        .portal-tab {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 20px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #4b5563;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .portal-tab:hover {
+            background: white;
+            color: #8b5a96;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .portal-tab.active {
+            background: linear-gradient(135deg, #8b5a96 0%, #6b4c93 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(139, 90, 150, 0.4);
+        }
+
+        .portal-tab.active:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(139, 90, 150, 0.5);
+        }
+
+        .portal-tab i {
+            font-size: 1rem;
+        }
+
+        /* Responsive Tab Navigation */
+        @media (max-width: 768px) {
+            .member-portal-tabs {
+                flex-direction: column;
+            }
+            
+            .portal-tab {
+                justify-content: center;
+                width: 100%;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .portal-tab {
+                padding: 10px 16px;
+                font-size: 0.85rem;
+            }
+            
+            .portal-tab i {
+                font-size: 0.9rem;
+            }
+        }
+        </style>
+        <?php
     }
 } 

@@ -150,6 +150,9 @@ foreach ($all_leave_requests as $request) {
             </div>
         </div>
         
+        <!-- Member Tab Navigation -->
+        <?php IIPM_Navigation_Manager::display_member_tab_bar('leave-requests'); ?>
+        
         <div class="leave-request-content">
             <!-- Submit Leave Request Section -->
             <div class="leave-request-submit-section">
@@ -299,8 +302,13 @@ foreach ($all_leave_requests as $request) {
                     <div class="form-section">
                         <form id="leaveRequestForm" class="leave-request-form">
                             <div class="form-group">
-                                <label for="date_of_leave">Start and end of Leave</label>
-                                <input type="text" id="date_of_leave" name="date_of_leave" readonly>
+                                <label for="date_of_leave">
+                                    Start and end of Leave
+                                    <span class="date-format-tooltip" title="Format: dd-mm-yyyy ~ dd-mm-yyyy">
+                                        <i class="fas fa-question-circle"></i>
+                                    </span>
+                                </label>
+                                <input type="text" id="date_of_leave" name="date_of_leave" placeholder="dd-mm-yyyy ~ dd-mm-yyyy">
                             </div>
                             
                             <div class="form-group">
@@ -920,10 +928,69 @@ foreach ($all_leave_requests as $request) {
 }
 
 .form-group label {
-    display: block;
+    display: flex;
+    align-items: center;
+    gap: 8px;
     margin-bottom: 8px;
     font-weight: 600;
     color: #333;
+}
+
+.date-format-tooltip {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    cursor: help;
+}
+
+.date-format-tooltip i {
+    color: #6b7280;
+    font-size: 14px;
+    transition: color 0.2s ease;
+}
+
+.date-format-tooltip:hover i {
+    color: #8b5a96;
+}
+
+.date-format-tooltip::after {
+    content: attr(title);
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1f2937;
+    color: #ffffff;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.2s ease;
+    z-index: 100;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.date-format-tooltip::before {
+    content: '';
+    position: absolute;
+    bottom: calc(100% + 2px);
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: #1f2937;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.2s ease;
+    z-index: 100;
+}
+
+.date-format-tooltip:hover::after,
+.date-format-tooltip:hover::before {
+    opacity: 1;
+    visibility: visible;
 }
 
 .form-group input,
@@ -1326,7 +1393,7 @@ window.iipm_ajax = {
 
 // Admin mode variables
 const targetUserId = <?php echo $target_user_id; ?>;
-const targetYear = <?php echo $target_year; ?>;
+let targetYear = <?php echo $target_year; ?>; // Changed to let so it can be updated when calendar year changes
 const isAdminMode = <?php echo $is_admin_mode ? 'true' : 'false'; ?>;
 const enrollmentYear = <?php echo $user_registration_year; ?>;
 
@@ -1351,19 +1418,25 @@ function fetchAndDisplayCpdImpact() {
         return;
     }
     
+    // Calculate duration from selected dates
+    const durationDays = Math.ceil((selectedEndDate - selectedStartDate) / (1000 * 60 * 60 * 24)) + 1;
+    fetchAndDisplayCpdImpactWithDuration(durationDays);
+}
+
+// Function to fetch and display CPD hours impact with specific duration
+function fetchAndDisplayCpdImpactWithDuration(durationDays) {
+    console.log('Fetching CPD impact for duration:', durationDays, 'days, year:', targetYear);
+    
+    if (!durationDays || durationDays <= 0) {
+        document.getElementById('cpdImpactSection').style.display = 'none';
+        return;
+    }
+    
     // Show loading state
     const cpdSection = document.getElementById('cpdImpactSection');
     const cpdContent = document.getElementById('cpdImpactContent');
     cpdSection.style.display = 'block';
     cpdContent.innerHTML = '<div style="text-align: center; padding: 20px;"><span style="color: rgba(255,255,255,0.8);">Calculating CPD impact...</span></div>';
-    
-    // Get form data for CPD calculation
-    const startDate = document.getElementById('date_of_leave').value.split(' - ')[0];
-    const endDate = document.getElementById('date_of_leave').value.split(' - ')[1];
-    const duration = document.getElementById('duration_of_leave').value;
-    
-    // Calculate days from duration string (e.g., "17 days" -> 17)
-    const durationDays = duration ? parseInt(duration.replace(/[^0-9]/g, '')) : 0;
     
     // Prepare form data
     const formData = new FormData();
@@ -1375,24 +1448,30 @@ function fetchAndDisplayCpdImpact() {
         formData.append('user_id', targetUserId);
     }
     
+    console.log('AJAX URL:', window.iipm_ajax.ajax_url);
+    console.log('Form data: action=iipm_get_adjusted_cpd_hours, year=' + targetYear + ', manual_duration=' + durationDays);
+    
     // Fetch CPD data
     fetch(window.iipm_ajax.ajax_url, {
         method: 'POST',
         body: formData
     })
-    .then(response => response.json())
+    .then(response => {
+        console.log('AJAX Response status:', response.status);
+        return response.json();
+    })
     .then(data => {
         console.log('CPD AJAX Response:', data);
         if (data.success) {
             displayCpdImpact(data.data);
         } else {
             console.error('CPD AJAX Error:', data.data);
-            cpdContent.innerHTML = `<div style="text-align: center; padding: 20px;"><span style="color: rgba(255,255,255,0.8);">Error: ${data.data}</span></div>`;
+            cpdContent.innerHTML = `<div style="text-align: center; padding: 20px;"><span style="color: rgba(255,255,255,0.8);">Error: ${data.data || 'Unknown error'}</span></div>`;
         }
     })
     .catch(error => {
         console.error('Error fetching CPD impact:', error);
-        cpdContent.innerHTML = '<div style="text-align: center; padding: 20px;"><span style="color: rgba(255,255,255,0.8);">Network Error</span></div>';
+        cpdContent.innerHTML = '<div style="text-align: center; padding: 20px;"><span style="color: rgba(255,255,255,0.8);">Network Error: ' + error.message + '</span></div>';
     });
 }
 
@@ -1403,7 +1482,11 @@ let deductedHoursFromCPD = 0;
 function displayCpdImpact(data) {
     const cpdContent = document.getElementById('cpdImpactContent');
     
-    const duration = Math.ceil((selectedEndDate - selectedStartDate) / (1000 * 60 * 60 * 24)) + 1;
+    // Get duration from the duration field (more reliable)
+    const durationStr = document.getElementById('duration_of_leave').value;
+    const duration = durationStr ? parseInt(durationStr.replace(/[^0-9]/g, '')) : 0;
+    
+    console.log('Displaying CPD impact, duration:', duration, 'data:', data);
     
     // Store the deducted hours for form submission
     deductedHoursFromCPD = Math.abs(data.difference);
@@ -1443,6 +1526,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize calendar
     initializeCalendar();
     
+    // Setup manual date input handlers
+    setupManualDateInputHandlers();
+    
     // Calendar navigation
     document.getElementById('prevMonth').addEventListener('click', function() {
         const newDate = new Date(currentDate);
@@ -1471,6 +1557,10 @@ document.addEventListener('DOMContentLoaded', function() {
     // Year selector change
     document.getElementById('calendarYearSelect').addEventListener('change', function(e) {
         const selectedYear = parseInt(e.target.value);
+        
+        // Update the global targetYear variable for CPD calculations
+        targetYear = selectedYear;
+        console.log('Calendar year changed to:', targetYear);
         
         // If in admin mode (tYear parameter exists), refresh page with new year
         const urlParams = new URLSearchParams(window.location.search);
@@ -1712,12 +1802,193 @@ function updateFormFields() {
         const endStr = formatDate(selectedEndDate);
         const duration = Math.ceil((selectedEndDate - selectedStartDate) / (1000 * 60 * 60 * 24)) + 1;
         
-        document.getElementById('date_of_leave').value = `${startStr} - ${endStr}`;
+        document.getElementById('date_of_leave').value = `${startStr} ~ ${endStr}`;
         document.getElementById('duration_of_leave').value = `${duration} days`;
         
         // Fetch and display CPD impact
         fetchAndDisplayCpdImpact();
     }
+}
+
+// Debounce timer for manual date input
+let dateInputDebounceTimer = null;
+
+// Function to process manual date input
+function processManualDateInput() {
+    const value = document.getElementById('date_of_leave').value.trim();
+    console.log('Processing manual date input:', value);
+    
+    // Support various separators: ~, -, to, etc.
+    // Match patterns like "01-03-2026 ~ 31-06-2026" or "01-03-2026 - 31-06-2026"
+    let parts;
+    if (value.includes(' ~ ')) {
+        parts = value.split(' ~ ');
+    } else if (value.includes('~')) {
+        parts = value.split('~');
+    } else if (value.includes(' - ') && value.split(' - ').length === 2) {
+        // Only split on " - " if it gives exactly 2 parts (to avoid splitting date parts)
+        parts = value.split(' - ');
+    } else {
+        // No valid separator found
+        console.log('No valid separator found in:', value);
+        selectedStartDate = null;
+        selectedEndDate = null;
+        document.getElementById('duration_of_leave').value = '';
+        document.getElementById('cpdImpactSection').style.display = 'none';
+        return;
+    }
+    
+    console.log('Split result:', parts);
+    
+    if (!parts || parts.length !== 2) {
+        console.log('Invalid date parts count:', parts ? parts.length : 0);
+        selectedStartDate = null;
+        selectedEndDate = null;
+        document.getElementById('duration_of_leave').value = '';
+        document.getElementById('cpdImpactSection').style.display = 'none';
+        return;
+    }
+    
+    const startDateStr = parts[0].trim();
+    const endDateStr = parts[1].trim();
+    
+    if (!startDateStr || !endDateStr) {
+        console.log('Empty date strings - start:', startDateStr, 'end:', endDateStr);
+        return;
+    }
+    console.log('Parsing dates:', startDateStr, endDateStr);
+    
+    // Parse dates in dd-mm-yyyy format
+    const startParsed = parseManualDate(startDateStr);
+    const endParsed = parseManualDate(endDateStr);
+    console.log('Parsed dates:', startParsed, endParsed);
+    
+    if (startParsed && endParsed && startParsed <= endParsed) {
+        selectedStartDate = startParsed;
+        selectedEndDate = endParsed;
+        
+        // Calculate duration
+        const duration = Math.ceil((selectedEndDate - selectedStartDate) / (1000 * 60 * 60 * 24)) + 1;
+        document.getElementById('duration_of_leave').value = `${duration} days`;
+        console.log('Duration calculated:', duration, 'days');
+        
+        // Sync calendar year selector to match the start date year
+        const yearSelector = document.getElementById('calendarYearSelect');
+        const startYear = startParsed.getFullYear();
+        if (yearSelector && yearSelector.value != startYear) {
+            // Check if the year exists in the selector
+            const yearOption = yearSelector.querySelector(`option[value="${startYear}"]`);
+            if (yearOption) {
+                yearSelector.value = startYear;
+                // Update the global targetYear for CPD calculations
+                targetYear = startYear;
+                console.log('Calendar year and targetYear synced to:', startYear);
+                // Reload leave requests for the new year
+                loadLeaveRequestsForYear(startYear);
+            }
+        }
+        
+        // Update calendar to show the start date's month
+        currentDate = new Date(startParsed.getFullYear(), startParsed.getMonth(), 1);
+        
+        // Update calendar view with selection
+        renderCalendar();
+        
+        // Fetch and display CPD impact with the calculated duration
+        fetchAndDisplayCpdImpactWithDuration(duration);
+    } else {
+        // Invalid dates - clear CPD impact
+        console.log('Invalid date range - startParsed:', startParsed, 'endParsed:', endParsed);
+        selectedStartDate = null;
+        selectedEndDate = null;
+        document.getElementById('duration_of_leave').value = '';
+        document.getElementById('cpdImpactSection').style.display = 'none';
+    }
+}
+
+// Setup manual date input handlers (called from DOMContentLoaded)
+function setupManualDateInputHandlers() {
+    const dateInput = document.getElementById('date_of_leave');
+    if (!dateInput) {
+        console.error('date_of_leave input not found');
+        return;
+    }
+    
+    // Debounced handler function
+    function handleDateInputChange() {
+        // Clear previous timer
+        if (dateInputDebounceTimer) {
+            clearTimeout(dateInputDebounceTimer);
+        }
+        
+        // Set new timer - wait 300ms after user stops typing
+        dateInputDebounceTimer = setTimeout(function() {
+            console.log('Debounce triggered, processing input...');
+            processManualDateInput();
+        }, 300);
+    }
+    
+    // Handle manual date input with debounce (triggers while typing)
+    dateInput.addEventListener('input', handleDateInputChange);
+    
+    // Handle keyup event (backup for input event)
+    dateInput.addEventListener('keyup', handleDateInputChange);
+    
+    // Handle paste event
+    dateInput.addEventListener('paste', function(e) {
+        // Process after paste completes
+        setTimeout(function() {
+            console.log('Paste detected, processing...');
+            processManualDateInput();
+        }, 100);
+    });
+
+    // Handle change event (triggers when field loses focus or user presses Enter)
+    dateInput.addEventListener('change', function(e) {
+        // Clear debounce timer and process immediately
+        if (dateInputDebounceTimer) {
+            clearTimeout(dateInputDebounceTimer);
+        }
+        console.log('Change event triggered, processing...');
+        processManualDateInput();
+    });
+    
+    // Handle blur event (when user clicks away)
+    dateInput.addEventListener('blur', function(e) {
+        if (dateInputDebounceTimer) {
+            clearTimeout(dateInputDebounceTimer);
+        }
+        console.log('Blur event triggered, processing...');
+        processManualDateInput();
+    });
+    
+    console.log('Manual date input handlers set up successfully');
+}
+
+// Parse date from dd-mm-yyyy format (lenient - allows day overflow to adjust)
+function parseManualDate(dateStr) {
+    const parts = dateStr.split('-');
+    if (parts.length !== 3) return null;
+    
+    let day = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10) - 1; // months are 0-indexed
+    const year = parseInt(parts[2], 10);
+    
+    if (isNaN(day) || isNaN(month) || isNaN(year)) return null;
+    if (day < 1 || day > 31 || month < 0 || month > 11) return null;
+    if (year < 2000 || year > 2100) return null;
+    
+    // Get the last day of the month
+    const lastDayOfMonth = new Date(year, month + 1, 0).getDate();
+    
+    // If day is greater than last day of month, use last day
+    if (day > lastDayOfMonth) {
+        day = lastDayOfMonth;
+        console.log(`Day adjusted to ${day} (last day of month)`);
+    }
+    
+    const date = new Date(year, month, day);
+    return date;
 }
 
 function formatDate(date) {

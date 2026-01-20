@@ -128,6 +128,9 @@ get_header();
             </div>
         </div>
 
+        <!-- Member Tab Navigation -->
+        <?php IIPM_Navigation_Manager::display_member_tab_bar('courses'); ?>
+
         <div>
             <div class="cpd-courses-layout">
                 <!-- Left Sidebar -->
