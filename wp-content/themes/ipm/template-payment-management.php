@@ -367,6 +367,8 @@ jQuery(function($) {
             const hasOrder = user.order_id && user.order_id > 0;
             const downloadInvoiceButtonDisabled = hasOrder ? '' : ' disabled';
             const downloadInvoiceButtonClass = hasOrder ? 'btn-icon-action download-invoice-btn' : 'btn-icon-action download-invoice-btn disabled';
+            const sendEmailButtonDisabled = hasOrder ? '' : ' disabled';
+            const sendEmailButtonClass = hasOrder ? 'btn-icon-action send-invoice-email-btn' : 'btn-icon-action send-invoice-email-btn disabled';
             
             return '<tr>' +
                 '<td><strong>' + fullName + '</strong><br></td>' +
@@ -376,8 +378,11 @@ jQuery(function($) {
                 '<td>' + statusBadge + '</td>' +
                 '<td>' + lastInvoiced + '</td>' +
                 '<td>' +
-                    '<button class="btn-icon-action send-invoice-btn' + (shouldDisable ? ' disabled' : '') + '" data-user-id="' + user.id + '"' + buttonDisabled + ' title="Send Invoice" style="margin-right: 5px;">' +
-                        '<i class="fas fa-paper-plane"></i>' +
+                    '<button class="btn-icon-action send-invoice-btn' + (shouldDisable ? ' disabled' : '') + '" data-user-id="' + user.id + '"' + buttonDisabled + ' title="Generate Order" style="margin-right: 5px;">' +
+                        '<i class="fas fa-pencil"></i>' +
+                    '</button>' +
+                    '<button class="' + sendEmailButtonClass + '" data-order-id="' + (user.order_id || '') + '" title="Send Invoice Email"' + sendEmailButtonDisabled + ' style="margin-right: 5px;">' +
+                        '<i class="fas fa-envelope"></i>' +
                     '</button>' +
                     '<button class="' + downloadInvoiceButtonClass + '" data-user-id="' + user.id + '" data-order-id="' + (user.order_id || '') + '" data-name="' + fullName + '" title="Download Invoice"' + downloadInvoiceButtonDisabled + ' style="margin-right: 5px;">' +
                         '<i class="fas fa-download"></i>' +
@@ -399,7 +404,7 @@ jQuery(function($) {
         $next.prop('disabled', pagination.current_page >= state.totalPages);
     }
 
-    function sendInvoice(userId, $button, forceCreate = false) {
+    function generateOrder(userId, $button, forceCreate = false) {
         if (!window.iipm_ajax || !iipm_ajax.payment_nonce) {
             notify('Missing security token. Please refresh the page.', 'error');
             return;
@@ -425,7 +430,7 @@ jQuery(function($) {
             }
         }).done(function(response) {
             if (response.success) {
-                notify(response.data.message || 'Invoice sent.', 'success');
+                notify(response.data.message || 'Order generated successfully.', 'success');
                 // Reload users to show updated status
                 loadUsers();
             } else if (response.needs_confirmation) {
@@ -433,16 +438,54 @@ jQuery(function($) {
                 $button.prop('disabled', false).html(originalHtml);
                 if (confirm(response.message)) {
                     // User confirmed, resend with force_create flag
-                    sendInvoice(userId, $button, true);
+                    generateOrder(userId, $button, true);
                 }
                 return; // Don't execute the always block yet
             } else {
-                notify(response.data || 'Failed to send invoice.', 'error');
+                notify(response.data || 'Failed to generate order.', 'error');
             }
         }).fail(function() {
-            notify('Server error while sending invoice.', 'error');
+            notify('Server error while generating order.', 'error');
         }).always(function() {
             if (!arguments[0] || !arguments[0].needs_confirmation) {
+                $button.prop('disabled', false).html(originalHtml);
+            }
+        });
+    }
+
+    function sendInvoiceEmail(orderId, $button) {
+        if (!window.iipm_ajax || !iipm_ajax.payment_nonce) {
+            notify('Missing security token. Please refresh the page.', 'error');
+            return;
+        }
+
+        if (!orderId || orderId <= 0) {
+            notify('No order found to send.', 'error');
+            return;
+        }
+
+        const originalHtml = $button.html();
+        $button.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
+
+        $.ajax({
+            url: '<?php echo admin_url('admin-ajax.php'); ?>',
+            method: 'POST',
+            data: {
+                action: 'iipm_resend_invoice_email',
+                nonce: iipm_ajax.payment_nonce,
+                order_id: orderId
+            },
+            success: function(response) {
+                if (response.success) {
+                    notify('Invoice email sent successfully.', 'success');
+                } else {
+                    notify('Failed to send email: ' + (response.data || 'Unknown error'), 'error');
+                }
+            },
+            error: function() {
+                notify('Error sending email.', 'error');
+            },
+            complete: function() {
                 $button.prop('disabled', false).html(originalHtml);
             }
         });
@@ -545,6 +588,8 @@ jQuery(function($) {
             // Enable Download Invoice button only if at least one order exists
             const downloadInvoiceButtonDisabled = hasOrder ? '' : ' disabled';
             const downloadInvoiceButtonClass = hasOrder ? 'btn-icon-action download-invoice-btn' : 'btn-icon-action download-invoice-btn disabled';
+            const sendEmailButtonDisabled = hasOrder ? '' : ' disabled';
+            const sendEmailButtonClass = hasOrder ? 'btn-icon-action send-invoice-email-btn' : 'btn-icon-action send-invoice-email-btn disabled';
             
             return '<tr>' +
                 '<td><strong>' + (org.organisation_name || '—') + '</strong></td>' +
@@ -554,8 +599,11 @@ jQuery(function($) {
                 '<td>' + statusBadge + '</td>' +
                 '<td>' + lastInvoiced + '</td>' +
                 '<td>' +
-                    '<button class="btn-icon-action send-org-invoice-btn' + (shouldDisable ? ' disabled' : '') + '" data-org-id="' + org.id + '"' + buttonDisabled + ' title="Send Invoice" style="margin-right: 5px;">' +
-                        '<i class="fas fa-paper-plane"></i>' +
+                    '<button class="btn-icon-action send-org-invoice-btn' + (shouldDisable ? ' disabled' : '') + '" data-org-id="' + org.id + '"' + buttonDisabled + ' title="Generate Order" style="margin-right: 5px;">' +
+                        '<i class="fas fa-pencil"></i>' +
+                    '</button>' +
+                    '<button class="' + sendEmailButtonClass + '" data-order-id="' + (org.order_id || '') + '" title="Send Invoice Email"' + sendEmailButtonDisabled + ' style="margin-right: 5px;">' +
+                        '<i class="fas fa-envelope"></i>' +
                     '</button>' +
                     '<button class="' + downloadInvoiceButtonClass + '" data-org-id="' + org.id + '" data-order-id="' + (org.order_id || '') + '" data-name="' + (org.organisation_name || '—') + '" title="Download Invoice"' + downloadInvoiceButtonDisabled + ' style="margin-right: 5px;">' +
                         '<i class="fas fa-download"></i>' +
@@ -580,7 +628,7 @@ jQuery(function($) {
         $orgNext.prop('disabled', pagination.current_page >= orgState.totalPages);
     }
 
-    function sendOrgInvoice(orgId, $button, forceCreate = false) {
+    function generateOrgOrder(orgId, $button, forceCreate = false) {
         if (!window.iipm_ajax || !iipm_ajax.payment_nonce) {
             notify('Missing security token. Please refresh the page.', 'error');
             return;
@@ -604,21 +652,21 @@ jQuery(function($) {
             }
         }).done(function(response) {
             if (response.success) {
-                notify(response.data.message || 'Invoice sent.', 'success');
+                notify(response.data.message || 'Order generated successfully.', 'success');
                 loadOrganizations();
             } else if (response.needs_confirmation) {
                 // Show confirmation dialog for processing orders
                 $button.prop('disabled', false).html(originalHtml);
                 if (confirm(response.message)) {
                     // User confirmed, resend with force_create flag
-                    sendOrgInvoice(orgId, $button, true);
+                    generateOrgOrder(orgId, $button, true);
                 }
                 return; // Don't execute the always block yet
             } else {
-                notify(response.data || 'Failed to send invoice.', 'error');
+                notify(response.data || 'Failed to generate order.', 'error');
             }
         }).fail(function() {
-            notify('Server error while sending invoice.', 'error');
+            notify('Server error while generating order.', 'error');
         }).always(function() {
             if (!arguments[0] || !arguments[0].needs_confirmation) {
                 $button.prop('disabled', false).html(originalHtml);
@@ -668,7 +716,15 @@ jQuery(function($) {
             return;
         }
         const userId = $(this).data('user-id');
-        sendInvoice(userId, $(this));
+        generateOrder(userId, $(this));
+    });
+
+    $tbody.on('click', '.send-invoice-email-btn', function() {
+        if ($(this).prop('disabled')) {
+            return;
+        }
+        const orderId = $(this).data('order-id');
+        sendInvoiceEmail(orderId, $(this));
     });
 
     // Organization event handlers
@@ -708,7 +764,15 @@ jQuery(function($) {
             return;
         }
         const orgId = $(this).data('org-id');
-        sendOrgInvoice(orgId, $(this));
+        generateOrgOrder(orgId, $(this));
+    });
+
+    $orgTbody.on('click', '.send-invoice-email-btn', function() {
+        if ($(this).prop('disabled')) {
+            return;
+        }
+        const orderId = $(this).data('order-id');
+        sendInvoiceEmail(orderId, $(this));
     });
 
     $yearSelector.on('change', function() {
@@ -723,7 +787,9 @@ jQuery(function($) {
 
     // Initialize tooltips
     $(document).on('mouseenter', '[title]', function() {
-        $(this).attr('data-title', $(this).attr('title'));
+        if (!$(this).attr('data-title')) {
+            $(this).attr('data-title', $(this).attr('title'));
+        }
         $(this).removeAttr('title');
     });
 
@@ -1476,8 +1542,8 @@ jQuery(function($) {
 }
 
 /* Tooltip */
-.btn-icon-action[title]:hover::after {
-    content: attr(title);
+.btn-icon-action[data-title]:hover::after {
+    content: attr(data-title);
     position: absolute;
     bottom: 100%;
     left: 50%;
@@ -1493,7 +1559,7 @@ jQuery(function($) {
     pointer-events: none;
 }
 
-.btn-icon-action[title]:hover::before {
+.btn-icon-action[data-title]:hover::before {
     content: '';
     position: absolute;
     bottom: 100%;
@@ -1506,8 +1572,8 @@ jQuery(function($) {
     pointer-events: none;
 }
 
-.btn-icon-square[title]:hover::after {
-    content: attr(title);
+.btn-icon-square[data-title]:hover::after {
+    content: attr(data-title);
     position: absolute;
     bottom: 100%;
     left: 50%;
@@ -1523,7 +1589,7 @@ jQuery(function($) {
     pointer-events: none;
 }
 
-.btn-icon-square[title]:hover::before {
+.btn-icon-square[data-title]:hover::before {
     content: '';
     position: absolute;
     bottom: 100%;

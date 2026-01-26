@@ -7083,7 +7083,7 @@ function iipm_admin_get_user_details() {
                 user_payment_method, Address_1, Address_2, Address_3,
                 email_address_pers, user_phone_pers, user_mobile_pers, 
                 Address_1_pers, Address_2_pers, Address_3_pers, correspondence_email,
-                employer_id FROM {$wpdb->prefix}test_iipm_member_profiles WHERE user_id = %d",
+                employer_id, user_notes FROM {$wpdb->prefix}test_iipm_member_profiles WHERE user_id = %d",
         $user_id
     ));
     
@@ -7133,7 +7133,8 @@ function iipm_admin_get_user_details() {
             'Address_2_pers' => $profile_data ? $profile_data->Address_2_pers : '',
             'Address_3_pers' => $profile_data ? $profile_data->Address_3_pers : '',
             'correspondence_email' => $profile_data ? $profile_data->correspondence_email : '',
-            'employer_id' => $profile_data ? $profile_data->employer_id : ''
+            'employer_id' => $profile_data ? $profile_data->employer_id : '',
+            'user_notes' => $profile_data ? $profile_data->user_notes : ''
         ),
         'organization_info' => $organization_data ? array(
             'name' => $organization_data->name,
@@ -7376,12 +7377,17 @@ function iipm_admin_update_user_details() {
             'user_phone', 'email_address', 'user_mobile', 'city_or_town', 'first_name', 'sur_name',
             'user_payment_method', 'Address_1', 'Address_2', 'Address_3',
             'email_address_pers', 'user_phone_pers', 'user_mobile_pers',
-            'Address_1_pers', 'Address_2_pers', 'Address_3_pers', 'correspondence_email'
+            'Address_1_pers', 'Address_2_pers', 'Address_3_pers', 'correspondence_email',
+            'user_notes'
         );
         
         foreach ($profile_fields as $field) {
             if (isset($_POST[$field])) {
-                $profile_data[$field] = sanitize_text_field($_POST[$field]);
+                if ($field === 'user_notes') {
+                    $profile_data[$field] = sanitize_textarea_field($_POST[$field]);
+                } else {
+                    $profile_data[$field] = sanitize_text_field($_POST[$field]);
+                }
             }
             $profile_data['email_address'] = sanitize_email($_POST['user_email']);
             $profile_data['user_fullName'] = sanitize_text_field($_POST['first_name']) . " " . sanitize_text_field($_POST['sur_name']);

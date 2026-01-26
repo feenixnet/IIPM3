@@ -130,7 +130,7 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
                     <table class="organisations-table" id="organisations-table">
                         <thead>
                             <tr>
-                                <th>organisation</th>
+                                <th>Organisation</th>
                                 <th>Contact Info</th>
                                 <th>Admin Status</th>
                                 <th>Members</th>

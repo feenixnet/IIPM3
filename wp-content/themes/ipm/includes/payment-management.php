@@ -1316,61 +1316,23 @@ function iipm_send_payment_invoice() {
 			error_log('IIPM: Failed to create Stripe checkout session for order #' . $wc_order_id);
 		}
 
-		// Handle organization invoice differently - generate PDF and send review link email
-		if ($is_organization) {
-			// Generate PDF invoice for download (without emailing it)
-			$pdf_generated = iipm_pm_generate_invoice_pdf($order);
-			
-			if (is_wp_error($pdf_generated)) {
-				error_log('IIPM: Failed to generate PDF for organization invoice: ' . $pdf_generated->get_error_message());
-			}
-			
-			// Generate unique token for organization invoice review
-			$token = iipm_generate_org_invoice_token($wc_order_id);
-			
-			// Send email to org admin with review link
-			$email_sent = iipm_send_org_invoice_email($wc_order_id, $org_id, $token);
-			
-			if (!$email_sent) {
-				error_log('IIPM: Failed to send organization invoice review email');
-				wp_send_json_success(array(
-					'message' => 'Order created successfully, but failed to send review email to organization',
-					'order_number' => $order_number,
-					'wc_order_id' => $wc_order_id,
-					'email_error' => 'Failed to send review email'
-				));
-			} else {
-				wp_send_json_success(array(
-					'message' => 'Order created and review link sent to organization administrator',
-					'order_number' => $order_number,
-					'wc_order_id' => $wc_order_id,
-					'review_link' => home_url('/org-invoice-review/?token=' . $token)
-				));
-			}
-		} else {
-			// For individual users, send the regular PDF invoice email
-			$email_sent = iipm_pm_send_wc_invoice_email($order, $email, $first_name);
-
-			if (is_wp_error($email_sent)) {
-				// Log error but don't fail the order creation
-				error_log('IIPM Invoice email error: ' . $email_sent->get_error_message());
-				
-				wp_send_json_success(array(
-					'message' => 'WooCommerce order created successfully, but invoice email failed',
-					'order_number' => $order_number,
-					'wc_order_id' => $wc_order_id,
-					'product_name' => $product->get_name(),
-					'email_error' => $email_sent->get_error_message()
-				));
-			} else {
-				wp_send_json_success(array(
-					'message' => 'WooCommerce order created and invoice email sent successfully',
-					'order_number' => $order_number,
-					'wc_order_id' => $wc_order_id,
-					'product_name' => $product->get_name()
-				));
-			}
+		// Generate PDF invoice for later download/email (no email sent here)
+		$pdf_generated = iipm_pm_generate_invoice_pdf($order);
+		if (is_wp_error($pdf_generated)) {
+			error_log('IIPM: Failed to generate PDF for order #' . $wc_order_id . ': ' . $pdf_generated->get_error_message());
 		}
+
+		if ($is_organization) {
+			// Ensure a review token exists for organization invoices (used when emailing)
+			iipm_generate_org_invoice_token($wc_order_id);
+		}
+
+		wp_send_json_success(array(
+			'message' => 'Order generated successfully. Use the mail icon in Orders to send the invoice.',
+			'order_number' => $order_number,
+			'wc_order_id' => $wc_order_id,
+			'product_name' => $product->get_name()
+		));
 
 	} catch (Exception $e) {
 		error_log('IIPM WC Order creation error: ' . $e->getMessage());
@@ -1482,7 +1444,7 @@ add_action('wp_ajax_iipm_get_payment_orders', 'iipm_get_payment_orders');
  * Generate invoice PDF without emailing.
  * 
  * @param WC_Order $order WooCommerce order object
- * @return bool|WP_Error True on success, WP_Error on failure
+ * @return string|WP_Error File path on success, WP_Error on failure
  */
 function iipm_pm_generate_invoice_pdf($order) {
 	try {
@@ -1531,7 +1493,7 @@ function iipm_pm_generate_invoice_pdf($order) {
 			return new WP_Error('pdf_not_saved', 'Could not save PDF file');
 		}
 
-		return true;
+		return $pdf_path;
 
 	} catch (Exception $e) {
 		error_log('IIPM Invoice PDF generation error: ' . $e->getMessage());
@@ -1902,7 +1864,7 @@ function iipm_get_org_invoice_by_token($token) {
  * @param string $token Review token
  * @return bool Success status
  */
-function iipm_send_org_invoice_email($order_id, $org_id, $token, $order_status = 'pending') {
+function iipm_send_org_invoice_email($order_id, $org_id, $token, $order_status = 'pending', $attachment_path = '') {
 	global $wpdb;
 	
 	// Get organization details
@@ -2091,8 +2053,12 @@ function iipm_send_org_invoice_email($order_id, $org_id, $token, $order_status =
 	}
 	
 	$headers = array('Content-Type: text/html; charset=UTF-8');
+	$attachments = array();
+	if (!empty($attachment_path) && file_exists($attachment_path)) {
+		$attachments[] = $attachment_path;
+	}
 	
-	return wp_mail($to, $subject, $message, $headers);
+	return wp_mail($to, $subject, $message, $headers, $attachments);
 }
 
 /**
@@ -2604,11 +2570,11 @@ function iipm_resend_invoice_email() {
 	$is_organization = !empty($customer_lookup->org_id);
 	
 	if ($is_organization) {
-		// For organizations: generate PDF and send email based on status
-		$pdf_generated = iipm_pm_generate_invoice_pdf($order);
+		// For organizations: generate PDF and send email with attachment
+		$pdf_path = iipm_pm_generate_invoice_pdf($order);
 		
-		if (is_wp_error($pdf_generated)) {
-			wp_send_json_error('Failed to generate PDF: ' . $pdf_generated->get_error_message());
+		if (is_wp_error($pdf_path)) {
+			wp_send_json_error('Failed to generate PDF: ' . $pdf_path->get_error_message());
 			return;
 		}
 		
@@ -2619,7 +2585,7 @@ function iipm_resend_invoice_email() {
 		}
 		
 		// Send email based on order status
-		$email_sent = iipm_send_org_invoice_email($order_id, $customer_lookup->org_id, $token, $order_status);
+		$email_sent = iipm_send_org_invoice_email($order_id, $customer_lookup->org_id, $token, $order_status, $pdf_path);
 		
 		if (!$email_sent) {
 			wp_send_json_error('Failed to send organization invoice email');

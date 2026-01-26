@@ -301,6 +301,22 @@ if (!function_exists('add_success_notification')) {
                     </div>
                 </div>
 
+                <!-- Section 6: Internal Note -->
+                <div class="info-section" data-section="internal-note">
+                    <div class="section-header">
+                        <h3><i class="fas fa-sticky-note"></i> Internal Note</h3>
+                        <button type="button" class="edit-toggle-btn">Edit</button>
+                    </div>
+                    <div class="section-content">
+                        <div class="form-grid">
+                            <div class="form-group full-width">
+                                <label>Internal Note:</label>
+                                <textarea name="user_notes" id="user_notes_edit" rows="5" disabled></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Save/Cancel Buttons -->
                 <div style="text-align: center; padding-top: 30px; border-top: 1px solid #e5e7eb;">
                     <button type="submit" class="btn-primary save-btn" style="display: none;">
@@ -727,7 +743,8 @@ if (!function_exists('add_success_notification')) {
 }
 
 .form-group input,
-.form-group select {
+.form-group select,
+.form-group textarea {
     padding: 10px 12px;
     border: 1px solid #d1d5db;
     border-radius: 6px;
@@ -735,8 +752,14 @@ if (!function_exists('add_success_notification')) {
     transition: border-color 0.3s ease;
 }
 
+.form-group textarea {
+    resize: vertical;
+    min-height: 120px;
+}
+
 .form-group input:focus,
-.form-group select:focus {
+.form-group select:focus,
+.form-group textarea:focus {
     outline: none;
     border-color: #667eea;
     box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
@@ -1163,6 +1186,9 @@ jQuery(document).ready(function($) {
             employerSelect.append(`<option value="${org.id}">${org.name}</option>`);
         });
         employerSelect.val(data.profile_info.employer_id || '');
+
+        // Section 6: Internal Note
+        $('#user_notes_edit').val(data.profile_info.user_notes || '');
         
         // Show/hide employer section based on member type
         if (data.member_info.member_type === 'organisation') {
@@ -1229,7 +1255,7 @@ jQuery(document).ready(function($) {
     
     function toggleEditMode(section, enable) {
         const $section = section.closest('.info-section');
-        const $inputs = $section.find('input:not([type="hidden"]), select');
+        const $inputs = $section.find('input:not([type="hidden"]), select, textarea');
         
         if (enable) {
             $inputs.prop('disabled', false);
@@ -2991,10 +3017,18 @@ jQuery(document).ready(function($) {
         }
         
         // Collect all form data
-        $(this).find('input, select').each(function() {
+        $(this).find('input, select, textarea').each(function() {
             const field = $(this);
-            if (field.attr('name') && field.val() !== '') {
-                formData[field.attr('name')] = field.val();
+            const fieldName = field.attr('name');
+            if (!fieldName) {
+                return;
+            }
+            if (fieldName === 'user_notes') {
+                formData[fieldName] = field.val() || '';
+                return;
+            }
+            if (field.val() !== '') {
+                formData[fieldName] = field.val();
             }
         });
         
