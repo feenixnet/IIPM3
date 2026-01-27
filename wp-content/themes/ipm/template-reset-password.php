@@ -15,6 +15,8 @@ $show_form = false;
 $key = isset($_GET['key']) ? sanitize_text_field($_GET['key']) : '';
 $login = isset($_GET['login']) ? sanitize_text_field($_GET['login']) : '';
 
+error_log('Key: ' . $key);
+
 // Validate reset key and login
 if (!empty($key) && !empty($login)) {
     $user = check_password_reset_key($key, $login);
@@ -136,7 +138,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reset_password_submit
                                             Email: <a href="mailto:info@iipm.ie" style="color: #10b981; text-decoration: none;">info@iipm.ie</a>
                                         </p>
                                         <p style="margin: 0; color: #9ca3af; font-size: 12px;">
-                                            © ' . date(format: 'Y') . ' IIPM. All rights reserved.
+                                            © ' . date('Y') . ' IIPM. All rights reserved.
                                         </p>
                                     </td>
                                 </tr>
