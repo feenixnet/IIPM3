@@ -7179,69 +7179,6 @@ function iipm_admin_update_user_details() {
     
     global $wpdb;
     
-    // Validation function for required fields
-    function validate_user_details($data) {
-        $errors = array();
-        
-        // Required fields validation
-        $required_fields = array(
-            'first_name' => 'First Name',
-            'sur_name' => 'Surname', 
-            'user_email' => 'Email',
-            'member_type' => 'Member Type',
-            'membership_level_id' => 'Membership Level',
-            'membership_status' => 'Membership Status',
-            'user_phone' => 'Phone',
-            'user_payment_method' => 'Payment Method'
-        );
-        
-        // Check required fields
-        foreach ($required_fields as $field => $label) {
-            if (!isset($data[$field]) || empty($data[$field]) || $data[$field] === '') {
-                $errors[] = $label . ' is required';
-            }
-        }
-        
-        // Email validation - very permissive: just check for @ symbol with content on both sides
-        // This allows apostrophes and other RFC 5322 valid characters like ciara.o'brien@zurich.com
-        if (isset($data['user_email']) && !empty($data['user_email'])) {
-            $email = trim($data['user_email']);
-            // Only reject if email doesn't contain @ or @ is first/last character
-            $at_pos = strpos($email, '@');
-            if ($at_pos === false || $at_pos === 0 || $at_pos === strlen($email) - 1) {
-                $errors[] = 'Email address is not valid - must contain @ with text before and after';
-            }
-            // Log that we accepted this email
-            error_log('IIPM: Email validation PASSED for: ' . $email);
-        }
-        
-        // At least one address required
-        $addresses = array('Address_1', 'Address_2', 'Address_3');
-        $has_address = false;
-        foreach ($addresses as $addr) {
-            if (isset($data[$addr]) && !empty($data[$addr])) {
-                $has_address = true;
-                break;
-            }
-        }
-        if (!$has_address) {
-            $errors[] = 'At least one address (Address 1, 2, or 3) is required';
-        }
-        
-        // Employer ID required for organisation members
-        if (isset($data['member_type']) && $data['member_type'] === 'organisation') {
-            if (!isset($data['employer_id']) || empty($data['employer_id']) || $data['employer_id'] === '0') {
-                $errors[] = 'Employer/Organisation is required for organisation members';
-            }
-        }
-        
-        return $errors;
-    }
-    
-    // Debug: Log received email with timestamp to confirm new code is running
-    error_log('IIPM DEBUG [' . date('Y-m-d H:i:s') . '] CODE VERSION 2 - Raw user_email received: ' . ($_POST['user_email'] ?? 'NOT SET'));
-    error_log('IIPM DEBUG - Raw user_email hex: ' . bin2hex($_POST['user_email'] ?? ''));
-    
     // Normalize email addresses - trim whitespace and convert smart quotes to ASCII
     $email_fields = array('user_email', 'email_address', 'email_address_pers', 'correspondence_email');
     foreach ($email_fields as $field) {
@@ -7254,48 +7191,10 @@ function iipm_admin_update_user_details() {
         }
     }
     
-    // Debug: Log normalized email
-    error_log('IIPM DEBUG - Normalized user_email: ' . ($_POST['user_email'] ?? 'NOT SET'));
-    
-    // Validate the submitted data
-    $validation_errors = validate_user_details($_POST);
-    if (!empty($validation_errors)) {
-        // Debug: Log the email and validation result
-        error_log('IIPM Email Validation Debug - Email: ' . ($_POST['user_email'] ?? 'not set'));
-        error_log('IIPM Email Validation Debug - Errors: ' . print_r($validation_errors, true));
-        wp_send_json_error('Validation failed: ' . implode(', ', $validation_errors));
-        return;
-    }
-    
     try {
-        // Handle password reset if provided
+        // Handle password reset if provided (no validation - admin can set any password)
         if (isset($_POST['new_password']) && !empty($_POST['new_password'])) {
             $new_password = sanitize_text_field($_POST['new_password']);
-            
-            // Validate password strength on server side
-            $password_errors = array();
-            if (strlen($new_password) < 8) {
-                $password_errors[] = 'Password must be at least 8 characters long';
-            }
-            if (!preg_match('/[A-Z]/', $new_password)) {
-                $password_errors[] = 'Password must contain at least one uppercase letter';
-            }
-            if (!preg_match('/[a-z]/', $new_password)) {
-                $password_errors[] = 'Password must contain at least one lowercase letter';
-            }
-            if (!preg_match('/\d/', $new_password)) {
-                $password_errors[] = 'Password must contain at least one number';
-            }
-            if (!preg_match('/[!@#$%^&*()_+\-=\[\]{};\':"\\|,.<>\/?]/', $new_password)) {
-                $password_errors[] = 'Password must contain at least one special character';
-            }
-            
-            if (!empty($password_errors)) {
-                wp_send_json_error('Password validation failed: ' . implode(', ', $password_errors));
-                return;
-            }
-            
-            // Update password
             wp_set_password($new_password, $user_id);
         }
         

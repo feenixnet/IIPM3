@@ -218,8 +218,8 @@ if (!function_exists('add_success_notification')) {
                     <div class="section-content">
                         <div class="form-grid">
                             <div class="form-group">
-                                <label>Payment Method: <span style="color: red;">*</span></label>
-                                <select name="user_payment_method" id="user_payment_method_edit" disabled required>
+                                <label>Payment Method:</label>
+                                <select name="user_payment_method" id="user_payment_method_edit" disabled>
                                     <option value="">Select Payment Method</option>
                                     <option value="Employer Invoiced">Employer Invoiced</option>
                                     <option value="Direct Invoiced">Direct Invoiced</option>
@@ -599,18 +599,18 @@ if (!function_exists('add_success_notification')) {
             <input type="hidden" id="qualification-id" value="">
             
             <div style="margin-bottom: 20px;">
-                <label for="qualification-designation" style="display: block; margin-bottom: 5px; font-weight: 500; color: #374151;">Qualification *</label>
-                <input type="text" id="qualification-designation" required style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                <label for="qualification-designation" style="display: block; margin-bottom: 5px; font-weight: 500; color: #374151;">Qualification</label>
+                <input type="text" id="qualification-designation" style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
             </div>
             
             <div style="margin-bottom: 20px;">
-                <label for="qualification-institute" style="display: block; margin-bottom: 5px; font-weight: 500; color: #374151;">Awarding Institute *</label>
-                <input type="text" id="qualification-institute" required style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                <label for="qualification-institute" style="display: block; margin-bottom: 5px; font-weight: 500; color: #374151;">Awarding Institute</label>
+                <input type="text" id="qualification-institute" style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
             </div>
             
             <div style="margin-bottom: 20px;">
-                <label for="qualification-date" style="display: block; margin-bottom: 5px; font-weight: 500; color: #374151;">Date Attained *</label>
-                <input type="date" id="qualification-date" required style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                <label for="qualification-date" style="display: block; margin-bottom: 5px; font-weight: 500; color: #374151;">Date Attained</label>
+                <input type="date" id="qualification-date" style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
             </div>
             
             <div style="margin-bottom: 20px;">
@@ -2884,11 +2884,6 @@ jQuery(document).ready(function($) {
         const dateAttained = $('#qualification-date').val();
         const isCurrent = $('#qualification-current').is(':checked') ? 1 : 0;
         
-        if (!designation || !institute || !dateAttained) {
-            alert('Please fill in all required fields');
-            return;
-        }
-        
         const action = qualificationId ? 'iipm_update_qualification' : 'iipm_add_qualification';
         const data = {
             action: action,
@@ -3002,34 +2997,19 @@ jQuery(document).ready(function($) {
             user_id: userId
         };
         
-        // Validate password if provided
-        const passwordField = $('#new_password_edit');
-        const password = passwordField.val();
-        
-        if (password && password.trim() !== '') {
-            const isStrongPassword = updatePasswordStrengthIndicator(password);
-            if (!isStrongPassword) {
-                if (window.notifications) {
-                    notifications.error('Password Validation Failed', 'Password must meet all strength requirements.');
-                }
-                return;
-            }
-        }
-        
-        // Collect all form data
+        // Collect all form data (including empty fields so they can be cleared)
         $(this).find('input, select, textarea').each(function() {
             const field = $(this);
             const fieldName = field.attr('name');
             if (!fieldName) {
                 return;
             }
-            if (fieldName === 'user_notes') {
-                formData[fieldName] = field.val() || '';
+            // Skip password field if empty (don't want to clear password accidentally)
+            if (fieldName === 'new_password' && (!field.val() || field.val().trim() === '')) {
                 return;
             }
-            if (field.val() !== '') {
-                formData[fieldName] = field.val();
-            }
+            // Send all fields including empty ones
+            formData[fieldName] = field.val() || '';
         });
         
         // Show loading state
