@@ -469,7 +469,6 @@ function iipm_ajax_add_cpd_confirmation() {
     $course_category = sanitize_text_field($_POST['course_category'] ?? '');
     $course_cpd_mins = intval($_POST['course_cpd_mins'] ?? 0);
     $crs_provider = sanitize_text_field($_POST['crs_provider'] ?? '');
-    $selected_year = isset($_POST['year']) && intval($_POST['year']) > 0 ? intval($_POST['year']) : null;
     
     if (!$course_id || !$course_name || !$course_category || !$course_cpd_mins) {
         wp_send_json_error('Missing required fields');
@@ -489,25 +488,19 @@ function iipm_ajax_add_cpd_confirmation() {
         return;
     }
     
-    // Extract year from course_date (format: DD/MM/YYYY)
+    // Extract year from course_date
     $course_year = null;
     $course_date = $course->course_date;
     if (!empty($course_date)) {
-        $date_parts = explode('/', $course_date);
-        if (count($date_parts) === 3) {
-            $course_year = intval($date_parts[2]); // Year is the third part
+        $parsed_date = iipm_parse_cpd_date($course_date);
+        if ($parsed_date) {
+            $course_year = intval(date('Y', $parsed_date));
         }
     }
     
-    // If course_date is not available or invalid, fall back to selected year or current year
+    // If course_date is not available or invalid, fall back to current year
     if (!$course_year) {
-        $course_year = $selected_year ?: iipm_get_cpd_logging_year();
-    }
-    
-    // Validate: If a year was selected, check if it matches the course date year
-    if ($selected_year && $course_year && $selected_year != $course_year) {
-        wp_send_json_error("This course is for {$course_year}, but you selected {$selected_year}. Please select the correct year.");
-        return;
+        $course_year = intval(date('Y'));
     }
     
     // Check if CPD certificate is already submitted for the course year
@@ -519,7 +512,7 @@ function iipm_ajax_add_cpd_confirmation() {
     ));
     
     if ($submission) {
-        wp_send_json_error("Can't add a course to your record as you got your CPD certificate already");
+        wp_send_json_error("{$course_year} CPD already submitted.");
         return;
     }
     
@@ -643,14 +636,13 @@ function iipm_ajax_get_courses_in_learning_path() {
     // Normalize user_id and year
     $user_id = isset($_POST['user_id']) ? intval($_POST['user_id']) : get_current_user_id();
     if ($user_id <= 0) { $user_id = get_current_user_id(); }
-    $tYear = isset($_POST['year']) ? intval($_POST['year']) : intval(date('Y'));
-    if ($tYear <= 0) { $tYear = intval(date('Y')); }
     
     if (!$user_id) {
         wp_send_json_error('User not logged in');
         return;
     }
     
+    $tYear = isset($_POST['year']) ? intval($_POST['year']) : null;
     $courses = iipm_get_courses_in_learning_path($user_id, $tYear);
     
     wp_send_json_success(array(
@@ -1425,18 +1417,24 @@ function iipm_get_started_courses($user_id) {
 /**
  * Get all courses in learning path (both completed and started)
  */
-function iipm_get_courses_in_learning_path($user_id, $tYear) {
+function iipm_get_courses_in_learning_path($user_id, $tYear = null) {
     global $wpdb;
     
     $table_name = $wpdb->prefix . 'fullcpd_confirmations';
+    $where_clause = "user_id = %d";
+    $query_args = array($user_id);
+    
+    if (!empty($tYear)) {
+        $where_clause .= " AND year = %d";
+        $query_args[] = $tYear;
+    }
     
     $query = $wpdb->prepare(
         "SELECT id as confirmation_id, course_id, courseName, crs_provider, dateOfCourse, dateOfReturn, year 
          FROM {$table_name} 
-         WHERE user_id = %d AND year = %d
+         WHERE {$where_clause}
          ORDER BY dateOfCourse DESC",
-        $user_id,
-        $tYear
+        $query_args
     );
     
     $courses = $wpdb->get_results($query);

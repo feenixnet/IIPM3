@@ -37,12 +37,12 @@ if (!function_exists('add_success_notification')) {
         <div class="tab-navigation" style="margin-bottom: 30px;">
             <div style="display: flex; justify-content: center; gap: 20px;">
                 <a href="?tab=library" class="tab-button <?php echo (!isset($_GET['tab']) || $_GET['tab'] === 'library') ? 'active' : ''; ?>" 
-                   style="padding: 12px 24px; background: <?php echo (!isset($_GET['tab']) || $_GET['tab'] === 'library') ? '#f8a135' : '#6b4c93'; ?>; color: white; border-radius: 8px; text-decoration: none; font-weight: 500; transition: all 0.3s ease;">
+                   style="padding: 12px 24px; background: <?php echo (!isset($_GET['tab']) || $_GET['tab'] === 'library') ? '#f8a135' : '#715091'; ?>; color: white; border-radius: 8px; text-decoration: none; font-weight: 500; transition: all 0.3s ease;">
                     <span style="margin-right: 8px;"><i class="fas fa-clipboard-list"></i></span>
                     Course Library
                 </a>
                 <a href="?tab=requests" class="tab-button <?php echo (isset($_GET['tab']) && $_GET['tab'] === 'requests') ? 'active' : ''; ?>"
-                   style="padding: 12px 24px; background: <?php echo (isset($_GET['tab']) && $_GET['tab'] === 'requests') ? '#f8a135' : '#6b4c93'; ?>; color: white; border-radius: 8px; text-decoration: none; font-weight: 500; transition: all 0.3s ease;">
+                   style="padding: 12px 24px; background: <?php echo (isset($_GET['tab']) && $_GET['tab'] === 'requests') ? '#f8a135' : '#715091'; ?>; color: white; border-radius: 8px; text-decoration: none; font-weight: 500; transition: all 0.3s ease;">
                     <span style="margin-right: 8px;"><i class="fas fa-inbox"></i></span>
                     Course Requests
                 </a>
@@ -932,12 +932,12 @@ if (!function_exists('add_success_notification')) {
 }
 
 .file-upload-area:hover {
-    border-color: #8b5a96;
+    border-color: #715091;
     background: #f1f5f9;
 }
 
 .file-upload-area.dragover {
-    border-color: #8b5a96;
+    border-color: #715091;
     background: #f0f9ff;
     transform: scale(1.02);
 }
@@ -970,7 +970,7 @@ if (!function_exists('add_success_notification')) {
 }
 
 .upload-link {
-    color: #8b5a96;
+    color: #715091;
     font-weight: 600;
     text-decoration: underline;
     cursor: pointer;
@@ -1094,7 +1094,7 @@ if (!function_exists('add_success_notification')) {
 
 .progress-fill {
     height: 100%;
-    background: linear-gradient(90deg, #8b5a96, #6b4c93);
+    background: linear-gradient(90deg, #715091, #715091);
     width: 0%;
     transition: width 0.3s ease;
 }
@@ -1189,13 +1189,13 @@ if (!function_exists('add_success_notification')) {
 
 .page-number:hover {
     background: #f3f4f6;
-    border-color: #8b5a96;
+    border-color: #715091;
 }
 
 .page-number.active {
-    background: #8b5a96;
+    background: #715091;
     color: white;
-    border-color: #8b5a96;
+    border-color: #715091;
 }
 
 .page-number:disabled {
@@ -1228,12 +1228,12 @@ if (!function_exists('add_success_notification')) {
 }
 
 .select-trigger:hover {
-    border-color: #8b5a96;
+    border-color: #715091;
 }
 
 .select-trigger.active {
-    border-color: #8b5a96;
-    box-shadow: 0 0 0 4px rgba(139, 90, 150, 0.1);
+    border-color: #715091;
+    box-shadow: 0 0 0 4px rgba(113, 80, 145, 0.1);
 }
 
 .select-placeholder {
@@ -1252,7 +1252,7 @@ if (!function_exists('add_success_notification')) {
     left: 0;
     right: 0;
     background: white;
-    border: 2px solid #8b5a96;
+    border: 2px solid #715091;
     border-radius: 8px;
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
     z-index: 1000;
@@ -1280,8 +1280,8 @@ if (!function_exists('add_success_notification')) {
 }
 
 .select-search input:focus {
-    border-color: #8b5a96;
-    box-shadow: 0 0 0 2px rgba(139, 90, 150, 0.1);
+    border-color: #715091;
+    box-shadow: 0 0 0 2px rgba(113, 80, 145, 0.1);
 }
 
 .select-options {
@@ -1306,7 +1306,7 @@ if (!function_exists('add_success_notification')) {
 
 .select-option.selected {
     background: #f0f9ff;
-    color: #8b5a96;
+    color: #715091;
 }
 
 .option-name {
@@ -1341,13 +1341,13 @@ if (!function_exists('add_success_notification')) {
 
 .select-page-number:hover {
     background: #f3f4f6;
-    border-color: #8b5a96;
+    border-color: #715091;
 }
 
 .select-page-number.active {
-    background: #8b5a96;
+    background: #715091;
     color: white;
-    border-color: #8b5a96;
+    border-color: #715091;
 }
 
 /* Checkbox Styles */
@@ -1362,7 +1362,7 @@ if (!function_exists('add_success_notification')) {
     height: 20px;
     margin: 0;
     cursor: pointer;
-    accent-color: #8b5a96;
+    accent-color: #715091;
 }
 
 .checkbox-label {
@@ -1389,8 +1389,8 @@ if (!function_exists('add_success_notification')) {
 }
 
 .checkbox-container input[type="checkbox"]:checked + .checkbox-label .checkbox-custom {
-    background: #8b5a96;
-    border-color: #8b5a96;
+    background: #715091;
+    border-color: #715091;
     transform: scale(1.1);
 }
 
@@ -1407,7 +1407,7 @@ if (!function_exists('add_success_notification')) {
 
 /* Course Header */
 .course-header {
-    background: linear-gradient(135deg, #8b5a96 0%, #6b4c93 100%);
+    background: linear-gradient(135deg, #715091 0%, #715091 100%);
     color: white;
     padding: 40px 0;
     margin-bottom: 30px;
@@ -1956,7 +1956,7 @@ body.modal-open {
 }
 
 .btn-secondary {
-    background: #8b5a96;
+    background: #715091;
     color: white;
 }
 

@@ -52,7 +52,7 @@ if (!function_exists('add_success_notification')) {
 
         <!-- Back Button -->
         <div style="margin-bottom: 30px;">
-            <a href="<?php echo home_url('/member-management/'); ?>" style="display: inline-flex; align-items: center; padding: 12px 24px; background: #6b4c93; color: white; border-radius: 8px; text-decoration: none; font-weight: 500; transition: all 0.3s ease;">
+            <a href="<?php echo home_url('/member-management/'); ?>" style="display: inline-flex; align-items: center; padding: 12px 24px; background: #715091; color: white; border-radius: 8px; text-decoration: none; font-weight: 500; transition: all 0.3s ease;">
                 <span style="margin-right: 8px;"><i class="fas fa-arrow-left"></i></span>
                 Back to Members
             </a>
@@ -99,10 +99,6 @@ if (!function_exists('add_success_notification')) {
                     </div>
                     <div class="section-content">
                         <div class="form-grid">
-                            <div class="form-group">
-                                <label>Username:</label>
-                                <input type="text" name="user_login" id="user_login_edit" disabled readonly>
-                            </div>
                             <div class="form-group">
                                 <label>Email:</label>
                                 <input type="text" name="user_email" id="user_email_edit" disabled>
@@ -290,6 +286,10 @@ if (!function_exists('add_success_notification')) {
                     </div>
                     <div class="section-content">
                         <div class="form-grid">
+                            <div class="form-group full-width">
+                                <label>Organisation Name (Signup):</label>
+                                <input type="text" name="employer_name" id="employer_name_edit" disabled>
+                            </div>
                             <div class="form-group full-width">
                                 <label>Organisation:</label>
                                 <select name="employer_id" id="employer_id" disabled>
@@ -1044,7 +1044,7 @@ if (!function_exists('add_success_notification')) {
 
 .summary-hours {
     font-weight: 600;
-    color: #8b5a96;
+    color: #715091;
 }
 
 .completion-status {
@@ -1114,10 +1114,9 @@ jQuery(document).ready(function($) {
     function displayUserDetails(data) {
         // Update page title
         const displayName = (data.profile_info.first_name + ' ' + data.profile_info.sur_name).trim();
-        $('#page-title').text(displayName || data.basic_info.user_login + ' - User Details');
+        $('#page-title').text(displayName || 'Member Details');
         
         // Section 1: User Information
-        $('#user_login_edit').val(data.basic_info.user_login);
         $('#user_email_edit').val(data.basic_info.user_email);
         $('#member_type_edit').val(data.member_info.member_type || '');
         $('#membership_status_edit').val(data.member_info.membership_status || '');
@@ -1180,6 +1179,7 @@ jQuery(document).ready(function($) {
         $('#Address_3_pers_edit').val(data.profile_info.Address_3_pers || '');
         
         // Section 5: Employer Information
+        $('#employer_name_edit').val(data.profile_info.employer_name || '');
         const employerSelect = $('#employer_id');
         employerSelect.empty().append('<option value="">Select Organisation</option>');
         organizations.forEach(function(org) {
@@ -2761,11 +2761,10 @@ jQuery(document).ready(function($) {
      */
     function initializeAddCoursesButton() {
         $('#add-courses-btn').on('click', function() {
-            const currentYear = $('#cpd-year').val() || new Date().getFullYear();
             const targetUserId = userDetails.basic_info.user_id;
             
-            // Redirect to CPD courses page with parameters
-            const cpdCoursesUrl = `<?php echo home_url('/cpd-courses/'); ?>?tyear=${currentYear}&user_id=${targetUserId}`;
+            // Redirect to CPD courses page with user_id only
+            const cpdCoursesUrl = `<?php echo home_url('/cpd-courses/'); ?>?user_id=${targetUserId}`;
             window.location.href = cpdCoursesUrl;
         });
     }
@@ -3204,9 +3203,9 @@ jQuery(document).ready(function($) {
 
 /* Form field styling for password */
 #new_password_edit:focus {
-    border-color: #8b5a96;
+    border-color: #715091;
     outline: none;
-    box-shadow: 0 0 0 3px rgba(139, 90, 150, 0.1);
+    box-shadow: 0 0 0 3px rgba(113, 80, 145, 0.1);
 }
 
 #new_password_edit:disabled {

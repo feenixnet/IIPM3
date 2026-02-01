@@ -431,6 +431,30 @@ function iipm_update_user() {
         wp_send_json_error($result->get_error_message());
         return;
     }
+
+    $full_name = trim($first_name . ' ' . $last_name);
+    if ($full_name !== '') {
+        $new_login = $full_name;
+        $existing_login = $wpdb->get_var($wpdb->prepare(
+            "SELECT ID FROM {$wpdb->users} WHERE user_login = %s AND ID != %d",
+            $new_login,
+            $user_id
+        ));
+        if ($existing_login) {
+            $new_login = $new_login . ' ' . $user_id;
+        }
+        
+        $wpdb->update(
+            $wpdb->users,
+            array(
+                'user_login' => $new_login,
+                'user_nicename' => $new_login
+            ),
+            array('ID' => $user_id),
+            array('%s', '%s'),
+            array('%d')
+        );
+    }
     
     // Update user role - set default subscriber role for all membership levels
     $user = new WP_User($user_id);

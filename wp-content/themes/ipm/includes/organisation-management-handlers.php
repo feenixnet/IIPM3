@@ -1005,10 +1005,10 @@ function iipm_send_organisation_admin_invitation($email, $organisation_id, $admi
     <style>
         body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
         .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-        .header { background: linear-gradient(135deg, #8b5a96 0%, #6b4c93 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
+        .header { background: linear-gradient(135deg, #715091 0%, #715091 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
         .content { background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; }
-        .button { display: inline-block; background: #8b5a96; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; margin: 20px 0; }
-        .info-box { background: #f8fafc; border-left: 4px solid #8b5a96; padding: 15px; margin: 20px 0; }
+        .button { display: inline-block; background: #715091; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; margin: 20px 0; }
+        .info-box { background: #f8fafc; border-left: 4px solid #715091; padding: 15px; margin: 20px 0; }
         .footer { background: #f8fafc; padding: 20px; text-align: center; color: #6b7280; border-radius: 0 0 8px 8px; }
         ul { padding-left: 20px; }
         ul li { margin-bottom: 8px; }
@@ -1062,7 +1062,7 @@ function iipm_send_organisation_admin_invitation($email, $organisation_id, $admi
         
         <div class='footer'>
             <p style='margin: 0; font-size: 14px;'><strong>Irish Institute of Pensions Management</strong></p>
-            <p style='margin: 5px 0 0 0;'><a href='https://www.iipm.ie' style='color: #8b5a96;'>www.iipm.ie</a></p>
+            <p style='margin: 5px 0 0 0;'><a href='https://www.iipm.ie' style='color: #715091;'>www.iipm.ie</a></p>
         </div>
     </div>
 </body>
@@ -1234,7 +1234,7 @@ function iipm_send_admin_welcome_email($user_id, $email, $first_name, $organisat
         .container { max-width: 600px; margin: 0 auto; padding: 20px; }
         .header { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
         .content { background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; }
-        .button { display: inline-block; background: #8b5a96; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; margin: 20px 0; }
+        .button { display: inline-block; background: #715091; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; margin: 20px 0; }
         .feature-box { background: #f0fdf4; border-left: 4px solid #10b981; padding: 15px; margin: 15px 0; }
         .steps { background: #f8fafc; padding: 15px; border-radius: 6px; margin: 20px 0; }
         .footer { background: #f8fafc; padding: 20px; text-align: center; color: #6b7280; border-radius: 0 0 8px 8px; }
@@ -1289,7 +1289,7 @@ function iipm_send_admin_welcome_email($user_id, $email, $first_name, $organisat
         
         <div class='footer'>
             <p style='margin: 0; font-size: 14px;'><strong>Irish Institute of Pensions Management</strong></p>
-            <p style='margin: 5px 0 0 0;'><a href='https://www.iipm.ie' style='color: #8b5a96;'>www.iipm.ie</a></p>
+            <p style='margin: 5px 0 0 0;'><a href='https://www.iipm.ie' style='color: #715091;'>www.iipm.ie</a></p>
         </div>
     </div>
 </body>
@@ -1817,7 +1817,8 @@ function iipm_export_organisation_members() {
     // Get members data
     $members = $wpdb->get_results($wpdb->prepare("
         SELECT u.ID, u.display_name, u.user_email, u.user_registered,
-               m.membership_status, m.last_login, mp.theUsersStatus
+               m.membership_status, m.last_login, mp.theUsersStatus,
+               mp.first_name, mp.sur_name
         FROM {$wpdb->users} u
         LEFT JOIN {$wpdb->prefix}test_iipm_members m ON u.ID = m.user_id
         LEFT JOIN {$wpdb->prefix}test_iipm_member_profiles mp ON u.ID = mp.user_id
@@ -1885,7 +1886,9 @@ function iipm_export_organisation_members() {
             $role_display = 'Member';
         }
         
-        if (in_array('name', $include_fields)) $row[] = $member->display_name ?: 'N/A';
+        $full_name = trim(($member->first_name ?? '') . ' ' . ($member->sur_name ?? ''));
+        $display_name = $full_name !== '' ? $full_name : ($member->display_name ?: 'N/A');
+        if (in_array('name', $include_fields)) $row[] = $display_name;
         if (in_array('email', $include_fields)) $row[] = $member->user_email ?: 'N/A';
         if (in_array('status', $include_fields)) $row[] = $member->membership_status ?: 'pending';
         if (in_array('last_login', $include_fields)) $row[] = $member->last_login ? date('Y-m-d H:i:s', strtotime($member->last_login)) : 'Never';
@@ -1942,7 +1945,7 @@ function iipm_export_organisation_members_csv() {
     // Get all members for this organisation with their designations
     $members = $wpdb->get_results($wpdb->prepare("
         SELECT u.ID, u.display_name, u.user_email,
-               mp.user_designation
+               mp.user_designation, mp.first_name, mp.sur_name
         FROM {$wpdb->users} u
         LEFT JOIN {$wpdb->prefix}test_iipm_member_profiles mp ON u.ID = mp.user_id
         WHERE mp.employer_id = %d
@@ -2024,7 +2027,8 @@ function iipm_export_organisation_members_csv() {
     
     // CSV data
     foreach ($members as $member) {
-        $name = $member->display_name ?: 'N/A';
+        $full_name = trim(($member->first_name ?? '') . ' ' . ($member->sur_name ?? ''));
+        $name = $full_name !== '' ? $full_name : ($member->display_name ?: 'N/A');
         $email = $member->user_email ?: 'N/A';
         $designation = $member->user_designation ?: 'N/A';
         $price = isset($designation_fees[$designation]) && $designation_fees[$designation] > 0 
@@ -2189,7 +2193,7 @@ function iipm_send_admin_removed_notification($email, $org_name, $admin_name = '
         
         <div class='footer'>
             <p style='margin: 0; font-size: 14px;'><strong>Irish Institute of Pensions Management</strong></p>
-            <p style='margin: 5px 0 0 0;'><a href='https://www.iipm.ie' style='color: #8b5a96;'>www.iipm.ie</a></p>
+            <p style='margin: 5px 0 0 0;'><a href='https://www.iipm.ie' style='color: #715091;'>www.iipm.ie</a></p>
         </div>
     </div>
 </body>

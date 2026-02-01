@@ -564,20 +564,20 @@ class IIPM_Navigation_Manager {
 
         .portal-tab:hover {
             background: white;
-            color: #8b5a96;
+            color: #715091;
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         }
 
         .portal-tab.active {
-            background: linear-gradient(135deg, #8b5a96 0%, #6b4c93 100%);
+            background: linear-gradient(135deg, #715091 0%, #715091 100%);
             color: white;
-            box-shadow: 0 4px 15px rgba(139, 90, 150, 0.4);
+            box-shadow: 0 4px 15px rgba(113, 80, 145, 0.4);
         }
 
         .portal-tab.active:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(139, 90, 150, 0.5);
+            box-shadow: 0 6px 20px rgba(113, 80, 145, 0.5);
         }
 
         .portal-tab i {

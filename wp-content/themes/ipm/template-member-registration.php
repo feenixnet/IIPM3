@@ -26,7 +26,7 @@ if (is_user_logged_in()) {
 get_header();
 ?>
 
-<div class="" style="padding-top: 120px; background: linear-gradient(135deg, #8b5a96 0%, #6b4c93 100%); color: white; padding: 60px 0;">
+<div class="" style="padding-top: 120px; background: linear-gradient(135deg, #715091 0%, #715091 100%); color: white; padding: 60px 0;">
     <div class="container">
         <div class="hero-content" style="text-align: center; margin-top:60px">
             <h1 style="color: white; font-size: 2.5rem; font-weight: 700; margin-bottom: 15px;">IIPM Member Registration</h1>
@@ -122,27 +122,8 @@ get_header();
                                 <input type="tel" name="user_mobile" id="user_mobile">
                             </div>
                             
-                            <div class="form-group">
-                                <label for="address">Full Address *</label>
-                                <textarea name="address" id="address" rows="3" placeholder="Street Address, Town, County, Eircode" required></textarea>
-                                <small>Required for invoicing purposes</small>
-                            </div>
                         </div>
                         
-                        <!-- Professional Information Section -->
-                        <div class="form-section">
-                            <h3>Professional Information</h3>
-                            
-                            <div class="form-group">
-                                <label for="membership_selection">Member Designation *</label>
-                                <input type="text" name="membership_selection" id="membership_selection" 
-                                       placeholder="Click to select your designation" readonly required>
-                                <input type="hidden" name="membership_id" id="membership_id">
-                                <input type="hidden" name="user_designation" id="user_designation">
-                                <small>Select your professional designation to determine membership level and requirements</small>
-                            </div>
-                        </div>
-
                         <div class="form-section">
                             <h3>Billing Address</h3>
                             <p class="alert-text" style="color: #666; font-style: italic; margin-bottom: 20px;">
@@ -151,54 +132,35 @@ get_header();
                             <div class="form-group">
                                 <label for="payment_method">Payment Method</label>
                                 <select name="payment_method" id="payment_method">
-                                    <?php if ($invitation): ?>
-                                        <!-- Individual invitation - only Direct Invoiced available -->
-                                        <option value="Direct Invoiced" selected>Direct Invoiced</option>
-                                    <?php else: ?>
-                                        <!-- Non-invitation - both options available -->
-                                        <option value="">Select payment method</option>
-                                        <option value="Direct Invoiced" selected>Direct Invoiced</option>
-                                        <option value="Employer Invoiced">Employer Invoiced</option>
-                                    <?php endif; ?>
+                                    <option value="">Select payment method</option>
+                                    <option value="Direct Invoiced" selected>Direct Invoiced</option>
+                                    <option value="Employer Invoiced">Employer Invoiced</option>
                                 </select>
                             </div>
                             
-                            <div class="form-group" id="employer-selection-group" style="display: none;">
-                                <label for="employer_id">Employer *</label>
-                                <div class="custom-select-container">
-                                    <div class="custom-select" id="employer-select">
-                                        <div class="select-trigger">
-                                            <span class="select-placeholder">Select Employer</span>
-                                            <i class="fas fa-chevron-down"></i>
-                                        </div>
-                                        <div class="select-dropdown">
-                                            <div class="select-search">
-                                                <input type="text" id="employer-search" placeholder="Search employers...">
-                                            </div>
-                                            <div class="select-options" id="employer-options">
-                                                <!-- Options will be loaded here -->
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <input type="hidden" name="employer_id" id="employer_id">
+                            <div class="form-group" id="organisation-name-group" style="display: none;">
+                                <label for="organisation_name">Organisation Name</label>
+                                <input type="text" name="organisation_name" id="organisation_name" placeholder="Enter organisation name" autocomplete="off">
                                 <input type="hidden" name="organisation_id" id="organisation_id">
+                                <div class="org-suggestions" id="organisation-suggestions" style="display: none;"></div>
                             </div>
-                            <div class="form-group">
-                                <label for="city_or_town">City or Town</label>
-                                <input type="text" name="city_or_town" id="city_or_town">
-                            </div>
-                            <div class="form-group">
-                                <label for="address_line_1">Address Line 1</label>
-                                <input type="address" name="address_line_1" id="address_line_1">
-                            </div>
-                            <div class="form-group">
-                                <label for="address_line_2">Address Line 2</label>
-                                <input type="address" name="address_line_2" id="address_line_2">
-                            </div>
-                            <div class="form-group">
-                                <label for="address_line_3">Address Line 3</label>
-                                <input type="address" name="address_line_3" id="address_line_3">
+                            <div id="billing-address-fields">
+                                <div class="form-group">
+                                    <label for="city_or_town">City or Town</label>
+                                    <input type="text" name="city_or_town" id="city_or_town">
+                                </div>
+                                <div class="form-group">
+                                    <label for="address_line_1">Address Line 1</label>
+                                    <input type="address" name="address_line_1" id="address_line_1">
+                                </div>
+                                <div class="form-group">
+                                    <label for="address_line_2">Address Line 2</label>
+                                    <input type="address" name="address_line_2" id="address_line_2">
+                                </div>
+                                <div class="form-group">
+                                    <label for="address_line_3">Address Line 3</label>
+                                    <input type="address" name="address_line_3" id="address_line_3">
+                                </div>
                             </div>
                         </div>
 
@@ -277,24 +239,7 @@ get_header();
                     </form>
                     
                     <!-- Membership Selection Modal -->
-                    <div id="membership-modal" class="membership-modal" style="display: none;">
-                        <div class="membership-modal-overlay"></div>
-                        <div class="membership-modal-content">
-                            <div class="membership-modal-header">
-                                <h3>Select Your Professional Designation</h3>
-                                <button type="button" class="membership-modal-close">&times;</button>
-                            </div>
-                            <div class="membership-modal-body">
-                                <div id="membership-list">
-                                    <div class="loading-message">Loading membership options...</div>
-                                </div>
-                            </div>
-                            <div class="membership-modal-footer">
-                                <button type="button" class="btn btn-secondary" id="cancel-membership-selection">Cancel</button>
-                                <button type="button" class="btn btn-primary" id="confirm-membership-selection" disabled>Select Designation</button>
-                            </div>
-                        </div>
-                    </div>
+                    
                     
                     <!-- Enhanced Success Message -->
                     <div id="registration-success" class="enhanced-success-message" style="display:none;">
@@ -429,7 +374,6 @@ get_header();
 <script>
 // Organizations data will be fetched via AJAX when needed
 var organizationsData = []; // Will be populated via AJAX call
-var employerSelectInitialized = false; // Flag to prevent multiple initializations
 
 // Enhanced debugging and form handling
 console.log("=== IIPM Registration Debug ===");
@@ -603,18 +547,12 @@ jQuery(document).ready(function($) {
             'first_name': 'First Name',
             'last_name': 'Last Name', 
             'email': 'Email Address',
-            'password': 'Password',
-            'address': 'Address',
-            'membership_id': 'Professional Designation',
+            'password': 'Password'
         };
         
-        // Add address fields as required if Employer Invoiced is selected
         var paymentMethod = $form.find('select[name="payment_method"]').val();
         if (paymentMethod === 'Employer Invoiced') {
-            requiredFields['address_line_1'] = 'Address Line 1';
-            requiredFields['address_line_2'] = 'Address Line 2';
-            requiredFields['address_line_3'] = 'Address Line 3';
-            requiredFields['employer_id'] = 'Employer';
+            requiredFields['organisation_name'] = 'Organisation Name';
         }
         
         // Validate login_name length if provided
@@ -708,20 +646,8 @@ jQuery(document).ready(function($) {
 
         // Handle employer and organisation fields based on payment method
         var paymentMethod = $form.find('select[name="payment_method"]').val();
-        if (paymentMethod === 'Employer Invoiced') {
-            // Ensure employer_id and organisation_id are set
-            var employerIdVal = $('#employer_id').val();
-            var organisationIdVal = $('#organisation_id').val();
-            if (employerIdVal) {
-                formData.set('employer_id', employerIdVal);
-                formData.set('organisation_id', organisationIdVal);
-                formData.set('address_line_1', $('#address_line_1').val());
-                formData.set('address_line_2', $('#address_line_2').val());
-                formData.set('address_line_3', $('#address_line_3').val());
-            }
-        } else {
-            // Remove employer fields if not Employer Invoiced
-            formData.delete('employer_id');
+        if (paymentMethod !== 'Employer Invoiced') {
+            formData.delete('organisation_name');
             formData.delete('organisation_id');
         }
         
@@ -964,25 +890,8 @@ jQuery(document).ready(function($) {
 jQuery(document).ready(function($){
     console.log("Document ready - initializing form");
     
-    // Initialize payment method based on invitation type
-    var isInviteMode = <?php echo $invitation ? 'true' : 'false'; ?>;
-    if (isInviteMode) {
-        // For individual invitations, set Direct Invoiced as default and ensure member_type is individual
-        $('#payment_method').val('Direct Invoiced');
-        $('#member_type').val('individual');
-        
-        // Ensure address fields are enabled for individual invitations
-        $('#address_line_1').prop('disabled', false).removeClass('disabled-field').prop('required', false);
-        $('#address_line_2').prop('disabled', false).removeClass('disabled-field').prop('required', false);
-        $('#address_line_3').prop('disabled', false).removeClass('disabled-field').prop('required', false);
-        
-        console.log("Individual invitation mode - Direct Invoiced set as default");
-    }
-    
-    // Initialize employer select if needed
-    if ($('#payment_method').val() === 'Employer Invoiced') {
-        loadEmployers();
-    }
+    // Apply initial billing field visibility
+    $('#payment_method').trigger('change');
 });
 
 // Populate employer select with all employers (single request) and handle selection
@@ -1028,52 +937,24 @@ jQuery(document).ready(function($){
         var selectedMethod = $(this).val();
         
         if (selectedMethod === 'Employer Invoiced') {
-            $('#employer-selection-group').show();
-            loadEmployers();
+            $('#organisation-name-group').show();
+            $('#billing-address-fields').hide();
+            $('#member_type').val('organisation');
             
-            // Set member_type to organisation for non-invite mode
-            var isInviteMode = <?php echo $invitation ? 'true' : 'false'; ?>;
-            if (!isInviteMode) {
-                $('#member_type').val('organisation');
-            }
-            
-            // Disable address inputs when Employer Invoiced is selected
-            $('#address_line_1').prop('disabled', true).addClass('disabled-field').prop('required', true);
-            $('#address_line_2').prop('disabled', true).addClass('disabled-field').prop('required', true);
-            $('#address_line_3').prop('disabled', true).addClass('disabled-field').prop('required', true);
+            $('#city_or_town').val('');
+            $('#address_line_1').val('');
+            $('#address_line_2').val('');
+            $('#address_line_3').val('');
         } else {
-            $('#employer-selection-group').hide();
-            $('#employer_id').val('');
+            $('#organisation-name-group').hide();
+            $('#organisation_name').val('');
             $('#organisation_id').val('');
-            $('#employer-select .select-trigger .select-placeholder').text('Select Employer');
-            
-            // Set member_type to individual for non-invite mode
-            var isInviteMode = <?php echo $invitation ? 'true' : 'false'; ?>;
-            if (!isInviteMode) {
-                $('#member_type').val('individual');
-            }
-            
-            // Enable address inputs for other payment methods
-            $('#address_line_1').prop('disabled', false).removeClass('disabled-field').prop('required', false);
-            $('#address_line_2').prop('disabled', false).removeClass('disabled-field').prop('required', false);
-            $('#address_line_3').prop('disabled', false).removeClass('disabled-field').prop('required', false);
-        }
-        
-        if (selectedMethod === 'Employer Invoiced') {
-            // Clear address fields when not Employer Invoiced
-            $('#address_line_1').val('');
-            $('#address_line_2').val('');
-            $('#address_line_3').val('');
-        } else {
-            // Clear address fields when not Employer Invoiced
-            $('#address_line_1').val('');
-            $('#address_line_2').val('');
-            $('#address_line_3').val('');
+            $('#billing-address-fields').show();
+            $('#member_type').val('individual');
         }
     });
     
-    // Load employers for dropdown
-    function loadEmployers() {
+    function loadOrganisationOptions() {
         $.ajax({
             url: (typeof iipm_ajax !== 'undefined' ? iipm_ajax.ajax_url : '<?php echo admin_url('admin-ajax.php'); ?>'),
             type: 'POST',
@@ -1083,237 +964,61 @@ jQuery(document).ready(function($){
                 nonce: (typeof iipm_ajax !== 'undefined' ? iipm_ajax.nonce : '<?php echo wp_create_nonce('iipm_portal_nonce'); ?>')
             }
         }).done(function(resp) {
-            if (resp.data && resp.data.length > 0) {
-                organizationsData = resp.data; // Store the data globally
-                var html = '';
-                resp.data.forEach(function(org) {
-                    html += '<div class="select-option" data-value="' + org.id + '" data-text="' + org.name + '">' + org.name + '</div>';
-                });
-                $('#employer-options').html(html);
-                
-                // Only initialize if not already initialized
-                if (!employerSelectInitialized) {
-                    initializeEmployerSelect();
-                    employerSelectInitialized = true;
-                }
-            } else {
-                $('#employer-options').html('<div class="select-option disabled">No employers found</div>');
-            }
+            organizationsData = resp.data || [];
         }).fail(function() {
-            $('#employer-options').html('<div class="select-option disabled">Error loading employers</div>');
+            organizationsData = [];
         });
     }
     
-    // Initialize employer custom select functionality
-    function initializeEmployerSelect() {
-        var $select = $('#employer-select');
-        var $trigger = $select.find('.select-trigger');
-        var $dropdown = $select.find('.select-dropdown');
-        var $options = $select.find('.select-options');
-        var $search = $select.find('#employer-search');
-        var $hidden = $('#employer_id');
+    function renderOrganisationSuggestions(query) {
+        var $list = $('#organisation-suggestions');
+        $list.empty();
         
-        // Remove any existing event listeners to prevent duplicates
-        $trigger.off('click.employerSelect');
-        $(document).off('click.employerSelect');
-        $options.off('click.employerSelect');
-        $search.off('input.employerSelect');
-        
-        // Toggle dropdown
-        $trigger.on('click.employerSelect', function(e) {
-            e.stopPropagation();
-            console.log("Hello, I am called!");
-            $dropdown.toggleClass('active');
-            if ($dropdown.hasClass('active')) {
-                $search.focus();
-            }
-        });
-        
-        // Close dropdown when clicking outside
-        $(document).on('click.employerSelect', function() {
-            $dropdown.removeClass('active');
-        });
-        
-        // Handle option selection
-        $options.on('click.employerSelect', '.select-option:not(.disabled)', function() {
-            var value = $(this).data('value');
-            var text = $(this).data('text');
-            
-            $hidden.val(value);
-            $('#organisation_id').val(value); // Set organisation_id to selected employer
-            $trigger.find('.select-placeholder').text(text);
-            $dropdown.removeClass('active');
-            
-            // Populate address fields with selected organization's address
-            populateAddressFromOrganization(value);
-        });
-        
-        // Handle search
-        $search.on('input.employerSelect', function() {
-            var searchTerm = $(this).val().toLowerCase();
-            $options.find('.select-option').each(function() {
-                var text = $(this).data('text').toLowerCase();
-                if (text.includes(searchTerm)) {
-                    $(this).show();
-                } else {
-                    $(this).hide();
-                }
-            });
-        });
-    }
-    
-    // Populate address fields from selected organization
-    function populateAddressFromOrganization(organizationId) {
-        if (organizationsData && organizationsData.length > 0) {
-            var selectedOrg = organizationsData.find(function(org) {
-                return org.id == organizationId;
-            });
-            
-            if (selectedOrg) {
-                // Populate address fields with organization's address
-                $('#address_line_1').val(selectedOrg.address_line1 || '');
-                $('#address_line_2').val(selectedOrg.address_line2 || '');
-                $('#address_line_3').val(selectedOrg.address_line3 || '');
-                $('#city_or_town').val(selectedOrg.city_or_town || '');
-            }
+        if (!query) {
+            $list.hide();
+            return;
         }
+        
+        var matches = organizationsData.filter(function(org) {
+            return org.name.toLowerCase().includes(query.toLowerCase());
+        });
+        
+        if (!matches.length) {
+            $list.append('<div class="org-suggestion disabled">No matching organisations</div>');
+        } else {
+            matches.slice(0, 6).forEach(function(org) {
+                $list.append('<div class="org-suggestion" data-id="' + org.id + '" data-name="' + org.name + '">' + org.name + '</div>');
+            });
+        }
+        
+        $list.show();
     }
     
-    // Membership Selection Modal Functionality
-    var selectedMembership = null;
-    var membershipData = [];
-    
-    // Load membership data when page loads
-    function loadMembershipData() {
-        var globalMemberships = <?php echo json_encode(iipm_get_membership_levels_data()); ?>;
-        var invitationMembershipLevel = <?php echo $invitation && isset($invitation->membership_level) ? $invitation->membership_level : 'null'; ?>;
-        
-        // Fetch real membership data from database
-        $.ajax({
-            url: (typeof iipm_ajax !== 'undefined' ? iipm_ajax.ajax_url : '<?php echo admin_url('admin-ajax.php'); ?>'),
-            type: 'POST',
-            dataType: 'json',
-            data: {
-                action: 'iipm_get_membership_data',
-                nonce: (typeof iipm_ajax !== 'undefined' ? iipm_ajax.nonce : '<?php echo wp_create_nonce('iipm_portal_nonce'); ?>')
-            }
-        }).done(function(resp) {
-            if (resp && resp.success && resp.data) {
-                // Filter memberships to only show those that match global constants
-                var allowedDesignations = Object.values(globalMemberships).map(function(level) {
-                    return level.designation;
-                });
-                
-                membershipData = resp.data.filter(function(membership) {
-                    return allowedDesignations.includes(membership.designation);
-                });
-                
-                renderMembershipList(invitationMembershipLevel);
-                
-                // Auto-set the membership selection field if a membership is selected
-                if (selectedMembership) {
-                    $('#membership_selection').val(selectedMembership.name + ' (' + selectedMembership.designation + ')');
-                    $('#membership_id').val(selectedMembership.id);
-                    $('#user_designation').val(selectedMembership.designation);
-                }
-            } else {
-                $('#membership-list').html('<div class="error-message">Failed to load membership options</div>');
-            }
-        }).fail(function() {
-            $('#membership-list').html('<div class="error-message">Error loading membership options</div>');
-        });
-    }
-    
-    // Render membership list in modal
-    function renderMembershipList(invitationMembershipLevel) {
-        var html = '';
-        var allowedDesignations = ['MIIPM', 'AIIPM', 'FIIPM', 'QPT IIPM'];
-        var filteredMemberships = membershipData.filter(function(membership) {
-            return allowedDesignations.includes(membership.designation);
-        });
-        
-        // Sort memberships to ensure MIIPM comes first
-        filteredMemberships.sort(function(a, b) {
-            var order = ['MIIPM', 'AIIPM', 'FIIPM', 'QPT IIPM'];
-            return order.indexOf(a.designation) - order.indexOf(b.designation);
-        });
-        
-        filteredMemberships.forEach(function(membership, index) {
-            var isSelected = false;
-            
-            // If invitation has membership level, find matching membership by ID
-            if (invitationMembershipLevel) {
-                isSelected = membership.id == invitationMembershipLevel;
-            } else {
-                // Default to MIIPM (first in sorted list)
-                isSelected = index === 0;
-            }
-            
-            if (isSelected) {
-                selectedMembership = membership;
-                $('#confirm-membership-selection').prop('disabled', false);
-            }
-            
-            html += '<div class="membership-option ' + (isSelected ? 'selected' : '') + '" data-membership-id="' + membership.id + '">';
-            html += '<div class="membership-option-header">';
-            html += '<h4>' + membership.name + '</h4>';
-            html += '<div class="membership-designation">' + membership.designation + '</div>';
-            html += '</div>';
-            html += '<div class="membership-option-details">';
-            html += '<div class="detail-row">';
-            html += '<span class="detail-label">Annual Fee:</span>';
-            html += '<span class="detail-value">€' + membership.fee + '</span>';
-            html += '</div>';
-            html += '<div class="detail-row">';
-            html += '<span class="detail-label">CPD Requirement:</span>';
-            html += '<span class="detail-value">' + membership.cpd_requirement + ' hours</span>';
-            html += '</div>';
-            html += '</div>';
-            html += '</div>';
-        });
-        
-        $('#membership-list').html(html);
-    }
-    
-    // Open modal when clicking on membership selection input
-    $('#membership_selection').on('click', function() {
-        $('#membership-modal').fadeIn(300);
-        $('body').addClass('modal-open');
+    $('#organisation_name').on('input', function() {
+        $('#organisation_id').val('');
+        renderOrganisationSuggestions($(this).val().trim());
     });
     
-    // Close modal
-    function closeMembershipModal() {
-        $('#membership-modal').fadeOut(300);
-        $('body').removeClass('modal-open');
-    }
-    
-    // Modal close handlers
-    $('.membership-modal-close, #cancel-membership-selection').on('click', closeMembershipModal);
-    $('.membership-modal-overlay').on('click', closeMembershipModal);
-    
-    // Handle membership option selection
-    $(document).on('click', '.membership-option', function() {
-        $('.membership-option').removeClass('selected');
-        $(this).addClass('selected');
-        
-        var membershipId = $(this).data('membership-id');
-        selectedMembership = membershipData.find(function(m) { return m.id == membershipId; });
-        
-        $('#confirm-membership-selection').prop('disabled', false);
+    $('#organisation_name').on('focus', function() {
+        renderOrganisationSuggestions($(this).val().trim());
     });
     
-    // Confirm membership selection
-    $('#confirm-membership-selection').on('click', function() {
-        if (selectedMembership) {
-            $('#membership_selection').val(selectedMembership.name + ' (' + selectedMembership.designation + ')');
-            $('#membership_id').val(selectedMembership.id);
-            $('#user_designation').val(selectedMembership.designation);
-            closeMembershipModal();
+    $(document).on('click', '.org-suggestion:not(.disabled)', function() {
+        var orgId = $(this).data('id');
+        var orgName = $(this).data('name');
+        $('#organisation_name').val(orgName);
+        $('#organisation_id').val(orgId);
+        $('#organisation-suggestions').hide().empty();
+    });
+    
+    $(document).on('click', function(e) {
+        if (!$(e.target).closest('#organisation-name-group').length) {
+            $('#organisation-suggestions').hide().empty();
         }
     });
     
-    // Load membership data on page load
-    loadMembershipData();
+    loadOrganisationOptions();
+    
 });
 
 
@@ -1324,6 +1029,33 @@ jQuery(document).ready(function($){
 .custom-select-container {
     position: relative;
     width: 100%;
+}
+
+.org-suggestions {
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    background: #fff;
+    margin-top: 8px;
+    max-height: 200px;
+    overflow-y: auto;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+    z-index: 50;
+}
+
+.org-suggestion {
+    padding: 10px 12px;
+    cursor: pointer;
+    font-size: 14px;
+    color: #374151;
+}
+
+.org-suggestion:hover {
+    background: #f8fafc;
+}
+
+.org-suggestion.disabled {
+    color: #9ca3af;
+    cursor: default;
 }
 
 .custom-select {
@@ -1344,7 +1076,7 @@ jQuery(document).ready(function($){
 }
 
 .select-trigger:hover {
-    border-color: #8b5a96;
+    border-color: #715091;
 }
 
 .select-trigger .select-placeholder {
@@ -1637,14 +1369,14 @@ jQuery(document).ready(function($){
 }
 
 .btn-primary {
-    background: linear-gradient(135deg, #8b5a96 0%, #6b4c93 100%);
+    background: linear-gradient(135deg, #715091 0%, #715091 100%);
     color: white;
-    box-shadow: 0 4px 15px rgba(139, 90, 150, 0.3);
+    box-shadow: 0 4px 15px rgba(113, 80, 145, 0.3);
 }
 
 .btn-primary:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(139, 90, 150, 0.4);
+    box-shadow: 0 8px 25px rgba(113, 80, 145, 0.4);
 }
 
 .btn-outline {
@@ -1655,8 +1387,8 @@ jQuery(document).ready(function($){
 
 .btn-outline:hover {
     background: #f9fafb;
-    border-color: #8b5a96;
-    color: #8b5a96;
+    border-color: #715091;
+    color: #715091;
 }
 
 .btn-secondary {
@@ -1688,7 +1420,7 @@ jQuery(document).ready(function($){
 }
 
 .help-text a {
-    color: #8b5a96;
+    color: #715091;
     text-decoration: none;
     font-weight: 500;
 }
@@ -1987,14 +1719,14 @@ jQuery(document).ready(function($){
 }
 
 .membership-option:hover {
-    border-color: #8b5a96;
-    box-shadow: 0 4px 12px rgba(139, 90, 150, 0.1);
+    border-color: #715091;
+    box-shadow: 0 4px 12px rgba(113, 80, 145, 0.1);
 }
 
 .membership-option.selected {
-    border-color: #8b5a96;
+    border-color: #715091;
     background: #f8f7ff;
-    box-shadow: 0 4px 12px rgba(139, 90, 150, 0.15);
+    box-shadow: 0 4px 12px rgba(113, 80, 145, 0.15);
 }
 
 .membership-option-header {
@@ -2012,7 +1744,7 @@ jQuery(document).ready(function($){
 }
 
 .membership-designation {
-    background: #8b5a96;
+    background: #715091;
     color: white;
     padding: 4px 12px;
     border-radius: 20px;
@@ -2065,8 +1797,8 @@ body.modal-open {
 }
 
 #membership_selection:focus {
-    border-color: #8b5a96;
-    box-shadow: 0 0 0 3px rgba(139, 90, 150, 0.1);
+    border-color: #715091;
+    box-shadow: 0 0 0 3px rgba(113, 80, 145, 0.1);
 }
 
 /* Responsive Design */

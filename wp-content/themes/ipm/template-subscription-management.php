@@ -21,7 +21,7 @@ get_header();
 <div class="subscription-management-page">
     <div class="container">
         <!-- Page Header -->
-        <div class="page-header" style="background: linear-gradient(135deg, #8b5a96 0%, #6b4c93 100%); color: white; padding: 60px 0; margin-bottom: 40px;">
+        <div class="page-header" style="background: linear-gradient(135deg, #715091 0%, #715091 100%); color: white; padding: 60px 0; margin-bottom: 40px;">
             <div class="container">
                 <h1 style="color: white; font-size: 2.5rem; font-weight: 700; margin-bottom: 15px;">Subscription Management</h1>
                 <p style="color: rgba(255, 255, 255, 0.9); font-size: 1.2rem;">Manage member subscriptions and payment status</p>
@@ -44,7 +44,7 @@ get_header();
                     </select>
                 </div>
                 
-                <button id="refresh-subscriptions" class="btn btn-primary" style="padding: 10px 20px; background: #8b5a96; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                <button id="refresh-subscriptions" class="btn btn-primary" style="padding: 10px 20px; background: #715091; color: white; border: none; border-radius: 6px; cursor: pointer;">
                     Refresh
                 </button>
             </div>
@@ -65,7 +65,7 @@ get_header();
                 <p style="color: #6b7280; margin: 0;">Unpaid Subscriptions</p>
             </div>
             <div class="stat-card" style="background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-                <h3 style="color: #8b5a96; font-size: 2rem; margin: 0 0 10px 0;">€0</h3>
+                <h3 style="color: #715091; font-size: 2rem; margin: 0 0 10px 0;">€0</h3>
                 <p style="color: #6b7280; margin: 0;">Total Revenue</p>
             </div>
         </div>

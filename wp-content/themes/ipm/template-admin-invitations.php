@@ -349,7 +349,7 @@ jQuery(document).ready(function($) {
 
 .organisation-badge {
     display: inline-block;
-    background: linear-gradient(135deg, #8b5a96, #6b4c93);
+    background: linear-gradient(135deg, #715091, #715091);
     color: white;
     padding: 8px 16px;
     border-radius: 20px;

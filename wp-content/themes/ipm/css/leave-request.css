@@ -11,7 +11,7 @@
 }
 
 .portal-title {
-  color: #8b5a96;
+  color: #715091;
   font-size: 2.5rem;
   font-weight: 700;
   margin: 0;
@@ -71,7 +71,7 @@
 }
 
 .leave-requests-section h2 {
-  color: #8b5a96;
+  color: #715091;
   font-size: 1.5rem;
   margin-bottom: 20px;
   font-weight: 600;
@@ -83,7 +83,7 @@
   padding: 20px;
   margin-bottom: 15px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  border-left: 4px solid #8b5a96;
+  border-left: 4px solid #715091;
 }
 
 .request-header {
@@ -180,7 +180,7 @@
 }
 
 .helpful-link {
-  color: #8b5a96;
+  color: #715091;
   text-decoration: none;
   font-weight: 500;
   transition: color 0.3s ease;
@@ -268,7 +268,7 @@
 .form-group select:focus,
 .form-group textarea:focus {
   outline: none;
-  border-color: #8b5a96;
+  border-color: #715091;
 }
 
 .form-actions {
@@ -289,7 +289,7 @@
 }
 
 .btn-primary {
-  background: #8b5a96;
+  background: #715091;
   color: white;
 }
 

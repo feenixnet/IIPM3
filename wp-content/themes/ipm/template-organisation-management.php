@@ -130,11 +130,11 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
                     <table class="organisations-table" id="organisations-table">
                         <thead>
                             <tr>
-                                <th>Organisation</th>
+                                <th class="sortable" data-sort="organisation">Organisation <span class="sort-icon"></span></th>
                                 <th>Contact Info</th>
-                                <th>Admin Status</th>
-                                <th>Members</th>
-                                <th>Created</th>
+                                <th class="sortable" data-sort="admin-status">Admin Status <span class="sort-icon"></span></th>
+                                <th class="sortable" data-sort="members">Members <span class="sort-icon"></span></th>
+                                <th class="sortable" data-sort="created">Created <span class="sort-icon"></span></th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -147,7 +147,7 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
                                 LEFT JOIN {$wpdb->prefix}test_iipm_member_profiles mp ON o.id = mp.employer_id
                                 WHERE o.is_active = 1
                                 GROUP BY o.id
-                                ORDER BY o.created_at DESC
+                                ORDER BY o.name ASC
                             ");
                             
                             if (empty($organisations)) {
@@ -222,7 +222,10 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
 <div id="organisation-modal" class="modal" style="display:none;">
     <div class="modal-content large">
         <div class="modal-header">
-            <h3 id="modal-title">Add New Organisation</h3>
+            <div class="modal-title-group">
+                <h3 id="modal-title">Add New Organisation</h3>
+                <p class="modal-subtitle">Create or update organisation details and admin setup.</p>
+            </div>
             <button class="modal-close">&times;</button>
         </div>
         <div class="modal-body">
@@ -232,63 +235,75 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
                 
                 <div class="form-section">
                     <h4><i class="fas fa-building"></i> Organisation Details</h4>
+                    <p class="section-help">Core details used for member association and invoices.</p>
                     <div class="form-row">
                         <div class="form-group">
                             <label for="org-name">Organisation Name *</label>
-                            <input type="text" id="org-name" name="name" required>
+                            <input type="text" id="org-name" name="name" placeholder="Organisation name" required>
                         </div>
                         
                         <div class="form-group">
                             <label for="contact-email">Contact Email *</label>
-                            <input type="email" id="contact-email" name="contact_email" required>
+                            <input type="email" id="contact-email" name="contact_email" placeholder="accounts@organisation.com" required>
                         </div>
                     </div>
                     
                     <div class="form-row">
                         <div class="form-group">
                             <label for="contact-phone">Contact Phone</label>
-                            <input type="tel" id="contact-phone" name="contact_phone">
+                            <input type="tel" id="contact-phone" name="contact_phone" placeholder="+353 1 234 5678">
                         </div>
                         
                         <div class="form-group">
                             <label for="billing-contact">Billing Contact</label>
-                            <input type="text" id="billing-contact" name="billing_contact">
+                            <input type="text" id="billing-contact" name="billing_contact" placeholder="Finance team or contact name">
                         </div>
                     </div>
                 </div>
                 
                 <div class="form-section">
                     <h4>📍 Address Information</h4>
-                    <div class="form-group">
-                        <label for="address-line1">Address Line 1</label>
-                        <input type="text" id="address-line1" name="address_line1">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="address-line2">Address Line 2</label>
-                        <input type="text" id="address-line2" name="address_line2">
+                    <p class="section-help">Optional but helpful for billing and correspondence.</p>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="address-line1">Address Line 1</label>
+                            <input type="text" id="address-line1" name="address_line1" placeholder="Street address">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="address-line2">Address Line 2</label>
+                            <input type="text" id="address-line2" name="address_line2" placeholder="Suite, building, floor">
+                        </div>
                     </div>
                     
                     <div class="form-row">
                         <div class="form-group">
+                            <label for="address-line3">Address Line 3</label>
+                            <input type="text" id="address-line3" name="address_line3" placeholder="Additional address info">
+                        </div>
+                        
+                        <div class="form-group">
                             <label for="city">City</label>
-                            <input type="text" id="city" name="city">
+                            <input type="text" id="city" name="city" placeholder="City">
                         </div>
                         
                         <div class="form-group">
                             <label for="county">County</label>
-                            <input type="text" id="county" name="county">
+                            <input type="text" id="county" name="county" placeholder="County">
                         </div>
-                        
+                    </div>
+                    
+                    <div class="form-row">
                         <div class="form-group">
                             <label for="eircode">Eircode</label>
-                            <input type="text" id="eircode" name="eircode">
+                            <input type="text" id="eircode" name="eircode" placeholder="A65 F4E2">
                         </div>
                     </div>
                 </div>
                 
                 <div class="form-section">
                     <h4><i class="fas fa-user-cog"></i> Member Administrator Setup</h4>
+                    <p class="section-help">Set the admin now or leave blank to add later.</p>
                     
                     <div class="form-group">
                         <label for="admin-name">Admin Name</label>
@@ -423,7 +438,7 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
 <style>
 /* Organisation Management Styles */
 .org-management-hero {
-    background: linear-gradient(135deg, #8b5a96 0%, #6b4c93 100%);
+    background: linear-gradient(135deg, #715091 0%, #715091 100%);
     color: white;
     padding: 60px 0;
     margin-bottom: 40px;
@@ -597,6 +612,48 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
     font-size: 0.875rem;
 }
 
+.organisations-table th.sortable {
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+}
+
+.organisations-table .sort-icon {
+    display: inline-block;
+    margin-left: 6px;
+    width: 10px;
+    height: 10px;
+    position: relative;
+}
+
+.organisations-table th.sortable .sort-icon::before,
+.organisations-table th.sortable .sort-icon::after {
+    content: '';
+    position: absolute;
+    left: 2px;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    opacity: 0.35;
+}
+
+.organisations-table th.sortable .sort-icon::before {
+    top: -1px;
+    border-bottom: 6px solid #6b7280;
+}
+
+.organisations-table th.sortable .sort-icon::after {
+    top: 6px;
+    border-top: 6px solid #6b7280;
+}
+
+.organisations-table th.sortable.sort-asc .sort-icon::before {
+    opacity: 1;
+}
+
+.organisations-table th.sortable.sort-desc .sort-icon::after {
+    opacity: 1;
+}
+
 .organisations-table tbody tr:hover {
     background: #f8fafc;
 }
@@ -688,12 +745,12 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
 }
 
 .btn-small:not(.btn-danger) {
-    background: #8b5a96;
+    background: #715091;
     color: white;
 }
 
 .btn-small:not(.btn-danger):hover {
-    background: #6b4c93;
+    background: #715091;
 }
 
 .btn-danger {
@@ -756,7 +813,7 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
 }
 
 .modal-content.large {
-    max-width: 900px;
+    max-width: 980px;
     width: 95%;
 }
 
@@ -772,9 +829,9 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
 }
 
 .modal-header {
-    background: linear-gradient(135deg, #8b5a96 0%, #6b4c93 100%);
+    background: linear-gradient(135deg, #715091 0%, #715091 100%);
     color: white;
-    padding: 25px 30px;
+    padding: 22px 28px;
     border-radius: 20px 20px 0 0;
     display: flex;
     justify-content: space-between;
@@ -784,41 +841,64 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
     z-index: 1;
 }
 
+.modal-title-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
 .modal-header h3 {
     margin: 0;
     font-size: 1.5rem;
     font-weight: 700;
 }
 
+.modal-header::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 2px;
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.modal-subtitle {
+    margin: 0;
+    font-size: 0.95rem;
+    opacity: 0.85;
+}
+
 .modal-close {
     background: rgba(255, 255, 255, 0.2);
-    border: none;
+    border: 1px solid rgba(255, 255, 255, 0.35);
     color: white;
-    font-size: 24px;
+    font-size: 22px;
     cursor: pointer;
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    display: flex;
+    width: 38px;
+    height: 38px;
+    border-radius: 999px;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.3s ease;
+    transition: all 0.2s ease;
 }
 
 .modal-close:hover {
-    background: rgba(255, 255, 255, 0.3);
-    transform: rotate(90deg);
+    background: rgba(255, 255, 255, 0.35);
+    transform: scale(1.05);
 }
 
 .modal-body {
-    padding: 40px 30px;
+    padding: 32px 30px;
+    background: #f8fafc;
 }
 
 /* Enhanced Form Styles */
 .form-section {
-    margin-bottom: 35px;
-    padding: 25px;
-    background: #f8fafc;
+    margin-bottom: 28px;
+    padding: 24px;
+    background: #ffffff;
     border-radius: 12px;
     border: 1px solid #e2e8f0;
     position: relative;
@@ -837,7 +917,13 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
     align-items: center;
     gap: 10px;
     padding-bottom: 10px;
-    border-bottom: 2px solid #8b5a96;
+    border-bottom: 2px solid #715091;
+}
+
+.section-help {
+    margin: -12px 0 20px 0;
+    color: #6b7280;
+    font-size: 0.9rem;
 }
 
 .form-row {
@@ -876,8 +962,8 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
 .form-group select:focus,
 .form-group textarea:focus {
     outline: none;
-    border-color: #8b5a96;
-    box-shadow: 0 0 0 4px rgba(139, 90, 150, 0.1);
+    border-color: #715091;
+    box-shadow: 0 0 0 4px rgba(113, 80, 145, 0.1);
     transform: translateY(-1px);
 }
 
@@ -904,7 +990,7 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
 }
 
 .checkbox-label:hover {
-    border-color: #8b5a96;
+    border-color: #715091;
     background: #f8fafc;
 }
 
@@ -924,8 +1010,8 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
 }
 
 .checkbox-label input[type="checkbox"]:checked + .checkbox-custom {
-    background: #8b5a96;
-    border-color: #8b5a96;
+    background: #715091;
+    border-color: #715091;
     transform: scale(1.1);
 }
 
@@ -943,11 +1029,30 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
 /* Form Actions */
 .form-actions {
     display: flex;
-    gap: 15px;
+    gap: 12px;
     justify-content: flex-end;
-    margin-top: 30px;
-    padding-top: 25px;
+    margin-top: 24px;
+    padding-top: 16px;
     border-top: 1px solid #e5e7eb;
+}
+
+.org-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 12px;
+    margin-bottom: 24px;
+    padding: 18px 20px;
+    border-radius: 12px;
+    border: 1px dashed #cbd5f5;
+    background: #f9fafb;
+}
+
+.org-options label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 500;
+    color: #374151;
 }
 
 .btn {
@@ -982,14 +1087,14 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
 }
 
 .btn-primary {
-    background: linear-gradient(135deg, #8b5a96 0%, #6b4c93 100%);
+    background: linear-gradient(135deg, #715091 0%, #715091 100%);
     color: white;
-    box-shadow: 0 4px 15px rgba(139, 90, 150, 0.3);
+    box-shadow: 0 4px 15px rgba(113, 80, 145, 0.3);
 }
 
 .btn-primary:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(139, 90, 150, 0.4);
+    box-shadow: 0 8px 25px rgba(113, 80, 145, 0.4);
 }
 
 .btn-secondary {
@@ -1309,6 +1414,84 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
 <script>
 jQuery(document).ready(function($) {
     let currentOrgId = null;
+    const $orgTable = $('#organisations-table');
+    const $orgTableBody = $orgTable.find('tbody');
+    const sortState = {
+        key: 'organisation',
+        direction: 'asc'
+    };
+    
+    function getSortValue($row, key) {
+        if (key === 'organisation') {
+            return $row.find('.org-name').text().trim().toLowerCase();
+        }
+        if (key === 'admin-status') {
+            return $row.find('.admin-status').text().trim().toLowerCase();
+        }
+        if (key === 'members') {
+            return parseInt($row.find('.member-count').text(), 10) || 0;
+        }
+        if (key === 'created') {
+            const createdText = $row.find('td').eq(4).text().trim();
+            const parsed = Date.parse(createdText);
+            return isNaN(parsed) ? 0 : parsed;
+        }
+        return '';
+    }
+    
+    function sortOrganisationTable() {
+        const rows = $orgTableBody.find('tr').get();
+        const { key, direction } = sortState;
+        
+        rows.sort((a, b) => {
+            const $rowA = $(a);
+            const $rowB = $(b);
+            const valueA = getSortValue($rowA, key);
+            const valueB = getSortValue($rowB, key);
+            
+            if (typeof valueA === 'number' && typeof valueB === 'number') {
+                return direction === 'asc' ? valueA - valueB : valueB - valueA;
+            }
+            return direction === 'asc'
+                ? String(valueA).localeCompare(String(valueB))
+                : String(valueB).localeCompare(String(valueA));
+        });
+        
+        $.each(rows, function(_, row) {
+            $orgTableBody.append(row);
+        });
+    }
+    
+    function updateSortIndicators() {
+        const $sortableHeaders = $orgTable.find('th.sortable');
+        $sortableHeaders.removeClass('sort-asc sort-desc');
+        $sortableHeaders.each(function() {
+            const $th = $(this);
+            if ($th.data('sort') === sortState.key) {
+                $th.addClass(sortState.direction === 'asc' ? 'sort-asc' : 'sort-desc');
+            }
+        });
+    }
+    
+    $orgTable.on('click', 'th.sortable', function() {
+        const sortKey = $(this).data('sort');
+        if (!sortKey) {
+            return;
+        }
+        
+        if (sortState.key === sortKey) {
+            sortState.direction = sortState.direction === 'asc' ? 'desc' : 'asc';
+        } else {
+            sortState.key = sortKey;
+            sortState.direction = 'asc';
+        }
+        
+        updateSortIndicators();
+        sortOrganisationTable();
+    });
+    
+    updateSortIndicators();
+    sortOrganisationTable();
     
     // Add Organisation
     $('#add-organisation-btn').click(function() {

@@ -518,7 +518,7 @@ get_header();
     }
 
     .portal-header {
-        background: linear-gradient(135deg, #8b5a96 0%, #6b4c93 100%);
+        background: linear-gradient(135deg, #715091 0%, #715091 100%);
         color: white;
         padding: 40px 0;
         margin-bottom: 30px;
@@ -902,7 +902,7 @@ get_header();
 
     .summary-hours {
         font-weight: 600;
-        color: #8b5a96;
+        color: #715091;
     }
 
     .status-icon {
@@ -951,7 +951,7 @@ get_header();
 
     .total-value {
         font-weight: 600;
-        color: #8b5a96;
+        color: #715091;
         font-size: 18px;
     }
 
@@ -968,7 +968,7 @@ get_header();
         width: 40px;
         height: 40px;
         border: 4px solid #e5e7eb;
-        border-top: 4px solid #8b5a96;
+        border-top: 4px solid #715091;
         border-radius: 50%;
         animation: spin 1s linear infinite;
     }
@@ -1223,7 +1223,7 @@ get_header();
         background: white;
         padding: 20px;
         border-radius: 12px;
-        border-left: 4px solid #8b5a96;
+        border-left: 4px solid #715091;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
     }
 
@@ -1290,7 +1290,7 @@ get_header();
     .courses-icon {
         width: 40px;
         height: 40px;
-        background: linear-gradient(135deg, #8b5a96 0%, #6b4c93 100%);
+        background: linear-gradient(135deg, #715091 0%, #715091 100%);
         border-radius: 50%;
         display: flex;
         align-items: center;
@@ -1547,7 +1547,7 @@ get_header();
     }
 
     .download-btn {
-        background: linear-gradient(135deg, #8b5a96, #6b4c93);
+        background: linear-gradient(135deg, #715091, #715091);
         color: white;
         border: none;
         padding: 12px 24px;
@@ -1564,7 +1564,7 @@ get_header();
 
     .download-btn:hover {
         transform: translateY(-2px);
-        box-shadow: 0 8px 20px rgba(139, 90, 150, 0.3);
+        box-shadow: 0 8px 20px rgba(113, 80, 145, 0.3);
         color: white;
         text-decoration: none;
     }
@@ -1612,7 +1612,7 @@ get_header();
         margin: 0 0 20px 0;
         font-size: 1.2rem;
         font-weight: 600;
-        color: #8b5a96;
+        color: #715091;
     }
 
     .training-content {
@@ -1674,8 +1674,8 @@ get_header();
     }
 
     .training-item:hover {
-        border-color: #8b5a96;
-        box-shadow: 0 2px 8px rgba(139, 90, 150, 0.1);
+        border-color: #715091;
+        box-shadow: 0 2px 8px rgba(113, 80, 145, 0.1);
     }
 
     .training-header-submitted {
@@ -1803,7 +1803,7 @@ get_header();
     }
 
     .modal-header {
-        background: linear-gradient(135deg, #8b5a96 0%, #6b4c93 100%);
+        background: linear-gradient(135deg, #715091 0%, #715091 100%);
         color: white;
         padding: 20px 24px;
         border-radius: 12px 12px 0 0;
@@ -1868,8 +1868,8 @@ get_header();
     }
 
     .training-option:hover {
-        border-color: #8b5a96;
-        box-shadow: 0 2px 8px rgba(139, 90, 150, 0.1);
+        border-color: #715091;
+        box-shadow: 0 2px 8px rgba(113, 80, 145, 0.1);
     }
 
     .training-option.selected {
@@ -1961,7 +1961,7 @@ get_header();
 
     .btn-primary {
         padding: 10px 20px;
-        background: #8b5a96;
+        background: #715091;
         border: none;
         border-radius: 6px;
         color: white;
@@ -1972,7 +1972,7 @@ get_header();
     }
 
     .btn-primary:hover {
-        background: #6b4c93;
+        background: #715091;
     }
 
     @media (max-width: 768px) {
@@ -2150,7 +2150,7 @@ get_header();
     }
 
     .stat-block.subscription-status::before {
-        background: linear-gradient(90deg, #8b5a96, #6b4c93);
+        background: linear-gradient(90deg, #715091, #715091);
     }
 
     .stat-icon {
@@ -2174,7 +2174,7 @@ get_header();
     }
 
     .stat-block.subscription-status .stat-icon {
-        background: linear-gradient(135deg, #8b5a96, #6b4c93);
+        background: linear-gradient(135deg, #715091, #715091);
     }
 
     .stat-content {
@@ -3685,22 +3685,7 @@ get_header();
          */
         function updateYearDependentUI() {
             const isCurrentYearView = (cpdLoggingYear === baseCpdYear);
-            const lastYear = baseCpdYear - 1;
-            const isLastYearView = (cpdLoggingYear === lastYear);
-            
-            // Check if we're before last year's deadline (Jan 30 of current year)
-            const now = new Date();
-            const currentYear = now.getFullYear();
-            const currentMonth = now.getMonth() + 1; // 1-12
-            const currentDay = now.getDate();
-            const isBeforeLastYearDeadline = (currentMonth === 1 && currentDay <= 30);
-            
-            // Browse Courses should be enabled for:
-            // 1. Current year
-            // 2. Last year if today is before Jan 30 (last year's submission deadline)
-            const shouldEnableBrowseCourses = isCurrentYearView || (isLastYearView && isBeforeLastYearDeadline);
-            
-            // If submitted, always disable actions regardless of year (except Browse Courses which has its own logic)
+            // If submitted, always disable actions regardless of year
             const shouldDisableActions = isSubmitted || !isCurrentYearView;
             
             // Log Training main button
@@ -3720,32 +3705,14 @@ get_header();
             
             // "Log your first training" button (when no training yet) will be handled when rendering cards
             
-            // Browse courses link - special logic: enabled for current year and last year before deadline
-            // Also disable if the selected year is already submitted
+            // Browse courses link - always enabled
             const browseCoursesLink = document.getElementById('browse-courses-link');
             if (browseCoursesLink) {
                 const baseUrl = browseCoursesLink.dataset.baseUrl || browseCoursesLink.getAttribute('href') || '<?php echo home_url('/cpd-courses/'); ?>';
-                
-                // Check if selected year is submitted
-                const yearSelect = document.getElementById('cpd-year-select');
-                const selectedYear = yearSelect ? parseInt(yearSelect.value, 10) : cpdLoggingYear;
-                
-                // Disable if:
-                // 1. Not in allowed years (current year or last year before deadline)
-                // 2. Selected year is already submitted
-                if (!shouldEnableBrowseCourses || isSubmitted) {
-                    browseCoursesLink.classList.add('disabled');
-                    browseCoursesLink.setAttribute('href', 'javascript:void(0)');
-                    browseCoursesLink.style.cursor = 'not-allowed';
-                    browseCoursesLink.style.color = '#9ca3af';
-                } else {
-                    browseCoursesLink.classList.remove('disabled');
-                    // Update URL to include selected year (tyear parameter)
-                    const coursesUrl = `${baseUrl}?tyear=${selectedYear}`;
-                    browseCoursesLink.setAttribute('href', coursesUrl);
-                    browseCoursesLink.style.cursor = 'pointer';
-                    browseCoursesLink.style.color = '';
-                }
+                browseCoursesLink.classList.remove('disabled');
+                browseCoursesLink.setAttribute('href', baseUrl);
+                browseCoursesLink.style.cursor = 'pointer';
+                browseCoursesLink.style.color = '';
             }
             
             // Submit leave request link - Always enabled (not disabled by year or submission status)
@@ -3977,7 +3944,7 @@ get_header();
                             line-height: 1.6;
                         ">You have successfully submitted your CPD training for ${cpdLoggingYear}!</p>
                         <button onclick="closeCongratulationsAlert()" style="
-                            background: linear-gradient(135deg, #8b5a96, #6b4c93);
+                            background: linear-gradient(135deg, #715091, #715091);
                             color: white;
                             border: none;
                             padding: 12px 30px;
@@ -4221,7 +4188,7 @@ get_header();
                         border-radius: 8px;
                         padding: 15px;
                         margin-top: 20px;
-                        border-left: 4px solid #8b5a96;
+                        border-left: 4px solid #715091;
                     ">
                         <h4 style="margin: 0 0 8px 0; color: #374151; font-size: 0.9rem;">Admin Notes:</h4>
                         <p style="margin: 0; color: #6b7280; font-size: 0.9rem;">${submission.admin_notes}</p>
@@ -4371,11 +4338,8 @@ get_header();
          */
         function selectPreApprovedTraining() {
             hideLogTrainingModal();
-            // Redirect to CPD courses page with selected year
-            const yearSelect = document.getElementById('cpd-year-select');
-            const selectedYear = yearSelect ? parseInt(yearSelect.value, 10) : getCpdYear();
-            const coursesUrl = `<?php echo home_url('/cpd-courses/'); ?>?tyear=${selectedYear}`;
-            window.location.href = coursesUrl;
+            // Redirect to CPD courses page
+            window.location.href = '<?php echo home_url('/cpd-courses/'); ?>';
         }
         
         /**

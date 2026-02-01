@@ -174,7 +174,8 @@ get_header();
                             <div class="section-header">
                                 <h3>Basic Information</h3>
                                 <button class="edit-btn" onclick="editSection('basic-info')" title="Edit">
-                                    <span class="edit-icon">✎</span>
+                                    <i class="fas fa-edit"></i>
+                                    <span class="edit-label">Edit</span>
                                 </button>
                             </div>
                             <div class="section-content" id="basic-info">
@@ -238,7 +239,8 @@ get_header();
                             <div class="section-header">
                                 <h3>Contact Details</h3>
                                 <button class="edit-btn" onclick="editSection('contact-details')" title="Edit">
-                                    <span class="edit-icon">✎</span>
+                                    <i class="fas fa-edit"></i>
+                                    <span class="edit-label">Edit</span>
                                 </button>
                             </div>
                             <div class="section-content" id="contact-details">
@@ -247,7 +249,7 @@ get_header();
                                         <div class="contact-column">
                                             <h4>Work</h4>
                                             <div class="form-group">
-                                                <label>Phone*</label>
+                                                <label>Work Phone</label>
                                                 <div class="form-value" data-field="user_phone">
                                                     <?php if ($profile->user_phone): ?>
                                                         <?php echo esc_html($profile->user_phone); ?>
@@ -257,7 +259,7 @@ get_header();
                                                 </div>
                                             </div>
                                             <div class="form-group">
-                                                <label>Mobile*</label>
+                                                <label>Work Mobile</label>
                                                 <div class="form-value" data-field="user_mobile">
                                                     <?php if ($profile->user_mobile): ?>
                                                         <?php echo esc_html($profile->user_mobile); ?>
@@ -267,14 +269,14 @@ get_header();
                                                 </div>
                                             </div>
                                             <div class="form-group">
-                                                <label>E-mail*</label>
+                                                <label>Work Email*</label>
                                                 <div class="form-value" data-field="email_address"><?php echo esc_html($current_user->user_email); ?></div>
                                             </div>
                                         </div>
                                         <div class="contact-column">
                                             <h4>Personal</h4>
                                             <div class="form-group">
-                                                <label>Phone*</label>
+                                                <label>Personal Phone</label>
                                                 <div class="form-value" data-field="user_phone_pers">
                                                     <?php if ($profile->user_phone_pers): ?>
                                                         <?php echo esc_html($profile->user_phone_pers); ?>
@@ -284,7 +286,7 @@ get_header();
                                                 </div>
                                             </div>
                                             <div class="form-group">
-                                                <label>Mobile*</label>
+                                                <label>Personal Mobile</label>
                                                 <div class="form-value" data-field="user_mobile_pers">
                                                     <?php if ($profile->user_mobile_pers): ?>
                                                         <?php echo esc_html($profile->user_mobile_pers); ?>
@@ -294,7 +296,7 @@ get_header();
                                                 </div>
                                             </div>
                                             <div class="form-group">
-                                                <label>E-mail</label>
+                                                <label>Personal Email</label>
                                                 <div class="form-value" data-field="email_address_pers">
                                                     <?php if ($profile->email_address_pers): ?>
                                                         <?php echo esc_html($profile->email_address_pers); ?>
@@ -311,32 +313,32 @@ get_header();
                                         <div class="contact-column">
                                             <h4>Work</h4>
                                             <div class="form-group">
-                                                <label>Phone*</label>
+                                                <label>Work Phone</label>
                                                 <input type="text" class="form-input" name="user_phone" value="<?php echo esc_attr($profile->user_phone); ?>" />
                                             </div>
                                             <div class="form-group">
-                                                <label>Mobile*</label>
+                                                <label>Work Mobile</label>
                                                 <input type="text" class="form-input" name="user_mobile" value="<?php echo esc_attr($profile->user_mobile); ?>" />
                                                 <!-- <input type="text" class="form-input" name="mobile" value="<?php echo esc_attr(get_user_meta($user_id, 'phone', true)); ?>" /> -->
                                             </div>
                                             <div class="form-group">
-                                                <label>E-mail*</label>
+                                                <label>Work Email*</label>
                                                 <input type="email" class="form-input" name="email_address" value="<?php echo esc_attr($current_user->user_email); ?>" disabled />
                                             </div>
                                         </div>
                                         <div class="contact-column">
                                             <h4>Personal</h4>
                                             <div class="form-group">
-                                                <label>Phone*</label>
+                                                <label>Personal Phone</label>
                                                 <input type="text" class="form-input" name="user_phone_pers" value="<?php echo esc_attr($profile->user_phone_pers); ?>" />
                                             </div>
                                             <div class="form-group">
-                                                <label>Mobile*</label>
+                                                <label>Personal Mobile</label>
                                                 <input type="text" class="form-input" name="user_mobile_pers" value="<?php echo esc_attr($profile->user_mobile_pers); ?>" />
                                                 <!-- <input type="text" class="form-input" name="mobile" value="<?php echo esc_attr(get_user_meta($user_id, 'phone', true)); ?>" /> -->
                                             </div>
                                             <div class="form-group">
-                                                <label>E-mail</label>
+                                                <label>Personal Email</label>
                                                 <input type="email" class="form-input" name="email_address_pers" value="<?php echo esc_attr($profile->email_address_pers); ?>" />
                                             </div>
                                         </div>
@@ -371,7 +373,8 @@ get_header();
                             <div class="section-header">
                                 <h3>Address</h3>
                                 <button class="edit-btn" onclick="editSection('address')" title="Edit">
-                                    <span class="edit-icon">✎</span>
+                                    <i class="fas fa-edit"></i>
+                                    <span class="edit-label">Edit</span>
                                 </button>
                             </div>
                             <div class="section-content" id="address">
@@ -479,7 +482,8 @@ get_header();
                             <div class="section-header">
                                 <h3>Qualifications</h3>
                                 <button class="edit-btn" onclick="editSection('qualifications')" title="Edit">
-                                    <span class="edit-icon">✎</span>
+                                    <i class="fas fa-edit"></i>
+                                    <span class="edit-label">Edit</span>
                                 </button>
                             </div>
                             <div class="section-content" id="qualifications">
@@ -1162,38 +1166,36 @@ get_header();
 }
 
 .edit-btn {
-    background: none;
+    background: #3b82f6;
+    color: #fff;
     border: none;
     cursor: pointer;
-    padding: 8px;
-    border-radius: 6px;
-    transition: all 0.2s;
-    color: #8b5cf6;
+    padding: 6px 12px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    font-size: 12px;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .edit-btn:hover {
-    background: #f3f4f6;
-    transform: scale(1.1);
-}
-
-.edit-icon {
-    font-size: 18px;
-    color: #8b5cf6;
-    font-weight: bold;
-    transition: all 0.2s;
+    background: #2563eb;
+    transform: translateY(-1px);
 }
 
 .edit-btn.editing {
-    background: #8b5cf6;
-    color: white;
+    background: #10b981;
+    color: #fff;
 }
 
 .edit-btn.editing:hover {
-    background: #7c3aed;
+    background: #059669;
 }
 
-.edit-btn.editing .edit-icon {
-    color: white;
+.edit-btn i {
+    font-size: 12px;
 }
 
 /* Payment Section Styles */
@@ -2815,20 +2817,23 @@ function hideValidationAlert() {
 function updateEditButtonState(sectionId, isEditing) {
     const section = document.getElementById(sectionId);
     const editBtn = section.querySelector('.edit-btn');
-    const editIcon = section.querySelector('.edit-icon');
+    const editLabel = section.querySelector('.edit-label');
+    const editIcon = section.querySelector('.edit-btn i');
     
-    if (!editBtn || !editIcon) {
+    if (!editBtn || !editLabel || !editIcon) {
         console.error('Edit button or icon not found for section:', sectionId);
         return;
     }
     
     if (isEditing) {
         editBtn.classList.add('editing');
-        editIcon.textContent = '✓'; // Checkmark when editing
+        editIcon.className = 'fas fa-check';
+        editLabel.textContent = 'Done';
         editBtn.title = 'Exit edit mode';
     } else {
         editBtn.classList.remove('editing');
-        editIcon.textContent = '✎'; // Pencil when viewing
+        editIcon.className = 'fas fa-edit';
+        editLabel.textContent = 'Edit';
         editBtn.title = 'Edit';
     }
 }

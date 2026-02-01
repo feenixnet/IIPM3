@@ -1,4 +1,13 @@
 /* Enhanced IIPM Portal Styles */
+:root {
+  --iipm-primary-dark: #2d2a26;
+  --iipm-primary: #715091;
+  --iipm-primary-muted: #898a8d;
+  --iipm-secondary-turquoise: #62cbc9;
+  --iipm-secondary-orange: #ff6c37;
+  --iipm-secondary-seafoam: #90d5ac;
+  --iipm-secondary-champagne: #f1e4b2;
+}
 
 /* Custom Select Styles - Shared Component */
 .custom-select-container {
@@ -25,12 +34,12 @@
 }
 
 .select-trigger:hover {
-  border-color: #8b5a96;
+  border-color: #715091;
 }
 
 .select-trigger.active {
-  border-color: #8b5a96;
-  box-shadow: 0 0 0 4px rgba(139, 90, 150, 0.1);
+  border-color: #715091;
+  box-shadow: 0 0 0 4px rgba(113, 80, 145, 0.1);
 }
 
 .select-placeholder {
@@ -49,7 +58,7 @@
   left: 0;
   right: 0;
   background: white;
-  border: 2px solid #8b5a96;
+  border: 2px solid #715091;
   border-radius: 8px;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
   z-index: 1000;
@@ -77,8 +86,8 @@
 }
 
 .select-search input:focus {
-  border-color: #8b5a96;
-  box-shadow: 0 0 0 2px rgba(139, 90, 150, 0.1);
+  border-color: #715091;
+  box-shadow: 0 0 0 2px rgba(113, 80, 145, 0.1);
 }
 
 .select-options {
@@ -103,7 +112,7 @@
 
 .select-option.selected {
   background: #f0f9ff;
-  color: #8b5a96;
+  color: #715091;
 }
 
 .option-name {
@@ -161,7 +170,7 @@
 /* Ensure icons are properly sized */
 .stat-icon i {
   font-size: 2rem;
-  color: #8b5a96;
+  color: #715091;
 }
 
 .btn-icon i {
@@ -193,7 +202,7 @@
 .card-icon i,
 .option-icon i {
   font-size: 2rem;
-  color: #8b5a96;
+  color: #715091;
 }
 
 .period-icon i {
@@ -203,7 +212,7 @@
 
 .unassigned-icon i {
   font-size: 3rem;
-  color: #8b5a96;
+  color: #715091;
 }
 
 .alert-icon i {
@@ -218,12 +227,12 @@
 .email-verification-page {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   line-height: 1.6;
-  color: #333;
+  color: var(--iipm-primary-dark);
 }
 
 /* Enhanced Portal Header - Add proper spacing from header */
 .portal-header {
-  background: linear-gradient(135deg, #8b5a96 0%, #6b4c93 100%);
+  background: linear-gradient(135deg, #715091 0%, #715091 100%);
   color: white;
   padding: 40px 0;
   margin-bottom: 30px;
@@ -340,7 +349,7 @@
   background: white;
   border-radius: 12px;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
-  min-width: 220px;
+  min-width: 320px;
   display: none;
   z-index: 1000;
   overflow: hidden;
@@ -371,11 +380,12 @@
   border-bottom: 1px solid #f3f4f6;
   transition: all 0.2s ease;
   font-weight: 500;
+  white-space: nowrap;
 }
 
 .dropdown-menu a:hover {
   background: #f8fafc;
-  color: #8b5a96;
+  color: #715091;
   padding-left: 24px;
 }
 
@@ -411,7 +421,7 @@
   left: 0;
   right: 0;
   height: 4px;
-  background: linear-gradient(90deg, #8b5a96, #6b4c93);
+  background: linear-gradient(90deg, #715091, #715091);
 }
 
 .dashboard-card:hover {
@@ -587,14 +597,14 @@
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #8b5a96 0%, #6b4c93 100%);
+  background: linear-gradient(135deg, #715091 0%, #715091 100%);
   color: white;
-  box-shadow: 0 4px 15px rgba(139, 90, 150, 0.3);
+  box-shadow: 0 4px 15px rgba(113, 80, 145, 0.3);
 }
 
 .btn-primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(139, 90, 150, 0.4);
+  box-shadow: 0 8px 25px rgba(113, 80, 145, 0.4);
 }
 
 .btn-secondary {
@@ -615,8 +625,8 @@
 
 .btn-outline:hover {
   background: #f9fafb;
-  border-color: #8b5a96;
-  color: #8b5a96;
+  border-color: #715091;
+  color: #715091;
 }
 
 .btn-large {
@@ -704,9 +714,9 @@
 }
 
 .action-item:hover {
-  border-color: #8b5a96;
+  border-color: #715091;
   transform: translateY(-3px);
-  box-shadow: 0 8px 25px rgba(139, 90, 150, 0.15);
+  box-shadow: 0 8px 25px rgba(113, 80, 145, 0.15);
 }
 
 .action-icon {
@@ -740,7 +750,7 @@
 }
 
 .action-link {
-  color: #8b5a96;
+  color: #715091;
   font-size: 1.5rem;
   text-decoration: none;
   font-weight: bold;
@@ -771,7 +781,7 @@
   display: block;
   font-size: 2rem;
   font-weight: 700;
-  color: #8b5a96;
+  color: #715091;
   margin-bottom: 5px;
 }
 
@@ -865,7 +875,7 @@
 
 /* Enhanced Registration Styles */
 .registration-hero {
-  background: linear-gradient(135deg, #8b5a96 0%, #6b4c93 100%);
+  background: linear-gradient(135deg, #715091 0%, #715091 100%);
   color: white;
   padding: 80px 0;
   text-align: center;
@@ -945,7 +955,7 @@
 
 .form-section h3 {
   color: #1f2937;
-  border-bottom: 3px solid #8b5a96;
+  border-bottom: 3px solid #715091;
   padding-bottom: 10px;
   margin-bottom: 30px;
   font-size: 1.3rem;
@@ -986,8 +996,8 @@
 .form-group select:focus,
 .form-group textarea:focus {
   outline: none;
-  border-color: #8b5a96;
-  box-shadow: 0 0 0 4px rgba(139, 90, 150, 0.1);
+  border-color: #715091;
+  box-shadow: 0 0 0 4px rgba(113, 80, 145, 0.1);
   transform: translateY(-1px);
 }
 
@@ -1127,7 +1137,7 @@
   font-size: 1.25rem;
   font-weight: 600;
   color: #1f2937;
-  border-bottom: 2px solid #8b5a96;
+  border-bottom: 2px solid #715091;
   padding-bottom: 8px;
   margin-bottom: 24px;
 }
@@ -1149,14 +1159,14 @@
   content: "✓";
   position: absolute;
   left: 0;
-  color: #8b5a96;
+  color: #715091;
   font-weight: bold;
   font-size: 16px;
 }
 
 .contact-list li::before {
   content: "•";
-  color: #8b5a96;
+  color: #715091;
 }
 
 .info-card p {
@@ -1166,7 +1176,7 @@
 }
 
 .info-card a {
-  color: #8b5a96;
+  color: #715091;
   text-decoration: none;
   font-weight: 500;
 }
@@ -1385,9 +1395,9 @@ input[type="checkbox"]:disabled:checked {
 }
 
 .membership-type-option:hover {
-  border-color: #8b5a96;
+  border-color: #715091;
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(139, 90, 150, 0.15);
+  box-shadow: 0 4px 12px rgba(113, 80, 145, 0.15);
 }
 
 .membership-type-option input[type="radio"] {
@@ -1405,7 +1415,7 @@ input[type="checkbox"]:disabled:checked {
   height: 24px;
   width: 24px;
   background-color: white;
-  border: 2px solid #8b5a96;
+  border: 2px solid #715091;
   border-radius: 50%;
   transition: all 0.2s ease;
 }
@@ -1419,7 +1429,7 @@ input[type="checkbox"]:disabled:checked {
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  background: #8b5a96;
+  background: #715091;
 }
 
 .membership-type-option input[type="radio"]:checked ~ .radio-custom::after {
@@ -1439,11 +1449,11 @@ input[type="checkbox"]:disabled:checked {
 }
 
 .membership-type-option input[type="radio"]:checked ~ .option-content {
-  color: #8b5a96;
+  color: #715091;
 }
 
 .membership-type-option input[type="radio"]:checked + .radio-custom {
-  border-color: #8b5a96;
+  border-color: #715091;
   background-color: white;
 }
 
@@ -1468,11 +1478,11 @@ input[type="checkbox"]:disabled:checked {
 }
 
 .membership-type-option input[type="radio"]:checked ~ .option-content strong {
-  color: #8b5a96;
+  color: #715091;
 }
 
 .membership-type-option input[type="radio"]:focus ~ .radio-custom {
-  box-shadow: 0 0 0 4px rgba(139, 90, 150, 0.2);
+  box-shadow: 0 0 0 4px rgba(113, 80, 145, 0.2);
 }
 
 /* Make the membership type options more prominent */

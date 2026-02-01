@@ -131,13 +131,20 @@ function iipm_handle_stripe_payment_redirect() {
 		$order_id = isset($_GET['order_id']) ? intval($_GET['order_id']) : 0;
 		$order_key = isset($_GET['key']) ? sanitize_text_field($_GET['key']) : '';
 		
-		// Verify order exists and key matches
+		// Verify order exists and key matches (attempt Stripe session check if webhook didn't update)
 		if ($order_id > 0) {
 			$order = wc_get_order($order_id);
 			if ($order && $order->get_order_key() === $order_key) {
-				// Update order status to completed (not processing - these are virtual products)
-				if ($order->get_status() === 'pending' || $order->get_status() === 'processing') {
-					$order->update_status('completed', __('Payment completed via Stripe Checkout.', 'iipm'));
+				$stripe_session_id = $order->get_meta('_stripe_checkout_session_id');
+				if ($stripe_session_id && class_exists('WC_Stripe_API')) {
+					$session = WC_Stripe_API::request(array(), 'checkout/sessions/' . $stripe_session_id, 'GET');
+					if (!is_wp_error($session) && empty($session->error)) {
+						if (!empty($session->payment_status) && $session->payment_status === 'paid') {
+							if ($order->get_status() === 'pending' || $order->get_status() === 'processing') {
+								$order->update_status('completed', __('Payment confirmed via Stripe Checkout.', 'iipm'));
+							}
+						}
+					}
 				}
 			}
 		}
@@ -928,7 +935,7 @@ function iipm_get_payment_organizations() {
 		}
 
 		$organizations[] = array(
-			'id' => intval($row->id),
+		'id' => intval($row->id),
 		'organisation_name' => $row->name ?? '',
 		'contact_email' => $row->contact_email ?? '',
 		'contact_phone' => $row->contact_phone ?? '',

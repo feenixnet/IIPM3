@@ -206,7 +206,7 @@
 
 			.user-dropdown-menu a:hover {
 				background: #f8fafc !important;
-				color: #8b5a96 !important;
+				color: #715091 !important;
 				padding-left: 24px !important;
 			}
 

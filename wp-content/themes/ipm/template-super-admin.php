@@ -58,7 +58,7 @@ get_header();
 
 /* Hero Section */
 .dashboard-hero {
-    background: linear-gradient(135deg, #6b4c93 0%, #9b6bb3 100%);
+    background: linear-gradient(135deg, #715091 0%, #715091 100%);
     padding: 40px 0;
     color: white;
     position: relative;
@@ -153,7 +153,7 @@ get_header();
 }
 
 .card-header h2 {
-    color: #6b4c93;
+    color: #715091;
     margin: 0;
     font-size: 18px;
     font-weight: 600;
@@ -217,7 +217,7 @@ get_header();
     cursor: pointer;
     transition: all 0.2s ease;
     background: #f0f0f1;
-    color: #6b4c93;
+    color: #715091;
     min-width: 120px;
     text-align: center;
     margin: 0;
@@ -225,16 +225,16 @@ get_header();
 
 .action-buttons .button:hover {
     background: #e5e5e5;
-    color: #553c75;
+    color: #715091;
 }
 
 .action-buttons .button-primary {
-    background: #6b4c93;
+    background: #715091;
     color: white;
 }
 
 .action-buttons .button-primary:hover {
-    background: #553c75;
+    background: #715091;
     color: white;
 }
 
@@ -272,7 +272,7 @@ get_header();
 
 .wp-list-table th {
     background: #f8f9fa;
-    color: #6b4c93;
+    color: #715091;
     padding: 12px;
     text-align: left;
     font-weight: 600;
@@ -302,7 +302,7 @@ get_header();
 }
 
 .password-modal h3 {
-    color: #6b4c93;
+    color: #715091;
     margin-top: 0;
 }
 
@@ -606,7 +606,7 @@ if (isset($_POST['add_super_admin']) && isset($_POST['super_admin_email'])) {
 /* Hero Section Styling */
 .dashboard-hero {
     position: relative;
-    background: linear-gradient(135deg, #6b4c93 0%, #9b6bb3 100%);
+    background: linear-gradient(135deg, #715091 0%, #715091 100%);
     padding: 40px 0;
     margin-bottom: 30px;
     z-index: 2;
@@ -634,7 +634,7 @@ if (isset($_POST['add_super_admin']) && isset($_POST['super_admin_email'])) {
 }
 
 .card-header h2 {
-    color: #6b4c93;
+    color: #715091;
     margin: 0;
     font-size: 18px;
     font-weight: 600;

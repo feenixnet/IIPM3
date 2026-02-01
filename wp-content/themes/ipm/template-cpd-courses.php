@@ -15,22 +15,21 @@ $current_user = wp_get_current_user();
 $user_id = $current_user->ID;
 $is_admin = current_user_can('administrator') || current_user_can('iipm_admin');
 
-// Middleware: Validate admin access requires tyear and user_id params
+// Middleware: Validate admin access requires user_id param
 if ($is_admin) {
     $has_user_id = isset($_GET['user_id']) && !empty($_GET['user_id']);
-    $has_tyear = isset($_GET['tyear']) && !empty($_GET['tyear']);
     
-    // Admin must provide both parameters
-    if (!$has_user_id || !$has_tyear) {
+    // Admin must provide user_id
+    if (!$has_user_id) {
         wp_die(
-            '<h1>Access Denied</h1><p>Administrators must access this page with valid <code>user_id</code> and <code>tyear</code> parameters.</p>',
+            '<h1>Access Denied</h1><p>Administrators must access this page with a valid <code>user_id</code> parameter.</p>',
             'Invalid Access',
             array('response' => 403, 'back_link' => true)
         );
     }
     
     $target_user_id = intval($_GET['user_id']);
-    $target_year = intval($_GET['tyear']);
+    $target_year = date('Y');
     
     // Validate user_id exists
     $target_user = get_userdata($target_user_id);
@@ -39,18 +38,6 @@ if ($is_admin) {
             '<h1>Invalid User</h1><p>The specified user ID does not exist.</p>',
             'User Not Found',
             array('response' => 404, 'back_link' => true)
-        );
-    }
-    
-    // Validate tyear is >= user's registration year
-    $user_registered = $target_user->user_registered;
-    $user_registration_year = date('Y', strtotime($user_registered));
-    
-    if ($target_year < $user_registration_year) {
-        wp_die(
-            '<h1>Invalid Year</h1><p>The specified year (' . $target_year . ') is before the user\'s registration year (' . $user_registration_year . ').</p>',
-            'Invalid Year',
-            array('response' => 400, 'back_link' => true)
         );
     }
     
@@ -65,25 +52,9 @@ if ($is_admin) {
     // Include CPD record API
     require_once get_template_directory() . '/includes/cpd-record-api.php';
     
-    // If tyear is provided in URL, use it; otherwise use current date year
-    // This allows members to access courses page with a specific year from member portal
-    if (isset($_GET['tyear']) && !empty($_GET['tyear'])) {
-        $target_year = intval($_GET['tyear']);
-        
-        // Validate year is >= user's registration year
-        $user_registered = $current_user->user_registered;
-        $user_registration_year = date('Y', strtotime($user_registered));
-        
-        if ($target_year < $user_registration_year) {
-            // If invalid year, fall back to current date year
-            $target_year = date('Y');
-        }
-    } else {
-        // CPD Courses: Use current date year directly (not CPD year logic)
-        // Note: Payment Management page uses different logic (CPD year N = membership expiration Feb 1, N+1)
-        $target_year = date('Y');
-    }
-    
+    // CPD Courses: Use current date year for display only
+    $target_year = date('Y');
+
     $current_year = $target_year;
 }
 
@@ -92,19 +63,6 @@ require_once get_template_directory() . '/includes/cpd-courses-api.php';
 
 // Always allow logging on the CPD courses page (no logging period toggle)
 $is_logging_period_active = true;
-
-// Check if CPD is already submitted for current year
-global $wpdb;
-$is_submitted = false;
-$submitted_rows = $wpdb->get_results($wpdb->prepare(
-    "SELECT * FROM {$wpdb->prefix}test_iipm_submissions WHERE user_id = %d AND year = %d",
-    $target_user_id,
-    $current_year
-));
-if(count($submitted_rows) > 0) {
-    $is_submitted = true;
-}
-
 
 get_header(); 
 ?>
@@ -118,7 +76,7 @@ get_header();
                 <p style="color: rgba(255,255,255,0.9); font-size: 1.1rem;">
                 <?php 
                 if ($is_admin_mode) {
-                    echo 'Managing CPD courses for ' . esc_html($target_user->display_name) . ' (Year: ' . $current_year . ')';
+                    echo 'Managing CPD courses for ' . esc_html($target_user->display_name);
                 } else {
                     echo 'Select the course in this library to train CPD.';
                 }
@@ -238,7 +196,7 @@ get_header();
     }
 
     .cpd-header {
-        background: linear-gradient(135deg, #8b5a96 0%, #6b4c93 100%);
+        background: linear-gradient(135deg, #715091 0%, #715091 100%);
         color: white;
         padding: 40px 0;
         margin-bottom: 30px;
@@ -466,8 +424,8 @@ get_header();
 
     .provider-select:focus {
         outline: none;
-        border-color: #8b5a96;
-        box-shadow: 0 0 0 3px rgba(139, 90, 150, 0.1);
+        border-color: #715091;
+        box-shadow: 0 0 0 3px rgba(113, 80, 145, 0.1);
     }
 
     .provider-select:hover {
@@ -487,7 +445,7 @@ get_header();
     .form-checkbox {
         width: 18px;
         height: 18px;
-        accent-color: #8b5a96;
+        accent-color: #715091;
         cursor: pointer;
     }
     
@@ -611,7 +569,7 @@ get_header();
 
     .add-course-btn {
         width: 100%;
-        background: linear-gradient(135deg, #8b5a96 0%, #6b4c93 100%);
+        background: linear-gradient(135deg, #715091 0%, #715091 100%);
         color: white;
         border: none;
         padding: 12px 16px;
@@ -626,18 +584,18 @@ get_header();
         gap: 8px;
         text-transform: uppercase;
         letter-spacing: 0.5px;
-        box-shadow: 0 2px 4px rgba(139, 90, 150, 0.2);
+        box-shadow: 0 2px 4px rgba(113, 80, 145, 0.2);
     }
 
     .add-course-btn:hover:not(:disabled) {
-        background: linear-gradient(135deg, #6b4c93 0%, #5a3d7a 100%);
+        background: linear-gradient(135deg, #715091 0%, #715091 100%);
         transform: translateY(-1px);
-        box-shadow: 0 4px 8px rgba(139, 90, 150, 0.3);
+        box-shadow: 0 4px 8px rgba(113, 80, 145, 0.3);
     }
 
     .add-course-btn:active:not(:disabled) {
         transform: translateY(0);
-        box-shadow: 0 2px 4px rgba(139, 90, 150, 0.2);
+        box-shadow: 0 2px 4px rgba(113, 80, 145, 0.2);
     }
 
     .add-course-btn.disabled {
@@ -855,8 +813,8 @@ get_header();
 
     .pagination-btn:hover:not(:disabled) {
         background: #f9fafb;
-        border-color: #8b5a96;
-        color: #8b5a96;
+        border-color: #715091;
+        color: #715091;
     }
 
     .pagination-btn:disabled {
@@ -884,13 +842,13 @@ get_header();
 
     .pagination-number:hover:not(.active) {
         background: #f9fafb;
-        border-color: #8b5a96;
-        color: #8b5a96;
+        border-color: #715091;
+        color: #715091;
     }
 
     .pagination-number.active {
-        background: #8b5a96;
-        border-color: #8b5a96;
+        background: #715091;
+        border-color: #715091;
         color: white;
     }
 
@@ -924,7 +882,7 @@ get_header();
         width: 40px;
         height: 40px;
         border: 4px solid #e5e7eb;
-        border-top: 4px solid #8b5a96;
+        border-top: 4px solid #715091;
         border-radius: 50%;
         animation: spin 1s linear infinite;
     }
@@ -982,34 +940,12 @@ get_header();
 </style>
 
 <script>
-    /**
-     * Get the current CPD year based on date logic
-     * If current date is before January 31st, return previous year
-     * Otherwise return current year
-     * This matches the PHP function iipm_get_cpd_logging_year()
-     * 
-     * @return {number} The CPD year
-     */
-    function getCpdYear() {
-        const now = new Date();
-        const currentYear = now.getFullYear();
-        
-        // CPD Courses: Always use current date year (not CPD year logic)
-        // If today is 2026, returns 2026
-        // Note: Payment Management page uses different logic (CPD year N = membership expiration Feb 1, N+1)
-        return currentYear;
-    }
-    
     // Define ajaxurl for AJAX calls
     var ajaxurl = '<?php echo admin_url('admin-ajax.php'); ?>';
     
     // Extract URL parameters
     const urlParams = new URLSearchParams(window.location.search);
     let userIdForCourses = urlParams.get('user_id') ? parseInt(urlParams.get('user_id')) : null;
-    
-    // CPD logging year - use tyear from URL if provided, otherwise use current date year
-    const tyearFromUrl = urlParams.get('tyear') ? parseInt(urlParams.get('tyear')) : null;
-    var cpdLoggingYear = tyearFromUrl || getCpdYear();
     
     // Global variables for pagination
     let currentPage = 1;
@@ -1182,28 +1118,10 @@ get_header();
                 const confirmation_id = isCourseInLearningPath(course) ? isCourseInLearningPath(course).confirmation_id : null;
                 console.log('isCourseCompleted(course):', isCourseCompleted(course));
                 const isCompleted = isCourseCompleted(course);
-                const isLoggingPeriodActive = <?php echo $is_logging_period_active ? 'true' : 'false'; ?>;
-                
-                // Check if CPD is submitted
-                const isCpdSubmitted = <?php echo $is_submitted ? 'true' : 'false'; ?>;
-                
-                // Determine button state based on logging period, course status, and CPD submission
+                // Determine button state based on course status
                 let addButtonClass, addButtonTitle, addButtonIcon, isDisabled, buttonText;
                 
-                if (isCpdSubmitted) {
-                    // If CPD is submitted, don't show any buttons
-                    addButtonClass = 'add-course-btn disabled';
-                    addButtonTitle = 'CPD already submitted';
-                    addButtonIcon = '<i class="fas fa-lock"></i>';
-                    buttonText = 'CPD Submitted';
-                    isDisabled = true;
-                } else if (!isLoggingPeriodActive) {
-                    addButtonClass = 'add-course-btn disabled';
-                    addButtonTitle = 'Logging period closed';
-                    addButtonIcon = '<i class="fas fa-lock"></i>';
-                    buttonText = 'Logging Closed';
-                    isDisabled = true;
-                } else if (isInLearningPath) {
+                if (isInLearningPath) {
                     // Show REMOVE button for added courses
                     addButtonClass = 'remove-course-btn';
                     addButtonTitle = 'Remove from learning path';
@@ -1295,12 +1213,6 @@ get_header();
                     if (this.classList.contains('remove-course-btn')) {
                         removeCourseFromLearningPath(course);
                     } else {
-                        // Double-check logging period before allowing course addition
-                        const isLoggingPeriodActive = <?php echo $is_logging_period_active ? 'true' : 'false'; ?>;
-                        if (!isLoggingPeriodActive) {
-                            showNotification('Cannot add courses during logging period closure', 'error');
-                            return;
-                        }
                         addCourseToLearningPath(course);
                     }
                 });
@@ -1340,26 +1252,6 @@ get_header();
                 return;
             }
             
-            // Validate course date year matches selected year
-            if (course.course_date) {
-                try {
-                    // Parse course date (format: DD/MM/YYYY or DD-MM-YYYY)
-                    const dateStr = course.course_date.replace(/\//g, '-');
-                    const dateParts = dateStr.split('-');
-                    if (dateParts.length === 3) {
-                        const courseYear = parseInt(dateParts[2]);
-                        const selectedYear = parseInt(cpdLoggingYear);
-                        
-                        if (courseYear && selectedYear && courseYear !== selectedYear) {
-                            showNotification(`This course is for ${courseYear}, but you selected ${selectedYear}. Please select the correct year.`, 'error');
-                            return;
-                        }
-                    }
-                } catch (e) {
-                    console.error('Error parsing course date:', e);
-                }
-            }
-            
             // Show loading state on the button
             const addBtn = event.target.closest('.add-course-btn');
             if (addBtn) {
@@ -1386,7 +1278,6 @@ get_header();
             formData.append('course_cpd_mins', course.course_cpd_mins);
             formData.append('crs_provider', course.crs_provider);
             formData.append('user_id', userIdForCourses);
-            formData.append('year', cpdLoggingYear);
             
             jQuery.ajax({
                 url: ajaxurl,
@@ -1638,8 +1529,7 @@ get_header();
                 type: 'POST',
                 data: {
                     action: 'iipm_get_courses_in_learning_path',
-                    user_id: userIdForCourses,
-                    year: cpdLoggingYear
+                    user_id: userIdForCourses
                 },
                 success: function(response) {
                     if (response.success && response.data.courses) {

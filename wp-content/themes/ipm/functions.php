@@ -1700,25 +1700,24 @@ function iipm_process_member_registration($data, $token = null) {
         $address_line3 = sanitize_text_field($data['address_line_3']);
         $password = $data['password'];
         
-        // For invited users, force the member type and organization from the invitation
-        if ($invitation) {
-            $member_type = $invitation->invitation_type === 'bulk' ? 'organisation' : 'individual';
-            $organisation_id = $invitation->organisation_id;
-            
-            // Fetch organisation name from database if organisation_id exists
-            if ($organisation_id) {
-                $org = $wpdb->get_row($wpdb->prepare(
-                    "SELECT name FROM {$wpdb->prefix}test_iipm_organisations WHERE id = %d",
-                    $organisation_id
-                ));
-                $organisation_name = $org ? $org->name : null;
-            } else {
-                $organisation_name = null;
+        $payment_method = sanitize_text_field($data['payment_method'] ?? 'Direct Invoiced');
+        $member_type = ($payment_method === 'Employer Invoiced') ? 'organisation' : 'individual';
+        $organisation_id = isset($data['organisation_id']) ? intval($data['organisation_id']) : null;
+        $organisation_name = isset($data['organisation_name']) ? sanitize_text_field($data['organisation_name']) : null;
+
+        $billing_address_line1 = $address_line1;
+        $billing_address_line2 = $address_line2;
+        $billing_address_line3 = $address_line3;
+        if ($payment_method === 'Employer Invoiced' && $organisation_id) {
+            $org_address = $wpdb->get_row($wpdb->prepare(
+                "SELECT address_line1, address_line2, address_line3 FROM {$wpdb->prefix}test_iipm_organisations WHERE id = %d",
+                $organisation_id
+            ));
+            if ($org_address) {
+                $billing_address_line1 = $org_address->address_line1 ?? '';
+                $billing_address_line2 = $org_address->address_line2 ?? '';
+                $billing_address_line3 = $org_address->address_line3 ?? '';
             }
-        } else {
-            $member_type = sanitize_text_field($data['member_type'] ?? 'individual');
-            $organisation_id = isset($data['organisation_id']) ? intval($data['organisation_id']) : null;
-            $organisation_name = isset($data['organisation_name']) ? sanitize_text_field($data['organisation_name']) : null;
         }
         
         $gdpr_consent = isset($data['gdpr_consent']) ? 1 : 0;
@@ -1761,7 +1760,16 @@ function iipm_process_member_registration($data, $token = null) {
         
         // Get membership ID and designation from form data
         $membership_id = isset($data['membership_id']) ? intval($data['membership_id']) : null;
+        if (!$membership_id && $invitation && isset($invitation->membership_level)) {
+            $membership_id = intval($invitation->membership_level);
+        }
         $user_designation = isset($data['user_designation']) ? sanitize_text_field($data['user_designation']) : '';
+        if (!$user_designation && $membership_id) {
+            $user_designation = $wpdb->get_var($wpdb->prepare(
+                "SELECT designation FROM {$wpdb->prefix}memberships WHERE id = %d",
+                $membership_id
+            )) ?: '';
+        }
         
         // Determine membership level based on selected membership ID
         $membership_level = 'member'; // default fallback
@@ -1800,9 +1808,9 @@ function iipm_process_member_registration($data, $token = null) {
                     'email_address' => $email,
                     'user_mobile' => sanitize_text_field($data['user_mobile'] ?? ''),
                     'city_or_town' => sanitize_text_field($data['city_or_town'] ?? ''),
-                    'Address_1' => sanitize_text_field($data['address_line_1'] ?? ''),
-                    'Address_2' => sanitize_text_field($data['address_line_2'] ?? ''),
-                    'Address_3' => sanitize_text_field($data['address_line_3'] ?? ''),
+                    'Address_1' => sanitize_text_field($billing_address_line1 ?? ''),
+                    'Address_2' => sanitize_text_field($billing_address_line2 ?? ''),
+                    'Address_3' => sanitize_text_field($billing_address_line3 ?? ''),
                     'user_fullName' => $first_name." ".$last_name,
                     'user_payment_method' => !empty($data['payment_method']) ? sanitize_text_field($data['payment_method']) : 'Direct Invoiced',
                     'sur_name' => sanitize_text_field($last_name ?? ''),
@@ -1825,6 +1833,7 @@ function iipm_process_member_registration($data, $token = null) {
                     'employerDetailsUpdated' => current_time('mysql'),
                     'theUsersStatus' => 'Full Member',
                     'employer_id' => $organisation_id,
+                    'employer_name' => $organisation_name,
                 ),
                 array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s')
             );
@@ -3765,7 +3774,7 @@ function iipm_handle_enhanced_member_registration_v2() {
     //     return;
     // }
     
-    $required_fields = ['first_name', 'last_name', 'email', 'password', 'address', 'membership_id'];
+    $required_fields = ['first_name', 'last_name', 'email', 'password'];
     $missing_fields = [];
     
     foreach ($required_fields as $field) {
@@ -3777,6 +3786,12 @@ function iipm_handle_enhanced_member_registration_v2() {
     if (!empty($missing_fields)) {
         error_log('IIPM: Missing required fields: ' . implode(', ', $missing_fields));
         wp_send_json_error('Missing required fields: ' . implode(', ', $missing_fields));
+        return;
+    }
+
+    $payment_method = sanitize_text_field($_POST['payment_method'] ?? '');
+    if ($payment_method === 'Employer Invoiced' && empty($_POST['organisation_name'])) {
+        wp_send_json_error('Organisation name is required for organisation invoicing');
         return;
     }
     
@@ -7079,8 +7094,8 @@ function iipm_admin_get_user_details() {
     
     // Get profile data from wp_test_iipm_member_profiles
     $profile_data = $wpdb->get_row($wpdb->prepare(
-        "SELECT user_phone, email_address, user_mobile, city_or_town, first_name, sur_name, 
-                user_payment_method, Address_1, Address_2, Address_3,
+        "SELECT user_phone, email_address, user_mobile, city_or_town, first_name, sur_name,
+                employer_name, user_payment_method, Address_1, Address_2, Address_3,
                 email_address_pers, user_phone_pers, user_mobile_pers, 
                 Address_1_pers, Address_2_pers, Address_3_pers, correspondence_email,
                 employer_id, user_notes FROM {$wpdb->prefix}test_iipm_member_profiles WHERE user_id = %d",
@@ -7122,6 +7137,7 @@ function iipm_admin_get_user_details() {
             'city_or_town' => $profile_data ? $profile_data->city_or_town : '',
             'first_name' => $profile_data ? $profile_data->first_name : '',
             'sur_name' => $profile_data ? $profile_data->sur_name : '',
+            'employer_name' => $profile_data ? $profile_data->employer_name : '',
             'user_payment_method' => $profile_data ? $profile_data->user_payment_method : '',
             'Address_1' => $profile_data ? $profile_data->Address_1 : '',
             'Address_2' => $profile_data ? $profile_data->Address_2 : '',
@@ -7200,11 +7216,35 @@ function iipm_admin_update_user_details() {
         
         // Update wp_users table
         if (isset($_POST['user_email'])) {
+            $first_name = sanitize_text_field($_POST['first_name'] ?? '');
+            $sur_name = sanitize_text_field($_POST['sur_name'] ?? '');
+            $full_name = trim($first_name . ' ' . $sur_name);
+            $user_email = sanitize_email($_POST['user_email']);
+            
+            $new_login = $full_name;
+            if ($new_login !== '') {
+                $existing_login = $wpdb->get_var($wpdb->prepare(
+                    "SELECT ID FROM {$wpdb->users} WHERE user_login = %s AND ID != %d",
+                    $new_login,
+                    $user_id
+                ));
+                if ($existing_login) {
+                    $new_login = $new_login . ' ' . $user_id;
+                }
+            } else {
+                $new_login = $user_email;
+            }
+            
             $wpdb->update(
                 $wpdb->users,
-                array('user_email' => sanitize_email($_POST['user_email']), 'display_name' => sanitize_text_field($_POST['first_name']) . " " . sanitize_text_field($_POST['sur_name'])),
+                array(
+                    'user_email' => $user_email,
+                    'display_name' => $full_name,
+                    'user_login' => $new_login,
+                    'user_nicename' => $new_login
+                ),
                 array('ID' => $user_id),
-                array('%s'),
+                array('%s', '%s', '%s', '%s'),
                 array('%d')
             );
         }

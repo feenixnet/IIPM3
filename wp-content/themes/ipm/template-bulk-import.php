@@ -534,7 +534,7 @@ get_header();
 
 /* Bulk Import Styles */
 .bulk-import-hero {
-    background: linear-gradient(135deg, #8b5a96 0%, #6b4c93 100%);
+    background: linear-gradient(135deg, #715091 0%, #715091 100%);
     color: white;
     padding: 60px 0;
     margin-bottom: 40px;
@@ -625,7 +625,7 @@ get_header();
 .step-number {
     width: 30px;
     height: 30px;
-    background: linear-gradient(135deg, #8b5a96, #6b4c93);
+    background: linear-gradient(135deg, #715091, #715091);
     color: white;
     border-radius: 50%;
     display: flex;
@@ -665,7 +665,7 @@ get_header();
 }
 
 .required-columns li strong {
-    color: #8b5a96;
+    color: #715091;
     font-family: monospace;
     background: #f3f4f6;
     padding: 2px 6px;
@@ -734,8 +734,8 @@ get_header();
 
 .bulk-import-form select:focus {
     outline: none;
-    border-color: #8b5a96;
-    box-shadow: 0 0 0 3px rgba(139, 90, 150, 0.1);
+    border-color: #715091;
+    box-shadow: 0 0 0 3px rgba(113, 80, 145, 0.1);
 }
 
 /* File Upload */
@@ -750,7 +750,7 @@ get_header();
 }
 
 .file-upload-area:hover {
-    border-color: #8b5a96;
+    border-color: #715091;
     background: #f3f4f6;
 }
 
@@ -806,7 +806,7 @@ get_header();
 }
 
 .checkbox-label:hover {
-    border-color: #8b5a96;
+    border-color: #715091;
     background: #f8fafc;
 }
 
@@ -825,8 +825,8 @@ get_header();
 }
 
 .checkbox-label input[type="checkbox"]:checked + .checkbox-custom {
-    background: #8b5a96;
-    border-color: #8b5a96;
+    background: #715091;
+    border-color: #715091;
 }
 
 .checkbox-label input[type="checkbox"]:checked + .checkbox-custom::after {
@@ -984,12 +984,12 @@ get_header();
 }
 
 .tab-button.active {
-    color: #8b5a96;
-    border-bottom-color: #8b5a96;
+    color: #715091;
+    border-bottom-color: #715091;
 }
 
 .tab-button:hover {
-    color: #8b5a96;
+    color: #715091;
 }
 
 .tab-content {
@@ -1102,14 +1102,14 @@ get_header();
 }
 
 .btn-primary {
-    background: linear-gradient(135deg, #8b5a96 0%, #6b4c93 100%);
+    background: linear-gradient(135deg, #715091 0%, #715091 100%);
     color: white;
-    box-shadow: 0 4px 15px rgba(139, 90, 150, 0.3);
+    box-shadow: 0 4px 15px rgba(113, 80, 145, 0.3);
 }
 
 .btn-primary:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(139, 90, 150, 0.4);
+    box-shadow: 0 8px 25px rgba(113, 80, 145, 0.4);
 }
 
 .btn-secondary {
@@ -1130,8 +1130,8 @@ get_header();
 
 .btn-outline:hover {
     background: #f9fafb;
-    border-color: #8b5a96;
-    color: #8b5a96;
+    border-color: #715091;
+    color: #715091;
 }
 
 .btn-large {
@@ -1142,7 +1142,7 @@ get_header();
 .btn-small {
     padding: 6px 12px;
     font-size: 0.75rem;
-    background: #8b5a96;
+    background: #715091;
     color: white;
     border: none;
     border-radius: 4px;
@@ -1151,7 +1151,7 @@ get_header();
 }
 
 .btn-small:hover {
-    background: #6b4c93;
+    background: #715091;
 }
 
 .btn.loading .btn-text {
@@ -1260,7 +1260,7 @@ get_header();
 
 .organisation-badge {
     display: inline-block;
-    background: linear-gradient(135deg, #8b5a96, #6b4c93);
+    background: linear-gradient(135deg, #715091, #715091);
     color: white;
     padding: 8px 16px;
     border-radius: 20px;

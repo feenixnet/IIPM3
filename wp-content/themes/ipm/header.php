@@ -279,7 +279,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 					background: white !important;
 					border-radius: 12px !important;
 					box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15) !important;
-					min-width: 200px !important;
+					min-width: 250px !important;
 					display: none !important;
 					z-index: 1000 !important;
 					overflow: hidden !important;
@@ -322,7 +322,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
 				.user-dropdown-menu a:hover {
 					background: #f8fafc !important;
-					color: #8b5a96 !important;
+					color: #715091 !important;
 					padding-left: 24px !important;
 				}
 
@@ -378,7 +378,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 					align-items: center !important;
 					gap: 10px !important;
 					padding: 14px 20px !important;
-					color: #8b5a96 !important;
+					color: #715091 !important;
 					text-decoration: none !important;
 					font-weight: 500 !important;
 					font-size: 14px !important;

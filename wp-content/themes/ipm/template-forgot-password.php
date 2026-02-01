@@ -56,7 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reset_password_submit
                                 <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="max-width: 600px; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
                                     <!-- Header -->
                                     <tr>
-                                        <td style="background: linear-gradient(135deg, #6b4c93 0%, #8b5a96 100%); padding: 40px 30px; text-align: center;">
+                                        <td style="background: linear-gradient(135deg, #715091 0%, #715091 100%); padding: 40px 30px; text-align: center;">
                                             <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700; line-height: 1.2;">
                                                 🔐<br>
                                                 Password Reset Request
@@ -79,7 +79,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reset_password_submit
                                             <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 30px 0;">
                                                 <tr>
                                                     <td align="center">
-                                                        <a href="' . esc_url($reset_url) . '" style="display: inline-block; padding: 14px 32px; background-color: #6b4c93; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px; text-align: center;">Reset Password</a>
+                                                        <a href="' . esc_url($reset_url) . '" style="display: inline-block; padding: 14px 32px; background-color: #715091; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px; text-align: center;">Reset Password</a>
                                                     </td>
                                                 </tr>
                                             </table>
@@ -88,7 +88,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reset_password_submit
                                                 Or copy and paste this link into your browser:
                                             </p>
                                             <p style="margin: 0 0 20px 0; color: #6b7280; font-size: 14px; line-height: 1.6; word-break: break-all;">
-                                                <a href="' . esc_url($reset_url) . '" style="color: #6b4c93; text-decoration: none;">' . esc_html($reset_url) . '</a>
+                                                <a href="' . esc_url($reset_url) . '" style="color: #715091; text-decoration: none;">' . esc_html($reset_url) . '</a>
                                             </p>
                                             
                                             <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; margin: 20px 0; border-radius: 4px;">
@@ -110,7 +110,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reset_password_submit
                                                 <strong>Irish Institute of Pensions Management</strong>
                                             </p>
                                             <p style="margin: 0 0 10px 0; color: #6b7280; font-size: 14px;">
-                                                Email: <a href="mailto:info@iipm.ie" style="color: #6b4c93; text-decoration: none;">info@iipm.ie</a>
+                                                Email: <a href="mailto:info@iipm.ie" style="color: #715091; text-decoration: none;">info@iipm.ie</a>
                                             </p>
                                             <p style="margin: 0; color: #9ca3af; font-size: 12px;">
                                                 © ' . date('Y') . ' IIPM. All rights reserved.
@@ -180,7 +180,7 @@ get_header();
                     </div>
                     
                     <div style="text-align: center; margin-top: 20px;">
-                        <a href="<?php echo home_url('/login/'); ?>" style="color: #6b4c93; text-decoration: none;">Back to Login</a>
+                        <a href="<?php echo home_url('/login/'); ?>" style="color: #715091; text-decoration: none;">Back to Login</a>
                     </div>
                 </form>
                 <?php else: ?>

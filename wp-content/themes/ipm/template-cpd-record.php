@@ -160,7 +160,7 @@ get_header();
     }
 
     .cpd-header {
-        background: linear-gradient(135deg, #8b5a96 0%, #6b4c93 100%);
+        background: linear-gradient(135deg, #715091 0%, #715091 100%);
         color: white;
         padding: 40px 0;
         margin-bottom: 30px;
@@ -400,7 +400,7 @@ get_header();
 
     .progress-percentage {
         font-weight: 600;
-        color: #8b5a96;
+        color: #715091;
         font-size: 1.1rem;
     }
 
@@ -415,7 +415,7 @@ get_header();
 
     .progress-fill {
         height: 100%;
-        background: linear-gradient(90deg, #8b5a96 0%, #6b4c93 100%);
+        background: linear-gradient(90deg, #715091 0%, #715091 100%);
         border-radius: 4px;
         transition: width 0.3s ease;
         width: 0%;
@@ -498,7 +498,7 @@ get_header();
 
     .summary-hours {
         font-weight: 600;
-        color: #8b5a96;
+        color: #715091;
     }
 
     .summary-total {
@@ -516,7 +516,7 @@ get_header();
 
     .total-value {
         font-weight: 600;
-        color: #8b5a96;
+        color: #715091;
         font-size: 18px;
     }
 
@@ -536,7 +536,7 @@ get_header();
         width: 40px;
         height: 40px;
         border: 4px solid #e5e7eb;
-        border-top: 4px solid #8b5a96;
+        border-top: 4px solid #715091;
         border-radius: 50%;
         animation: spin 1s linear infinite;
     }
@@ -646,7 +646,7 @@ get_header();
 
     .course-hours {
         font-weight: 600;
-        color: #8b5a96;
+        color: #715091;
     }
 
     .course-date {

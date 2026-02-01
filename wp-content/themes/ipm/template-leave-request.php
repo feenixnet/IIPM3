@@ -458,7 +458,7 @@ foreach ($all_leave_requests as $request) {
 }
 
 .portal-title {
-    color: #8b5a96;
+    color: #715091;
     font-size: 2.5rem;
     font-weight: 700;
     margin: 0;
@@ -652,7 +652,7 @@ foreach ($all_leave_requests as $request) {
 }
 
 .leave-requests-section h2 {
-    color: #8b5a96;
+    color: #715091;
     font-size: 1.5rem;
     margin-bottom: 20px;
     font-weight: 600;
@@ -664,7 +664,7 @@ foreach ($all_leave_requests as $request) {
     padding: 20px;
     margin-bottom: 15px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    border-left: 4px solid #8b5a96;
+    border-left: 4px solid #715091;
 }
 
 .request-header {
@@ -745,7 +745,7 @@ foreach ($all_leave_requests as $request) {
 }
 
 .helpful-link {
-    color: #8b5a96;
+    color: #715091;
     text-decoration: none;
     font-weight: 500;
     transition: color 0.3s ease;
@@ -788,7 +788,7 @@ foreach ($all_leave_requests as $request) {
 
 .modal-header h2 {
     margin: 0;
-    color: #8b5a96;
+    color: #715091;
     font-size: 1.5rem;
     font-weight: 600;
 }
@@ -909,13 +909,13 @@ foreach ($all_leave_requests as $request) {
 }
 
 .calendar-day.selected {
-    background: #8b5a96;
+    background: #715091;
     color: white;
 }
 
 .calendar-day.in-range {
     background: #e8d5ea;
-    color: #8b5a96;
+    color: #715091;
 }
 
 .form-section {
@@ -950,7 +950,7 @@ foreach ($all_leave_requests as $request) {
 }
 
 .date-format-tooltip:hover i {
-    color: #8b5a96;
+    color: #715091;
 }
 
 .date-format-tooltip::after {
@@ -1007,11 +1007,11 @@ foreach ($all_leave_requests as $request) {
 .form-group input:focus,
 .form-group textarea:focus {
     outline: none;
-    border-color: #8b5a96;
+    border-color: #715091;
 }
 
 .btn-submit-leave {
-    background: #8b5a96;
+    background: #715091;
     color: white;
     border: none;
     padding: 15px 30px;
@@ -1056,7 +1056,7 @@ foreach ($all_leave_requests as $request) {
 }
 
 .btn-ok {
-    background: #8b5a96;
+    background: #715091;
     color: white;
     border: none;
     padding: 12px 40px;
@@ -1367,7 +1367,7 @@ foreach ($all_leave_requests as $request) {
 }
 
 .btn-ok-cancel {
-    background: #8b5a96;
+    background: #715091;
     color: white;
     border: none;
     padding: 12px 40px;

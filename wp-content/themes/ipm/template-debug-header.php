@@ -418,7 +418,7 @@ add_action('wp_ajax_iipm_debug_create_files', function() {
 
 <style>
 .header-simple {
-    background: #8b5a96;
+    background: #715091;
     padding: 15px 0;
     color: white;
 }

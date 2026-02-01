@@ -227,7 +227,7 @@ get_header();
 }
 
 .role-badge.corporate {
-    background: #8b5a96;
+    background: #715091;
     color: white;
 }
 
@@ -335,7 +335,7 @@ get_header();
 }
 
 .nav-card.primary {
-    background: linear-gradient(135deg, #8b5a96 0%, #6b4c93 100%);
+    background: linear-gradient(135deg, #715091 0%, #715091 100%);
     color: white;
 }
 
@@ -344,7 +344,7 @@ get_header();
 }
 
 .nav-card.corporate {
-    border-left: 4px solid #8b5a96;
+    border-left: 4px solid #715091;
 }
 
 .nav-card.council {
@@ -388,7 +388,7 @@ get_header();
 }
 
 .nav-card:not(.primary) .card-button {
-    background: #8b5a96;
+    background: #715091;
     color: white;
 }
 
@@ -458,7 +458,7 @@ get_header();
     display: block;
     font-size: 2rem;
     font-weight: 700;
-    color: #8b5a96;
+    color: #715091;
     margin-bottom: 4px;
 }
 
@@ -472,12 +472,12 @@ get_header();
     flex-direction: column;
     align-items: center;
     text-decoration: none;
-    color: #8b5a96;
+    color: #715091;
     transition: color 0.2s ease;
 }
 
 .stat-link:hover {
-    color: #6b4c93;
+    color: #715091;
 }
 
 .stat-link .icon {
@@ -520,12 +520,12 @@ get_header();
 }
 
 .personal-stat-card.action-card {
-    background: linear-gradient(135deg, #8b5a96 0%, #6b4c93 100%);
+    background: linear-gradient(135deg, #715091 0%, #715091 100%);
     color: white;
 }
 
 .personal-stat-card.action-card:hover {
-    background: linear-gradient(135deg, #6b4c93 0%, #553c75 100%);
+    background: linear-gradient(135deg, #715091 0%, #715091 100%);
 }
 
 .stat-icon {
@@ -541,7 +541,7 @@ get_header();
     display: block;
     font-size: 1.5rem;
     font-weight: 700;
-    color: #8b5a96;
+    color: #715091;
     margin-bottom: 4px;
 }
 
@@ -604,7 +604,7 @@ get_header();
 }
 
 .action-btn.primary {
-    background: #8b5a96;
+    background: #715091;
     color: white;
 }
 

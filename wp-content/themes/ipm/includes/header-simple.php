@@ -236,7 +236,7 @@
 .header-simple__logo .logo-text {
     font-size: 24px;
     font-weight: 700;
-    color: #8b5a96;
+    color: #715091;
     font-family: 'Gabarito', sans-serif;
 }
 
@@ -316,7 +316,7 @@
 .mark-all-read {
     background: none;
     border: none;
-    color: #8b5a96;
+    color: #715091;
     font-size: 12px;
     cursor: pointer;
     font-weight: 500;
@@ -369,7 +369,7 @@
 }
 
 .notification-footer a {
-    color: #8b5a96;
+    color: #715091;
     text-decoration: none;
     font-size: 14px;
     font-weight: 500;
@@ -421,7 +421,7 @@
     width: 48px;
     height: 48px;
     border-radius: 50%;
-    background: #8b5a96;
+    background: #715091;
     color: white;
     display: flex;
     align-items: center;
@@ -465,7 +465,7 @@
 
 .profile-menu-item:hover {
     background-color: #f9fafb;
-    color: #8b5a96;
+    color: #715091;
 }
 
 .profile-menu-item svg {
@@ -493,7 +493,7 @@
     align-items: center;
     gap: 8px;
     padding: 8px 16px;
-    background: #8b5a96;
+    background: #715091;
     color: white;
     text-decoration: none;
     border-radius: 8px;

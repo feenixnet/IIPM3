@@ -229,7 +229,7 @@ foreach ($leave_requests as $request) {
 }
 
 .leave-header {
-    background: linear-gradient(135deg, #8b5a96 0%, #6b4c93 100%);
+    background: linear-gradient(135deg, #715091 0%, #715091 100%);
     color: white;
     padding: 40px 0;
     margin-bottom: 30px;
@@ -261,7 +261,7 @@ foreach ($leave_requests as $request) {
 .stat-card.pending { border-left-color: #ffc107; }
 .stat-card.approved { border-left-color: #28a745; }
 .stat-card.rejected { border-left-color: #dc3545; }
-.stat-card.total { border-left-color: #8b5a96; }
+.stat-card.total { border-left-color: #715091; }
 
 .stat-card h3 {
     font-size: 2.5rem;
@@ -272,7 +272,7 @@ foreach ($leave_requests as $request) {
 .stat-card.pending h3 { color: #ffc107; }
 .stat-card.approved h3 { color: #28a745; }
 .stat-card.rejected h3 { color: #dc3545; }
-.stat-card.total h3 { color: #8b5a96; }
+.stat-card.total h3 { color: #715091; }
 
 .stat-card p {
     margin: 0;
@@ -285,7 +285,7 @@ foreach ($leave_requests as $request) {
 }
 
 .admin-section h2 {
-    color: #8b5a96;
+    color: #715091;
     font-size: 1.5rem;
     margin-bottom: 20px;
     font-weight: 600;
@@ -434,7 +434,7 @@ foreach ($leave_requests as $request) {
 }
 
 .section-header-with-filters h2 {
-    color: #8b5a96;
+    color: #715091;
     font-size: 1.5rem;
     margin: 0;
     font-weight: 600;
@@ -457,7 +457,7 @@ foreach ($leave_requests as $request) {
 
 .search-input:focus {
     outline: none;
-    border-color: #8b5a96;
+    border-color: #715091;
 }
 
 .btn-clear {
@@ -502,13 +502,13 @@ foreach ($leave_requests as $request) {
 
 .page-btn:hover {
     background: #f8f9fa;
-    border-color: #8b5a96;
+    border-color: #715091;
 }
 
 .page-btn.active {
-    background: #8b5a96;
+    background: #715091;
     color: white;
-    border-color: #8b5a96;
+    border-color: #715091;
 }
 
 .page-dots {
@@ -615,7 +615,7 @@ foreach ($leave_requests as $request) {
 
 .form-group textarea:focus {
     outline: none;
-    border-color: #8b5a96;
+    border-color: #715091;
 }
 
 .form-actions {

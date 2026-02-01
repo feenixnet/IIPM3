@@ -57,17 +57,17 @@ if (!function_exists('add_success_notification')) {
         <div class="tab-navigation" style="margin-bottom: 30px;">
             <div style="display: flex; justify-content: center; gap: 20px;">
                 <a href="?tab=users" class="tab-button <?php echo $active_tab === 'users' ? 'active' : ''; ?>" 
-                   style="padding: 12px 24px; background: <?php echo $active_tab === 'users' ? '#f8a135' : '#6b4c93'; ?>; color: white; border-radius: 8px; text-decoration: none; font-weight: 500; transition: all 0.3s ease;">
+                   style="padding: 12px 24px; background: <?php echo $active_tab === 'users' ? '#f8a135' : '#715091'; ?>; color: white; border-radius: 8px; text-decoration: none; font-weight: 500; transition: all 0.3s ease;">
                     <span style="margin-right: 8px;"><i class="fas fa-users"></i></span>
                     Members
                 </a>
                 <a href="?tab=invitations" class="tab-button <?php echo $active_tab === 'invitations' ? 'active' : ''; ?>"
-                   style="padding: 12px 24px; background: <?php echo $active_tab === 'invitations' ? '#f8a135' : '#6b4c93'; ?>; color: white; border-radius: 8px; text-decoration: none; font-weight: 500; transition: all 0.3s ease;">
+                   style="padding: 12px 24px; background: <?php echo $active_tab === 'invitations' ? '#f8a135' : '#715091'; ?>; color: white; border-radius: 8px; text-decoration: none; font-weight: 500; transition: all 0.3s ease;">
                     <span style="margin-right: 8px;"><i class="fas fa-envelope"></i></span>
                     Add Member
                 </a>
                 <a href="?tab=membership" class="tab-button <?php echo $active_tab === 'membership' ? 'active' : ''; ?>"
-                   style="padding: 12px 24px; background: <?php echo $active_tab === 'membership' ? '#f8a135' : '#6b4c93'; ?>; color: white; border-radius: 8px; text-decoration: none; font-weight: 500; transition: all 0.3s ease;">
+                   style="padding: 12px 24px; background: <?php echo $active_tab === 'membership' ? '#f8a135' : '#715091'; ?>; color: white; border-radius: 8px; text-decoration: none; font-weight: 500; transition: all 0.3s ease;">
                     <span style="margin-right: 8px;"><i class="fas fa-id-card"></i></span>
                     Membership Levels
                 </a>
@@ -592,7 +592,7 @@ if (!function_exists('add_success_notification')) {
 .btn-primary {
     display: inline-block;
     padding: 12px 24px;
-    background: #6b4c93;
+    background: #715091;
     color: white;
     border: none;
     border-radius: 8px;
@@ -742,7 +742,7 @@ if (!function_exists('add_success_notification')) {
 
 .btn-small {
     padding: 4px 8px;
-    background: #6b4c93;
+    background: #715091;
     color: white;
     border: none;
     border-radius: 4px;

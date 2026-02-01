@@ -43,7 +43,7 @@
 				?>
 			</td>
 			<td style="width: 50%; text-align: right; vertical-align: top;">
-				<div style="font-size: 14pt; font-weight: bold; margin-top: 10px;">IIPM CPD</div>
+				<div style="font-size: 14pt; font-weight: bold; margin-top: 10px;">IIPM CPD Portal</div>
 			</td>
 		</tr>
 	</table>
@@ -154,30 +154,95 @@
 		</tr>
 	</thead>
 	<tbody>
-		<?php foreach ( $this->get_order_items() as $item_id => $item ) : ?>
-			<tr class="<?php echo esc_html( $item['row_class'] ); ?>">
-				<td class="product">
-					<p class="item-name"><?php echo esc_html( $item['name'] ); ?></p>
-					<?php do_action( 'wpo_wcpdf_before_item_meta', $this->get_type(), $item, $this->order ); ?>
-					<div class="item-meta">
-						<?php if ( ! empty( $item['sku'] ) ) : ?>
-							<p class="sku"><span class="label"><?php $this->sku_title(); ?></span> <?php echo esc_attr( $item['sku'] ); ?></p>
-						<?php endif; ?>
-						<?php if ( ! empty( $item['weight'] ) ) : ?>
-							<p class="weight"><span class="label"><?php $this->weight_title(); ?></span> <?php echo esc_attr( $item['weight'] ); ?><?php echo esc_attr( get_option( 'woocommerce_weight_unit' ) ); ?></p>
-						<?php endif; ?>
-						<!-- ul.wc-item-meta -->
-						<?php if ( ! empty( $item['meta'] ) ) : ?>
-							<?php echo wp_kses_post( $item['meta'] ); ?>
-						<?php endif; ?>
-						<!-- / ul.wc-item-meta -->
-					</div>
-					<?php do_action( 'wpo_wcpdf_after_item_meta', $this->get_type(), $item, $this->order ); ?>
-				</td>
-				<td class="quantity"><?php echo esc_html( $item['quantity'] ); ?></td>
-				<td class="price"><?php echo esc_html( $item['order_price'] ); ?></td>
-			</tr>
-		<?php endforeach; ?>
+		<?php
+		global $wpdb;
+		$customer_id = $this->order->get_customer_id();
+		$org_id = $customer_id ? $wpdb->get_var($wpdb->prepare(
+			"SELECT org_id FROM {$wpdb->prefix}wc_customer_lookup WHERE customer_id = %d",
+			$customer_id
+		)) : 0;
+		?>
+		<?php if ( $org_id ) : ?>
+			<?php
+			$members = $wpdb->get_results($wpdb->prepare(
+				"SELECT mp.user_designation
+				 FROM {$wpdb->prefix}test_iipm_member_profiles mp
+				 WHERE mp.employer_id = %d
+				   AND mp.user_designation IS NOT NULL
+				   AND mp.user_designation != ''",
+				$org_id
+			));
+			$designation_counts = array();
+			foreach ($members as $member) {
+				$designation = trim($member->user_designation);
+				if ($designation === '') {
+					continue;
+				}
+				if (!isset($designation_counts[$designation])) {
+					$designation_counts[$designation] = 0;
+				}
+				$designation_counts[$designation]++;
+			}
+			$designation_fees = array();
+			?>
+			<?php foreach ( $designation_counts as $designation => $count ) : ?>
+				<?php
+				if (!isset($designation_fees[$designation])) {
+					$product_ids = wc_get_products(array(
+						'name' => $designation,
+						'limit' => 1,
+						'return' => 'ids'
+					));
+					if (!empty($product_ids)) {
+						$product = wc_get_product($product_ids[0]);
+						$designation_fees[$designation] = $product ? floatval($product->get_price()) : 0;
+					} else {
+						$designation_fees[$designation] = 0;
+					}
+				}
+				$line_total = $designation_fees[$designation] * $count;
+				?>
+				<tr>
+					<td class="product">
+						<p class="item-name"><?php echo esc_html( $designation ); ?></p>
+					</td>
+					<td class="quantity"><?php echo esc_html( $count ); ?></td>
+					<td class="price"><?php echo wp_kses_post( wc_price( $line_total, array( 'currency' => $this->order->get_currency() ) ) ); ?></td>
+				</tr>
+			<?php endforeach; ?>
+			<?php if ( empty( $designation_counts ) ) : ?>
+				<tr>
+					<td class="product"><p class="item-name"><?php echo esc_html( $this->order->get_order_number() ); ?></p></td>
+					<td class="quantity">1</td>
+					<td class="price"><?php echo wp_kses_post( wc_price( $this->order->get_total(), array( 'currency' => $this->order->get_currency() ) ) ); ?></td>
+				</tr>
+			<?php endif; ?>
+		<?php else : ?>
+			<?php foreach ( $this->get_order_items() as $item_id => $item ) : ?>
+				<tr class="<?php echo esc_html( $item['row_class'] ); ?>">
+					<td class="product">
+						<p class="item-name"><?php echo esc_html( $item['name'] ); ?></p>
+						<?php do_action( 'wpo_wcpdf_before_item_meta', $this->get_type(), $item, $this->order ); ?>
+						<div class="item-meta">
+							<?php if ( ! empty( $item['sku'] ) ) : ?>
+								<p class="sku"><span class="label"><?php $this->sku_title(); ?></span> <?php echo esc_attr( $item['sku'] ); ?></p>
+							<?php endif; ?>
+							<?php if ( ! empty( $item['weight'] ) ) : ?>
+								<p class="weight"><span class="label"><?php $this->weight_title(); ?></span> <?php echo esc_attr( $item['weight'] ); ?><?php echo esc_attr( get_option( 'woocommerce_weight_unit' ) ); ?></p>
+							<?php endif; ?>
+							<!-- ul.wc-item-meta -->
+							<?php if ( ! empty( $item['meta'] ) ) : ?>
+								<?php echo wp_kses_post( $item['meta'] ); ?>
+							<?php endif; ?>
+							<!-- / ul.wc-item-meta -->
+						</div>
+						<?php do_action( 'wpo_wcpdf_after_item_meta', $this->get_type(), $item, $this->order ); ?>
+					</td>
+					<td class="quantity"><?php echo esc_html( $item['quantity'] ); ?></td>
+					<td class="price"><?php echo esc_html( $item['order_price'] ); ?></td>
+				</tr>
+			<?php endforeach; ?>
+		<?php endif; ?>
 	</tbody>
 </table>
 

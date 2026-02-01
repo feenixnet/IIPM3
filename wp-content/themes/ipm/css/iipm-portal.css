@@ -1,4 +1,13 @@
 /* Login Page Styles */
+:root {
+  --iipm-primary-dark: #2d2a26;
+  --iipm-primary: #715091;
+  --iipm-primary-muted: #898a8d;
+  --iipm-secondary-turquoise: #62cbc9;
+  --iipm-secondary-orange: #ff6c37;
+  --iipm-secondary-seafoam: #90d5ac;
+  --iipm-secondary-champagne: #f1e4b2;
+}
 .login-content {
   padding: 60px 0;
   background: #f8fafc;
@@ -68,12 +77,12 @@
 .login-form input[type="email"]:focus,
 .login-form input[type="password"]:focus {
   outline: none;
-  border-color: #8b5a96;
-  box-shadow: 0 0 0 3px rgba(139, 90, 150, 0.1);
+  border-color: #715091;
+  box-shadow: 0 0 0 3px rgba(113, 80, 145, 0.1);
 }
 
 .login-btn {
-  background: linear-gradient(135deg, #8b5a96 0%, #6b4c93 100%);
+  background: linear-gradient(135deg, #715091 0%, #715091 100%);
   color: white;
   border: none;
   padding: 14px 32px;
@@ -82,25 +91,25 @@
   font-size: 1rem;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 12px rgba(139, 90, 150, 0.3);
+  box-shadow: 0 4px 12px rgba(113, 80, 145, 0.3);
 }
 
 .login-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(139, 90, 150, 0.4);
-  background: linear-gradient(135deg, #9a6ba5 0%, #7a5ba2 100%);
+  box-shadow: 0 6px 20px rgba(113, 80, 145, 0.4);
+  background: linear-gradient(135deg, #715091 0%, #715091 100%);
 }
 
 .forgot-password {
   text-align: center;
-  color: #8b5a96;
+  color: #715091;
   text-decoration: none;
   font-size: 0.875rem;
   transition: color 0.2s;
 }
 
 .forgot-password:hover {
-  color: #6b4c93;
+  color: #715091;
   text-decoration: underline;
 }
 
@@ -112,7 +121,7 @@
 }
 
 .register-text a {
-  color: #8b5a96;
+  color: #715091;
   text-decoration: none;
   font-weight: 500;
 }
@@ -155,7 +164,7 @@
 
 /* Additional styles for better integration */
 .text-purple {
-  color: #8b5a96 !important;
+  color: #715091 !important;
 }
 
 /* .title-md {
@@ -170,8 +179,8 @@
   /* align-items: center; */
   background: linear-gradient(
     135deg,
-    rgba(139, 90, 150, 0.9) 0%,
-    rgba(107, 76, 147, 0.9) 100%
+    rgba(113, 80, 145, 0.9) 0%,
+    rgba(113, 80, 145, 0.9) 100%
   );
 }
 
@@ -287,7 +296,7 @@
   background: white;
   border-radius: 8px;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
-  min-width: 200px;
+  min-width: 320px;
   display: none;
   z-index: 1000;
   overflow: hidden;
@@ -304,6 +313,7 @@
   text-decoration: none;
   border-bottom: 1px solid #f3f4f6;
   transition: background 0.2s;
+  white-space: nowrap;
 }
 
 .dropdown-menu a:hover {
@@ -405,7 +415,7 @@
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #8b5a96 0%, #6b4c93 100%);
+  background: linear-gradient(135deg, #715091 0%, #715091 100%);
   color: white;
   border: none;
   padding: 14px 32px;
@@ -414,13 +424,13 @@
   font-size: 1rem;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 12px rgba(139, 90, 150, 0.3);
+  box-shadow: 0 4px 12px rgba(113, 80, 145, 0.3);
 }
 
 .btn-primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(139, 90, 150, 0.4);
-  background: linear-gradient(135deg, #9a6ba5 0%, #7a5ba2 100%);
+  box-shadow: 0 6px 20px rgba(113, 80, 145, 0.4);
+  background: linear-gradient(135deg, #715091 0%, #715091 100%);
 }
 
 .btn-secondary {
@@ -759,7 +769,7 @@
 
 .form-section h3 {
   color: #1f2937;
-  border-bottom: 2px solid #8b5a96;
+  border-bottom: 2px solid #715091;
   padding-bottom: 8px;
   margin-bottom: 24px;
 }
@@ -794,8 +804,8 @@
 .form-group input:focus,
 .form-group select:focus {
   outline: none;
-  border-color: #8b5a96;
-  box-shadow: 0 0 0 3px rgba(139, 90, 150, 0.1);
+  border-color: #715091;
+  box-shadow: 0 0 0 3px rgba(113, 80, 145, 0.1);
 }
 
 .form-group small {
@@ -844,8 +854,8 @@
 }
 
 .radio-label input[type="radio"]:checked + .radio-custom {
-  border-color: #8b5a96;
-  background: #8b5a96;
+  border-color: #715091;
+  background: #715091;
 }
 
 .radio-label input[type="radio"]:checked + .radio-custom::after {
@@ -861,8 +871,8 @@
 }
 
 .checkbox-label input[type="checkbox"]:checked + .checkbox-custom {
-  border-color: #8b5a96;
-  background: #8b5a96;
+  border-color: #715091;
+  background: #715091;
 }
 
 .checkbox-label input[type="checkbox"]:checked + .checkbox-custom::after {
@@ -920,7 +930,7 @@
 }
 
 .success-icon {
-  background: #8b5a96;
+  background: #715091;
   color: white;
   border-radius: 50%;
   display: flex;
@@ -961,7 +971,7 @@
   font-size: 1.25rem;
   font-weight: 600;
   color: #1f2937;
-  border-bottom: 2px solid #8b5a96;
+  border-bottom: 2px solid #715091;
   padding-bottom: 8px;
   margin-bottom: 24px;
 }
@@ -983,14 +993,14 @@
   content: "✓";
   position: absolute;
   left: 0;
-  color: #8b5a96;
+  color: #715091;
   font-weight: bold;
   font-size: 16px;
 }
 
 .contact-list li::before {
   content: "•";
-  color: #8b5a96;
+  color: #715091;
 }
 
 .info-card p {
@@ -1000,7 +1010,7 @@
 }
 
 .info-card a {
-  color: #8b5a96;
+  color: #715091;
   text-decoration: none;
   font-weight: 500;
 }
@@ -1100,7 +1110,7 @@
 }
 
 .file-input-display:hover {
-  border-color: #8b5a96;
+  border-color: #715091;
 }
 
 .file-input-label {
@@ -1109,7 +1119,7 @@
 }
 
 .file-input-label:hover {
-  color: #8b5a96;
+  color: #715091;
   text-decoration: underline;
 }
 
@@ -1181,13 +1191,13 @@
 }
 
 .iipm-checkbox-container:hover .iipm-checkbox-checkmark {
-  border-color: #8b5a96 !important;
+  border-color: #715091 !important;
   background-color: #ffffff !important;
 }
 
 .iipm-checkbox-input:checked + .iipm-checkbox-checkmark {
-  background-color: #8b5a96 !important;
-  border-color: #8b5a96 !important;
+  background-color: #715091 !important;
+  border-color: #715091 !important;
 }
 
 .iipm-checkbox-input:checked + .iipm-checkbox-checkmark:after {
@@ -1220,7 +1230,7 @@
 }
 
 .iipm-checkbox-container:focus-within .iipm-checkbox-checkmark {
-  box-shadow: 0 0 0 2px rgba(139, 90, 150, 0.2) !important;
+  box-shadow: 0 0 0 2px rgba(113, 80, 145, 0.2) !important;
   outline: none !important;
 }
 

@@ -207,7 +207,7 @@ get_header();
                     </div>
                     
                     <div style="text-align: center; margin-top: 20px;">
-                        <a href="<?php echo home_url('/login/'); ?>" style="color: #6b4c93; text-decoration: none;">Back to Login</a>
+                        <a href="<?php echo home_url('/login/'); ?>" style="color: #715091; text-decoration: none;">Back to Login</a>
                     </div>
                 </form>
                 <?php elseif ($message_type === 'success'): ?>
@@ -218,7 +218,7 @@ get_header();
                     <div style="text-align: center; margin-top: 30px;">
                         <a href="<?php echo home_url('/forgot-password/'); ?>" class="btn btn-primary" style="display: inline-block; text-decoration: none; margin-bottom: 15px;">Request New Reset Link</a>
                         <div>
-                            <a href="<?php echo home_url('/login/'); ?>" style="color: #6b4c93; text-decoration: none;">Back to Login</a>
+                            <a href="<?php echo home_url('/login/'); ?>" style="color: #715091; text-decoration: none;">Back to Login</a>
                         </div>
                     </div>
                 <?php endif; ?>

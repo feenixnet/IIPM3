@@ -37,7 +37,7 @@ get_header();
                     Review Submissions
                 </button>
                 <button class="tab-button" data-section="certificates"
-                   style="padding: 12px 24px; background: #6b4c93; color: white; border-radius: 8px; text-decoration: none; font-weight: 500; transition: all 0.3s ease; border: none; cursor: pointer;">
+                   style="padding: 12px 24px; background: #715091; color: white; border-radius: 8px; text-decoration: none; font-weight: 500; transition: all 0.3s ease; border: none; cursor: pointer;">
                     <span style="margin-right: 8px;"><i class="fas fa-graduation-cap"></i></span>
                     Certificates
                 </button>
@@ -390,8 +390,8 @@ get_header();
 .filter-group select:focus,
 .filter-group input:focus {
     outline: none;
-    border-color: #8b5a96;
-    box-shadow: 0 0 0 3px rgba(139, 90, 150, 0.1);
+    border-color: #715091;
+    box-shadow: 0 0 0 3px rgba(113, 80, 145, 0.1);
 }
 
 .filter-actions {
@@ -509,9 +509,9 @@ get_header();
 }
 
 .page-number.active {
-    background: #8b5a96;
+    background: #715091;
     color: white;
-    border-color: #8b5a96;
+    border-color: #715091;
 }
 
 /* Modal Styles - Same as Course Management */
@@ -652,10 +652,10 @@ body.modal-open {
 }
 
 .detail-item:hover {
-    border-color: #8b5a96;
+    border-color: #715091;
     background: #f8fafc;
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(139, 90, 150, 0.1);
+    box-shadow: 0 4px 12px rgba(113, 80, 145, 0.1);
 }
 
 .detail-label {
@@ -725,8 +725,8 @@ body.modal-open {
 }
 
 .course-item:hover {
-    border-color: #8b5a96;
-    box-shadow: 0 4px 8px rgba(139, 90, 150, 0.1);
+    border-color: #715091;
+    box-shadow: 0 4px 8px rgba(113, 80, 145, 0.1);
 }
 
 .course-header {
@@ -869,7 +869,7 @@ body.modal-open {
     margin-bottom: 24px;
     padding-bottom: 20px;
     border-bottom: 2px solid #e5e7eb;
-    background: linear-gradient(135deg, rgba(139, 90, 150, 0.02) 0%, rgba(139, 90, 150, 0.05) 100%);
+    background: linear-gradient(135deg, rgba(113, 80, 145, 0.02) 0%, rgba(113, 80, 145, 0.05) 100%);
     padding: 20px 24px;
     border-radius: 12px;
     margin-bottom: 0;
@@ -924,9 +924,9 @@ body.modal-open {
 }
 
 .submission-item:hover {
-    border-color: #8b5a96;
+    border-color: #715091;
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(139, 90, 150, 0.15);
+    box-shadow: 0 4px 12px rgba(113, 80, 145, 0.15);
 }
 
 .submission-header {
@@ -1024,8 +1024,8 @@ body.modal-open {
 
 .search-input-wrapper input:focus {
     outline: none;
-    border-color: #8b5a96;
-    box-shadow: 0 0 0 3px rgba(139, 90, 150, 0.1);
+    border-color: #715091;
+    box-shadow: 0 0 0 3px rgba(113, 80, 145, 0.1);
     background: white;
 }
 
@@ -1050,8 +1050,8 @@ body.modal-open {
 
 .filter-group select:focus {
     outline: none;
-    border-color: #8b5a96;
-    box-shadow: 0 0 0 3px rgba(139, 90, 150, 0.1);
+    border-color: #715091;
+    box-shadow: 0 0 0 3px rgba(113, 80, 145, 0.1);
     background: white;
 }
 
@@ -1100,8 +1100,8 @@ body.modal-open {
 
 .page-size-selector select:focus {
     outline: none;
-    border-color: #8b5a96;
-    box-shadow: 0 0 0 2px rgba(139, 90, 150, 0.1);
+    border-color: #715091;
+    box-shadow: 0 0 0 2px rgba(113, 80, 145, 0.1);
 }
 
 #courses-count {
@@ -1121,7 +1121,7 @@ body.modal-open {
     align-items: center;
     gap: 6px;
     padding: 4px 12px;
-    background: linear-gradient(135deg, #8b5a96 0%, #7c5087 100%);
+    background: linear-gradient(135deg, #715091 0%, #715091 100%);
     color: white;
     border-radius: 16px;
     font-size: 0.75rem;
@@ -1206,7 +1206,7 @@ body.modal-open {
 }
 
 .pagination-btn:hover:not(:disabled) {
-    border-color: #8b5a96;
+    border-color: #715091;
     background: #f8f9fa;
     transform: translateY(-1px);
 }
@@ -1241,14 +1241,14 @@ body.modal-open {
 }
 
 .page-number:hover {
-    border-color: #8b5a96;
+    border-color: #715091;
     background: #f8f9fa;
     transform: translateY(-1px);
 }
 
 .page-number.active {
-    background: linear-gradient(135deg, #8b5a96 0%, #7c5087 100%);
-    border-color: #8b5a96;
+    background: linear-gradient(135deg, #715091 0%, #715091 100%);
+    border-color: #715091;
     color: white;
     font-weight: 600;
 }
@@ -1292,8 +1292,8 @@ body.modal-open {
 
 .pagination-jump input:focus {
     outline: none;
-    border-color: #8b5a96;
-    box-shadow: 0 0 0 2px rgba(139, 90, 150, 0.1);
+    border-color: #715091;
+    box-shadow: 0 0 0 2px rgba(113, 80, 145, 0.1);
 }
 
 .btn-small {
@@ -1652,7 +1652,7 @@ body.modal-open {
     width: 40px;
     height: 40px;
     border: 4px solid #f3f4f6;
-    border-top: 4px solid #8b5a96;
+    border-top: 4px solid #715091;
     border-radius: 50%;
     animation: spin 1s linear infinite;
     margin: 0 auto 16px;
@@ -1694,8 +1694,8 @@ body.modal-open {
 
 .form-control:focus {
     outline: none;
-    border-color: #8b5a96;
-    box-shadow: 0 0 0 3px rgba(139, 90, 150, 0.1);
+    border-color: #715091;
+    box-shadow: 0 0 0 3px rgba(113, 80, 145, 0.1);
 }
 
 /* Modal Styles */
@@ -1788,15 +1788,15 @@ body.modal-open {
 }
 
 .btn-primary {
-    background: linear-gradient(135deg, #8b5a96 0%, #7c5087 100%);
+    background: linear-gradient(135deg, #715091 0%, #715091 100%);
     color: white;
-    box-shadow: 0 2px 4px rgba(139, 90, 150, 0.2);
+    box-shadow: 0 2px 4px rgba(113, 80, 145, 0.2);
 }
 
 .btn-primary:hover {
-    background: linear-gradient(135deg, #7c5087 0%, #6d4578 100%);
+    background: linear-gradient(135deg, #715091 0%, #715091 100%);
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(139, 90, 150, 0.3);
+    box-shadow: 0 4px 12px rgba(113, 80, 145, 0.3);
 }
 
 .btn-outline {
@@ -1993,9 +1993,9 @@ body.modal-open {
 }
 
 .report-card:hover {
-    border-color: #8b5a96;
+    border-color: #715091;
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(139, 90, 150, 0.15);
+    box-shadow: 0 4px 12px rgba(113, 80, 145, 0.15);
 }
 
 .report-card h3 {
@@ -2049,15 +2049,15 @@ body.modal-open {
 }
 
 .btn-primary {
-    background: linear-gradient(135deg, #8b5a96 0%, #7c5087 100%);
+    background: linear-gradient(135deg, #715091 0%, #715091 100%);
     color: white;
-    box-shadow: 0 2px 4px rgba(139, 90, 150, 0.2);
+    box-shadow: 0 2px 4px rgba(113, 80, 145, 0.2);
 }
 
 .btn-primary:hover {
-    background: linear-gradient(135deg, #7c5087 0%, #6d4578 100%);
+    background: linear-gradient(135deg, #715091 0%, #715091 100%);
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(139, 90, 150, 0.3);
+    box-shadow: 0 4px 12px rgba(113, 80, 145, 0.3);
 }
 
 .btn-secondary {
@@ -2136,8 +2136,8 @@ body.modal-open {
 .form-group select:focus,
 .form-group textarea:focus {
     outline: none;
-    border-color: #8b5a96;
-    box-shadow: 0 0 0 3px rgba(139, 90, 150, 0.1);
+    border-color: #715091;
+    box-shadow: 0 0 0 3px rgba(113, 80, 145, 0.1);
 }
 
 .form-actions {
@@ -2207,7 +2207,7 @@ body.modal-open {
     width: 40px;
     height: 40px;
     border: 4px solid #f3f4f6;
-    border-top: 4px solid #8b5a96;
+    border-top: 4px solid #715091;
     border-radius: 50%;
     animation: spin 1s linear infinite;
     margin: 0 auto 16px;
@@ -2274,7 +2274,7 @@ jQuery(document).ready(function($) {
         $(`.tab-button[data-section="${section}"]`).addClass('active');
         
         // Update button styles
-        $('.tab-button').css('background', '#6b4c93');
+        $('.tab-button').css('background', '#715091');
         $(`.tab-button[data-section="${section}"]`).css('background', '#f8a135');
         
         $('.admin-section').removeClass('active');

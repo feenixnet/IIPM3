@@ -58,7 +58,7 @@ wp_add_inline_script('jquery', 'var iipm_ajax = ' . json_encode(array(
 
         <!-- Back Button -->
         <div style="margin-bottom: 30px;">
-            <a href="<?php echo home_url('/organisation-management/'); ?>" style="display: inline-flex; align-items: center; padding: 12px 24px; background: #6b4c93; color: white; border-radius: 8px; text-decoration: none; font-weight: 500; transition: all 0.3s ease;">
+            <a href="<?php echo home_url('/organisation-management/'); ?>" style="display: inline-flex; align-items: center; padding: 12px 24px; background: #715091; color: white; border-radius: 8px; text-decoration: none; font-weight: 500; transition: all 0.3s ease;">
                 <span style="margin-right: 8px;"><i class="fas fa-arrow-left"></i></span>
                 Back to Organisations
             </a>

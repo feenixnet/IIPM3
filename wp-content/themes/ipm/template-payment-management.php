@@ -98,7 +98,7 @@ get_header();
                 </button>
             </div>
             <div class="table-responsive">
-                <table class="payment-table">
+                <table class="payment-table org-payment-table">
                     <thead>
                         <tr>
                             <th>Organisation</th>
@@ -139,7 +139,7 @@ get_header();
                 </button>
             </div>
             <div class="table-responsive">
-                <table class="payment-table">
+                <table class="payment-table user-payment-table">
                     <thead>
                         <tr>
                             <th>User</th>
@@ -371,13 +371,13 @@ jQuery(function($) {
             const sendEmailButtonClass = hasOrder ? 'btn-icon-action send-invoice-email-btn' : 'btn-icon-action send-invoice-email-btn disabled';
             
             return '<tr>' +
-                '<td><strong>' + fullName + '</strong><br></td>' +
+                '<td class="user-name-cell"><strong>' + fullName + '</strong><br></td>' +
                 '<td>' + user.user_email + '</td>' +
                 '<td>' + designation + '</td>' +
                 '<td>' + formatCurrency(user.membership_fee || 0) + '</td>' +
                 '<td>' + statusBadge + '</td>' +
                 '<td>' + lastInvoiced + '</td>' +
-                '<td>' +
+                '<td class="payment-actions-cell">' +
                     '<button class="btn-icon-action send-invoice-btn' + (shouldDisable ? ' disabled' : '') + '" data-user-id="' + user.id + '"' + buttonDisabled + ' title="Generate Order" style="margin-right: 5px;">' +
                         '<i class="fas fa-pencil"></i>' +
                     '</button>' +
@@ -592,13 +592,13 @@ jQuery(function($) {
             const sendEmailButtonClass = hasOrder ? 'btn-icon-action send-invoice-email-btn' : 'btn-icon-action send-invoice-email-btn disabled';
             
             return '<tr>' +
-                '<td><strong>' + (org.organisation_name || '—') + '</strong></td>' +
+                '<td class="org-name-cell"><strong>' + (org.organisation_name || '—') + '</strong></td>' +
                 '<td>' + (org.admin_email || '—') + '</td>' +
                 '<td>' + org.member_count + '</td>' +
                 '<td>' + formatCurrency(org.total_fees) + '</td>' +
                 '<td>' + statusBadge + '</td>' +
                 '<td>' + lastInvoiced + '</td>' +
-                '<td>' +
+                '<td class="payment-actions-cell">' +
                     '<button class="btn-icon-action send-org-invoice-btn' + (shouldDisable ? ' disabled' : '') + '" data-org-id="' + org.id + '"' + buttonDisabled + ' title="Generate Order" style="margin-right: 5px;">' +
                         '<i class="fas fa-pencil"></i>' +
                     '</button>' +
@@ -1632,6 +1632,24 @@ jQuery(function($) {
     text-align: left;
     border-bottom: 1px solid #e5e7eb;
     font-size: 14px;
+}
+
+.org-payment-table .org-name-cell {
+    max-width: 220px;
+    width: 220px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.org-payment-table th:last-child,
+.org-payment-table td:last-child {
+    width: 260px;
+    white-space: nowrap;
+}
+
+.payment-actions-cell {
+    white-space: nowrap;
 }
 
 .payment-table tbody tr:hover {
