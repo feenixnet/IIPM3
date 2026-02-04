@@ -7086,7 +7086,7 @@ function iipm_admin_get_user_details() {
     
     // Get member data from wp_test_iipm_members
     $member_data = $wpdb->get_row($wpdb->prepare(
-        "SELECT member_type, membership_level, membership_status FROM {$wpdb->prefix}test_iipm_members WHERE user_id = %d",
+        "SELECT member_type, membership_level, membership_status, marketing_consent FROM {$wpdb->prefix}test_iipm_members WHERE user_id = %d",
         $user_id
     ));
 
@@ -7128,7 +7128,8 @@ function iipm_admin_get_user_details() {
         'member_info' => array(
             'member_type' => $member_data ? $member_data->member_type : '',
             'membership_level' => $member_data ? $member_data->membership_level : '',
-            'membership_status' => $member_data ? $member_data->membership_status : ''
+            'membership_status' => $member_data ? $member_data->membership_status : '',
+            'marketing_consent' => $member_data ? (int) $member_data->marketing_consent : 0
         ),
         'profile_info' => array(
             'user_phone' => $profile_data ? $profile_data->user_phone : '',
@@ -7251,10 +7252,12 @@ function iipm_admin_update_user_details() {
         
         // Update wp_test_iipm_members table
         $member_data = array();
+        $member_formats = array();
         $membership_level_changed = false;
         
         if (isset($_POST['member_type'])) {
             $member_data['member_type'] = sanitize_text_field($_POST['member_type']);
+            $member_formats[] = '%s';
         }
         if (isset($_POST['membership_level_id'])) {
             $old_membership_level = $wpdb->get_var($wpdb->prepare(
@@ -7268,9 +7271,15 @@ function iipm_admin_update_user_details() {
             }
             
             $member_data['membership_level'] = $new_membership_level;
+            $member_formats[] = '%d';
         }
         if (isset($_POST['membership_status'])) {
             $member_data['membership_status'] = sanitize_text_field($_POST['membership_status']);
+            $member_formats[] = '%s';
+        }
+        if (isset($_POST['marketing_consent'])) {
+            $member_data['marketing_consent'] = intval($_POST['marketing_consent']) ? 1 : 0;
+            $member_formats[] = '%d';
         }
         
         if (!empty($member_data)) {
@@ -7281,18 +7290,20 @@ function iipm_admin_update_user_details() {
             
             if ($existing_member) {
                 $member_data['updated_at'] = current_time('mysql');
+                $member_formats[] = '%s';
                 $wpdb->update(
                     $wpdb->prefix . 'test_iipm_members',
                     $member_data,
                     array('user_id' => $user_id),
-                    array('%s', '%d', '%s'),
+                    $member_formats,
                     array('%d')
                 );
             } else {
                 $member_data['user_id'] = $user_id;
                 $member_data['created_at'] = current_time('mysql');
                 $member_data['updated_at'] = current_time('mysql');
-                $wpdb->insert($wpdb->prefix . 'test_iipm_members', $member_data);
+                $insert_formats = array_merge($member_formats, array('%d', '%s', '%s'));
+                $wpdb->insert($wpdb->prefix . 'test_iipm_members', $member_data, $insert_formats);
             }
         }
         

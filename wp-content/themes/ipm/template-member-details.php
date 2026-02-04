@@ -317,6 +317,14 @@ if (!function_exists('add_success_notification')) {
                     </div>
                 </div>
 
+                <!-- Section 7: Marketing Consent -->
+                <div class="info-section" data-section="marketing-consent">
+                    <label style="display: inline-flex; align-items: center; gap: 8px; margin: 0; font-weight: 500; color: #374151;">
+                        <input type="checkbox" name="marketing_consent" id="marketing_consent_edit">
+                        Marketing email consent
+                    </label>
+                </div>
+
                 <!-- Save/Cancel Buttons -->
                 <div style="text-align: center; padding-top: 30px; border-top: 1px solid #e5e7eb;">
                     <button type="submit" class="btn-primary save-btn" style="display: none;">
@@ -1120,6 +1128,10 @@ jQuery(document).ready(function($) {
         $('#user_email_edit').val(data.basic_info.user_email);
         $('#member_type_edit').val(data.member_info.member_type || '');
         $('#membership_status_edit').val(data.member_info.membership_status || '');
+        $('#marketing_consent_edit').prop('checked', parseInt(data.member_info.marketing_consent || 0, 10) === 1);
+        $('#marketing_consent_edit').off('change').on('change', function() {
+            $('.save-btn, .cancel-btn').show();
+        });
         
         // Populate memberships dropdown
         const membershipSelect = $('#membership_level_edit');
@@ -3001,6 +3013,10 @@ jQuery(document).ready(function($) {
             const field = $(this);
             const fieldName = field.attr('name');
             if (!fieldName) {
+                return;
+            }
+            if (field.is(':checkbox')) {
+                formData[fieldName] = field.is(':checked') ? '1' : '0';
                 return;
             }
             // Skip password field if empty (don't want to clear password accidentally)

@@ -214,7 +214,7 @@ get_header();
                                 <label class="">
                                     <input type="checkbox" name="marketing_consent">
                                     
-                                    I would like to receive marketing communications from IIPM about courses, events, and industry updates
+                                    Marketing email consent
                                 </label>
                             </div>
                             
