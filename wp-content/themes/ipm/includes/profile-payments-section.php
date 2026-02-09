@@ -28,6 +28,15 @@ if (!function_exists('iipm_check_user_org_payment')) {
 }
 
 $user_org_payment = iipm_check_user_org_payment($user_id);
+
+global $wpdb;
+$profile = $wpdb->get_row($wpdb->prepare(
+    "SELECT employer_id, user_payment_method FROM {$wpdb->prefix}test_iipm_member_profiles WHERE user_id = %d",
+    $user_id
+));
+$show_org_missing_notice = $profile
+    && $profile->user_payment_method === 'Employer Invoiced'
+    && empty($profile->employer_id);
 ?>
 
 <style>
@@ -191,6 +200,19 @@ $user_org_payment = iipm_check_user_org_payment($user_id);
     margin-bottom: 20px;
 }
 
+.org-missing-notice {
+    background: #fff7ed;
+    border: 1px solid #fed7aa;
+    color: #9a3412;
+    padding: 20px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+}
+
+.org-missing-notice strong {
+    color: #7c2d12;
+}
+
 .empty-state {
     text-align: center;
     padding: 60px 20px;
@@ -210,7 +232,12 @@ $user_org_payment = iipm_check_user_org_payment($user_id);
 </style>
 
 <div class="invoices-main payment-main" id="payment-section" style="display: none;">
-    <?php if ($user_org_payment && is_object($user_org_payment)): ?>
+    <?php if ($show_org_missing_notice): ?>
+        <div class="org-missing-notice">
+            <strong>Your organisation is not registered yet.</strong>
+            <p>Please contact your administrator to register your organisation so we can link your account.</p>
+        </div>
+    <?php elseif ($user_org_payment && is_object($user_org_payment)): ?>
         <!-- Organization Account Message -->
         <div class="org-account-notice">
             <div class="org-account-icon">🏢</div>
@@ -256,7 +283,7 @@ $user_org_payment = iipm_check_user_org_payment($user_id);
     <?php endif; ?>
 </div>
 
-<?php if (!$user_org_payment): ?>
+<?php if (!$user_org_payment && !$show_org_missing_notice): ?>
 <script>
 // Global function to load user invoices - exposed for template-profile.php
 window.loadUserPaymentInvoices = function(year) {

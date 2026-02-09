@@ -375,6 +375,7 @@ get_header();
                             </div>
                         </div>
                     </div>
+
                     
                     <!-- <button class="btn btn-outline" id="submit-return-btn">Submit my return</button> -->
                     
@@ -954,6 +955,7 @@ get_header();
         color: #715091;
         font-size: 18px;
     }
+
 
     /* Loading Spinner */
     .loading-spinner {
@@ -2388,7 +2390,6 @@ get_header();
     
     // Define ajaxurl for AJAX calls
     var ajaxurl = '<?php echo admin_url('admin-ajax.php'); ?>';
-    var isUserAssigned = true;
     var isTrainingCompleted = <?php echo $cpd_stats['completion_percentage'] >= 100 ? 'true' : 'false'; ?> == 'true' ? true : false;
     var isSubmitted = <?php echo $is_submitted ? 'true' : 'false'; ?>;
     var statData = null;
@@ -2438,10 +2439,8 @@ get_header();
             // Load initial data
             loadCompletedCpdStats();
             
-            // Always load training data for assigned users
-            if (isUserAssigned) {
-                loadRecentlyLoggedTraining();
-            }
+            // Always load training data
+            loadRecentlyLoggedTraining();
             
             // Set up event listeners
             setupEventListeners();
@@ -2650,9 +2649,7 @@ get_header();
                         console.log('Changed CPD year to:', cpdLoggingYear);
                         updateYearDependentUI();
                         loadCompletedCpdStats();
-                        if (isUserAssigned) {
-                            loadRecentlyLoggedTraining();
-                        }
+                        loadRecentlyLoggedTraining();
                         // Update submit button text when year changes
                         const submitBtnText = document.getElementById('submit-btn-text');
                         if (submitBtnText) {
@@ -2685,9 +2682,6 @@ get_header();
                 success: function(response) {
                     console.log('API Response:', response);
                     if (response.success) {
-                        if(response.data.is_user_assigned) {
-                            isUserAssigned = true;
-                        }
                         statData = response.data;
                         updateCpdProgress(response.data);
                     } else {
@@ -2727,69 +2721,6 @@ get_header();
             updateCpdStats(data);
             updateCourseSummary(data);
             
-            // Update category progress
-            const categories = ['pensions', 'savings & investments', 'ethics', 'life assurance'];
-            let totalCompleted = 0;
-            
-            categories.forEach(category => {
-                const statusElement = document.getElementById(category + '-status');
-                const progressElement = document.getElementById(category + '-progress');
-                
-                if (statusElement && progressElement) {
-                    // Try to find category by exact match first, then by partial match
-                    let categoryData = data.courses_summary.find(item => 
-                        item.category.toLowerCase() === category.toLowerCase()
-                    );
-                    
-                    // If no exact match, try partial match
-                    if (!categoryData) {
-                        categoryData = data.courses_summary.find(item => 
-                            item.category.toLowerCase().includes(category.toLowerCase())
-                        );
-                    }
-                    
-                    // If still no match, try to match by common variations
-                    if (!categoryData) {
-                        if (category === 'savings') {
-                            categoryData = data.courses_summary.find(item => 
-                                item.category.toLowerCase().includes('savings') || 
-                                item.category.toLowerCase().includes('investment')
-                            );
-                        } else if (category === 'life') {
-                            categoryData = data.courses_summary.find(item => 
-                                item.category.toLowerCase().includes('life') || 
-                                item.category.toLowerCase().includes('assurance')
-                            );
-                        }
-                    }
-                    
-                    if (categoryData) {
-                        const completed = categoryData.count;
-                        const required = categoryData.required || 1;
-                        const percentage = completed >= required ? 100 : (completed / required) * 100;
-                        
-                        statusElement.textContent = `${completed}/${required}`;
-                        progressElement.style.width = percentage + '%';
-                        
-                        if (completed >= required) {
-                            totalCompleted++;
-                        }
-                        
-                        console.log(`Updated ${category}: ${completed}/${required} (${percentage}%)`); // Debug log
-                    } else {
-                        statusElement.textContent = '0/1';
-                        progressElement.style.width = '0%';
-                        console.log(`No data found for ${category}`); // Debug log
-                    }
-                }
-            });
-            
-            // Update total progress
-            const totalStatus = document.getElementById('total-status');
-            if (totalStatus) {
-                totalStatus.textContent = `${totalCompleted}/4`;
-            }
-            
             // Update CPD stats and course summary
             updateCpdStats(data);
             updateCourseSummary(data);
@@ -2807,7 +2738,7 @@ get_header();
             
             // Re-render training blocks with updated submission status
             // This ensures remove buttons show/hide correctly when year changes and isSubmitted is updated
-            if (isUserAssigned && currentTrainingData) {
+            if (currentTrainingData) {
                 // Re-render existing training data with updated isSubmitted status
                 // This avoids unnecessary API call and ensures immediate update
                 renderTrainingInPortal(currentTrainingData);
@@ -2818,7 +2749,6 @@ get_header();
                 }
             }
             
-            console.log(`Total completed: ${totalCompleted}/4`); // Debug log
         }
         
         /**
@@ -2987,7 +2917,6 @@ get_header();
             if (!submissionAlert || !submissionDeadlineText) return;
             
             // Show alert only if user is assigned and in submission period (not submitted)
-            const isUserAssigned = data.is_user_assigned;
             const isSubmitted = data.is_submitted;
             
             const yearSelect = document.getElementById('cpd-year-select');
@@ -2995,7 +2924,7 @@ get_header();
             const isInExtendedPeriod = isInExtendedSubmissionPeriod(selectedYear);
             const isSubmissionPeriod = data.is_submission_period_available || isInExtendedPeriod;
             
-            if (isUserAssigned && isSubmissionPeriod && !isSubmitted) {
+            if (isSubmissionPeriod && !isSubmitted) {
                 // Calculate next year's January 30th deadline
                 const nextYear = selectedYear + 1;
                 const deadlineDate = new Date(nextYear, 0, 30); // Jan 30 of next year
@@ -3079,7 +3008,6 @@ get_header();
             // Submission period: Jan 1 of year X to Jan 30 of year X+1
             const isInSubmissionPeriod = isInExtendedSubmissionPeriod(selectedYear);
             const isSubmissionPeriod = data.is_submission_period_available || isInSubmissionPeriod;
-            const isUserAssigned = data.is_user_assigned;
             const isSubmitted = data.is_submitted || false;
             
             // If already submitted, hide submit button immediately and check for certificate
@@ -3111,7 +3039,7 @@ get_header();
             // - In submission period (Jan 1 of year X to Jan 30 of year X+1)
             // - Meets all requirements
             // - Not already submitted (checked above)
-            if (isUserAssigned && isSubmissionPeriod && meetsSubmissionRequirements) {
+            if (isSubmissionPeriod && meetsSubmissionRequirements) {
                 // Hide download container - submit and download should never show together
                 if (downloadContainer) {
                     downloadContainer.style.display = 'none';
@@ -3129,7 +3057,7 @@ get_header();
                 submitContainer.style.display = 'none';
                 
                 // Show validation message if user is assigned and in submission period but doesn't meet requirements
-                if (isUserAssigned && isSubmissionPeriod) {
+                if (isSubmissionPeriod) {
                     showValidationMessage(data);
                 } else {
                     hideValidationMessage();

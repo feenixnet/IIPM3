@@ -359,6 +359,8 @@ get_header();
                                         <div class="form-value" data-field="employer_name">
                                             <?php if ($organisation): ?>
                                                 <?php echo esc_html($organisation->name); ?>
+                                            <?php elseif ($profile && $profile->employer_name): ?>
+                                                <?php echo esc_html($profile->employer_name); ?>
                                             <?php else: ?>
                                                 <span class="placeholder-text">No employer information on file</span>
                                             <?php endif; ?>

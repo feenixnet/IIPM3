@@ -589,7 +589,7 @@ jQuery(document).ready(function($) {
         members.forEach(function(member) {
             html += `
                 <tr class="member-row">
-                    <td style="padding: 16px; color: #374151;">${escapeHtml(member.display_name)}</td>
+                    <td style="padding: 16px; color: #374151;">${escapeHtml(member.full_name || member.display_name)}</td>
                     <td style="padding: 16px; color: #6b7280;">${escapeHtml(member.user_email)}</td>
                     <td style="padding: 16px;">
                         <span class="status-badge status-${member.membership_status}">${member.membership_status}</span>

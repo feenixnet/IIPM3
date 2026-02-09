@@ -43,7 +43,7 @@
 				?>
 			</td>
 			<td style="width: 50%; text-align: right; vertical-align: top;">
-				<div style="font-size: 14pt; font-weight: bold; margin-top: 10px;">IIPM CPD Portal</div>
+				<div style="font-size: 14pt; font-weight: bold; margin-top: 10px;">IIPM Subscription</div>
 			</td>
 		</tr>
 	</table>
@@ -165,7 +165,7 @@
 		<?php if ( $org_id ) : ?>
 			<?php
 			$members = $wpdb->get_results($wpdb->prepare(
-				"SELECT mp.user_designation
+				"SELECT mp.user_designation, mp.first_name, mp.sur_name
 				 FROM {$wpdb->prefix}test_iipm_member_profiles mp
 				 WHERE mp.employer_id = %d
 				   AND mp.user_designation IS NOT NULL
@@ -173,6 +173,7 @@
 				$org_id
 			));
 			$designation_counts = array();
+			$designation_names = array();
 			foreach ($members as $member) {
 				$designation = trim($member->user_designation);
 				if ($designation === '') {
@@ -180,8 +181,15 @@
 				}
 				if (!isset($designation_counts[$designation])) {
 					$designation_counts[$designation] = 0;
+					$designation_names[$designation] = array();
 				}
 				$designation_counts[$designation]++;
+				$first_name = trim($member->first_name ?? '');
+				$sur_name = trim($member->sur_name ?? '');
+				$full_name = trim($first_name . ' ' . $sur_name);
+				if ($full_name !== '') {
+					$designation_names[$designation][] = $full_name;
+				}
 			}
 			$designation_fees = array();
 			?>
@@ -205,6 +213,9 @@
 				<tr>
 					<td class="product">
 						<p class="item-name"><?php echo esc_html( $designation ); ?></p>
+						<?php if (!empty($designation_names[$designation])) : ?>
+							<p class="item-meta"><?php echo esc_html(implode(', ', $designation_names[$designation])); ?></p>
+						<?php endif; ?>
 					</td>
 					<td class="quantity"><?php echo esc_html( $count ); ?></td>
 					<td class="price"><?php echo wp_kses_post( wc_price( $line_total, array( 'currency' => $this->order->get_currency() ) ) ); ?></td>
@@ -289,10 +300,15 @@
 	<h2 style="margin: 0 0 15px 0; font-size: 16pt; font-weight: bold; text-transform: uppercase; border-bottom: 2px solid #000; padding-bottom: 10px;">PAYMENT METHODS</h2>
 	
 	<?php 
-	// Get the Stripe Checkout URL (direct Stripe payment page)
-	$stripe_checkout_url = $this->order->get_meta('_stripe_checkout_url');
-	// Fallback to WooCommerce checkout payment URL if Stripe URL not available
-	$payment_url = !empty($stripe_checkout_url) ? $stripe_checkout_url : $this->order->get_checkout_payment_url(false);
+	// Build a refresh link that generates a new Stripe Checkout session on click
+	$refresh_payment_url = add_query_arg(
+		array(
+			'iipm_refresh_stripe_checkout' => '1',
+			'order_id' => $this->order->get_id(),
+			'key' => $this->order->get_order_key(),
+		),
+		home_url('/')
+	);
 	?>
 	
 	<div style="margin-bottom: 15px;">
@@ -300,7 +316,7 @@
 	</div>
 	
 	<div style="margin-bottom: 15px;">
-		Click <a href="<?php echo esc_url($payment_url); ?>" style="color: #0066cc; text-decoration: underline;">here</a> to pay with Stripe.
+		Click <a href="<?php echo esc_url($refresh_payment_url); ?>" style="color: #0066cc; text-decoration: underline;">here</a> to pay with Stripe.
 	</div>
 	
 	<div style="text-align: center; margin: 15px 0; font-weight: bold;">

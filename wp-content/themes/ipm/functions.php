@@ -119,6 +119,11 @@ function iipm_restrict_admin_access() {
 	if (!is_admin()) {
 		return;
 	}
+
+	// Allow Stripe refresh redirect before admin lockout
+	if (isset($_GET['iipm_refresh_stripe_checkout']) && $_GET['iipm_refresh_stripe_checkout'] === '1') {
+		return;
+	}
 	
 	// Skip for AJAX requests
 	if (defined('DOING_AJAX') && DOING_AJAX) {
@@ -1702,22 +1707,49 @@ function iipm_process_member_registration($data, $token = null) {
         
         $payment_method = sanitize_text_field($data['payment_method'] ?? 'Direct Invoiced');
         $member_type = ($payment_method === 'Employer Invoiced') ? 'organisation' : 'individual';
-        $organisation_id = isset($data['organisation_id']) ? intval($data['organisation_id']) : null;
-        $organisation_name = isset($data['organisation_name']) ? sanitize_text_field($data['organisation_name']) : null;
+        $organisation_name = isset($data['organisation_name']) ? trim(sanitize_text_field($data['organisation_name'])) : '';
+        $organisation_id = null;
+        $matched_organisation = null;
+        if ($payment_method === 'Employer Invoiced' && $organisation_name === '') {
+            return array('success' => false, 'error' => 'Organisation name is required');
+        }
+
+        if ($payment_method === 'Employer Invoiced' && $organisation_name !== '') {
+            if (ctype_digit($organisation_name)) {
+                $matched_organisation = $wpdb->get_row($wpdb->prepare(
+                    "SELECT id, name, address_line1, address_line2, address_line3
+                     FROM {$wpdb->prefix}test_iipm_organisations
+                     WHERE name = %d
+                     LIMIT 1",
+                    intval($organisation_name)
+                ));
+                if ($matched_organisation) {
+                    $organisation_id = intval($matched_organisation->id);
+                    $organisation_name = $matched_organisation->name;
+                }
+            }
+        }
+
+        if ($payment_method === 'Employer Invoiced' && $organisation_name !== '' && !$matched_organisation) {
+            $matched_organisation = $wpdb->get_row($wpdb->prepare(
+                "SELECT id, name, address_line1, address_line2, address_line3
+                 FROM {$wpdb->prefix}test_iipm_organisations
+                 WHERE LOWER(name) = LOWER(%s)
+                 LIMIT 1",
+                $organisation_name
+            ));
+            if ($matched_organisation) {
+                $organisation_id = intval($matched_organisation->id);
+            }
+        }
 
         $billing_address_line1 = $address_line1;
         $billing_address_line2 = $address_line2;
         $billing_address_line3 = $address_line3;
-        if ($payment_method === 'Employer Invoiced' && $organisation_id) {
-            $org_address = $wpdb->get_row($wpdb->prepare(
-                "SELECT address_line1, address_line2, address_line3 FROM {$wpdb->prefix}test_iipm_organisations WHERE id = %d",
-                $organisation_id
-            ));
-            if ($org_address) {
-                $billing_address_line1 = $org_address->address_line1 ?? '';
-                $billing_address_line2 = $org_address->address_line2 ?? '';
-                $billing_address_line3 = $org_address->address_line3 ?? '';
-            }
+        if ($payment_method === 'Employer Invoiced' && $matched_organisation) {
+            $billing_address_line1 = $matched_organisation->address_line1 ?? '';
+            $billing_address_line2 = $matched_organisation->address_line2 ?? '';
+            $billing_address_line3 = $matched_organisation->address_line3 ?? '';
         }
         
         $gdpr_consent = isset($data['gdpr_consent']) ? 1 : 0;
@@ -1835,7 +1867,39 @@ function iipm_process_member_registration($data, $token = null) {
                     'employer_id' => $organisation_id,
                     'employer_name' => $organisation_name,
                 ),
-                array('%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s')
+                array(
+                    '%d', // user_id
+                    '%s', // user_phone
+                    '%s', // email_address
+                    '%s', // user_mobile
+                    '%s', // city_or_town
+                    '%s', // Address_1
+                    '%s', // Address_2
+                    '%s', // Address_3
+                    '%s', // user_fullName
+                    '%s', // user_payment_method
+                    '%s', // sur_name
+                    '%s', // first_name
+                    '%d', // user_is_admin
+                    '%s', // user_designation
+                    '%s', // user_name_login
+                    '%s', // email_address_pers
+                    '%s', // user_phone_pers
+                    '%s', // user_mobile_pers
+                    '%s', // Address_1_pers
+                    '%s', // Address_2_pers
+                    '%s', // Address_3_pers
+                    '%s', // eircode_p
+                    '%s', // eircode_w
+                    '%s', // correspondence_email
+                    '%s', // user_notes
+                    '%s', // dateOfUpdatePers
+                    '%s', // dateOfUpdateGen
+                    '%s', // employerDetailsUpdated
+                    '%s', // theUsersStatus
+                    '%d', // employer_id
+                    '%s'  // employer_name
+                )
             );
             if ($member_result === false) {
                 error_log('IIPM: Failed to insert member. Database error: ' . $wpdb->last_error);
@@ -2518,6 +2582,38 @@ function iipm_handle_update_profile() {
             break;
             
         case 'employment':
+            $employer_name = isset($_POST['employer_name']) ? trim(sanitize_text_field($_POST['employer_name'])) : '';
+            $employer_id = 0;
+            if ($employer_name !== '') {
+                if (ctype_digit($employer_name)) {
+                    $matched_org = $wpdb->get_row($wpdb->prepare(
+                        "SELECT id, name FROM {$wpdb->prefix}test_iipm_organisations WHERE id = %d LIMIT 1",
+                        intval($employer_name)
+                    ));
+                    if ($matched_org) {
+                        $employer_id = intval($matched_org->id);
+                        $employer_name = $matched_org->name;
+                    }
+                }
+
+                $matched_org = $wpdb->get_row($wpdb->prepare(
+                    "SELECT id FROM {$wpdb->prefix}test_iipm_organisations WHERE LOWER(name) = LOWER(%s) LIMIT 1",
+                    $employer_name
+                ));
+                if ($matched_org) {
+                    $employer_id = intval($matched_org->id);
+                }
+            }
+
+            $wpdb->update(
+                $wpdb->prefix . 'test_iipm_member_profiles',
+                array(
+                    'employer_name' => $employer_name,
+                    'employer_id' => $employer_id,
+                    'employerDetailsUpdated' => current_time('mysql')
+                ),
+                array('user_id' => $user_id)
+            );
 
             break;
             
@@ -2872,6 +2968,9 @@ add_action('wp_enqueue_scripts', 'iipm_enqueue_portal_scripts');
  * Redirect non-logged-in users from protected pages
  */
 function iipm_protect_portal_pages() {
+    if (isset($_GET['iipm_refresh_stripe_checkout']) && $_GET['iipm_refresh_stripe_checkout'] === '1') {
+        return;
+    }
     if (is_page_template('template-member-portal.php') || 
         is_page_template('template-dashboard.php') ||
         is_page_template('template-member-management.php') ||
@@ -7339,9 +7438,73 @@ function iipm_admin_update_user_details() {
                     $profile_data[$field] = sanitize_text_field($_POST[$field]);
                 }
             }
-            $profile_data['email_address'] = sanitize_email($_POST['user_email']);
-            $profile_data['user_fullName'] = sanitize_text_field($_POST['first_name']) . " " . sanitize_text_field($_POST['sur_name']);
-            $profile_data['employer_id'] = $member_data['member_type'] == "individual" ? 0 : intval($_POST['employer_id']);
+        }
+
+        $profile_data['email_address'] = sanitize_email($_POST['user_email']);
+        $profile_data['user_fullName'] = sanitize_text_field($_POST['first_name']) . " " . sanitize_text_field($_POST['sur_name']);
+
+        $member_type = $member_data['member_type'] ?? $wpdb->get_var($wpdb->prepare(
+            "SELECT member_type FROM {$wpdb->prefix}test_iipm_members WHERE user_id = %d",
+            $user_id
+        ));
+
+        $employer_name = isset($_POST['employer_name']) ? trim(sanitize_text_field($_POST['employer_name'])) : '';
+        $employer_id = 0;
+
+        if ($member_type === 'individual') {
+            $employer_name = '';
+        } else {
+            if ($employer_name !== '') {
+                if (ctype_digit($employer_name)) {
+                    $matched_org = $wpdb->get_row($wpdb->prepare(
+                        "SELECT id, name FROM {$wpdb->prefix}test_iipm_organisations WHERE id = %d LIMIT 1",
+                        intval($employer_name)
+                    ));
+                    if ($matched_org) {
+                        $employer_id = intval($matched_org->id);
+                        $employer_name = $matched_org->name;
+                    }
+                }
+
+                $matched_org = $wpdb->get_row($wpdb->prepare(
+                    "SELECT id, name FROM {$wpdb->prefix}test_iipm_organisations WHERE LOWER(name) = LOWER(%s) LIMIT 1",
+                    $employer_name
+                ));
+                if ($matched_org) {
+                    $employer_id = intval($matched_org->id);
+                }
+            }
+
+            if (!$employer_id && !empty($_POST['employer_id'])) {
+                $employer_id = intval($_POST['employer_id']);
+                if ($employer_name === '' && $employer_id) {
+                    $employer_name = $wpdb->get_var($wpdb->prepare(
+                        "SELECT name FROM {$wpdb->prefix}test_iipm_organisations WHERE id = %d",
+                        $employer_id
+                    )) ?: '';
+                }
+            }
+        }
+
+        $profile_data['employer_id'] = $employer_id;
+        $profile_data['employer_name'] = $employer_name;
+
+        $payment_method = isset($_POST['user_payment_method'])
+            ? sanitize_text_field($_POST['user_payment_method'])
+            : '';
+
+        if ($member_type !== 'individual' && $employer_id && $payment_method === 'Employer Invoiced') {
+            $org_address = $wpdb->get_row($wpdb->prepare(
+                "SELECT address_line1, address_line2, address_line3
+                 FROM {$wpdb->prefix}test_iipm_organisations
+                 WHERE id = %d",
+                $employer_id
+            ));
+            if ($org_address) {
+                $profile_data['Address_1'] = $org_address->address_line1 ?? '';
+                $profile_data['Address_2'] = $org_address->address_line2 ?? '';
+                $profile_data['Address_3'] = $org_address->address_line3 ?? '';
+            }
         }
         
         // Add designation if membership level changed

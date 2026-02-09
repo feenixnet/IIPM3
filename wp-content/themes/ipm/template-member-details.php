@@ -286,16 +286,11 @@ if (!function_exists('add_success_notification')) {
                     </div>
                     <div class="section-content">
                         <div class="form-grid">
-                            <div class="form-group full-width">
-                                <label>Organisation Name (Signup):</label>
-                                <input type="text" name="employer_name" id="employer_name_edit" disabled>
-                            </div>
-                            <div class="form-group full-width">
-                                <label>Organisation:</label>
-                                <select name="employer_id" id="employer_id" disabled>
-                                    <option value="">Select Organisation</option>
-                                                <!-- Populated by JavaScript -->
-                                </select>
+                            <div class="form-group full-width" id="organisation-name-group">
+                                <label>Organisation Name:</label>
+                                <input type="text" name="employer_name" id="employer_name_edit" disabled autocomplete="off">
+                                <input type="hidden" name="employer_id" id="employer_id_edit">
+                                <div class="org-suggestions" id="organisation-suggestions-edit" style="display: none;"></div>
                             </div>
                         </div>
                     </div>
@@ -1081,6 +1076,35 @@ if (!function_exists('add_success_notification')) {
         font-size: 13px;
     }
 }
+
+/* Organisation autocomplete */
+.org-suggestions {
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    background: #fff;
+    margin-top: 8px;
+    max-height: 200px;
+    overflow-y: auto;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+    z-index: 50;
+    position: relative;
+}
+
+.org-suggestion {
+    padding: 10px 12px;
+    cursor: pointer;
+    font-size: 14px;
+    color: #374151;
+}
+
+.org-suggestion:hover {
+    background: #f8fafc;
+}
+
+.org-suggestion.disabled {
+    color: #9ca3af;
+    cursor: default;
+}
 </style>
 
 <script>
@@ -1192,12 +1216,7 @@ jQuery(document).ready(function($) {
         
         // Section 5: Employer Information
         $('#employer_name_edit').val(data.profile_info.employer_name || '');
-        const employerSelect = $('#employer_id');
-        employerSelect.empty().append('<option value="">Select Organisation</option>');
-        organizations.forEach(function(org) {
-            employerSelect.append(`<option value="${org.id}">${org.name}</option>`);
-        });
-        employerSelect.val(data.profile_info.employer_id || '');
+        $('#employer_id_edit').val(data.profile_info.employer_id || '');
 
         // Section 6: Internal Note
         $('#user_notes_edit').val(data.profile_info.user_notes || '');
@@ -1329,7 +1348,7 @@ jQuery(document).ready(function($) {
                 $('#Address_3_billing_edit').prop('readonly', false);
             } else {
                 // If changed to "Employer Invoiced" and organisation is selected, keep fields readonly
-                const orgId = $('#employer_id').val();
+                const orgId = $('#employer_id_edit').val();
                 if (orgId && orgId !== '') {
                     $('#Address_1_billing_edit').prop('readonly', true);
                     $('#Address_2_billing_edit').prop('readonly', true);
@@ -1346,7 +1365,7 @@ jQuery(document).ready(function($) {
         $('#member_type_edit').off('change').on('change', function() {
             const memberType = $(this).val();
             const paymentMethodSelect = $('#user_payment_method_edit');
-            const orgId = $('#employer_id').val();
+            const orgId = $('#employer_id_edit').val();
             
             if (memberType === 'individual') {
                 $('[data-section="employer-info"]').hide();
@@ -1414,62 +1433,110 @@ jQuery(document).ready(function($) {
     }
     
     function setupOrganisationHandler() {
-        $('#employer_id').off('change').on('change', function() {
-            const orgId = $(this).val();
+        const $input = $('#employer_name_edit');
+        const $idField = $('#employer_id_edit');
+        const $list = $('#organisation-suggestions-edit');
+        
+        function applyOrganisationDetails(orgId) {
             const memberType = $('#member_type_edit').val();
-            
-            // Only handle organisation change if member type is "organisation"
             if (memberType !== 'organisation') {
                 return;
             }
             
-            if (orgId && orgId !== '') {
-                // Fetch organisation details
-                $.ajax({
-                    url: '<?php echo admin_url('admin-ajax.php'); ?>',
-                    type: 'POST',
-                    data: {
-                        action: 'iipm_get_organisation',
-                        nonce: '<?php echo wp_create_nonce('iipm_portal_nonce'); ?>',
-                        org_id: orgId
-                    },
-                    success: function(response) {
-                        if (response.success && response.data) {
-                            const org = response.data;
-                            
-                            // Populate billing address fields with organisation addresses
-                            $('#Address_1_billing_edit').val(org.address_line1 || '');
-                            $('#Address_2_billing_edit').val(org.address_line2 || '');
-                            $('#Address_3_billing_edit').val(org.address_line3 || '');
-                            
-                            // Ensure payment method is "Employer Invoiced" (should already be set by member type handler)
-                            $('#user_payment_method_edit').val('Employer Invoiced');
-                            
-                            // Disable billing address fields (make them readonly)
-                            $('#Address_1_billing_edit').prop('readonly', true);
-                            $('#Address_2_billing_edit').prop('readonly', true);
-                            $('#Address_3_billing_edit').prop('readonly', true);
-                            
-                            // Update billing addresses display
-                            setBillingAddresses('Employer Invoiced', {
-                                address_line1: org.address_line1,
-                                address_line2: org.address_line2,
-                                address_line3: org.address_line3
-                            });
-                        }
-                    },
-                    error: function() {
-                        console.error('Failed to fetch organisation details');
-                    }
-                });
-            } else {
-                // If organisation is cleared, clear addresses but keep them disabled for organisation members
+            if (!orgId) {
                 $('#Address_1_billing_edit').val('');
                 $('#Address_2_billing_edit').val('');
                 $('#Address_3_billing_edit').val('');
                 $('#Address_1_billing_edit').prop('readonly', true);
                 $('#Address_2_billing_edit').prop('readonly', true);
                 $('#Address_3_billing_edit').prop('readonly', true);
+                return;
+            }
+            
+            $.ajax({
+                url: '<?php echo admin_url('admin-ajax.php'); ?>',
+                type: 'POST',
+                data: {
+                    action: 'iipm_get_organisation',
+                    nonce: '<?php echo wp_create_nonce('iipm_portal_nonce'); ?>',
+                    org_id: orgId
+                },
+                success: function(response) {
+                    if (response.success && response.data) {
+                        const org = response.data;
+                        $('#Address_1_billing_edit').val(org.address_line1 || '');
+                        $('#Address_2_billing_edit').val(org.address_line2 || '');
+                        $('#Address_3_billing_edit').val(org.address_line3 || '');
+                        $('#user_payment_method_edit').val('Employer Invoiced');
+                        $('#Address_1_billing_edit').prop('readonly', true);
+                        $('#Address_2_billing_edit').prop('readonly', true);
+                        $('#Address_3_billing_edit').prop('readonly', true);
+                        setBillingAddresses('Employer Invoiced', {
+                            address_line1: org.address_line1,
+                            address_line2: org.address_line2,
+                            address_line3: org.address_line3
+                        });
+                    }
+                },
+                error: function() {
+                    console.error('Failed to fetch organisation details');
+                }
+            });
+        }
+        
+        function renderOrganisationSuggestions(query) {
+            if ($input.is(':disabled')) {
+                $list.hide().empty();
+                return;
+            }
+            
+            const normalizedQuery = (query || '').trim().toLowerCase();
+            let matches = organizations;
+            
+            if (normalizedQuery) {
+                matches = organizations.filter(function(org) {
+                    return (org.name || '').toLowerCase().includes(normalizedQuery);
+                });
+            } else {
+                matches = organizations.slice(0, 10);
+            }
+            
+            $list.empty();
+            if (!matches.length) {
+                $list.append('<div class="org-suggestion disabled">No matching organisations</div>');
+                $list.show();
+                return;
+            }
+            
+            matches.slice(0, 10).forEach(function(org) {
+                $list.append('<div class="org-suggestion" data-id="' + org.id + '" data-name="' + org.name + '">' + org.name + '</div>');
+            });
+            
+            $list.show();
+        }
+        
+        $input.off('input').on('input', function() {
+            $idField.val('');
+            applyOrganisationDetails('');
+            renderOrganisationSuggestions($input.val());
+        });
+        
+        $input.off('focus').on('focus', function() {
+            renderOrganisationSuggestions($input.val());
+        });
+        
+        $list.off('click').on('click', '.org-suggestion:not(.disabled)', function() {
+            const orgId = $(this).data('id');
+            const orgName = $(this).data('name');
+            $input.val(orgName || '');
+            $idField.val(orgId || '');
+            $list.hide().empty();
+            applyOrganisationDetails(orgId);
+        });
+        
+        $(document).off('click.orgSuggestions').on('click.orgSuggestions', function(e) {
+            if (!$(e.target).closest('#organisation-name-group').length) {
+                $list.hide().empty();
             }
         });
     }

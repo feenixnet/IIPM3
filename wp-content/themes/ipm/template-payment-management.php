@@ -82,86 +82,98 @@ get_header();
         </section>
 
         <section class="payment-card main-content">
-            <!-- Organisations Table -->
-            <div class="section-header">
-                <h2>Organisations <span class="count-badge" id="org-total-count">0</span></h2>
+            <div class="payment-tabs">
+                <button type="button" class="payment-tab-btn active" data-target="org-tab">Organisations</button>
+                <button type="button" class="payment-tab-btn" data-target="user-tab">Individual Members</button>
             </div>
-            <div class="header-actions" style="margin-bottom: 20px;">
-                <div class="search-input-wrapper">
-                    <input type="text" id="org-search" placeholder="Search by organisation name or email">
-                    <button id="org-search-btn" class="btn-icon-square" title="Search">
-                        <i class="fas fa-search"></i>
+
+            <!-- Organisations Table -->
+            <div id="org-tab" class="payment-tab-panel active">
+                <div class="section-header">
+                    <h2>Organisations <span class="count-badge" id="org-total-count">0</span></h2>
+                </div>
+                <div class="header-actions" style="margin-bottom: 20px;">
+                    <div class="search-input-wrapper">
+                        <input type="text" id="org-search" placeholder="Search by organisation name or email">
+                        <button id="org-search-btn" class="btn-icon-square" title="Search">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                    <button id="org-refresh" class="btn-icon-square" title="Refresh">
+                        <i class="fas fa-sync-alt"></i>
                     </button>
                 </div>
-                <button id="org-refresh" class="btn-icon-square" title="Refresh">
-                    <i class="fas fa-sync-alt"></i>
-                </button>
-            </div>
-            <div class="table-responsive">
-                <table class="payment-table org-payment-table">
-                    <thead>
-                        <tr>
-                            <th>Organisation</th>
-                            <th>Email</th>
-                            <th>Members</th>
-                            <th>Total Fees</th>
-                            <th>Status</th>
-                            <th>Last Invoiced</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody id="payment-orgs-body">
-                        <tr>
-                            <td colspan="7" class="text-center">Loading organizations...</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-            <div class="pagination">
-                <button id="org-prev" class="btn btn-secondary" disabled>Previous</button>
-                <span id="org-page-info">Page 1 of 1</span>
-                <button id="org-next" class="btn btn-secondary" disabled>Next</button>
+                <div class="table-responsive">
+                    <table class="payment-table org-payment-table">
+                        <thead>
+                            <tr>
+                                <th>Organisation</th>
+                                <th>Email</th>
+                                <th>Members</th>
+                                <th>Total Fees</th>
+                                <th>Status</th>
+                                <th>Last Invoiced</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="payment-orgs-body">
+                            <tr>
+                                <td colspan="7" class="text-center">Loading organizations...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="pagination">
+                    <button id="org-prev" class="btn btn-secondary" disabled>Previous</button>
+                    <span id="org-page-info">Page 1 of 1</span>
+                    <button id="org-next" class="btn btn-secondary" disabled>Next</button>
+                </div>
             </div>
 
             <!-- Individual Members Table -->
-            <div class="section-header" style="margin-top: 40px;">
-                <h2>Individual Members <span class="count-badge" id="user-total-count">0</span></h2>
-            </div>
-            <div class="header-actions" style="margin-bottom: 20px;">
-                <div class="search-input-wrapper">
-                    <input type="text" id="payment-search" placeholder="Search by name or email">
-                    <button id="payment-search-btn" class="btn-icon-square" title="Search">
-                        <i class="fas fa-search"></i>
+            <div id="user-tab" class="payment-tab-panel">
+                <div class="section-header" style="margin-top: 10px;">
+                    <h2>Individual Members <span class="count-badge" id="user-total-count">0</span></h2>
+                </div>
+                <div class="header-actions" style="margin-bottom: 20px;">
+                    <div class="search-input-wrapper">
+                        <input type="text" id="payment-search" placeholder="Search by name or email">
+                        <button id="payment-search-btn" class="btn-icon-square" title="Search">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                    <button id="payment-refresh" class="btn-icon-square" title="Refresh">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                    <button id="bulk-generate-invoices" class="btn btn-primary" type="button">
+                        Generate invoices
                     </button>
                 </div>
-                <button id="payment-refresh" class="btn-icon-square" title="Refresh">
-                    <i class="fas fa-sync-alt"></i>
-                </button>
-            </div>
-            <div class="table-responsive">
-                <table class="payment-table user-payment-table">
-                    <thead>
-                        <tr>
-                            <th>User</th>
-                            <th>Email</th>
-                            <th>Designation</th>
-                            <th>Membership Fee</th>
-                            <th>Status</th>
-                            <th>Last Invoiced</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody id="payment-users-body">
-                        <tr>
-                            <td colspan="7" class="text-center">Loading users...</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-            <div class="pagination">
-                <button id="payment-prev" class="btn btn-secondary" disabled>Previous</button>
-                <span id="payment-page-info">Page 1 of 1</span>
-                <button id="payment-next" class="btn btn-secondary" disabled>Next</button>
+                <div class="table-responsive">
+                    <table class="payment-table user-payment-table">
+                        <thead>
+                            <tr>
+                                <th>User</th>
+                                <th>Email</th>
+                                <th>Designation</th>
+                                <th>Membership Fee</th>
+                                <th>Status</th>
+                                <th>Last Invoiced</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="payment-users-body">
+                            <tr>
+                                <td colspan="7" class="text-center">Loading users...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="pagination">
+                    <button id="payment-prev" class="btn btn-secondary" disabled>Previous</button>
+                    <span id="payment-page-info">Page 1 of 1</span>
+                    <button id="payment-next" class="btn btn-secondary" disabled>Next</button>
+                </div>
             </div>
         </section>
     </div>
@@ -274,6 +286,16 @@ jQuery(function($) {
         }
     }
 
+    function initTabs() {
+        $('.payment-tab-btn').on('click', function() {
+            const target = $(this).data('target');
+            $('.payment-tab-btn').removeClass('active');
+            $(this).addClass('active');
+            $('.payment-tab-panel').removeClass('active');
+            $('#' + target).addClass('active');
+        });
+    }
+
     function loadUsers() {
         if (!window.iipm_ajax || !iipm_ajax.payment_nonce) {
             notify('Missing security token. Please refresh the page.', 'error');
@@ -324,7 +346,8 @@ jQuery(function($) {
             
             // Check if at least one address field exists
             const hasAddress = (user.Address_1 && user.Address_1.trim() !== '') || 
-                              (user.Address_2 && user.Address_2.trim() !== '');
+                              (user.Address_2 && user.Address_2.trim() !== '') ||
+                              (user.Address_3 && user.Address_3.trim() !== '');
             
             // Disable if no address OR if user already has completed order for this year
             const shouldDisable = !hasAddress || user.has_processing_order;
@@ -449,6 +472,40 @@ jQuery(function($) {
         }).always(function() {
             if (!arguments[0] || !arguments[0].needs_confirmation) {
                 $button.prop('disabled', false).html(originalHtml);
+            }
+        });
+    }
+
+    function getBulkInvoiceCount() {
+        return $.ajax({
+            url: iipm_ajax.ajax_url,
+            method: 'POST',
+            dataType: 'json',
+            data: {
+                action: 'iipm_bulk_send_individual_invoices',
+                nonce: iipm_ajax.payment_nonce,
+                invoice_year: state.selectedYear,
+                mode: 'count'
+            }
+        });
+    }
+
+    function sendBulkInvoices($button, offset, totals) {
+        return $.ajax({
+            url: iipm_ajax.ajax_url,
+            method: 'POST',
+            dataType: 'json',
+            data: {
+                action: 'iipm_bulk_send_individual_invoices',
+                nonce: iipm_ajax.payment_nonce,
+                invoice_year: state.selectedYear,
+                mode: 'send',
+                offset: offset || 0,
+                limit: 50
+            }
+        }).always(function() {
+            if (!totals || totals.done) {
+                $button.prop('disabled', false).text('Generate invoices');
             }
         });
     }
@@ -725,6 +782,82 @@ jQuery(function($) {
         }
         const orderId = $(this).data('order-id');
         sendInvoiceEmail(orderId, $(this));
+    });
+
+    $('#bulk-generate-invoices').on('click', function() {
+        if (!window.iipm_ajax || !iipm_ajax.payment_nonce) {
+            notify('Missing security token. Please refresh the page.', 'error');
+            return;
+        }
+
+        const $btn = $(this);
+        $btn.prop('disabled', true).text('Checking...');
+
+        getBulkInvoiceCount().done(function(response) {
+            if (!response.success) {
+                notify(response.data || 'Unable to load eligible members.', 'error');
+                $btn.prop('disabled', false).text('Generate invoices');
+                return;
+            }
+
+            const count = response.data.count || 0;
+            if (count === 0) {
+                notify('No eligible individual members found for invoices.', 'info');
+                $btn.prop('disabled', false).text('Generate invoices');
+                return;
+            }
+
+            const confirmed = confirm('Are you sure you want to send invoices to ' + count + ' members?');
+            if (!confirmed) {
+                $btn.prop('disabled', false).text('Generate invoices');
+                return;
+            }
+
+            const totalCount = count;
+            let sentTotal = 0;
+            let failedTotal = 0;
+            let skippedTotal = 0;
+            let processedTotal = 0;
+            let nextOffset = 0;
+
+            function processBatch() {
+                $btn.text('Sending... ' + processedTotal + '/' + totalCount);
+                sendBulkInvoices($btn, nextOffset, { done: false }).done(function(sendResponse) {
+                    if (!sendResponse.success) {
+                        notify(sendResponse.data || 'Failed to send invoices.', 'error');
+                        $btn.prop('disabled', false).text('Generate invoices');
+                        return;
+                    }
+
+                    const summary = sendResponse.data || {};
+                    sentTotal += summary.sent || 0;
+                    failedTotal += summary.failed || 0;
+                    skippedTotal += summary.skipped || 0;
+                    processedTotal += summary.processed || 0;
+                    nextOffset = summary.next_offset || (nextOffset + (summary.processed || 0));
+
+                    if (summary.done) {
+                        $btn.prop('disabled', false).text('Generate invoices');
+                        notify(
+                            'Bulk invoices sent. Sent: ' + sentTotal + ', Skipped: ' + skippedTotal + ', Failed: ' + failedTotal + '.',
+                            'success'
+                        );
+                        loadUsers();
+                        return;
+                    }
+
+                    processBatch();
+                }).fail(function() {
+                    notify('Server error while sending invoices.', 'error');
+                    $btn.prop('disabled', false).text('Generate invoices');
+                });
+            }
+
+            processBatch();
+        }).fail(function() {
+            notify('Server error while checking members.', 'error');
+            $btn.prop('disabled', false).text('Generate invoices');
+        });
     });
 
     // Organization event handlers
@@ -1293,6 +1426,7 @@ jQuery(function($) {
     });
 
     // Load stats and tables on page load
+    initTabs();
     loadStats();
     loadUsers();
     loadOrganizations();
@@ -1607,6 +1741,38 @@ jQuery(function($) {
     border-radius: 12px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
     padding: 28px;
+}
+
+.payment-tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.payment-tab-btn {
+    border: 1px solid #e5e7eb;
+    background: #f9fafb;
+    color: #374151;
+    padding: 10px 18px;
+    border-radius: 999px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.payment-tab-btn.active {
+    background: #7c3aed;
+    color: #fff;
+    border-color: #7c3aed;
+}
+
+.payment-tab-panel {
+    display: none;
+}
+
+.payment-tab-panel.active {
+    display: block;
 }
 
 .payment-table {

@@ -428,7 +428,8 @@ function iipm_get_organisation_members() {
     // Get members with pagination
     $members_sql = "
         SELECT u.ID, u.display_name, u.user_email, u.user_registered,
-               m.membership_status, m.last_login, mp.employer_id, mp.theUsersStatus
+               m.membership_status, m.last_login, mp.employer_id, mp.theUsersStatus,
+               mp.first_name, mp.sur_name
         FROM {$wpdb->users} u
         LEFT JOIN {$wpdb->prefix}test_iipm_members m ON u.ID = m.user_id
         LEFT JOIN {$wpdb->prefix}test_iipm_member_profiles mp ON u.ID = mp.user_id
@@ -443,9 +444,11 @@ function iipm_get_organisation_members() {
     // Process members data
     $processed_members = array();
     foreach ($members as $member) {
+        $full_name = trim(($member->first_name ?? '') . ' ' . ($member->sur_name ?? ''));
         $processed_members[] = array(
             'ID' => $member->ID,
             'display_name' => $member->display_name,
+            'full_name' => $full_name !== '' ? $full_name : $member->display_name,
             'user_email' => $member->user_email,
             'membership_status' => $member->membership_status ?: 'pending',
             'last_login' => $member->last_login ? date('M j, Y g:i A', strtotime($member->last_login)) : null,

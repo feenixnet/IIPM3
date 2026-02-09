@@ -220,6 +220,10 @@ function iipm_get_user_details() {
         return;
     }
     
+    global $wpdb;
+
+    global $wpdb;
+
     $user_id = intval($_POST['user_id']);
     if (!$user_id) {
         wp_send_json_error('Invalid user ID');
@@ -231,7 +235,6 @@ function iipm_get_user_details() {
     $is_site_admin = current_user_can('administrator');
     
     if (!$is_site_admin) {
-        global $wpdb;
         $current_org_id = $wpdb->get_var($wpdb->prepare(
             "SELECT employer_id FROM {$wpdb->prefix}test_iipm_member_profiles WHERE user_id = %d",
             $current_user->ID
@@ -296,6 +299,8 @@ function iipm_update_user() {
         wp_send_json_error('Security check failed');
         return;
     }
+
+    global $wpdb;
     
     $user_id = intval($_POST['user_id']);
     $first_name = sanitize_text_field($_POST['first_name']);
@@ -304,6 +309,13 @@ function iipm_update_user() {
     $membership = sanitize_text_field($_POST['membership']);
     $status = sanitize_text_field($_POST['status']);
     $employer_id = intval($_POST['employer_id'] ?? 0);
+    $employer_name = '';
+    if ($employer_id) {
+        $employer_name = $wpdb->get_var($wpdb->prepare(
+            "SELECT name FROM {$wpdb->prefix}test_iipm_organisations WHERE id = %d",
+            $employer_id
+        )) ?: '';
+    }
     
     if (!$user_id || !$first_name || !$last_name || !$email) {
         wp_send_json_error('Missing required fields');
@@ -485,6 +497,7 @@ function iipm_update_user() {
         'user_fullName' => $first_name . ' ' . $last_name,
         'user_is_admin' => ($membership === 'Admin' || $membership === 'Systems Admin') ? 1 : 0,
         'employer_id' => $employer_id,
+        'employer_name' => $employer_name,
         'dateOfUpdateGen' => current_time('mysql')
     );
     
@@ -494,7 +507,7 @@ function iipm_update_user() {
     }
     
     // Prepare format array based on whether designation is included
-    $format_array = array('%s', '%s', '%s', '%s', '%s', '%d', '%d', '%s');
+    $format_array = array('%s', '%s', '%s', '%s', '%s', '%d', '%d', '%s', '%s');
     if ($membership_changed && $new_designation !== null) {
         $format_array[] = '%s'; // Add format for designation
     }

@@ -70,7 +70,7 @@ get_header();
                             </div>
 
                             <div class="form-group">
-                                <label for="login_name">User Name</label>
+                                <label for="login_name">Login Name</label>
                                 <input type="text" name="login_name" id="login_name" required>
                             </div>
                             
@@ -141,8 +141,6 @@ get_header();
                             <div class="form-group" id="organisation-name-group" style="display: none;">
                                 <label for="organisation_name">Organisation Name</label>
                                 <input type="text" name="organisation_name" id="organisation_name" placeholder="Enter organisation name" autocomplete="off">
-                                <input type="hidden" name="organisation_id" id="organisation_id">
-                                <div class="org-suggestions" id="organisation-suggestions" style="display: none;"></div>
                             </div>
                             <div id="billing-address-fields">
                                 <div class="form-group">
@@ -372,9 +370,6 @@ get_header();
     </div>
 
 <script>
-// Organizations data will be fetched via AJAX when needed
-var organizationsData = []; // Will be populated via AJAX call
-
 // Enhanced debugging and form handling
 console.log("=== IIPM Registration Debug ===");
 console.log("jQuery available:", typeof jQuery !== 'undefined');
@@ -953,71 +948,6 @@ jQuery(document).ready(function($){
             $('#member_type').val('individual');
         }
     });
-    
-    function loadOrganisationOptions() {
-        $.ajax({
-            url: (typeof iipm_ajax !== 'undefined' ? iipm_ajax.ajax_url : '<?php echo admin_url('admin-ajax.php'); ?>'),
-            type: 'POST',
-            dataType: 'json',
-            data: {
-                action: 'iipm_get_organizations_data',
-                nonce: (typeof iipm_ajax !== 'undefined' ? iipm_ajax.nonce : '<?php echo wp_create_nonce('iipm_portal_nonce'); ?>')
-            }
-        }).done(function(resp) {
-            organizationsData = resp.data || [];
-        }).fail(function() {
-            organizationsData = [];
-        });
-    }
-    
-    function renderOrganisationSuggestions(query) {
-        var $list = $('#organisation-suggestions');
-        $list.empty();
-        
-        if (!query) {
-            $list.hide();
-            return;
-        }
-        
-        var matches = organizationsData.filter(function(org) {
-            return org.name.toLowerCase().includes(query.toLowerCase());
-        });
-        
-        if (!matches.length) {
-            $list.append('<div class="org-suggestion disabled">No matching organisations</div>');
-        } else {
-            matches.slice(0, 6).forEach(function(org) {
-                $list.append('<div class="org-suggestion" data-id="' + org.id + '" data-name="' + org.name + '">' + org.name + '</div>');
-            });
-        }
-        
-        $list.show();
-    }
-    
-    $('#organisation_name').on('input', function() {
-        $('#organisation_id').val('');
-        renderOrganisationSuggestions($(this).val().trim());
-    });
-    
-    $('#organisation_name').on('focus', function() {
-        renderOrganisationSuggestions($(this).val().trim());
-    });
-    
-    $(document).on('click', '.org-suggestion:not(.disabled)', function() {
-        var orgId = $(this).data('id');
-        var orgName = $(this).data('name');
-        $('#organisation_name').val(orgName);
-        $('#organisation_id').val(orgId);
-        $('#organisation-suggestions').hide().empty();
-    });
-    
-    $(document).on('click', function(e) {
-        if (!$(e.target).closest('#organisation-name-group').length) {
-            $('#organisation-suggestions').hide().empty();
-        }
-    });
-    
-    loadOrganisationOptions();
     
 });
 

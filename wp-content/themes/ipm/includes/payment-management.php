@@ -186,6 +186,78 @@ function iipm_handle_stripe_payment_redirect() {
 add_action('template_redirect', 'iipm_handle_stripe_payment_redirect');
 
 /**
+ * Refresh Stripe Checkout link and redirect to new session.
+ * Used by invoice PDFs where old session links may expire.
+ */
+function iipm_handle_stripe_checkout_refresh() {
+	if (!isset($_GET['iipm_refresh_stripe_checkout']) || $_GET['iipm_refresh_stripe_checkout'] !== '1') {
+		return;
+	}
+
+	error_log('IIPM Stripe Refresh: refresh handler triggered.');
+
+	$order_id = isset($_GET['order_id']) ? intval($_GET['order_id']) : 0;
+	$order_key = isset($_GET['key']) ? sanitize_text_field($_GET['key']) : '';
+
+	if ($order_id <= 0 || $order_key === '') {
+		error_log('IIPM Stripe Refresh: missing order_id or key.');
+		wp_safe_redirect(home_url('/'));	
+		exit;
+	}
+
+	$order = wc_get_order($order_id);
+	if (!$order || $order->get_order_key() !== $order_key) {
+		error_log('IIPM Stripe Refresh: order not found or key mismatch.');
+		wp_safe_redirect(home_url('/'));
+		exit;
+	}
+
+	$stripe_checkout_url = iipm_create_stripe_checkout_session($order);
+	if ($stripe_checkout_url) {
+		error_log('IIPM Stripe Refresh: new checkout URL created.' . $stripe_checkout_url);
+		wp_redirect($stripe_checkout_url);
+		exit;
+	}
+
+	// Fallback to WooCommerce payment page if Stripe session fails
+	error_log('IIPM Stripe Refresh: failed to create checkout URL, using Woo payment page.');
+	wp_safe_redirect($order->get_checkout_payment_url(false));
+	exit;
+}
+add_action('template_redirect', 'iipm_handle_stripe_checkout_refresh', 0);
+add_action('admin_init', 'iipm_handle_stripe_checkout_refresh', 0);
+
+/**
+ * AJAX: Refresh Stripe checkout URL and redirect (no login required).
+ */
+function iipm_refresh_stripe_checkout_ajax() {
+	$order_id = isset($_GET['order_id']) ? intval($_GET['order_id']) : 0;
+	$order_key = isset($_GET['key']) ? sanitize_text_field($_GET['key']) : '';
+
+	if ($order_id <= 0 || $order_key === '') {
+		wp_safe_redirect(home_url('/'));
+		exit;
+	}
+
+	$order = wc_get_order($order_id);
+	if (!$order || $order->get_order_key() !== $order_key) {
+		wp_safe_redirect(home_url('/'));
+		exit;
+	}
+
+	$stripe_checkout_url = iipm_create_stripe_checkout_session($order);
+	if ($stripe_checkout_url) {
+		wp_safe_redirect($stripe_checkout_url);
+		exit;
+	}
+
+	wp_safe_redirect($order->get_checkout_payment_url(false));
+	exit;
+}
+add_action('wp_ajax_iipm_refresh_stripe_checkout', 'iipm_refresh_stripe_checkout_ajax');
+add_action('wp_ajax_nopriv_iipm_refresh_stripe_checkout', 'iipm_refresh_stripe_checkout_ajax');
+
+/**
  * Filter to set order status to 'completed' instead of 'processing' when Stripe payment is complete.
  * This handles the webhook from Stripe that calls $order->payment_complete().
  * 
@@ -654,7 +726,7 @@ function iipm_get_payment_users() {
 	$users_sql = "
 		SELECT u.ID, u.user_login, u.user_email,
 			   mp.first_name, mp.sur_name, mp.user_designation,
-			   mp.Address_1, mp.Address_2
+			   mp.Address_1, mp.Address_2, mp.Address_3
 		FROM {$wpdb->users} u
 		LEFT JOIN {$wpdb->prefix}test_iipm_member_profiles mp ON mp.user_id = u.ID
 		{$where_sql}
@@ -752,6 +824,7 @@ function iipm_get_payment_users() {
 			'membership_fee' => $membership_fee,
 			'Address_1' => $row->Address_1 ?? '',
 			'Address_2' => $row->Address_2 ?? '',
+			'Address_3' => $row->Address_3 ?? '',
 			'order_status' => $order_status,
 			'status_label' => $status_label,
 			'last_invoiced' => $last_invoiced,
@@ -1347,6 +1420,275 @@ function iipm_send_payment_invoice() {
 	}
 }
 add_action('wp_ajax_iipm_send_payment_invoice', 'iipm_send_payment_invoice');
+
+/**
+ * AJAX: Bulk send invoices to individual members.
+ */
+function iipm_bulk_send_individual_invoices() {
+	$nonce = sanitize_text_field($_POST['nonce'] ?? '');
+	if (!wp_verify_nonce($nonce, 'iipm_payment_nonce')) {
+		wp_send_json_error('Security check failed');
+	}
+
+	if (!iipm_pm_user_can_manage()) {
+		wp_send_json_error('Insufficient permissions');
+	}
+
+	$invoice_year = intval($_POST['invoice_year'] ?? date('Y'));
+	if ($invoice_year < 2019 || $invoice_year > date('Y')) {
+		$invoice_year = date('Y');
+	}
+
+	$mode = sanitize_text_field($_POST['mode'] ?? 'count');
+	$offset = max(0, intval($_POST['offset'] ?? 0));
+	$limit = intval($_POST['limit'] ?? 50);
+	$limit = min(200, max(10, $limit));
+	global $wpdb;
+
+	$users = $wpdb->get_results(
+		"SELECT u.ID, u.user_email, u.user_login,
+				mp.first_name, mp.sur_name, mp.user_designation,
+				mp.Address_1, mp.Address_2, mp.Address_3, mp.city_or_town, mp.user_phone
+		 FROM {$wpdb->users} u
+		 INNER JOIN {$wpdb->prefix}test_iipm_member_profiles mp ON mp.user_id = u.ID
+		 INNER JOIN {$wpdb->prefix}test_iipm_members m ON m.user_id = u.ID
+		 WHERE m.member_type = 'individual'
+		   AND (mp.employer_id IS NULL OR mp.employer_id = 0)
+		   AND mp.user_designation IS NOT NULL
+		   AND mp.user_designation != ''
+		   AND NOT EXISTS (
+				SELECT 1
+				FROM {$wpdb->usermeta} um
+				WHERE um.user_id = u.ID
+				  AND um.meta_key = '{$wpdb->prefix}capabilities'
+				  AND um.meta_value LIKE '%administrator%'
+		   )
+		 ORDER BY mp.first_name ASC, mp.sur_name ASC"
+	);
+
+	$eligible = array();
+	foreach ($users as $user) {
+		$has_address = (!empty($user->Address_1) || !empty($user->Address_2) || !empty($user->Address_3));
+		if (!$has_address) {
+			continue;
+		}
+
+		$product = null;
+		$products = get_posts(array(
+			'post_type' => 'product',
+			'posts_per_page' => 1,
+			'post_status' => 'publish',
+			'title' => $user->user_designation,
+			's' => $user->user_designation
+		));
+		if (!empty($products)) {
+			$product = wc_get_product($products[0]->ID);
+		}
+		if (!$product) {
+			continue;
+		}
+
+		$customer_id = $wpdb->get_var($wpdb->prepare(
+			"SELECT customer_id FROM {$wpdb->prefix}wc_customer_lookup WHERE user_id = %d",
+			$user->ID
+		));
+		if ($customer_id) {
+			$existing_order = $wpdb->get_var($wpdb->prepare(
+				"SELECT COUNT(*)
+				 FROM {$wpdb->prefix}wc_orders o
+				 INNER JOIN {$wpdb->prefix}wc_orders_meta om_year
+					ON o.id = om_year.order_id AND om_year.meta_key = '_iipm_invoice_year'
+				 WHERE o.type = 'shop_order'
+				   AND o.customer_id = %d
+				   AND om_year.meta_value = %d
+				   AND o.status IN ('wc-processing', 'wc-completed')",
+				$customer_id,
+				$invoice_year
+			));
+			if ($existing_order > 0) {
+				continue;
+			}
+		}
+
+		$eligible[] = $user;
+	}
+
+	$total_eligible = count($eligible);
+
+	if ($mode === 'count') {
+		wp_send_json_success(array('count' => $total_eligible));
+	}
+
+	if ($mode !== 'send') {
+		wp_send_json_error('Invalid mode');
+	}
+
+	$sent = 0;
+	$skipped = 0;
+	$failed = 0;
+	$processed = 0;
+
+	$batch = array_slice($eligible, $offset, $limit);
+	foreach ($batch as $user) {
+		$order = iipm_pm_create_individual_invoice_order($user, $invoice_year);
+		if (is_wp_error($order)) {
+			$failed++;
+			$processed++;
+			continue;
+		}
+
+		$email = $order->get_billing_email();
+		$first_name = $order->get_billing_first_name() ?: ($user->first_name ?? '');
+		$email_sent = iipm_pm_send_wc_invoice_email($order, $email, $first_name, 'pending');
+		if (is_wp_error($email_sent)) {
+			$failed++;
+			$processed++;
+			continue;
+		}
+
+		$sent++;
+		$processed++;
+	}
+
+	$next_offset = $offset + $processed;
+	$done = $next_offset >= $total_eligible;
+
+	wp_send_json_success(array(
+		'sent' => $sent,
+		'skipped' => $skipped,
+		'failed' => $failed,
+		'processed' => $processed,
+		'offset' => $offset,
+		'next_offset' => $next_offset,
+		'total' => $total_eligible,
+		'done' => $done
+	));
+}
+add_action('wp_ajax_iipm_bulk_send_individual_invoices', 'iipm_bulk_send_individual_invoices');
+
+/**
+ * Helper: Create individual invoice order for bulk send.
+ */
+function iipm_pm_create_individual_invoice_order($user, $invoice_year) {
+	global $wpdb;
+
+	$user_id = intval($user->ID);
+	$designation = $user->user_designation ?? '';
+	if (empty($designation)) {
+		return new WP_Error('missing_designation', 'User designation not found');
+	}
+
+	$products = get_posts(array(
+		'post_type' => 'product',
+		'posts_per_page' => 1,
+		'post_status' => 'publish',
+		'title' => $designation,
+		's' => $designation
+	));
+
+	if (empty($products)) {
+		return new WP_Error('product_not_found', 'No product found for designation');
+	}
+
+	$product_id = $products[0]->ID;
+	$product = wc_get_product($product_id);
+	if (!$product) {
+		return new WP_Error('product_load_failed', 'Failed to load product');
+	}
+
+	$first_name = $user->first_name ?? '';
+	$sur_name = $user->sur_name ?? '';
+	$address_1 = $user->Address_1 ?? '';
+	$address_2 = $user->Address_2 ?? '';
+	$city = $user->city_or_town ?? '';
+	$phone = $user->user_phone ?? '';
+	$email = $user->user_email ?? '';
+	$username = trim($first_name . ' ' . $sur_name);
+	if (empty($username)) {
+		$username = $user->user_login ?? $email;
+	}
+
+	$customer_lookup = $wpdb->get_row($wpdb->prepare(
+		"SELECT customer_id FROM {$wpdb->prefix}wc_customer_lookup WHERE user_id = %d",
+		$user_id
+	));
+
+	if (!$customer_lookup) {
+		$insert_data = array(
+			'username' => $username,
+			'first_name' => $first_name,
+			'last_name' => $sur_name,
+			'email' => $email,
+			'date_registered' => current_time('mysql', 1),
+			'date_last_active' => current_time('mysql', 1),
+			'country' => '',
+			'postcode' => '',
+			'city' => $city,
+			'state' => '',
+			'user_id' => $user_id
+		);
+		$insert_formats = array('%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d');
+		$wpdb->insert($wpdb->prefix . 'wc_customer_lookup', $insert_data, $insert_formats);
+		$customer_id = $wpdb->insert_id;
+	} else {
+		$customer_id = intval($customer_lookup->customer_id);
+		$update_data = array(
+			'username' => $username,
+			'first_name' => $first_name,
+			'last_name' => $sur_name,
+			'email' => $email,
+			'date_last_active' => current_time('mysql', 1),
+			'user_id' => $user_id
+		);
+		$update_formats = array('%s', '%s', '%s', '%s', '%s', '%d');
+		$wpdb->update(
+			$wpdb->prefix . 'wc_customer_lookup',
+			$update_data,
+			array('customer_id' => $customer_id),
+			$update_formats,
+			array('%d')
+		);
+	}
+
+	$order = wc_create_order(array(
+		'customer_id' => $customer_id,
+		'status' => 'pending'
+	));
+
+	if (is_wp_error($order)) {
+		return $order;
+	}
+
+	$item = new WC_Order_Item_Product();
+	$item->set_product($product);
+	$item->set_quantity(1);
+	$order_amount = $product->get_price();
+	$item->set_subtotal($order_amount);
+	$item->set_total($order_amount);
+	$order->add_item($item);
+
+	$order->set_billing_first_name($first_name);
+	$order->set_billing_last_name($sur_name);
+	$order->set_billing_email($email);
+	$order->set_billing_phone($phone);
+	$order->set_billing_address_1($address_1);
+	$order->set_billing_address_2($address_2);
+	$order->set_billing_city($city);
+
+	$order->calculate_totals();
+	$order->save();
+
+	$order->update_meta_data('_iipm_designation', $designation);
+	$order->update_meta_data('_iipm_user_id', $user_id);
+	$order->update_meta_data('_iipm_product_id', $product_id);
+	$order->update_meta_data('_iipm_invoice_year', $invoice_year);
+	$order->save();
+
+	iipm_create_stripe_checkout_session($order);
+	iipm_pm_generate_invoice_pdf($order);
+
+	return $order;
+}
 
 /**
  * AJAX: Get payment orders with status.
