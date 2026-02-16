@@ -486,6 +486,49 @@ function iipm_pm_user_can_manage() {
 	return current_user_can('administrator') || current_user_can('manage_iipm_members');
 }
 
+function iipm_pm_orders_has_column($column) {
+	static $cache = array();
+	if (array_key_exists($column, $cache)) {
+		return $cache[$column];
+	}
+
+	global $wpdb;
+	$table = $wpdb->prefix . 'wc_orders';
+	$exists = $wpdb->get_var($wpdb->prepare("SHOW COLUMNS FROM {$table} LIKE %s", $column));
+	$cache[$column] = !empty($exists);
+	return $cache[$column];
+}
+
+function iipm_pm_upsert_order_meta($order_id, $meta_key, $meta_value) {
+	global $wpdb;
+	$table = $wpdb->prefix . 'wc_orders_meta';
+	$existing = $wpdb->get_var($wpdb->prepare(
+		"SELECT meta_id FROM {$table} WHERE order_id = %d AND meta_key = %s",
+		$order_id,
+		$meta_key
+	));
+
+	if ($existing) {
+		$wpdb->update(
+			$table,
+			array('meta_value' => $meta_value),
+			array('meta_id' => $existing),
+			array('%s'),
+			array('%d')
+		);
+	} else {
+		$wpdb->insert(
+			$table,
+			array(
+				'order_id' => $order_id,
+				'meta_key' => $meta_key,
+				'meta_value' => $meta_value
+			),
+			array('%d', '%s', '%s')
+		);
+	}
+}
+
 /**
  * Helper function to get membership fee for a designation.
  * Finds a product with matching title and returns its price.
@@ -679,6 +722,7 @@ function iipm_get_payment_users() {
 	if ($filter_year < 2019 || $filter_year > date('Y')) {
 		$filter_year = date('Y');
 	}
+	$test_mode = isset($_POST['test_mode']) && $_POST['test_mode'] === '1';
 
 	$where_clauses = array(
 		"NOT EXISTS (
@@ -701,6 +745,11 @@ function iipm_get_payment_users() {
 			  AND m.member_type = 'individual'
 		)"
 	);
+	if ($test_mode) {
+		$where_clauses[] = "COALESCE(mp.is_test_user, 0) = 1";
+	} else {
+		$where_clauses[] = "(mp.is_test_user IS NULL OR mp.is_test_user = 0)";
+	}
 	$params = array();
 
 	if (!empty($search)) {
@@ -726,7 +775,8 @@ function iipm_get_payment_users() {
 	$users_sql = "
 		SELECT u.ID, u.user_login, u.user_email,
 			   mp.first_name, mp.sur_name, mp.user_designation,
-			   mp.Address_1, mp.Address_2, mp.Address_3
+			   mp.Address_1, mp.Address_2, mp.Address_3,
+			   COALESCE(mp.is_test_user, 0) as is_test_user
 		FROM {$wpdb->users} u
 		LEFT JOIN {$wpdb->prefix}test_iipm_member_profiles mp ON mp.user_id = u.ID
 		{$where_sql}
@@ -829,7 +879,8 @@ function iipm_get_payment_users() {
 			'status_label' => $status_label,
 			'last_invoiced' => $last_invoiced,
 			'order_id' => $order_id,
-			'has_processing_order' => $has_processing_order
+			'has_processing_order' => $has_processing_order,
+			'is_test_user' => !empty($row->is_test_user)
 		);
 	}
 
@@ -1381,7 +1432,7 @@ function iipm_send_payment_invoice() {
 		if ($is_organization) {
 			$order->update_meta_data('_iipm_designation', 'Organization'); // Multiple designations
 			$order->update_meta_data('_iipm_total_fee', $total_fee);
-			// org_id is stored in wc_customer_lookup, not in order meta
+		$order->update_meta_data('_iipm_org_id', $org_id);
 		} else {
 			$order->update_meta_data('_iipm_designation', $designation);
 			$order->update_meta_data('_iipm_user_id', $user_id);
@@ -1438,12 +1489,17 @@ function iipm_bulk_send_individual_invoices() {
 	if ($invoice_year < 2019 || $invoice_year > date('Y')) {
 		$invoice_year = date('Y');
 	}
+	$test_mode = isset($_POST['test_mode']) && $_POST['test_mode'] === '1';
 
 	$mode = sanitize_text_field($_POST['mode'] ?? 'count');
 	$offset = max(0, intval($_POST['offset'] ?? 0));
 	$limit = intval($_POST['limit'] ?? 50);
 	$limit = min(200, max(10, $limit));
 	global $wpdb;
+
+	$test_filter = $test_mode
+		? "AND COALESCE(mp.is_test_user, 0) = 1"
+		: "AND (mp.is_test_user IS NULL OR mp.is_test_user = 0)";
 
 	$users = $wpdb->get_results(
 		"SELECT u.ID, u.user_email, u.user_login,
@@ -1456,6 +1512,7 @@ function iipm_bulk_send_individual_invoices() {
 		   AND (mp.employer_id IS NULL OR mp.employer_id = 0)
 		   AND mp.user_designation IS NOT NULL
 		   AND mp.user_designation != ''
+		   {$test_filter}
 		   AND NOT EXISTS (
 				SELECT 1
 				FROM {$wpdb->usermeta} um
@@ -2608,12 +2665,33 @@ function iipm_get_orders($user_id = 0, $org_id = 0, $year = null) {
 			"SELECT customer_id FROM {$wpdb->prefix}wc_customer_lookup WHERE org_id = %d",
 			$org_id
 		));
+		if (!$customer_id) {
+			$org_name = $wpdb->get_var($wpdb->prepare(
+				"SELECT name FROM {$wpdb->prefix}test_iipm_organisations WHERE id = %d",
+				$org_id
+			));
+			if ($org_name) {
+				$customer_id = $wpdb->get_var($wpdb->prepare(
+					"SELECT customer_id FROM {$wpdb->prefix}wc_customer_lookup WHERE username = %s AND user_id IS NULL",
+					$org_name
+				));
+			}
+		}
 	} else {
 		// For individuals: lookup by user_id
 		$customer_id = $wpdb->get_var($wpdb->prepare(
 			"SELECT customer_id FROM {$wpdb->prefix}wc_customer_lookup WHERE user_id = %d",
 			$user_id
 		));
+		if (!$customer_id) {
+			$user = get_userdata($user_id);
+			if ($user && !empty($user->user_email)) {
+				$customer_id = $wpdb->get_var($wpdb->prepare(
+					"SELECT customer_id FROM {$wpdb->prefix}wc_customer_lookup WHERE email = %s",
+					$user->user_email
+				));
+			}
+		}
 	}
 	
 	if (!$customer_id) {
@@ -2621,25 +2699,79 @@ function iipm_get_orders($user_id = 0, $org_id = 0, $year = null) {
 	}
 	
 	// Get all orders for this customer in the specified year
-	$orders = $wpdb->get_results($wpdb->prepare(
-		"SELECT o.id, o.status, o.total_amount, o.date_created_gmt, o.date_updated_gmt,
-		        om_designation.meta_value as designation,
-		        om_product.meta_value as product_id,
-		        om_total_fee.meta_value as total_fee,
-		        om_year.meta_value as invoice_year
-		FROM {$wpdb->prefix}wc_orders o
-		LEFT JOIN {$wpdb->prefix}wc_orders_meta om_designation ON om_designation.order_id = o.id AND om_designation.meta_key = '_iipm_designation'
-		LEFT JOIN {$wpdb->prefix}wc_orders_meta om_product ON om_product.order_id = o.id AND om_product.meta_key = '_iipm_product_id'
-		LEFT JOIN {$wpdb->prefix}wc_orders_meta om_total_fee ON om_total_fee.order_id = o.id AND om_total_fee.meta_key = '_iipm_total_fee'
-		LEFT JOIN {$wpdb->prefix}wc_orders_meta om_year ON om_year.order_id = o.id AND om_year.meta_key = '_iipm_invoice_year'
-		WHERE o.customer_id = %d
-		  AND o.type = 'shop_order'
-		  AND om_year.meta_value = %d
-		ORDER BY o.date_created_gmt DESC",
-		$customer_id,
-		$year
-	));
-	
+	$payment_method_select = 'o.payment_method AS payment_method';
+	$payment_method_title_select = 'o.payment_method_title AS payment_method_title';
+	$payment_date_select = 'o.date_paid_gmt AS date_paid_gmt';
+	$meta_joins = '';
+
+	if (!iipm_pm_orders_has_column('payment_method')) {
+		$meta_joins .= " LEFT JOIN {$wpdb->prefix}wc_orders_meta om_payment_method ON om_payment_method.order_id = o.id AND om_payment_method.meta_key = '_payment_method'";
+		$payment_method_select = 'om_payment_method.meta_value AS payment_method';
+	}
+	if (!iipm_pm_orders_has_column('payment_method_title')) {
+		$meta_joins .= " LEFT JOIN {$wpdb->prefix}wc_orders_meta om_payment_method_title ON om_payment_method_title.order_id = o.id AND om_payment_method_title.meta_key = '_payment_method_title'";
+		$payment_method_title_select = 'om_payment_method_title.meta_value AS payment_method_title';
+	}
+	if (!iipm_pm_orders_has_column('date_paid_gmt')) {
+		$meta_joins .= " LEFT JOIN {$wpdb->prefix}wc_orders_meta om_date_paid ON om_date_paid.order_id = o.id AND om_date_paid.meta_key = '_date_paid'";
+		$payment_date_select = "CASE WHEN om_date_paid.meta_value REGEXP '^[0-9]+$' THEN FROM_UNIXTIME(om_date_paid.meta_value) ELSE om_date_paid.meta_value END AS date_paid_gmt";
+	}
+
+	if (!$customer_id) {
+		$where_user = $is_org
+			? "om_org.meta_value = %d"
+			: "om_user.meta_value = %d";
+		$meta_user_join = $is_org
+			? "LEFT JOIN {$wpdb->prefix}wc_orders_meta om_org ON om_org.order_id = o.id AND om_org.meta_key = '_iipm_org_id'"
+			: "LEFT JOIN {$wpdb->prefix}wc_orders_meta om_user ON om_user.order_id = o.id AND om_user.meta_key = '_iipm_user_id'";
+		$orders = $wpdb->get_results($wpdb->prepare(
+			"SELECT o.id, o.status, o.total_amount, o.date_created_gmt, o.date_updated_gmt,
+			        {$payment_method_select}, {$payment_method_title_select}, {$payment_date_select},
+			        om_designation.meta_value as designation,
+			        om_product.meta_value as product_id,
+			        om_total_fee.meta_value as total_fee,
+			        om_year.meta_value as invoice_year
+			FROM {$wpdb->prefix}wc_orders o
+			LEFT JOIN {$wpdb->prefix}wc_orders_meta om_designation ON om_designation.order_id = o.id AND om_designation.meta_key = '_iipm_designation'
+			LEFT JOIN {$wpdb->prefix}wc_orders_meta om_product ON om_product.order_id = o.id AND om_product.meta_key = '_iipm_product_id'
+			LEFT JOIN {$wpdb->prefix}wc_orders_meta om_total_fee ON om_total_fee.order_id = o.id AND om_total_fee.meta_key = '_iipm_total_fee'
+			LEFT JOIN {$wpdb->prefix}wc_orders_meta om_year ON om_year.order_id = o.id AND om_year.meta_key = '_iipm_invoice_year'
+			{$meta_user_join}
+			{$meta_joins}
+			WHERE o.type = 'shop_order'
+			  AND (om_year.meta_value = %d OR YEAR(o.date_created_gmt) = %d)
+			  AND {$where_user}
+			GROUP BY o.id
+			ORDER BY o.date_created_gmt DESC",
+			$year,
+			$year,
+			$is_org ? $org_id : $user_id
+		));
+	} else {
+		$orders = $wpdb->get_results($wpdb->prepare(
+			"SELECT o.id, o.status, o.total_amount, o.date_created_gmt, o.date_updated_gmt,
+			        {$payment_method_select}, {$payment_method_title_select}, {$payment_date_select},
+			        om_designation.meta_value as designation,
+			        om_product.meta_value as product_id,
+			        om_total_fee.meta_value as total_fee,
+			        om_year.meta_value as invoice_year
+			FROM {$wpdb->prefix}wc_orders o
+			LEFT JOIN {$wpdb->prefix}wc_orders_meta om_designation ON om_designation.order_id = o.id AND om_designation.meta_key = '_iipm_designation'
+			LEFT JOIN {$wpdb->prefix}wc_orders_meta om_product ON om_product.order_id = o.id AND om_product.meta_key = '_iipm_product_id'
+			LEFT JOIN {$wpdb->prefix}wc_orders_meta om_total_fee ON om_total_fee.order_id = o.id AND om_total_fee.meta_key = '_iipm_total_fee'
+			LEFT JOIN {$wpdb->prefix}wc_orders_meta om_year ON om_year.order_id = o.id AND om_year.meta_key = '_iipm_invoice_year'
+			{$meta_joins}
+			WHERE o.customer_id = %d
+			  AND o.type = 'shop_order'
+			  AND (om_year.meta_value = %d OR YEAR(o.date_created_gmt) = %d)
+			GROUP BY o.id
+			ORDER BY o.date_created_gmt DESC",
+			$customer_id,
+			$year,
+			$year
+		));
+	}
+
 	// Format orders for response
 	$formatted_orders = array();
 	foreach ($orders as $order) {
@@ -2650,6 +2782,9 @@ function iipm_get_orders($user_id = 0, $org_id = 0, $year = null) {
 			'total_amount' => floatval($order->total_amount),
 			'date_created_gmt' => $order->date_created_gmt,
 			'date_updated_gmt' => $order->date_updated_gmt,
+			'payment_method' => $order->payment_method ?? '',
+			'payment_method_title' => $order->payment_method_title ?? '',
+			'payment_date' => $order->date_paid_gmt ?? '',
 			'designation' => $order->designation ?? '',
 			'product_id' => $order->product_id ?? '',
 			'total_fee' => $order->total_fee ? floatval($order->total_fee) : floatval($order->total_amount),
@@ -2696,6 +2831,222 @@ function iipm_get_orders_ajax() {
 }
 add_action('wp_ajax_iipm_get_orders', 'iipm_get_orders_ajax');
 add_action('wp_ajax_nopriv_iipm_get_orders', 'iipm_get_orders_ajax');
+
+/**
+ * AJAX: Update order payment fields and status.
+ */
+function iipm_update_order_payment_fields() {
+	$nonce = sanitize_text_field($_POST['nonce'] ?? '');
+	if (!wp_verify_nonce($nonce, 'iipm_payment_nonce')) {
+		wp_send_json_error('Security check failed');
+	}
+
+	if (!iipm_pm_user_can_manage()) {
+		wp_send_json_error('Insufficient permissions');
+	}
+
+	$order_id = intval($_POST['order_id'] ?? 0);
+	if ($order_id <= 0) {
+		wp_send_json_error('Invalid order ID');
+	}
+
+	$status = sanitize_text_field($_POST['status'] ?? '');
+	$payment_method = sanitize_text_field($_POST['payment_method'] ?? '');
+	$payment_date = sanitize_text_field($_POST['payment_date'] ?? '');
+
+	$update_data = array();
+	$update_formats = array();
+	$use_orders_columns = iipm_pm_orders_has_column('payment_method');
+	$meta_updated = false;
+
+	if ($status !== '') {
+		$allowed_statuses = array('wc-pending', 'wc-processing', 'wc-completed', 'wc-trash');
+		if (!in_array($status, $allowed_statuses, true)) {
+			wp_send_json_error('Invalid status');
+		}
+		$update_data['status'] = $status;
+		$update_formats[] = '%s';
+	}
+
+	if ($status === 'wc-completed' && $payment_method === '') {
+		$payment_method = 'stripe';
+	}
+
+	if ($payment_method !== '') {
+		$payment_method = ($payment_method === 'bank') ? 'bank' : 'stripe';
+		if ($use_orders_columns) {
+			$update_data['payment_method'] = $payment_method;
+			$update_formats[] = '%s';
+			$update_data['payment_method_title'] = $payment_method === 'bank' ? 'Bank Transfer' : 'Stripe';
+			$update_formats[] = '%s';
+		} else {
+			iipm_pm_upsert_order_meta($order_id, '_payment_method', $payment_method);
+			iipm_pm_upsert_order_meta($order_id, '_payment_method_title', $payment_method === 'bank' ? 'Bank Transfer' : 'Stripe');
+			$meta_updated = true;
+		}
+	}
+
+	if ($status === 'wc-completed' && $payment_date === '') {
+		$payment_date = current_time('Y-m-d');
+	}
+
+	if ($payment_date !== '') {
+		$parsed_date = date_create_from_format('Y-m-d', $payment_date);
+		if (!$parsed_date) {
+			wp_send_json_error('Invalid payment date');
+		}
+		$payment_datetime = $parsed_date->format('Y-m-d') . ' 00:00:00';
+		if ($use_orders_columns && iipm_pm_orders_has_column('date_paid_gmt')) {
+			$update_data['date_paid_gmt'] = $payment_datetime;
+			$update_formats[] = '%s';
+			if (iipm_pm_orders_has_column('date_paid')) {
+				$update_data['date_paid'] = $payment_datetime;
+				$update_formats[] = '%s';
+			}
+		} else {
+			iipm_pm_upsert_order_meta($order_id, '_date_paid', strtotime($payment_datetime));
+			$meta_updated = true;
+		}
+
+		if ($status === '') {
+			$update_data['status'] = 'wc-completed';
+			$update_formats[] = '%s';
+		}
+	}
+
+	if ($status !== '' && $status !== 'wc-completed') {
+		if ($use_orders_columns && iipm_pm_orders_has_column('date_paid_gmt')) {
+			$update_data['date_paid_gmt'] = null;
+			$update_formats[] = '%s';
+			if (iipm_pm_orders_has_column('date_paid')) {
+				$update_data['date_paid'] = null;
+				$update_formats[] = '%s';
+			}
+		} else {
+			iipm_pm_upsert_order_meta($order_id, '_date_paid', '');
+			$meta_updated = true;
+		}
+
+		if ($use_orders_columns) {
+			if (iipm_pm_orders_has_column('payment_method')) {
+				$update_data['payment_method'] = null;
+				$update_formats[] = '%s';
+			}
+			if (iipm_pm_orders_has_column('payment_method_title')) {
+				$update_data['payment_method_title'] = null;
+				$update_formats[] = '%s';
+			}
+		} else {
+			iipm_pm_upsert_order_meta($order_id, '_payment_method', '');
+			iipm_pm_upsert_order_meta($order_id, '_payment_method_title', '');
+			$meta_updated = true;
+		}
+	}
+
+	if (empty($update_data)) {
+		if ($meta_updated) {
+			wp_send_json_success(array('message' => 'Order updated'));
+		}
+		wp_send_json_error('No fields to update');
+	}
+
+	global $wpdb;
+	$result = $wpdb->update(
+		$wpdb->prefix . 'wc_orders',
+		$update_data,
+		array('id' => $order_id),
+		$update_formats,
+		array('%d')
+	);
+
+	if ($result === false) {
+		wp_send_json_error('Failed to update order');
+	}
+
+	wp_send_json_success(array('message' => 'Order updated'));
+}
+add_action('wp_ajax_iipm_update_order_payment_fields', 'iipm_update_order_payment_fields');
+
+/**
+ * AJAX: Permanently delete an order.
+ */
+function iipm_delete_order_permanently() {
+	$nonce = sanitize_text_field($_POST['nonce'] ?? '');
+	if (!wp_verify_nonce($nonce, 'iipm_payment_nonce')) {
+		wp_send_json_error('Security check failed');
+	}
+
+	if (!iipm_pm_user_can_manage()) {
+		wp_send_json_error('Insufficient permissions');
+	}
+
+	$order_id = intval($_POST['order_id'] ?? 0);
+	if ($order_id <= 0) {
+		wp_send_json_error('Invalid order ID');
+	}
+
+	if (!function_exists('wc_get_order')) {
+		wp_send_json_error('WooCommerce not available');
+	}
+
+	$order = wc_get_order($order_id);
+	if (!$order) {
+		wp_send_json_error('Order not found');
+	}
+
+	$deleted = $order->delete(true);
+	if (!$deleted) {
+		wp_send_json_error('Failed to delete order');
+	}
+
+	wp_send_json_success(array('message' => 'Order deleted'));
+}
+add_action('wp_ajax_iipm_delete_order_permanently', 'iipm_delete_order_permanently');
+
+/**
+ * Ensure Stripe payment method is set when orders complete.
+ */
+function iipm_sync_stripe_payment_method_on_complete($order_id) {
+	$order_id = intval($order_id);
+	if ($order_id <= 0) {
+		return;
+	}
+
+	global $wpdb;
+	$use_orders_columns = iipm_pm_orders_has_column('payment_method');
+
+	if ($use_orders_columns) {
+		$current_method = $wpdb->get_var($wpdb->prepare(
+			"SELECT payment_method FROM {$wpdb->prefix}wc_orders WHERE id = %d",
+			$order_id
+		));
+		if (!empty($current_method)) {
+			return;
+		}
+		$wpdb->update(
+			$wpdb->prefix . 'wc_orders',
+			array(
+				'payment_method' => 'stripe',
+				'payment_method_title' => 'Stripe'
+			),
+			array('id' => $order_id),
+			array('%s', '%s'),
+			array('%d')
+		);
+		return;
+	}
+
+	$current_method = $wpdb->get_var($wpdb->prepare(
+		"SELECT meta_value FROM {$wpdb->prefix}wc_orders_meta WHERE order_id = %d AND meta_key = '_payment_method'",
+		$order_id
+	));
+	if (!empty($current_method)) {
+		return;
+	}
+	iipm_pm_upsert_order_meta($order_id, '_payment_method', 'stripe');
+	iipm_pm_upsert_order_meta($order_id, '_payment_method_title', 'Stripe');
+}
+add_action('woocommerce_order_status_completed', 'iipm_sync_stripe_payment_method_on_complete', 20, 1);
 
 /**
  * AJAX: Get decline reason for cancelled order.

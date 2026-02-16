@@ -393,13 +393,13 @@ get_header();
                         <!-- Validation messages will be shown here -->
                     </div>
 
-                    <!-- Submission Deadline Alert -->
+                    <!-- Submission Reminder Alert -->
                     <?php if (!$is_submitted): ?>
                     <div class="submission-alert" id="submission-alert" style="display: none;">
                         <div class="alert-content">
                             <i class="fas fa-calendar-check alert-icon"></i>
                             <div class="alert-text">
-                                <strong>Submission Deadline</strong>
+                                <strong>Submit CPD Return</strong>
                                 <p id="submission-deadline-text">-</p>
                             </div>
                         </div>
@@ -2907,8 +2907,8 @@ get_header();
         }
         
         /**
-         * Update submission deadline alert
-         * Members can submit CPD until next year's Jan 30th
+         * Update submission alert
+         * Members can submit CPD at any time for current or previous years.
          */
         function updateSubmissionAlert(data) {
             const submissionAlert = document.getElementById('submission-alert');
@@ -2925,15 +2925,7 @@ get_header();
             const isSubmissionPeriod = data.is_submission_period_available || isInExtendedPeriod;
             
             if (isSubmissionPeriod && !isSubmitted) {
-                // Calculate next year's January 30th deadline
-                const nextYear = selectedYear + 1;
-                const deadlineDate = new Date(nextYear, 0, 30); // Jan 30 of next year
-                const formattedDeadline = deadlineDate.toLocaleDateString('en-GB', {
-                    day: 'numeric',
-                    month: 'long',
-                    year: 'numeric'
-                });
-                submissionDeadlineText.textContent = `Submit your CPD return before ${formattedDeadline}`;
+                submissionDeadlineText.textContent = 'Submit your CPD return once you have completed the requirements.';
                 submissionAlert.style.display = 'block';
             } else {
                 submissionAlert.style.display = 'none';
@@ -2942,42 +2934,21 @@ get_header();
         
         /**
          * Check if we're in the submission period for a given year
-         * Submission period formula: X year's submission duration is from X's Jan 1st to X+1's Jan 30th
-         * Example: For CPD year 2025, submission period is Jan 1, 2025 to Jan 30, 2026
+         * Members can submit CPD at any time for current or previous years until they meet requirements.
+         * No expiry date - submission is always available for past years.
          */
         function isInExtendedSubmissionPeriod(selectedYear) {
             const now = new Date();
             const currentYear = now.getFullYear();
-            const currentMonth = now.getMonth() + 1; // 1-12
-            const currentDay = now.getDate();
-            
             const yearNum = parseInt(selectedYear, 10);
-            const nextYear = yearNum + 1;
             
-            // Submission period: Jan 1 of year X to Jan 30 of year X+1
-            // Case 1: We're in the CPD year itself (year X)
-            if (currentYear === yearNum) {
-                // Any date in year X is within submission period
-                return true;
-            }
-            
-            // Case 2: We're in the year after the CPD year (year X+1)
-            if (currentYear === nextYear) {
-                // Check if it's January and on or before the 30th
-                if (currentMonth === 1 && currentDay <= 30) {
-                    return true; // On or before Jan 30
-                }
-                return false; // After Jan 30
-            }
-            
-            // Case 3: We're before the CPD year or after the submission deadline
-            return false;
+            // Submission always available: we're in or past the CPD year
+            return currentYear >= yearNum;
         }
         
         /**
          * Update CPD action buttons based on period and assignment status
-         * Submit button: Show for any year that's in its submission period (Jan 1 of year X to Jan 30 of year X+1)
-         * Submission period formula: X year's submission duration is from X's Jan 1st to X+1's Jan 30th
+         * Submit button: Show for any year that's in or past the CPD year (members can submit at any time)
          */
         function updateCpdActionButtons(data) {
             const submitContainer = document.getElementById('cpd-action-buttons-submit');
@@ -3005,7 +2976,7 @@ get_header();
             if (!submitContainer || !submitBtn) return;
             
             // Check if we're in the submission period for the selected year
-            // Submission period: Jan 1 of year X to Jan 30 of year X+1
+            // Members can submit CPD at any time for current or previous years
             const isInSubmissionPeriod = isInExtendedSubmissionPeriod(selectedYear);
             const isSubmissionPeriod = data.is_submission_period_available || isInSubmissionPeriod;
             const isSubmitted = data.is_submitted || false;
@@ -3036,7 +3007,7 @@ get_header();
             const meetsSubmissionRequirements = checkSubmissionRequirements(data);
             
             // User is assigned, show submit button if:
-            // - In submission period (Jan 1 of year X to Jan 30 of year X+1)
+            // - In submission period (current or past year - no expiry)
             // - Meets all requirements
             // - Not already submitted (checked above)
             if (isSubmissionPeriod && meetsSubmissionRequirements) {
@@ -3056,7 +3027,7 @@ get_header();
                 submitBtn.style.display = 'none';
                 submitContainer.style.display = 'none';
                 
-                // Show validation message if user is assigned and in submission period but doesn't meet requirements
+                // Show validation message if user is assigned (can submit) but doesn't meet requirements
                 if (isSubmissionPeriod) {
                     showValidationMessage(data);
                 } else {

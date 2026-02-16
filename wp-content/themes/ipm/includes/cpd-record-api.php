@@ -180,10 +180,15 @@ function iipm_get_cpd_stats($user_id, $year) {
             }
             
             // Check if current date is in submission period
+            // Members can submit CPD at any time for current or previous years (no expiry date)
             $start_submission = $primary_type->{'Start of annual submission date'};
             $end_submission = $primary_type->{'End of annual submission date'};
             
-            if ($start_submission && $end_submission) {
+            $current_year = intval(date('Y'));
+            $cpd_year = intval($year);
+            if ($current_year >= $cpd_year) {
+                $is_submission_period_available = true; // Always allow submission for current/past years
+            } elseif ($start_submission && $end_submission) {
                 $is_submission_period_available = ($current_date >= $start_submission && $current_date <= $end_submission);
             }
             
@@ -871,10 +876,15 @@ function iipm_get_completed_cpd_stats($user_id, $year) {
                 }
                 
                 // Check if current date is in submission period
+                // Members can submit CPD at any time for current or previous years (no expiry date)
                 $start_submission = $primary_type->{'Start of annual submission date'};
                 $end_submission = $primary_type->{'End of annual submission date'};
                 
-                if ($start_submission && $end_submission) {
+                $current_year = intval(date('Y'));
+                $cpd_year = intval($year);
+                if ($current_year >= $cpd_year) {
+                    $is_submission_period_available = true; // Always allow submission for current/past years
+                } elseif ($start_submission && $end_submission) {
                     $is_submission_period_available = ($current_date >= $start_submission && $current_date <= $end_submission);
                 }
                 
@@ -1062,10 +1072,15 @@ function iipm_get_completed_cpd_stats($user_id, $year) {
             }
             
             // Check if current date is in submission period
+            // Members can submit CPD at any time for current or previous years (no expiry date)
             $start_submission = $primary_type->{'Start of annual submission date'};
             $end_submission = $primary_type->{'End of annual submission date'};
             
-            if ($start_submission && $end_submission) {
+            $current_year = intval(date('Y'));
+            $cpd_year = intval($year);
+            if ($current_year >= $cpd_year) {
+                $is_submission_period_available = true; // Always allow submission for current/past years
+            } elseif ($start_submission && $end_submission) {
                 $is_submission_period_available = ($current_date >= $start_submission && $current_date <= $end_submission);
             }
             

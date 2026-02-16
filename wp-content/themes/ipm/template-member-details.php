@@ -1144,9 +1144,11 @@ jQuery(document).ready(function($) {
     }
     
     function displayUserDetails(data) {
-        // Update page title
+        // Update page title with optional Test Member label
         const displayName = (data.profile_info.first_name + ' ' + data.profile_info.sur_name).trim();
-        $('#page-title').text(displayName || 'Member Details');
+        const isTestUser = data.profile_info && parseInt(data.profile_info.is_test_user || 0, 10) === 1;
+        const titleText = (displayName || 'Member Details') + (isTestUser ? ' <span class="test-member-label" style="font-size: 0.6em; font-weight: normal; color: #2563eb; margin-left: 8px;">(Test Member)</span>' : '');
+        $('#page-title').html(titleText);
         
         // Section 1: User Information
         $('#user_email_edit').val(data.basic_info.user_email);

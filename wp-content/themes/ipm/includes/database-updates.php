@@ -37,6 +37,31 @@ function iipm_update_invitations_table() {
 }
 
 /**
+ * Add is_test_user column to member_profiles table for deploy/test mode
+ */
+function iipm_add_is_test_user_column() {
+    global $wpdb;
+
+    $table_name = $wpdb->prefix . 'test_iipm_member_profiles';
+
+    $column_exists = $wpdb->get_results($wpdb->prepare(
+        "SHOW COLUMNS FROM `{$table_name}` LIKE %s",
+        'is_test_user'
+    ));
+
+    if (empty($column_exists)) {
+        $sql = "ALTER TABLE `{$table_name}` ADD COLUMN `is_test_user` tinyint(1) DEFAULT 0 AFTER `user_id`";
+        $result = $wpdb->query($sql);
+        if ($result === false) {
+            error_log('IIPM: Failed to add is_test_user column: ' . $wpdb->last_error);
+            return false;
+        }
+        return true;
+    }
+    return true;
+}
+
+/**
  * Create forgo_requirements table
  */
 function iipm_create_forgo_requirements_table() {
@@ -86,14 +111,17 @@ function iipm_create_forgo_requirements_table() {
 function iipm_run_database_updates() {
     // Update invitations table
     iipm_update_invitations_table();
-    
+
+    // Add is_test_user to member_profiles
+    iipm_add_is_test_user_column();
+
     // Create forgo_requirements table
     iipm_create_forgo_requirements_table();
     
     // You can add more database updates here in the future
     
     // Update the database version
-    update_option('iipm_db_version', '1.3');
+    update_option('iipm_db_version', '1.4');
 }
 
 /**
@@ -101,15 +129,16 @@ function iipm_run_database_updates() {
  */
 function iipm_check_database_updates() {
     $current_version = get_option('iipm_db_version', '1.0');
-    $required_version = '1.3';
+    $required_version = '1.4';
     
     if (version_compare($current_version, $required_version, '<')) {
         iipm_run_database_updates();
     }
 }
 
-// Run database updates on admin init
+// Run database updates on admin init and init (for frontend admin pages like member-details)
 add_action('admin_init', 'iipm_check_database_updates');
+add_action('init', 'iipm_check_database_updates', 5);
 
 /**
  * Manual database update function (for testing)

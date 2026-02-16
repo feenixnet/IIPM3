@@ -7191,13 +7191,13 @@ function iipm_admin_get_user_details() {
 
 
     
-    // Get profile data from wp_test_iipm_member_profiles
+    // Get profile data from wp_test_iipm_member_profiles (is_test_user for deploy/test mode)
     $profile_data = $wpdb->get_row($wpdb->prepare(
         "SELECT user_phone, email_address, user_mobile, city_or_town, first_name, sur_name,
                 employer_name, user_payment_method, Address_1, Address_2, Address_3,
                 email_address_pers, user_phone_pers, user_mobile_pers, 
                 Address_1_pers, Address_2_pers, Address_3_pers, correspondence_email,
-                employer_id, user_notes FROM {$wpdb->prefix}test_iipm_member_profiles WHERE user_id = %d",
+                employer_id, user_notes, COALESCE(is_test_user, 0) as is_test_user FROM {$wpdb->prefix}test_iipm_member_profiles WHERE user_id = %d",
         $user_id
     ));
     
@@ -7250,7 +7250,8 @@ function iipm_admin_get_user_details() {
             'Address_3_pers' => $profile_data ? $profile_data->Address_3_pers : '',
             'correspondence_email' => $profile_data ? $profile_data->correspondence_email : '',
             'employer_id' => $profile_data ? $profile_data->employer_id : '',
-            'user_notes' => $profile_data ? $profile_data->user_notes : ''
+            'user_notes' => $profile_data ? $profile_data->user_notes : '',
+            'is_test_user' => $profile_data && !empty($profile_data->is_test_user) ? 1 : 0
         ),
         'organization_info' => $organization_data ? array(
             'name' => $organization_data->name,

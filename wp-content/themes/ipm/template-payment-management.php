@@ -21,25 +21,13 @@ get_header();
         <div class="page-header" style="text-align: center; margin-bottom: 20px;">
             <div>
                 <div style="display: flex; justify-content: center; align-items: center; gap: 15px; margin-bottom: 10px;">
-                    <h1 style="color: white; font-size: 2.5rem; margin: 0;">Payment Management</h1>
+                    <?php $cpd_year = date('Y') - 1; ?>
+                    <h1 style="color: white; font-size: 2.5rem; margin: 0;"><?php echo esc_html($cpd_year); ?> CPD Year Payment Management</h1>
                     <a href="<?php echo admin_url('admin.php?page=wc-orders'); ?>" class="btn-wc-orders-link" title="View WooCommerce Orders" target="_blank">
                         <i class="fas fa-external-link-alt"></i>
                     </a>
                 </div>
-                <div class="year-selector-main" style="display: flex; justify-content: center; align-items: center; gap: 12px; margin-top: 15px;">
-                    <select id="year-selector" class="year-select-main">
-                        <?php
-                        // Payment Management: Year selector shows CPD years
-                        // CPD year N corresponds to membership expiration Feb 1, (N+1)
-                        // Example: CPD year 2025 = membership expiration Feb 1, 2026
-                        // Note: Member portal and member details use current date year, not CPD years
-                        $current_year = date('Y');
-                        for ($year = $current_year; $year >= 2019; $year--) {
-                            echo '<option value="' . $year . '">' . $year . '</option>';
-                        }
-                        ?>
-                    </select>
-                </div>
+                <input type="hidden" id="year-selector" value="<?php echo esc_html($cpd_year); ?>">
             </div>
         </div>
 
@@ -107,13 +95,13 @@ get_header();
                     <table class="payment-table org-payment-table">
                         <thead>
                             <tr>
-                                <th>Organisation</th>
-                                <th>Email</th>
-                                <th>Members</th>
-                                <th>Total Fees</th>
-                                <th>Status</th>
-                                <th>Last Invoiced</th>
-                                <th>Action</th>
+                            <th class="sortable" data-sort-type="text">Organisation</th>
+                            <th class="sortable" data-sort-type="text">Email</th>
+                            <th class="sortable" data-sort-type="number">Members</th>
+                            <th class="sortable" data-sort-type="currency">Total Fees</th>
+                            <th class="sortable" data-sort-type="text">Status</th>
+                            <th class="sortable" data-sort-type="date">Last Invoiced</th>
+                            <th>Action</th>
                             </tr>
                         </thead>
                         <tbody id="payment-orgs-body">
@@ -142,6 +130,12 @@ get_header();
                             <i class="fas fa-search"></i>
                         </button>
                     </div>
+                    <div class="test-mode-toggle" style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 13px; color: #6b7280;">Show:</span>
+                        <button type="button" id="test-mode-toggle" class="btn btn-secondary" title="Toggle between test members and actual members" style="min-width: 140px;">
+                            <i class="fas fa-users"></i> Actual Members
+                        </button>
+                    </div>
                     <button id="payment-refresh" class="btn-icon-square" title="Refresh">
                         <i class="fas fa-sync-alt"></i>
                     </button>
@@ -153,13 +147,13 @@ get_header();
                     <table class="payment-table user-payment-table">
                         <thead>
                             <tr>
-                                <th>User</th>
-                                <th>Email</th>
-                                <th>Designation</th>
-                                <th>Membership Fee</th>
-                                <th>Status</th>
-                                <th>Last Invoiced</th>
-                                <th>Action</th>
+                            <th class="sortable" data-sort-type="text">User</th>
+                            <th class="sortable" data-sort-type="text">Email</th>
+                            <th class="sortable" data-sort-type="text">Designation</th>
+                            <th class="sortable" data-sort-type="currency">Membership Fee</th>
+                            <th class="sortable" data-sort-type="text">Status</th>
+                            <th class="sortable" data-sort-type="date">Last Invoiced</th>
+                            <th>Action</th>
                             </tr>
                         </thead>
                         <tbody id="payment-users-body">
@@ -209,7 +203,8 @@ jQuery(function($) {
         page: 1,
         totalPages: 1,
         search: '',
-        selectedYear: $('#year-selector').val()
+        selectedYear: $('#year-selector').val(),
+        testMode: false
     };
     const orgState = {
         page: 1,
@@ -230,6 +225,8 @@ jQuery(function($) {
     const $orgPageInfo = $('#org-page-info');
     const $orgPrev = $('#org-prev');
     const $orgNext = $('#org-next');
+    let currentOrdersUserId = null;
+    let currentOrdersOrgId = null;
 
     function loadStats() {
         if (!window.iipm_ajax || !iipm_ajax.payment_nonce) {
@@ -264,6 +261,51 @@ jQuery(function($) {
         const parts = num.split('.');
         parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
         return '€' + parts.join('.');
+    }
+
+    function setupSortableTable($table) {
+        const $headers = $table.find('th.sortable');
+        $headers.off('click.sortable').on('click.sortable', function() {
+            const $th = $(this);
+            const index = $th.index();
+            const type = $th.data('sort-type') || 'text';
+            const currentDir = $th.data('sort-dir') || 'asc';
+            const newDir = currentDir === 'asc' ? 'desc' : 'asc';
+
+            $headers.removeClass('sort-asc sort-desc').removeData('sort-dir');
+            $th.addClass(newDir === 'asc' ? 'sort-asc' : 'sort-desc').data('sort-dir', newDir);
+
+            const $tbody = $table.find('tbody');
+            const rows = $tbody.find('tr').get();
+
+            rows.sort(function(a, b) {
+                const aText = $(a).children('td').eq(index).text().trim();
+                const bText = $(b).children('td').eq(index).text().trim();
+                let aVal = aText;
+                let bVal = bText;
+
+                if (type === 'number' || type === 'currency') {
+                    aVal = parseFloat(aText.replace(/[^\d.-]/g, '')) || 0;
+                    bVal = parseFloat(bText.replace(/[^\d.-]/g, '')) || 0;
+                } else if (type === 'date') {
+                    const aDate = Date.parse(aText);
+                    const bDate = Date.parse(bText);
+                    aVal = isNaN(aDate) ? 0 : aDate;
+                    bVal = isNaN(bDate) ? 0 : bDate;
+                } else {
+                    aVal = aText.toLowerCase();
+                    bVal = bText.toLowerCase();
+                }
+
+                if (aVal < bVal) return newDir === 'asc' ? -1 : 1;
+                if (aVal > bVal) return newDir === 'asc' ? 1 : -1;
+                return 0;
+            });
+
+            $.each(rows, function(_, row) {
+                $tbody.append(row);
+            });
+        });
     }
 
     function notify(message, type = 'info') {
@@ -314,7 +356,8 @@ jQuery(function($) {
                 page: state.page,
                 per_page: perPage,
                 search: state.search,
-                filter_year: state.selectedYear
+                filter_year: state.selectedYear,
+                test_mode: state.testMode ? '1' : '0'
             }
         }).done(function(response) {
             if (response.success) {
@@ -341,6 +384,8 @@ jQuery(function($) {
         const rows = users.map(user => {
             const designation = user.designation ? user.designation : '—';
             const fullName = user.full_name || 'Unknown';
+            const isTestUser = user.is_test_user;
+            const nameStyle = isTestUser ? ' style="color: #2563eb; font-weight: 600;"' : '';
             let statusLabel = user.status_label || '—';
             const lastInvoiced = user.last_invoiced || '—';
             
@@ -394,7 +439,7 @@ jQuery(function($) {
             const sendEmailButtonClass = hasOrder ? 'btn-icon-action send-invoice-email-btn' : 'btn-icon-action send-invoice-email-btn disabled';
             
             return '<tr>' +
-                '<td class="user-name-cell"><strong>' + fullName + '</strong><br></td>' +
+                '<td class="user-name-cell"><strong' + nameStyle + '>' + fullName + '</strong><br></td>' +
                 '<td>' + user.user_email + '</td>' +
                 '<td>' + designation + '</td>' +
                 '<td>' + formatCurrency(user.membership_fee || 0) + '</td>' +
@@ -485,7 +530,8 @@ jQuery(function($) {
                 action: 'iipm_bulk_send_individual_invoices',
                 nonce: iipm_ajax.payment_nonce,
                 invoice_year: state.selectedYear,
-                mode: 'count'
+                mode: 'count',
+                test_mode: state.testMode ? '1' : '0'
             }
         });
     }
@@ -501,7 +547,8 @@ jQuery(function($) {
                 invoice_year: state.selectedYear,
                 mode: 'send',
                 offset: offset || 0,
-                limit: 50
+                limit: 50,
+                test_mode: state.testMode ? '1' : '0'
             }
         }).always(function() {
             if (!totals || totals.done) {
@@ -730,6 +777,25 @@ jQuery(function($) {
             }
         });
     }
+
+    function updateTestModeToggleLabel() {
+        const $toggle = $('#test-mode-toggle');
+        if (state.testMode) {
+            $toggle.html('<i class="fas fa-flask"></i> Test Members');
+            $toggle.removeClass('btn-secondary').addClass('btn-primary');
+        } else {
+            $toggle.html('<i class="fas fa-users"></i> Actual Members');
+            $toggle.removeClass('btn-primary').addClass('btn-secondary');
+        }
+    }
+    updateTestModeToggleLabel();
+
+    $('#test-mode-toggle').on('click', function() {
+        state.testMode = !state.testMode;
+        state.page = 1;
+        updateTestModeToggleLabel();
+        loadUsers();
+    });
 
     $('#payment-search-btn').on('click', function() {
         state.search = $('#payment-search').val();
@@ -1282,6 +1348,8 @@ jQuery(function($) {
         $('#orders-loading').show();
         $('#orders-content').hide();
         $('#orders-modal').fadeIn(200);
+        currentOrdersUserId = userId || 0;
+        currentOrdersOrgId = orgId || 0;
 
         $.ajax({
             url: '<?php echo admin_url('admin-ajax.php'); ?>',
@@ -1293,8 +1361,9 @@ jQuery(function($) {
                 year: state.selectedYear
             },
             success: function(response) {
+                console.log('[Orders Modal] Response:', response);
                 $('#orders-loading').hide();
-                if (response.success && response.data.orders && response.data.orders.length > 0) {
+                if (response.success && response.data && response.data.orders && response.data.orders.length > 0) {
                     renderOrdersTable(response.data.orders);
                     $('#orders-content').show();
                     $('#orders-empty').hide();
@@ -1302,13 +1371,16 @@ jQuery(function($) {
                     $('#orders-content').show();
                     $('#orders-empty').show();
                     $('#orders-tbody').empty();
+                    if (!response.success) {
+                        notify(response.data || 'Failed to load orders.', 'error');
+                    }
                 }
             },
             error: function() {
                 $('#orders-loading').hide();
                 $('#orders-content').show();
                 $('#orders-empty').show();
-                $('#orders-tbody').html('<tr><td colspan="5" style="text-align: center; color: #ef4444;">Error loading orders</td></tr>');
+                $('#orders-tbody').html('<tr><td colspan="7" style="text-align: center; color: #ef4444;">Error loading orders</td></tr>');
             }
         });
     }
@@ -1318,12 +1390,48 @@ jQuery(function($) {
         const adminUrl = '<?php echo admin_url("admin.php?page=wc-orders&action=edit&id="); ?>';
         
         const rows = orders.map(order => {
-            const date = new Date(order.date_created_gmt);
-            const formattedDate = date.toLocaleDateString('en-GB', {
-                day: '2-digit',
-                month: 'short',
-                year: 'numeric'
-            });
+            function formatLocalDate(dateValue) {
+                if (!dateValue || dateValue === '0000-00-00 00:00:00') {
+                    return '';
+                }
+                const iso = dateValue.replace(' ', 'T') + 'Z';
+                const dateObj = new Date(iso);
+                if (isNaN(dateObj.getTime())) {
+                    return '';
+                }
+                return dateObj.toLocaleDateString('en-GB', {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric'
+                });
+            }
+
+            function formatLocalDateInput(dateValue) {
+                if (!dateValue || dateValue === '0000-00-00 00:00:00') {
+                    return '';
+                }
+                const iso = dateValue.replace(' ', 'T') + 'Z';
+                const dateObj = new Date(iso);
+                if (isNaN(dateObj.getTime())) {
+                    return '';
+                }
+                const year = dateObj.getFullYear();
+                const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+                const day = String(dateObj.getDate()).padStart(2, '0');
+                return year + '-' + month + '-' + day;
+            }
+
+            const formattedDate = formatLocalDate(order.date_created_gmt);
+            const paymentMethod = (order.payment_method || '').toLowerCase();
+            const paymentTypeValue = paymentMethod === 'bank'
+                ? 'bank'
+                : (paymentMethod === 'stripe' ? 'stripe' : '');
+            const paymentTypeLabel = paymentTypeValue === 'bank'
+                ? 'Bank'
+                : (paymentTypeValue === 'stripe' ? 'Stripe' : '-');
+            let paymentDateValue = '';
+            const paymentDateSource = order.date_updated_gmt || order.payment_date || '';
+            paymentDateValue = formatLocalDateInput(paymentDateSource);
 
             // Map status
             let statusClass = 'status-badge';
@@ -1341,11 +1449,22 @@ jQuery(function($) {
 
             const statusLabel = order.status.replace('wc-', '').replace('-', ' ').toUpperCase();
             
-            return '<tr>' +
+            return '<tr data-order-id="' + order.id + '">' +
                 '<td><strong>#' + order.id + '</strong></td>' +
                 '<td>' + formattedDate + '</td>' +
                 '<td><strong>' + formatCurrency(order.total_amount) + '</strong></td>' +
-                '<td><span class="' + statusClass + '">' + statusLabel + '</span></td>' +
+                '<td>' + paymentTypeLabel + '</td>' +
+                '<td>' +
+                    '<input type="date" class="order-payment-date" data-order-id="' + order.id + '" value="' + paymentDateValue + '">' +
+                '</td>' +
+                '<td>' +
+                    '<select class="order-status-select" data-order-id="' + order.id + '" data-payment-method="' + paymentTypeValue + '" data-previous="' + order.status + '">' +
+                        '<option value="wc-pending"' + (order.status === 'wc-pending' ? ' selected' : '') + '>Pending</option>' +
+                        '<option value="wc-processing"' + (order.status === 'wc-processing' ? ' selected' : '') + '>Processing</option>' +
+                        '<option value="wc-completed"' + (order.status === 'wc-completed' ? ' selected' : '') + '>Completed</option>' +
+                        '<option value="wc-trash"' + (order.status === 'wc-trash' ? ' selected' : '') + '>Trash</option>' +
+                    '</select>' +
+                '</td>' +
                 '<td>' +
                     '<a href="' + adminUrl + order.id + '" class="btn-order-link" title="View Order in WooCommerce" target="_blank">' +
                         '<i class="fas fa-link"></i>' +
@@ -1353,11 +1472,52 @@ jQuery(function($) {
                     '<button class="btn-resend-email" data-order-id="' + order.id + '" title="Resend Invoice Email">' +
                         '<i class="fas fa-envelope"></i>' +
                     '</button>' +
+                    '<button class="btn-remove-order" data-order-id="' + order.id + '" title="Remove Order">' +
+                        '<i class="fas fa-trash"></i>' +
+                    '</button>' +
                 '</td>' +
             '</tr>';
         }).join('');
 
         $('#orders-tbody').html(rows);
+    }
+
+    function showOrdersConfirmation(message, onConfirm, onCancel) {
+        $('#orders-confirmation-message').text(message);
+        $('#orders-confirmation').css('display', 'flex');
+        $('#orders-confirm-ok').off('click').on('click', function() {
+            $('#orders-confirmation').hide();
+            if (onConfirm) onConfirm();
+        });
+        $('#orders-confirm-cancel').off('click').on('click', function() {
+            $('#orders-confirmation').hide();
+            if (onCancel) onCancel();
+        });
+    }
+
+    function updateOrderFields(orderId, payload, onDone) {
+        $.ajax({
+            url: '<?php echo admin_url('admin-ajax.php'); ?>',
+            method: 'POST',
+            data: Object.assign({
+                action: 'iipm_update_order_payment_fields',
+                nonce: iipm_ajax.payment_nonce,
+                order_id: orderId
+            }, payload),
+            success: function(response) {
+                if (response.success) {
+                    notify('Order updated.', 'success');
+                } else {
+                    notify(response.data || 'Failed to update order.', 'error');
+                }
+            },
+            error: function() {
+                notify('Error updating order.', 'error');
+            },
+            complete: function() {
+                if (onDone) onDone();
+            }
+        });
     }
 
     // Handle resend email button
@@ -1393,15 +1553,86 @@ jQuery(function($) {
         }
     });
 
+    // Update payment date
+    $(document).on('change', '.order-payment-date', function() {
+        const orderId = $(this).data('order-id');
+        const paymentDate = $(this).val();
+        updateOrderFields(orderId, { payment_date: paymentDate, status: 'wc-completed', payment_method: 'bank' });
+    });
+
+    // Update status
+    $(document).on('change', '.order-status-select', function() {
+        const orderId = $(this).data('order-id');
+        const status = $(this).val();
+        const previous = $(this).data('previous') || 'wc-pending';
+            const paymentMethod = $(this).data('payment-method');
+        const $row = $(this).closest('tr');
+        const $dateInput = $row.find('.order-payment-date');
+        $(this).data('previous', status);
+
+        if (status === 'wc-completed') {
+            if (paymentMethod === 'stripe') {
+                if (!$dateInput.val()) {
+                    $dateInput.val(new Date().toISOString().slice(0, 10));
+                }
+                updateOrderFields(orderId, { status: status });
+                return;
+            }
+            showOrdersConfirmation('Did you get paid via bank or other outside payments?', function() {
+                if (!$dateInput.val()) {
+                    $dateInput.val(new Date().toISOString().slice(0, 10));
+                }
+                updateOrderFields(orderId, { status: status, payment_method: 'bank' });
+                $(this).data('payment-method', 'bank');
+            }.bind(this), function() {
+                $(this).val(previous);
+                $(this).data('previous', previous);
+            }.bind(this));
+            return;
+        }
+
+        $dateInput.val('');
+        updateOrderFields(orderId, { status: status });
+    });
+
+    // Remove order (permanent delete)
+    $(document).on('click', '.btn-remove-order', function() {
+        const orderId = $(this).data('order-id');
+        showOrdersConfirmation('Delete Order #' + orderId + ' permanently? This cannot be undone.', function() {
+            $.ajax({
+                url: '<?php echo admin_url('admin-ajax.php'); ?>',
+                method: 'POST',
+                data: {
+                    action: 'iipm_delete_order_permanently',
+                    nonce: iipm_ajax.payment_nonce,
+                    order_id: orderId
+                },
+                success: function(response) {
+                    if (response.success) {
+                        notify('Order deleted permanently.', 'success');
+                        showOrdersModal(currentOrdersUserId || 0, currentOrdersOrgId || 0, $('#orders-entity-name').text());
+                    } else {
+                        notify(response.data || 'Failed to delete order.', 'error');
+                    }
+                },
+                error: function() {
+                    notify('Error deleting order.', 'error');
+                }
+            });
+        });
+    });
+
     // Close orders modal
     $('#orders-modal .modal-close').on('click', function() {
         $('#orders-modal').fadeOut(200);
+        $('#orders-confirmation').hide();
     });
 
     // Close modal on background click
     $('#orders-modal').on('click', function(e) {
         if (e.target.id === 'orders-modal') {
             $('#orders-modal').fadeOut(200);
+            $('#orders-confirmation').hide();
         }
     });
 
@@ -1426,6 +1657,8 @@ jQuery(function($) {
     });
 
     // Load stats and tables on page load
+    setupSortableTable($('.org-payment-table'));
+    setupSortableTable($('.user-payment-table'));
     initTabs();
     loadStats();
     loadUsers();
@@ -1793,6 +2026,30 @@ jQuery(function($) {
     font-size: 14px;
 }
 
+.payment-table th.sortable {
+    cursor: pointer;
+    position: relative;
+    padding-right: 28px;
+}
+
+.payment-table th.sortable::after {
+    content: '↕';
+    position: absolute;
+    right: 10px;
+    color: #9ca3af;
+    font-size: 12px;
+}
+
+.payment-table th.sort-asc::after {
+    content: '↑';
+    color: #6b7280;
+}
+
+.payment-table th.sort-desc::after {
+    content: '↓';
+    color: #6b7280;
+}
+
 .payment-table td {
     padding: 14px;
     text-align: left;
@@ -2071,6 +2328,35 @@ jQuery(function($) {
     color: white !important;
 }
 
+.order-payment-type,
+.order-status-select,
+.order-payment-date {
+    padding: 6px 8px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 13px;
+    background: #fff;
+}
+
+.btn-remove-order {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: white !important;
+    border: none;
+    padding: 6px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.btn-remove-order:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.btn-remove-order i {
+    color: white !important;
+}
+
 /* WooCommerce Orders Link Button */
 .btn-wc-orders-link {
     background: rgba(255, 255, 255, 0.2);
@@ -2105,13 +2391,17 @@ jQuery(function($) {
     background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
     color: white !important;
     border: none;
-    padding: 6px 10px;
+    padding: 0;
     border-radius: 6px;
     cursor: pointer;
     font-size: 14px;
     text-decoration: none;
-    display: inline-block;
-    margin-right: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    margin-right: 6px;
     transition: all 0.2s ease;
 }
 
@@ -2122,6 +2412,62 @@ jQuery(function($) {
 
 .btn-order-link i {
     color: white !important;
+}
+
+
+.orders-table td:last-child {
+    white-space: nowrap;
+}
+
+.orders-table .btn-resend-email,
+.orders-table .btn-remove-order {
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 6px;
+}
+
+#orders-confirmation {
+    margin-top: 16px;
+    padding: 12px 16px;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    background: #f9fafb;
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+#orders-confirmation .confirm-message {
+    color: #374151;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+#orders-confirmation .confirm-actions {
+    display: inline-flex;
+    gap: 8px;
+}
+
+#orders-confirmation .confirm-actions button {
+    border: none;
+    border-radius: 8px;
+    padding: 8px 14px;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+#orders-confirmation .confirm-ok {
+    background: #7c3aed;
+    color: #fff;
+}
+
+#orders-confirmation .confirm-cancel {
+    background: #e5e7eb;
+    color: #374151;
 }
 </style>
 
@@ -2142,8 +2488,10 @@ jQuery(function($) {
                     <thead>
                         <tr>
                             <th>Order #</th>
-                            <th>Date</th>
+                            <th>Created At</th>
                             <th>Amount</th>
+                            <th>Payment Type</th>
+                            <th>Updated At</th>
                             <th>Status</th>
                             <th>Action</th>
                         </tr>
@@ -2153,6 +2501,13 @@ jQuery(function($) {
                 <div id="orders-empty" style="display: none; text-align: center; padding: 40px; color: #6b7280;">
                     <i class="fas fa-inbox" style="font-size: 48px; margin-bottom: 16px;"></i>
                     <p>No orders found</p>
+                </div>
+                <div id="orders-confirmation">
+                    <div class="confirm-message" id="orders-confirmation-message"></div>
+                    <div class="confirm-actions">
+                        <button type="button" class="confirm-cancel" id="orders-confirm-cancel">Cancel</button>
+                        <button type="button" class="confirm-ok" id="orders-confirm-ok">OK</button>
+                    </div>
                 </div>
             </div>
         </div>
